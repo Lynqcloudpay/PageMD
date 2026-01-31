@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
 import PatientChartPanel from './PatientChartPanel';
+import { useAuth } from '../context/AuthContext';
 
 const VisitChartView = ({ visitId, patientId, onClose }) => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [activeVisitId, setActiveVisitId] = useState(visitId);
     const [allVisits, setAllVisits] = useState([]);
     const [showPatientChart, setShowPatientChart] = useState(false);
@@ -411,6 +413,29 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         }
     };
 
+    const handleCosign = async () => {
+        if (!window.confirm('Are you sure you want to cosign this note? This will finalize it as Signed.')) return;
+        try {
+            await visitsAPI.cosign(activeVisitId);
+            await fetchData();
+        } catch (error) {
+            console.error('Error cosigning note:', error);
+            alert('Failed to cosign note');
+        }
+    };
+
+    const handleReject = async () => {
+        const reason = window.prompt('Please enter a reason for rejecting/returning this note:');
+        if (!reason) return;
+        try {
+            await visitsAPI.reject(activeVisitId, { reason });
+            await fetchData();
+        } catch (error) {
+            console.error('Error rejecting note:', error);
+            alert('Failed to reject note');
+        }
+    };
+
     const handleCreateSuperbill = async () => {
         onClose();
         navigate(`/patient/${patientId}/fee-sheet/${activeVisitId}`);
@@ -740,6 +765,25 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         </button>
                                     </>
                                 )}
+
+
+                                {visit.status === 'preliminary' && user?.id === visit.assigned_attending_id && (
+                                    <>
+                                        <button
+                                            onClick={handleReject}
+                                            className="px-3 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full border border-rose-200 transition-all flex items-center gap-1"
+                                        >
+                                            <RotateCcw className="w-3 h-3" /> Return to Draft
+                                        </button>
+                                        <button
+                                            onClick={handleCosign}
+                                            className="px-3 py-1 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full border border-blue-600 transition-all flex items-center gap-1 shadow-sm"
+                                        >
+                                            <CheckCircle2 className="w-3 h-3" /> Cosign & Finalize
+                                        </button>
+                                    </>
+                                )}
+
                                 <button
                                     onClick={() => setShowAuditModal(true)}
                                     className="px-3 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-all flex items-center gap-1"
@@ -780,6 +824,22 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         </div>
                                     </>
                                 )}
+
+
+                                {visit.status === 'preliminary' && (
+                                    <div className="avoid-cut mb-8 p-4 bg-amber-50 border-l-8 border-amber-500 rounded-r-lg shadow-sm">
+                                        <div className="flex items-start gap-3">
+                                            <AlertCircle className="w-6 h-6 text-amber-600 mt-0.5 shrink-0" />
+                                            <div>
+                                                <h3 className="text-[16px] font-black text-amber-900 uppercase tracking-tight">Preliminary Report - Cosignature Required</h3>
+                                                <p className="text-[12px] font-bold text-amber-800 mt-1">
+                                                    This documentation was authored by a trainee or mid-level provider and requires clinical validation by an attending physician. content is subject to change.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {visit.status === 'retracted' && (
                                     <div className="avoid-cut mb-8 p-4 bg-rose-100 border-l-8 border-rose-600 rounded-r-lg shadow-sm">
                                         <div className="flex items-start gap-3">
@@ -1074,170 +1134,176 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </div >
+                </div >
+            </div >
 
             {/* Redesigned Modal Containers */}
-            {showAddendumModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={() => setShowAddendumModal(false)}>
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl p-10 border border-slate-100" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-50">
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900 tracking-tight">Add Record Amendment</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Clinical Context Supplement</p>
+            {
+                showAddendumModal && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={() => setShowAddendumModal(false)}>
+                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl p-10 border border-slate-100" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-50">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Add Record Amendment</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Clinical Context Supplement</p>
+                                </div>
+                                <button onClick={() => setShowAddendumModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
                             </div>
-                            <button onClick={() => setShowAddendumModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
-                        </div>
-                        <textarea value={addendumText} onChange={e => setAddendumText(e.target.value)} className="w-full h-48 bg-slate-50 border border-slate-200 rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300" placeholder="Enter clinical supplement..." />
-                        <div className="flex justify-end gap-3 mt-8">
-                            <button onClick={() => setShowAddendumModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
-                            <button onClick={handleAddAddendum} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">Authenticate Addendum</button>
+                            <textarea value={addendumText} onChange={e => setAddendumText(e.target.value)} className="w-full h-48 bg-slate-50 border border-slate-200 rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300" placeholder="Enter clinical supplement..." />
+                            <div className="flex justify-end gap-3 mt-8">
+                                <button onClick={() => setShowAddendumModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
+                                <button onClick={handleAddAddendum} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">Authenticate Addendum</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* RETRACT MODAL */}
-            {showRetractModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowRetractModal(false)}>
-                    <div className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 className="text-[20px] font-black text-slate-900 tracking-tight">Retract Clinical Note</h3>
-                                <p className="text-slate-500 text-[13px] font-medium mt-1 uppercase tracking-wider">Legal Void Process (Entered in Error)</p>
+            {
+                showRetractModal && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowRetractModal(false)}>
+                        <div className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-start mb-6">
+                                <div>
+                                    <h3 className="text-[20px] font-black text-slate-900 tracking-tight">Retract Clinical Note</h3>
+                                    <p className="text-slate-500 text-[13px] font-medium mt-1 uppercase tracking-wider">Legal Void Process (Entered in Error)</p>
+                                </div>
+                                <button onClick={() => setShowRetractModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
                             </div>
-                            <button onClick={() => setShowRetractModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
-                        </div>
 
-                        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 mb-6 flex gap-3">
-                            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                            <div className="text-[12px] text-rose-700 font-medium leading-relaxed">
-                                <strong>Warning:</strong> Retracting a signed note will mark it as "Entered in Error" across the system. This action is immutable and logged for clinical auditing.
+                            <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 mb-6 flex gap-3">
+                                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                                <div className="text-[12px] text-rose-700 font-medium leading-relaxed">
+                                    <strong>Warning:</strong> Retracting a signed note will mark it as "Entered in Error" across the system. This action is immutable and logged for clinical auditing.
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Retraction Reason</label>
-                                <select
-                                    value={retractReason}
-                                    onChange={e => setRetractReason(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all"
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Retraction Reason</label>
+                                    <select
+                                        value={retractReason}
+                                        onChange={e => setRetractReason(e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all"
+                                    >
+                                        <option value="ENTERED_IN_ERROR">Entered in Error</option>
+                                        <option value="WRONG_PATIENT">Wrong Patient</option>
+                                        <option value="INCORRECT_DATE">Incorrect Date</option>
+                                        <option value="DUPLICATE_NOTE">Duplicate Note</option>
+                                        <option value="REVISED_EXTENSIVELY">Extensive Revisions Required</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Explanation (Required for Audit Log)</label>
+                                    <textarea
+                                        value={retractExplanation}
+                                        onChange={e => setRetractExplanation(e.target.value)}
+                                        className="w-full h-32 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300"
+                                        placeholder="Briefly describe why this note is being voided..."
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-3 mt-8">
+                                <button onClick={() => setShowRetractModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                                <button
+                                    onClick={handleRetract}
+                                    disabled={!retractExplanation.trim() || isRetracting}
+                                    className={`px-8 py-3 bg-rose-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${(!retractExplanation.trim() || isRetracting) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    <option value="ENTERED_IN_ERROR">Entered in Error</option>
-                                    <option value="WRONG_PATIENT">Wrong Patient</option>
-                                    <option value="INCORRECT_DATE">Incorrect Date</option>
-                                    <option value="DUPLICATE_NOTE">Duplicate Note</option>
-                                    <option value="REVISED_EXTENSIVELY">Extensive Revisions Required</option>
-                                </select>
+                                    {isRetracting ? 'Voiding...' : 'Confirm Retraction'}
+                                </button>
                             </div>
-
-                            <div>
-                                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Explanation (Required for Audit Log)</label>
-                                <textarea
-                                    value={retractExplanation}
-                                    onChange={e => setRetractExplanation(e.target.value)}
-                                    className="w-full h-32 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300"
-                                    placeholder="Briefly describe why this note is being voided..."
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end gap-3 mt-8">
-                            <button onClick={() => setShowRetractModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
-                            <button
-                                onClick={handleRetract}
-                                disabled={!retractExplanation.trim() || isRetracting}
-                                className={`px-8 py-3 bg-rose-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${(!retractExplanation.trim() || isRetracting) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                {isRetracting ? 'Voiding...' : 'Confirm Retraction'}
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
-            {showAuditModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowAuditModal(false)}>
-                    <div className="bg-[#f8fafc] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200" onClick={e => e.stopPropagation()}>
-                        <div className="bg-white p-8 border-b border-slate-200 flex justify-between items-center">
-                            <div>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                                        <Shield className="text-white w-5 h-5" />
+            {
+                showAuditModal && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowAuditModal(false)}>
+                        <div className="bg-[#f8fafc] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200" onClick={e => e.stopPropagation()}>
+                            <div className="bg-white p-8 border-b border-slate-200 flex justify-between items-center">
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                                            <Shield className="text-white w-5 h-5" />
+                                        </div>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Note History Audit</h3>
                                     </div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Note History Audit</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-1">Lifecycle Activity & Signatures</p>
                                 </div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-1">Lifecycle Activity & Signatures</p>
+                                <button onClick={() => setShowAuditModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
                             </div>
-                            <button onClick={() => setShowAuditModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
-                        </div>
 
-                        <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4 bg-slate-50/30">
-                            {loadingHistory ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                                    <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-                                    <p className="font-bold">Retrieving history...</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {noteHistory.map((event, i) => (
-                                        <div key={event.id} className="relative flex gap-6">
-                                            {/* Vertical Line */}
-                                            {i < noteHistory.length - 1 && (
-                                                <div className="absolute left-[19px] top-10 bottom-[-16px] w-0.5 bg-slate-200" />
-                                            )}
+                            <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4 bg-slate-50/30">
+                                {loadingHistory ? (
+                                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                                        <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                                        <p className="font-bold">Retrieving history...</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {noteHistory.map((event, i) => (
+                                            <div key={event.id} className="relative flex gap-6">
+                                                {/* Vertical Line */}
+                                                {i < noteHistory.length - 1 && (
+                                                    <div className="absolute left-[19px] top-10 bottom-[-16px] w-0.5 bg-slate-200" />
+                                                )}
 
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-[#f8fafc] ${event.action.includes('SIGNED') ? 'bg-emerald-500 shadow-lg shadow-emerald-200' :
-                                                event.action.includes('RETRACTED') ? 'bg-rose-500 shadow-lg shadow-rose-200' :
-                                                    'bg-white border-slate-200 text-slate-400 shadow-sm'
-                                                }`}>
-                                                {event.action.includes('SIGNED') ? <CheckCircle2 className="w-5 h-5 text-white" /> :
-                                                    event.action.includes('RETRACTED') ? <AlertCircle className="w-5 h-5 text-white" /> :
-                                                        <Clock className="w-4 h-4" />}
-                                            </div>
-
-                                            <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div>
-                                                        <div className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{event.action.replace(/_/g, ' ')}</div>
-                                                        <div className="text-sm font-black text-slate-900 mt-0.5">{event.actor_name || 'System'}</div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-[10px] font-bold text-slate-400 uppercase">{format(new Date(event.occurred_at), 'MM/dd/yy')}</div>
-                                                        <div className="text-[11px] font-black text-slate-800 tabular-nums">{format(new Date(event.occurred_at), 'h:mm a')}</div>
-                                                    </div>
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-[#f8fafc] ${event.action.includes('SIGNED') ? 'bg-emerald-500 shadow-lg shadow-emerald-200' :
+                                                    event.action.includes('RETRACTED') ? 'bg-rose-500 shadow-lg shadow-rose-200' :
+                                                        'bg-white border-slate-200 text-slate-400 shadow-sm'
+                                                    }`}>
+                                                    {event.action.includes('SIGNED') ? <CheckCircle2 className="w-5 h-5 text-white" /> :
+                                                        event.action.includes('RETRACTED') ? <AlertCircle className="w-5 h-5 text-white" /> :
+                                                            <Clock className="w-4 h-4" />}
                                                 </div>
 
-                                                {Object.keys(event.details || {}).length > 0 && (
-                                                    <div className="mt-3 p-3 bg-slate-50/50 rounded-lg border border-slate-100 italic text-[12px] text-slate-500 leading-relaxed font-medium">
-                                                        {event.details.reason && <span>Reason: {event.details.reason} </span>}
-                                                        {event.details.reason_code && <span>Reason: {event.details.reason_code} </span>}
-                                                        {event.details.reason_text && <span className="block mt-1 text-slate-600">"{event.details.reason_text}"</span>}
-                                                        {event.details.method && <span>via {event.details.method} </span>}
-                                                        {event.details.status && <span>({event.details.status})</span>}
+                                                <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <div className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{event.action.replace(/_/g, ' ')}</div>
+                                                            <div className="text-sm font-black text-slate-900 mt-0.5">{event.actor_name || 'System'}</div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-[10px] font-bold text-slate-400 uppercase">{format(new Date(event.occurred_at), 'MM/dd/yy')}</div>
+                                                            <div className="text-[11px] font-black text-slate-800 tabular-nums">{format(new Date(event.occurred_at), 'h:mm a')}</div>
+                                                        </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {noteHistory.length === 0 && (
-                                        <div className="text-center py-20 text-slate-300 font-bold uppercase tracking-widest text-[10px] italic">Historical migration data pending</div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
 
-                        <div className="p-8 bg-white border-t border-slate-100 flex justify-between items-center">
-                            <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                                <Lock className="w-3 h-3" /> Immutable Audit Trail
+                                                    {Object.keys(event.details || {}).length > 0 && (
+                                                        <div className="mt-3 p-3 bg-slate-50/50 rounded-lg border border-slate-100 italic text-[12px] text-slate-500 leading-relaxed font-medium">
+                                                            {event.details.reason && <span>Reason: {event.details.reason} </span>}
+                                                            {event.details.reason_code && <span>Reason: {event.details.reason_code} </span>}
+                                                            {event.details.reason_text && <span className="block mt-1 text-slate-600">"{event.details.reason_text}"</span>}
+                                                            {event.details.method && <span>via {event.details.method} </span>}
+                                                            {event.details.status && <span>({event.details.status})</span>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {noteHistory.length === 0 && (
+                                            <div className="text-center py-20 text-slate-300 font-bold uppercase tracking-widest text-[10px] italic">Historical migration data pending</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <button onClick={() => setShowAuditModal(false)} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/10 active:scale-95 transition-all">Close History</button>
+
+                            <div className="p-8 bg-white border-t border-slate-100 flex justify-between items-center">
+                                <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                                    <Lock className="w-3 h-3" /> Immutable Audit Trail
+                                </div>
+                                <button onClick={() => setShowAuditModal(false)} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/10 active:scale-95 transition-all">Close History</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {showBillingModal && <BillingModal patientId={patientId} isOpen={showBillingModal} onClose={() => setShowBillingModal(false)} />}
 

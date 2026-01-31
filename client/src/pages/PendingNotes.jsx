@@ -42,6 +42,11 @@ const PendingNotes = () => {
         if (noteText.trim().length === 0) {
             return { label: 'Not Started', color: 'bg-red-100 text-red-700', icon: AlertCircle };
         }
+
+        if (visit.status === 'preliminary') {
+            return { label: 'Needs Cosign', color: 'bg-amber-100 text-amber-700', icon: Sparkles };
+        }
+
         // Check if note has all required sections
         const hasHPI = /HPI|History of Present Illness/i.test(noteText);
         const hasAssessment = /Assessment|A:/i.test(noteText);

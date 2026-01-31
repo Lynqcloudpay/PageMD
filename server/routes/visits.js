@@ -114,17 +114,19 @@ router.get('/pending', requirePermission('notes:view'), async (req, res) => {
       LEFT JOIN users u ON v.provider_id = u.id
       INNER JOIN patients p ON v.patient_id = p.id
       LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
-      WHERE v.note_signed_at IS NULL 
-        AND (v.status = 'draft' OR v.status IS NULL)
+      WHERE 
+        (v.provider_id = $1 AND (v.status = 'draft' OR v.status IS NULL))
+        OR
+        (v.assigned_attending_id = $1 AND v.status = 'preliminary')
     `;
-    const params = [];
-    let paramIndex = 1;
+    const params = [providerId || currentUserId];
+    // let paramIndex = 1;
 
-    if (providerId || currentUserId) {
-      query += ` AND v.provider_id = $${paramIndex}`;
-      params.push(providerId || currentUserId);
-      paramIndex++;
-    }
+    // if (providerId || currentUserId) {
+    //   query += ` AND v.provider_id = $${paramIndex}`;
+    //   params.push(providerId || currentUserId);
+    //   paramIndex++;
+    // }
 
     query += ` ORDER BY v.visit_date DESC, v.created_at DESC`;
 
@@ -831,6 +833,109 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
     res.status(500).json({ error: 'Failed to sign visit', details: process.env.NODE_ENV === 'development' ? error.message : undefined });
+  }
+});
+
+// Cosign visit
+router.post('/:id/cosign', requirePermission('notes:cosign'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Authenticate: Ensure user is the assigned attending
+    const visitRes = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
+    if (visitRes.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
+    const visit = visitRes.rows[0];
+
+    // Optional: Strict check if user is the assigned attending (or admin)
+    // if (visit.assigned_attending_id !== req.user.id && !req.user.is_admin) {
+    //   return res.status(403).json({ error: 'You are not the assigned attending for this note.' });
+    // }
+
+    const result = await pool.query(
+      `UPDATE visits 
+       SET status = 'signed',
+           cosigned_by = $1,
+           cosigned_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING *`,
+      [req.user.id, id]
+    );
+
+    req.logAuditEvent({
+      action: 'NOTE_COSIGNED',
+      entityType: 'Note',
+      entityId: id,
+      patientId: visit.patient_id,
+      details: { cosigner: req.user.email }
+    });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error cosigning visit:', error);
+    res.status(500).json({ error: 'Failed to cosign visit' });
+  }
+});
+
+// Reject/Return to Draft
+router.post('/:id/reject', requirePermission('notes:cosign'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const visitRes = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
+    if (visitRes.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
+    const visit = visitRes.rows[0];
+
+    // Revert status to draft, clear signature
+    // Note: We keep the original 'note_signed_by' user as the 'provider_id' usually, 
+    // but we must clear 'note_signed_at' so it appears as draft again.
+    const result = await pool.query(
+      `UPDATE visits 
+       SET status = 'draft',
+           note_signed_at = NULL,
+           content_integrity_verified = FALSE,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    // Notify the provider
+    if (visit.note_signed_by) {
+      await pool.query(
+        `INSERT INTO inbox_items(
+                patient_id, type, priority, status, subject, body,
+                reference_id, reference_table, created_by, clinic_id, assigned_user_id
+            ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          visit.patient_id,
+          'note_rejected',
+          'high',
+          'new',
+          `Note Returned: ${visit.visit_type}`,
+          `Your note has been returned by ${req.user.first_name} ${req.user.last_name}. Reason: ${reason || 'Review required'}`,
+          id,
+          'visits',
+          req.user.id,
+          req.user.clinic_id,
+          visit.note_signed_by // Send back to the person who signed it
+        ]
+      );
+    }
+
+    req.logAuditEvent({
+      action: 'NOTE_REJECTED',
+      entityType: 'Note',
+      entityId: id,
+      patientId: visit.patient_id,
+      details: { reason }
+    });
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error rejecting visit:', error);
+    res.status(500).json({ error: 'Failed to reject visit' });
   }
 });
 

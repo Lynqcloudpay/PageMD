@@ -152,6 +152,7 @@ export const visitsAPI = {
   retract: (id, data) => api.post(`/visits/${id}/retract`, data),
   getRetraction: (id) => api.get(`/visits/${id}/retraction`),
   cosign: (id, data) => api.post(`/visits/${id}/cosign`, data),
+  reject: (id, data) => api.post(`/visits/${id}/reject`, data),
 };
 
 // Orders
