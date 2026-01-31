@@ -1082,7 +1082,7 @@ const VisitNote = () => {
                 const filtered = data.filter(u =>
                     (u.role || '').toLowerCase().includes('physician') ||
                     (u.role || '').toLowerCase().includes('clinician') ||
-                    ((u.role || '').toLowerCase().includes('admin') && !(u.role || '').toLowerCase().includes('super'))
+                    (u.role || '').toLowerCase().includes('provider')
                 );
                 setAttendings(filtered);
             } catch (err) {
