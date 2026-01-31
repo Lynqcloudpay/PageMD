@@ -211,7 +211,7 @@ const RetractionModal = ({ isOpen, onClose, onConfirm, data, setData }) => {
 };
 
 // Cosignature Modal for Attending Physicians
-const CosignModal = ({ isOpen, onClose, onConfirm, visitData, authorshipModel, setAuthorshipModel, attestationText, setAttestationText, macros }) => {
+const CosignModal = ({ isOpen, onClose, onConfirm, visitData, authorshipModel, setAuthorshipModel, attestationText, setAttestationText, macros, isSaving }) => {
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -1501,6 +1501,7 @@ const VisitNote = () => {
             setVisitData(visit);
             setIsSigned(true);
             setIsPreliminary(false);
+            setShowCosignModal(false);
         } catch (error) {
             showToast('Failed to cosign note: ' + (error.response?.data?.error || error.message || 'Unknown error'), 'error');
         } finally {
@@ -4013,8 +4014,8 @@ const VisitNote = () => {
                         macros={attestationMacros}
                         onConfirm={() => {
                             handleCosign(attestationText, authorshipModel);
-                            setShowCosignModal(false);
                         }}
+                        isSaving={isSaving}
                     />
                 )}
 
