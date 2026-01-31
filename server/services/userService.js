@@ -111,7 +111,6 @@ class UserService {
         u.last_login,
         u.professional_type,
         u.npi,
-        u.credentials,
         u.is_admin,
         u.role
       FROM users u

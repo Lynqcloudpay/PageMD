@@ -33,7 +33,8 @@ router.get('/directory', async (req, res) => {
       first_name: u.first_name,
       last_name: u.last_name,
       role: u.role_name || u.role, // Fallback
-      email: u.email
+      email: u.email,
+      professional_type: u.professional_type
     }));
 
     res.json(simplified);

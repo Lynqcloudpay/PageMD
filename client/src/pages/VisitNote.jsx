@@ -1078,12 +1078,17 @@ const VisitNote = () => {
             try {
                 const response = await usersAPI.getDirectory();
                 const data = response.data;
-                // Filter for clinicians/physicians
-                const filtered = data.filter(u =>
-                    (u.role || '').toLowerCase().includes('physician') ||
-                    (u.role || '').toLowerCase().includes('clinician') ||
-                    (u.role || '').toLowerCase().includes('provider')
-                );
+                // Filter for attendings (Physicians only as requested: MD, DO, Physician)
+                const filtered = data.filter(u => {
+                    const profType = (u.professional_type || '').toLowerCase();
+                    const role = (u.role || '').toLowerCase();
+
+                    return profType.includes('physician') ||
+                        profType.includes('md') ||
+                        profType.includes('do') ||
+                        profType.includes('medical doctor') ||
+                        role.includes('physician'); // Fallback for legacy
+                });
                 setAttendings(filtered);
             } catch (err) {
                 console.error('Error fetching attendings:', err);
