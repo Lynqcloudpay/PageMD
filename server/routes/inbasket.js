@@ -45,6 +45,7 @@ async function ensureSchema(client) {
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 completed_at TIMESTAMP WITH TIME ZONE,
                 completed_by UUID REFERENCES users(id),
+                clinic_id UUID,
                 visit_method VARCHAR(20) DEFAULT 'office'
             )
         `);
@@ -96,6 +97,7 @@ async function ensureSchema(client) {
                 END IF;
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'inbox_items') THEN
                     ALTER TABLE inbox_items ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
+                    ALTER TABLE inbox_items ADD COLUMN IF NOT EXISTS clinic_id UUID;
                 END IF;
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'appointments') THEN
                     ALTER TABLE appointments ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office';
@@ -135,7 +137,7 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      created_by, assigned_user_id, created_at, updated_at
+      created_by, assigned_user_id, clinic_id, created_at, updated_at
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 'lab', 
@@ -144,7 +146,7 @@ async function syncInboxItems(tenantId, schema) {
       COALESCE(order_payload->>'test_name', 'Lab Result'),
       'New lab result ready for review',
       id, 'orders',
-      ordered_by, ordered_by, created_at, created_at
+      ordered_by, ordered_by, clinic_id, created_at, created_at
     FROM orders 
     WHERE order_type = 'lab' 
       AND (status = 'completed' OR result_value IS NOT NULL)
@@ -157,7 +159,7 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      created_by, assigned_user_id, created_at, updated_at
+      created_by, assigned_user_id, clinic_id, created_at, updated_at
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 'imaging', 'normal',
@@ -165,11 +167,11 @@ async function syncInboxItems(tenantId, schema) {
       COALESCE(order_payload->>'study_name', 'Imaging Result'),
       'New imaging result ready for review',
       id, 'orders',
-      ordered_by, ordered_by, created_at, created_at
+      ordered_by, ordered_by, clinic_id, created_at, created_at
     FROM orders 
     WHERE order_type = 'imaging'
-      AND (status = 'completed' OR result_value IS NOT NULL)
-      AND (reviewed IS NULL OR reviewed = false)
+    AND (status = 'completed' OR result_value IS NOT NULL)
+    AND (reviewed IS NULL OR reviewed = false)
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
@@ -179,7 +181,7 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      created_by, created_at, updated_at
+      created_by, clinic_id, created_at, updated_at
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 'document', 'normal',
@@ -187,7 +189,7 @@ async function syncInboxItems(tenantId, schema) {
       filename,
       COALESCE(doc_type, 'Document Upload'),
       id, 'documents',
-      uploader_id, created_at, created_at
+      uploader_id, clinic_id, created_at, created_at
     FROM documents
     WHERE (reviewed IS NULL OR reviewed = false)
       AND (doc_type IS NOT NULL AND doc_type NOT IN ('other', 'administrative', 'background_upload'))
@@ -199,7 +201,7 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      created_by, created_at, updated_at
+      created_by, clinic_id, created_at, updated_at
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 'referral', 'normal',
@@ -207,7 +209,7 @@ async function syncInboxItems(tenantId, schema) {
       'Referral: ' || COALESCE(recipient_name, recipient_specialty, 'New Referral'),
       reason,
       id, 'referrals',
-      created_by, created_at, created_at
+      created_by, clinic_id, created_at, created_at
     FROM referrals
     WHERE (status IS NULL OR status = 'pending' OR status = 'new')
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
@@ -218,7 +220,7 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      assigned_user_id, created_at, updated_at
+      assigned_user_id, clinic_id, created_at, updated_at
     )
     SELECT 
       gen_random_uuid(), $1, patient_id, 
@@ -229,13 +231,14 @@ async function syncInboxItems(tenantId, schema) {
       CASE WHEN status = 'preliminary' THEN 'Preliminary note pending review' ELSE 'Visit dated ' || encounter_date END,
       id, 'visits',
       CASE WHEN status = 'preliminary' AND assigned_attending_id IS NOT NULL THEN assigned_attending_id ELSE provider_id END, 
-      created_at, created_at
+      clinic_id, created_at, created_at
     FROM visits
     WHERE (status = 'draft' AND note_signed_at IS NULL) OR status = 'preliminary'
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' 
     DO UPDATE SET 
         type = EXCLUDED.type,
         assigned_user_id = EXCLUDED.assigned_user_id,
+        clinic_id = EXCLUDED.clinic_id,
         subject = EXCLUDED.subject,
         body = EXCLUDED.body,
         updated_at = CURRENT_TIMESTAMP
@@ -246,7 +249,7 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
       subject, body, reference_id, reference_table, 
-      assigned_user_id, created_by, created_at, updated_at,
+      assigned_user_id, created_by, clinic_id, created_at, updated_at,
       completed_at
     )
     SELECT 

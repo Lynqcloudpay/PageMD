@@ -512,7 +512,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const providerName = `${visit.provider_first_name || ''} ${visit.provider_last_name || ''} `.trim() || 'Attending Physician';
     const patientAge = calculateAge(patient.dob);
     const patientDOB = patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : '';
-    const isSigned = visit?.note_signed_at || visit?.locked;
+    const isSigned = visit?.status === 'signed';
+    const isPreliminary = visit?.status === 'preliminary';
+    const isRetracted = visit?.status === 'retracted';
 
     return (
         <><style>{`
@@ -844,7 +846,20 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
 
                                 {/* Preliminary Banner Removed from here and moved to top for visibility */}
 
-                                {visit.status === 'retracted' && (
+                                {isPreliminary && (
+                                    <div className="bg-amber-500 text-white p-4 rounded-lg mb-6 flex items-center justify-between shadow-md no-print">
+                                        <div className="flex items-center gap-3">
+                                            <ClipboardList className="w-6 h-6" />
+                                            <div>
+                                                <h3 className="text-sm font-bold uppercase tracking-widest">Preliminary Report - Cosignature Required</h3>
+                                                <p className="text-[11px] text-amber-50 font-medium">
+                                                    This clinical note requires review and cosignature by an attending physician.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {isRetracted && (
                                     <div className="avoid-cut mb-8 p-4 bg-rose-100 border-l-8 border-rose-600 rounded-r-lg shadow-sm">
                                         <div className="flex items-start gap-3">
                                             <AlertCircle className="w-6 h-6 text-rose-700 mt-0.5 shrink-0" />

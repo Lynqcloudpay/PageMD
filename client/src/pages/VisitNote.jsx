@@ -954,8 +954,12 @@ const VisitNote = () => {
                     }
                     setCurrentVisitId(visit.id);
                     setVisitData(visit);
-                    // Check status field or legacy fields
-                    setIsSigned(visit.status === 'signed' || visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
+                    // Check status field explicitly
+                    const isFinal = visit.status === 'signed';
+                    const isPrelim = visit.status === 'preliminary';
+
+                    setIsSigned(isFinal);
+                    setIsPreliminary(isPrelim);
                     hasInitialSaveRef.current = true; // Mark that we've created the visit
                     // Use navigate to properly update the route - this will trigger the useEffect to reload with new visitId
                     console.log('Navigating to visit:', `/patient/${id}/visit/${visit.id}`);
@@ -987,8 +991,11 @@ const VisitNote = () => {
                     setVisitData(visit);
                     setCurrentVisitId(visit.id);
                     setVisitType(visit.visit_type || 'Office Visit');
-                    setIsSigned(visit.status === 'signed' || visit.locked || !!visit.note_signed_by || !!visit.note_signed_at);
-                    setIsPreliminary(visit.status === 'preliminary');
+                    const isFinal = visit.status === 'signed';
+                    const isPrelim = visit.status === 'preliminary';
+
+                    setIsSigned(isFinal);
+                    setIsPreliminary(isPrelim);
                     setIsRetracted(visit.status === 'retracted');
 
                     if (visit.status === 'retracted') {
@@ -2415,7 +2422,7 @@ const VisitNote = () => {
                                 <select
                                     value={visitType}
                                     onChange={(e) => setVisitType(e.target.value)}
-                                    disabled={isSigned}
+                                    disabled={isSigned || isPreliminary}
                                     className="text-base font-semibold text-neutral-900 bg-transparent border-none rounded-md focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-neutral-50 px-1 -ml-1 transition-all"
                                 >
                                     <option value="Follow-up">Follow-up</option>
@@ -2460,7 +2467,7 @@ const VisitNote = () => {
                                     )}
                                 </div>
                             )}
-                            {!isSigned && (
+                            {!isSigned && !isPreliminary && (
                                 <>
                                     {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}
                                     <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: isSaving ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}>

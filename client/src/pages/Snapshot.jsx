@@ -771,7 +771,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             carePlan: carePlanMatch ? carePlanMatch[1].trim() : "",
                             followUp: followUpMatch ? followUpMatch[1].trim() : "",
                             chiefComplaint: chiefComplaint,
-                            signed: visit.locked || !!visit.note_signed_by,
+                            signed: visit.status === 'signed',
+                            preliminary: visit.status === 'preliminary',
+                            locked: visit.locked || !!visit.note_signed_by,
                             visitDate: visit.visit_date,
                             visit_date: visit.visit_date, // For ChartReviewModal
                             createdAt: visit.created_at || visit.visit_date, // Fallback to visit_date if created_at not available
@@ -1347,6 +1349,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <h3 className="font-bold text-ink-900">{note.type}</h3>
                                                             {note.signed ? (
                                                                 <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Signed</span>
+                                                            ) : note.preliminary ? (
+                                                                <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded flex items-center gap-1">
+                                                                    <FileSignature className="w-3 h-3" /> Preliminary
+                                                                </span>
                                                             ) : (
                                                                 <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Draft</span>
                                                             )}
@@ -1375,9 +1381,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 }`}
                                                         >
                                                             <Eye className="w-3 h-3" />
-                                                            <span>{note.signed ? 'View Chart' : 'Edit'}</span>
+                                                            <span>{note.signed ? 'View Chart' : (note.preliminary ? 'Review Note' : 'Edit')}</span>
                                                         </button>
-                                                        {!note.signed && (
+                                                        {!note.signed && !note.preliminary && (
                                                             <button
                                                                 onClick={(e) => handleDeleteNote(note.id, e)}
                                                                 className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
