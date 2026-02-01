@@ -497,8 +497,29 @@ const VisitNote = () => {
     const [showOrderDetails, setShowOrderDetails] = useState(false);
     const [showICD10Modal, setShowICD10Modal] = useState(false);
     const [showReferralModal, setShowReferralModal] = useState(false);
+
     const { hasPrivilege } = usePrivileges();
     const { user } = useAuth();
+
+    // Authorization Logic
+    const isAttending = useMemo(() => {
+        if (!user) return false;
+        const role = (user.role || '').toLowerCase();
+        const roleName = (user.role_name || '').toLowerCase();
+        const profType = (user.professional_type || '').toLowerCase();
+
+        // Match the logic used for the "Cosign Note" button exactly
+        return roleName === 'Physician' || role === 'physician' ||
+            roleName === 'CLINICIAN' || role === 'clinician' ||
+            roleName === 'Admin' || role === 'admin' ||
+            profType.includes('md') || profType.includes('do');
+    }, [user]);
+
+    // Locked State: 
+    // - Note is read-only if fully signed (final)
+    // - Note is read-only if preliminary AND user is NOT an attending
+    // - Note is read-only if retracted
+    const isLocked = isSigned || (isPreliminary && !isAttending) || isRetracted;
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
     const [showPatientChart, setShowPatientChart] = useState(false);
@@ -2570,9 +2591,9 @@ const VisitNote = () => {
                     </div>
                 )}
                 {/* Main Content with Optional Sidebar */}
-                <div className={`flex gap-4 ${showQuickActions && !isSigned && !isRetracted ? '' : ''}`}>
+                <div className={`flex gap-4 ${showQuickActions && !isLocked ? '' : ''}`}>
                     {/* Left: Main Note Content */}
-                    <div className={`${showQuickActions && !isSigned && !isRetracted ? 'flex-1' : 'w-full'} transition-all duration-300 ${isRetracted && !viewRetractedContent ? 'opacity-40 blur-[1px] pointer-events-none grayscale' : ''}`}>
+                    <div className={`${showQuickActions && !isLocked ? 'flex-1' : 'w-full'} transition-all duration-300 ${isRetracted && !viewRetractedContent ? 'opacity-40 blur-[1px] pointer-events-none grayscale' : ''}`}>
 
                         {/* Vitals */}
                         <Section title="Vital Signs" defaultOpen={true}>
@@ -2587,8 +2608,8 @@ const VisitNote = () => {
                                                 setVitals({ ...vitals, systolic: sys, bp });
                                             }}
                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); } }}
-                                            disabled={isSigned}
-                                            className={`w-14 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
+                                            disabled={isLocked}
+                                            className={`w-14 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                         />
                                         <span className="text-neutral-400 text-xs font-medium px-0.5">/</span>
                                         <input ref={diastolicRef} type="number" placeholder="80" value={vitals.diastolic}
@@ -2598,8 +2619,8 @@ const VisitNote = () => {
                                                 setVitals({ ...vitals, diastolic: dia, bp });
                                             }}
                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); } }}
-                                            disabled={isSigned}
-                                            className={`w-14 px-1.5 py-1 text-xs border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-accent-500 focus:border-accent-500 disabled:bg-white disabled:text-gray-900 transition-colors ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600 font-semibold border-red-300' : 'text-gray-900'}`}
+                                            disabled={isLocked}
+                                            className={`w-14 px-1.5 py-1 text-xs border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-accent-500 focus:border-accent-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600 font-semibold border-red-300' : 'text-gray-900'}`}
                                         />
                                     </div>
                                 </div>
@@ -2608,8 +2629,8 @@ const VisitNote = () => {
                                     <input ref={pulseRef} type="number" placeholder="72" value={vitals.pulse}
                                         onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
                                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); } }}
-                                        disabled={isSigned}
-                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('pulse', vitals.pulse) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
+                                        disabled={isLocked}
+                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('pulse', vitals.pulse) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                     />
                                 </div>
                                 <div>
@@ -2617,8 +2638,8 @@ const VisitNote = () => {
                                     <input ref={o2satRef} type="number" placeholder="98" value={vitals.o2sat}
                                         onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
                                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); } }}
-                                        disabled={isSigned}
-                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('o2sat', vitals.o2sat) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
+                                        disabled={isLocked}
+                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('o2sat', vitals.o2sat) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                     />
                                 </div>
                                 <div>
@@ -2626,7 +2647,7 @@ const VisitNote = () => {
                                     <input ref={tempRef} type="number" step="0.1" placeholder="98.6" value={vitals.temp}
                                         onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
                                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); } }}
-                                        disabled={isSigned}
+                                        disabled={isLocked}
                                         className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('temp', vitals.temp) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
                                     />
                                 </div>
@@ -2653,7 +2674,7 @@ const VisitNote = () => {
                                                 setVitals(newVitals);
                                             }}
                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); } }}
-                                            disabled={isSigned}
+                                            disabled={isLocked}
                                             className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                                         />
                                         <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
@@ -2667,7 +2688,7 @@ const VisitNote = () => {
                                                 } else {
                                                     setVitals({ ...vitals, weightUnit: newUnit });
                                                 }
-                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
+                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
                                             <button type="button" onClick={() => {
                                                 const newUnit = 'kg';
                                                 if (vitals.weight && vitals.weightUnit !== newUnit) {
@@ -2678,7 +2699,7 @@ const VisitNote = () => {
                                                 } else {
                                                     setVitals({ ...vitals, weightUnit: newUnit });
                                                 }
-                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
+                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
                                         </div>
                                     </div>
                                 </div>
@@ -2697,7 +2718,7 @@ const VisitNote = () => {
                                                 setVitals(newVitals);
                                             }}
                                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); } }}
-                                            disabled={isSigned}
+                                            disabled={isLocked}
                                             className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
                                         />
                                         <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
@@ -2711,7 +2732,7 @@ const VisitNote = () => {
                                                 } else {
                                                     setVitals({ ...vitals, heightUnit: newUnit });
                                                 }
-                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
+                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
                                             <button type="button" onClick={() => {
                                                 const newUnit = 'cm';
                                                 if (vitals.height && vitals.heightUnit !== newUnit) {
@@ -2722,7 +2743,7 @@ const VisitNote = () => {
                                                 } else {
                                                     setVitals({ ...vitals, heightUnit: newUnit });
                                                 }
-                                            }} disabled={isSigned} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
+                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
                                         </div>
                                     </div>
                                 </div>
@@ -2740,8 +2761,8 @@ const VisitNote = () => {
                             <label className="block text-sm font-semibold text-neutral-900 mb-1">Chief Complaint</label>
                             <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
                                 onChange={(e) => setNoteData({ ...noteData, chiefComplaint: e.target.value })}
-                                disabled={isSigned}
-                                className="w-full px-2 py-1.5 text-sm font-medium border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
+                                disabled={isLocked}
+                                className="w-full px-2 py-1.5 text-sm font-medium border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors text-neutral-900"
                             />
                         </div>
 
@@ -2749,6 +2770,7 @@ const VisitNote = () => {
                         <Section title="History of Present Illness (HPI)" defaultOpen={true}>
                             <div className="relative">
                                 <textarea ref={hpiRef} value={noteData.hpi}
+                                    disabled={isLocked}
                                     onChange={(e) => {
                                         handleTextChange(e.target.value, 'hpi');
                                         handleDotPhraseAutocomplete(e.target.value, 'hpi', hpiRef);
@@ -2781,9 +2803,9 @@ const VisitNote = () => {
                                         }
                                     }}
                                     onFocus={() => setActiveTextArea('hpi')}
-                                    disabled={isSigned}
+                                    disabled={isLocked}
                                     rows={6}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
+                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
                                     placeholder="Type .dotphrase to expand, or press F2 to find [] placeholders..."
                                 />
                                 {autocompleteState.show && autocompleteState.field === 'hpi' && autocompleteState.suggestions.length > 0 && (
@@ -2808,7 +2830,7 @@ const VisitNote = () => {
                                     <Zap className="w-3.5 h-3.5" />
                                     <span className="text-xs font-medium">Dot Phrases (F2)</span>
                                 </button>
-                                {!isSigned && (
+                                {!isLocked && (
                                     <button onClick={() => openCarryForward('hpi')} className="flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors">
                                         <RotateCcw className="w-3.5 h-3.5" />
                                         <span className="text-xs font-medium">Pull Prior</span>
@@ -2827,6 +2849,7 @@ const VisitNote = () => {
                                             {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
                                             <span className="text-xs text-neutral-700 capitalize">{system}</span>
                                             <input type="checkbox" checked={noteData.ros[system]}
+                                                disabled={isLocked}
                                                 onChange={(e) => {
                                                     const isChecked = e.target.checked;
                                                     const systemName = system.charAt(0).toUpperCase() + system.slice(1);
@@ -2843,15 +2866,16 @@ const VisitNote = () => {
                                                     }
                                                     setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
                                                 }}
-                                                disabled={isSigned}
+                                                disabled={isLocked}
                                                 className="hidden"
                                             />
                                         </label>
                                     ))}
                                 </div>
                                 <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
-                                    disabled={isSigned} rows={10}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
+                                    disabled={isLocked}
+                                    disabled={isLocked} rows={10}
+                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                     placeholder="ROS notes..."
                                 />
                                 <div className="mt-1.5 flex items-center gap-2">
@@ -2864,10 +2888,10 @@ const VisitNote = () => {
                                             rosText += `${systemName}: ${rosFindings[key]}\n`;
                                         });
                                         setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
-                                    }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                    }} disabled={isLocked} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
                                         Pre-fill Normal ROS
                                     </button>
-                                    {!isSigned && (
+                                    {!isLocked && (
                                         <button onClick={() => openCarryForward('ros')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
                                             <RotateCcw className="w-3 h-3" />
                                             Pull Prior
@@ -2884,6 +2908,7 @@ const VisitNote = () => {
                                             {noteData.pe[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
                                             <span className="text-xs text-neutral-700 capitalize">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
                                             <input type="checkbox" checked={noteData.pe[system]}
+                                                disabled={isLocked}
                                                 onChange={(e) => {
                                                     const isChecked = e.target.checked;
                                                     const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -2900,15 +2925,16 @@ const VisitNote = () => {
                                                     }
                                                     setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
                                                 }}
-                                                disabled={isSigned}
+                                                disabled={isLocked}
                                                 className="hidden"
                                             />
                                         </label>
                                     ))}
                                 </div>
                                 <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
-                                    disabled={isSigned} rows={10}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
+                                    disabled={isLocked}
+                                    disabled={isLocked} rows={10}
+                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                     placeholder="PE findings..."
                                 />
                                 <div className="mt-1.5 flex items-center gap-2">
@@ -2921,10 +2947,10 @@ const VisitNote = () => {
                                             peText += `${systemName}: ${peFindings[key]}\n`;
                                         });
                                         setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
-                                    }} disabled={isSigned} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
+                                    }} disabled={isLocked} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
                                         Pre-fill Normal PE
                                     </button>
-                                    {!isSigned && (
+                                    {!isLocked && (
                                         <button onClick={() => openCarryForward('pe')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
                                             <RotateCcw className="w-3 h-3" />
                                             Pull Prior
@@ -3326,7 +3352,8 @@ const VisitNote = () => {
                                                 setIcd10Search(e.target.value);
                                                 setShowIcd10Search(true);
                                             }}
-                                            className={`w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 transition-colors ${editingDiagnosisIndex !== null ? 'border-primary-500 ring-1 ring-primary-500' : ''}`}
+                                            disabled={isLocked}
+                                            className={`w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${editingDiagnosisIndex !== null ? 'border-primary-500 ring-1 ring-primary-500' : ''}`}
                                         />
                                     </div>
 
@@ -3416,12 +3443,14 @@ const VisitNote = () => {
                                                         >
                                                             {index + 1}. {item.diagnosis}
                                                         </button>
-                                                        <button
-                                                            onClick={() => removeFromPlan(index)}
-                                                            className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all p-1"
-                                                        >
-                                                            <Trash2 className="w-3 h-3" />
-                                                        </button>
+                                                        {!isLocked && (
+                                                            <button
+                                                                onClick={() => removeFromPlan(index)}
+                                                                className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all p-1"
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <ul className="ml-4 space-y-0.5">
                                                         {item.orders.flatMap((order, orderIdx) => {
@@ -3468,7 +3497,7 @@ const VisitNote = () => {
                                     </div>
                                 )}
                             </div>
-                            {!isSigned && (
+                            {!isLocked && (
                                 <div className="mt-2 flex space-x-1.5">
                                     {hasPrivilege('order_labs') && (
                                         <button
@@ -3515,7 +3544,7 @@ const VisitNote = () => {
                                     onChange={(e) => setNoteData({ ...noteData, cts: e.target.value })}
                                     placeholder="Document topic (e.g. Wound Care), time spent, and if telehealth..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
-                                    disabled={isSigned}
+                                    disabled={isLocked}
                                 />
                                 {!isSigned && (
                                     <div className="mt-2 text-xs">
@@ -3549,7 +3578,7 @@ const VisitNote = () => {
                                     onChange={(e) => setNoteData({ ...noteData, ascvd: e.target.value })}
                                     placeholder="Risk score, category, and management plan..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
-                                    disabled={isSigned}
+                                    disabled={isLocked}
                                 />
                                 {!isSigned && (
                                     <div className="mt-2 text-xs">
@@ -3578,7 +3607,7 @@ const VisitNote = () => {
                                     onChange={(e) => setNoteData({ ...noteData, safetyPlan: e.target.value })}
                                     placeholder="Warning signs, coping strategies, and contacts..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
-                                    disabled={isSigned}
+                                    disabled={isLocked}
                                 />
                                 {!isSigned && (
                                     <div className="mt-2 text-xs">
@@ -3607,7 +3636,7 @@ const VisitNote = () => {
                                     onChange={(e) => setNoteData({ ...noteData, carePlan: e.target.value })}
                                     placeholder="Summary of what needs to be done in preparation for the next visit..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
-                                    disabled={isSigned}
+                                    disabled={isLocked}
                                 />
                             </div>
                         </Section>
@@ -3620,7 +3649,7 @@ const VisitNote = () => {
                                     onChange={(e) => setNoteData({ ...noteData, followUp: e.target.value })}
                                     placeholder="Follow up instructions..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
-                                    disabled={isSigned}
+                                    disabled={isLocked}
                                 />
                                 {!isSigned && (
                                     <div className="mt-2 text-xs">
@@ -3648,7 +3677,7 @@ const VisitNote = () => {
                             <div className="mt-8 space-y-4">
                                 <SignatureCard
                                     type="Author"
-                                    signerName={visitData?.note_signed_by_name}
+                                    signerName={visitData?.note_signed_by_name || (visitData?.signed_by_first_name ? `${visitData.signed_by_first_name} ${visitData.signed_by_last_name}` : '')}
                                     role={visitData?.author_role}
                                     date={visitData?.note_signed_at}
                                     isPreliminary={isPreliminary}
@@ -3656,7 +3685,7 @@ const VisitNote = () => {
                                 {visitData?.cosigned_at && (
                                     <SignatureCard
                                         type="Cosigner"
-                                        signerName={visitData?.cosigned_by_name}
+                                        signerName={visitData?.cosigned_by_name || (visitData?.cosigned_by_first_name ? `${visitData.cosigned_by_first_name} ${visitData.cosigned_by_last_name}` : '')}
                                         role={visitData?.cosigner_role || 'Attending Physician'}
                                         date={visitData?.cosigned_at}
                                         attestationText={visitData?.attestation_text}
@@ -3667,7 +3696,7 @@ const VisitNote = () => {
                         )}
 
                         {/* Bottom Action Buttons */}
-                        {!isSigned && (
+                        {!isSigned && !isPreliminary && (
                             <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
                                 <div className="flex items-center space-x-1.5">
                                     {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}

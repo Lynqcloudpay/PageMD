@@ -853,61 +853,6 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
   }
 });
 
-// Cosign visit
-router.post('/:id/cosign', requirePermission('notes:cosign'), async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Authenticate: Ensure user is the assigned attending
-    const visitRes = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
-    if (visitRes.rows.length === 0) return res.status(404).json({ error: 'Visit not found' });
-    const visit = visitRes.rows[0];
-
-    // Optional: Strict check if user is the assigned attending (or admin)
-    // if (visit.assigned_attending_id !== req.user.id && !req.user.is_admin) {
-    //   return res.status(403).json({ error: 'You are not the assigned attending for this note.' });
-    // }
-
-    const result = await pool.query(
-      `UPDATE visits 
-       SET status = 'signed',
-           cosigned_by = $1,
-           cosigned_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2
-       RETURNING *`,
-      [req.user.id, id]
-    );
-
-    // Mark the inbox item as completed
-    try {
-      await pool.query(
-        `UPDATE inbox_items 
-         SET status = 'completed',
-             completed_at = CURRENT_TIMESTAMP,
-             completed_by = $1,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE reference_id = $2 AND reference_table = 'visits'`,
-        [req.user.id, id]
-      );
-    } catch (inboxErr) {
-      console.warn('Failed to complete inbox item on cosign:', inboxErr.message);
-    }
-
-    req.logAuditEvent({
-      action: 'NOTE_COSIGNED',
-      entityType: 'Note',
-      entityId: id,
-      patientId: visit.patient_id,
-      details: { cosigner: req.user.email }
-    });
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error cosigning visit:', error);
-    res.status(500).json({ error: 'Failed to cosign visit' });
-  }
-});
 
 // Reject/Return to Draft
 router.post('/:id/reject', requirePermission('notes:cosign'), async (req, res) => {
@@ -1318,11 +1263,16 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
         `SELECT v.*,
         u.first_name as provider_first_name,
         u.last_name as provider_last_name,
+        u.role as author_role,
         signed_by_user.first_name as signed_by_first_name,
-        signed_by_user.last_name as signed_by_last_name
+        signed_by_user.last_name as signed_by_last_name,
+        cosigned_user.first_name as cosigned_by_first_name,
+        cosigned_user.last_name as cosigned_by_last_name,
+        cosigned_user.role as cosigner_role
         FROM visits v
         LEFT JOIN users u ON v.provider_id = u.id
         LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
+        LEFT JOIN users cosigned_user ON v.cosigned_by = cosigned_user.id
         WHERE v.id = $1`,
         [id]
       );
@@ -1333,12 +1283,17 @@ router.get('/:id', requirePermission('notes:view'), async (req, res) => {
           `SELECT v.*,
         u.first_name as provider_first_name,
         u.last_name as provider_last_name,
+        u.role as author_role,
         signed_by_user.first_name as signed_by_first_name,
-        signed_by_user.last_name as signed_by_last_name
+        signed_by_user.last_name as signed_by_last_name,
+        cosigned_user.first_name as cosigned_by_first_name,
+        cosigned_user.last_name as cosigned_by_last_name,
+        cosigned_user.role as cosigner_role
           FROM visits v
           LEFT JOIN users u ON v.provider_id = u.id
           LEFT JOIN users signed_by_user ON v.note_signed_by = signed_by_user.id
-          WHERE v.id:: text = $1 OR CAST(v.id AS TEXT) = $1`,
+          LEFT JOIN users cosigned_user ON v.cosigned_by = cosigned_user.id
+          WHERE v.id::text = $1 OR CAST(v.id AS TEXT) = $1`,
           [id]
         );
       } else {
@@ -1423,10 +1378,23 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
     const checkRes = await pool.query('SELECT status, note_signed_at FROM visits WHERE id = $1', [id]);
     if (checkRes.rows.length > 0) {
       const v = checkRes.rows[0];
-      if ((v.status === 'signed' || v.note_signed_at) && !req.user.is_admin) {
+      const userRoleLower = (req.user.role_name || req.user.role || '').toLowerCase();
+      const userIsAttending = userRoleLower.includes('physician') ||
+        userRoleLower.includes('clinician') ||
+        userRoleLower.includes('medical doctor') ||
+        req.user.role === 'admin';
+
+      if (v.status === 'signed') {
         return res.status(403).json({
-          error: 'Signed notes cannot be edited. Please use the addendum or retraction workflow.',
+          error: 'Signed notes are finalized and cannot be edited. Please use the addendum or retraction workflow.',
           code: 'NOTE_LOCKED'
+        });
+      }
+
+      if (v.status === 'preliminary' && !userIsAttending) {
+        return res.status(403).json({
+          error: 'This note is in preliminary review and can only be edited by the supervising attending.',
+          code: 'NOTE_PRELIMINARY_LOCKED'
         });
       }
       if (v.status === 'retracted') {

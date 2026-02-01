@@ -11,7 +11,11 @@ router.use(authenticate);
 // Syncs external items (orders, documents) into the inbox_items table
 // This ensures we have a unified, real-table representation for everything
 // Schema self-healing state
-async function ensureSchema(client) {
+const ensuredSchemas = new Set();
+
+async function ensureSchema(client, schemaName) {
+  if (ensuredSchemas.has(schemaName)) return;
+
   const db = client || pool;
   // 1. Try to create extensions (separately, ignored if fails due to permissions)
   try {
@@ -108,6 +112,9 @@ async function ensureSchema(client) {
                     ALTER TABLE appointments ADD CONSTRAINT appointments_appointment_type_check 
                         CHECK (appointment_type IN ('Follow-up', 'New Patient', 'Sick Visit', 'Physical', 'Telehealth Visit', 'Other'));
                 END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'visits') THEN
+                    ALTER TABLE visits ADD COLUMN IF NOT EXISTS assigned_attending_id UUID REFERENCES users(id);
+                END IF;
             END $$;
         `);
     } catch (e) {
@@ -119,18 +126,22 @@ async function ensureSchema(client) {
     // Don't throw, let the query fail naturally if table doesn't exist, 
     // but at least we tried our best.
   }
+
+  ensuredSchemas.add(schemaName);
 }
 
-async function syncInboxItems(tenantId, schema) {
-  const client = await pool.connect();
+async function syncInboxItems(tenantId, schema, providedClient = null) {
+  const client = providedClient || await pool.connect();
+  const shouldRelease = !providedClient;
+
   try {
-    if (schema) {
+    if (schema && !providedClient) {
       // Set the search path strictly to the tenant schema first, then public
       await client.query(`SET search_path TO ${schema}, public`);
     }
 
-    // [MOD] Removal of ensureSchema from hot path to prevent AccessExclusiveLock deadlocks during concurrent polls
-    // await ensureSchema(client);
+    // [MOD] Re-enabling ensureSchema with a run-once cache to prevent deadlocks
+    await ensureSchema(client, schema || 'public');
 
     // 1. Sync Lab Orders
     await client.query(`
@@ -227,8 +238,8 @@ async function syncInboxItems(tenantId, schema) {
       CASE WHEN status = 'preliminary' THEN 'cosignature_required' ELSE 'note' END,
       'normal',
       'new',
-      CASE WHEN status = 'preliminary' THEN 'Cosignature Required: ' || COALESCE(note_type, 'Office Visit') ELSE 'Sign Note: ' || COALESCE(note_type, 'Office Visit') END,
-      CASE WHEN status = 'preliminary' THEN 'Preliminary note pending review' ELSE 'Visit dated ' || encounter_date END,
+      CASE WHEN status = 'preliminary' THEN 'Cosignature Required: ' || COALESCE(visit_type, 'Office Visit') ELSE 'Sign Note: ' || COALESCE(visit_type, 'Office Visit') END,
+      CASE WHEN status = 'preliminary' THEN 'Preliminary note pending review' ELSE 'Visit dated ' || visit_date END,
       id, 'visits',
       CASE WHEN status = 'preliminary' AND assigned_attending_id IS NOT NULL THEN assigned_attending_id ELSE provider_id END, 
       clinic_id, created_at, created_at
@@ -266,7 +277,7 @@ async function syncInboxItems(tenantId, schema) {
         ELSE 'new'
       END,
       subject, body, id, 'messages',
-      to_user_id, from_user_id, created_at, created_at,
+      to_user_id, from_user_id, clinic_id, created_at, created_at,
       CASE WHEN task_status = 'completed' THEN created_at ELSE NULL END
     FROM messages
     WHERE NOT EXISTS (
@@ -391,7 +402,7 @@ async function syncInboxItems(tenantId, schema) {
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
-      assigned_user_id, created_at, updated_at, visit_method
+      assigned_user_id, clinic_id, created_at, updated_at, visit_method
     )
     SELECT
       gen_random_uuid(), $1, p.id, 'portal_appointment', 
@@ -400,7 +411,7 @@ async function syncInboxItems(tenantId, schema) {
       CASE WHEN ar.status = 'declined' THEN 'DECLINED SUGGESTIONS: ' || appointment_type ELSE 'Portal Appt Req: ' || appointment_type END,
       'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
       ar.id, 'portal_appointment_requests',
-      COALESCE(ar.provider_id, p.primary_care_provider), ar.created_at, ar.created_at, ar.visit_method
+      COALESCE(ar.provider_id, p.primary_care_provider), ar.clinic_id, ar.created_at, ar.created_at, ar.visit_method
     FROM portal_appointment_requests ar
     JOIN patients p ON ar.patient_id = p.id
     WHERE ar.status IN ('pending', 'declined')
@@ -414,7 +425,9 @@ async function syncInboxItems(tenantId, schema) {
     `, [tenantId]);
 
   } finally {
-    client.release();
+    if (shouldRelease) {
+      client.release();
+    }
   }
 }
 
@@ -426,9 +439,10 @@ router.get('/', async (req, res) => {
     const { status = 'new', type, assignedTo } = req.query;
     const tenantId = req.clinic?.id || null;
     const schema = req.clinic?.schema_name || 'public';
+    const client = req.dbClient || pool;
 
     // Trigger sync first - always run since we use schema-based multi-tenancy
-    await syncInboxItems(tenantId, schema);
+    await syncInboxItems(tenantId, schema, req.dbClient);
 
     let query = `
       SELECT i.*,
@@ -496,10 +510,11 @@ router.get('/stats', async (req, res) => {
   try {
     const tenantId = req.clinic?.id || null;
     const schema = req.clinic?.schema_name || 'public';
+    const client = req.dbClient || pool;
 
-    await syncInboxItems(tenantId, schema);
+    await syncInboxItems(tenantId, schema, req.dbClient);
 
-    const counts = await pool.query(`
+    const counts = await client.query(`
       SELECT
         COUNT(*) FILTER(WHERE status = 'new') as all_count,
         COUNT(*) FILTER(WHERE status = 'new' AND assigned_user_id = $1) as my_count,
@@ -514,8 +529,8 @@ router.get('/stats', async (req, res) => {
 
     res.json(counts.rows[0]);
   } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed' });
+    console.error('Error fetching stats:', error.message, error.stack);
+    res.status(500).json({ error: 'Failed to fetch inbasket statistics', details: error.message });
   }
 });
 
@@ -523,9 +538,10 @@ router.get('/stats', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const client = req.dbClient || pool;
 
     // 1. Get Item
-    const itemRes = await pool.query(`
+    const itemRes = await client.query(`
       SELECT i.*,
     u_assigned.first_name as assigned_first_name, u_assigned.last_name as assigned_last_name
       FROM inbox_items i
@@ -550,7 +566,7 @@ router.get('/:id', async (req, res) => {
 
     // If it's a portal message, fetch ALL message history for this patient across all threads
     if (item.type === 'portal_message') {
-      const threadMsgs = await pool.query(`
+      const threadMsgs = await client.query(`
             SELECT 
                 m.id, 
                 m.body as note, 
@@ -587,8 +603,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { type, subject, body, patientId, priority = 'normal', assignedUserId } = req.body;
+    const client = req.dbClient || pool;
 
-    const result = await pool.query(`
+    const result = await client.query(`
       INSERT INTO inbox_items(
       type, subject, body, patient_id, priority, assigned_user_id, created_by, status
     ) VALUES($1, $2, $3, $4, $5, $6, $7, 'new')
@@ -640,20 +657,21 @@ router.put('/:id', async (req, res) => {
 
     params.push(id);
     const query = `UPDATE inbox_items SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${params.length} RETURNING * `;
+    const client = req.dbClient || pool;
 
-    const result = await pool.query(query, params);
+    const result = await client.query(query, params);
 
     // Propagate completion to original orders/docs if applicable
     if (status === 'completed' && result.rows[0].reference_id) {
       const item = result.rows[0];
       if (item.reference_table === 'orders') {
-        await pool.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+        await client.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
       } else if (item.reference_table === 'documents') {
-        await pool.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+        await client.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
       } else if (item.reference_table === 'portal_messages') {
-        await pool.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
+        await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
       } else if (item.reference_table === 'portal_message_threads') {
-        await pool.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE thread_id = $1 AND sender_portal_account_id IS NOT NULL AND read_at IS NULL", [item.reference_id]);
+        await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE thread_id = $1 AND sender_portal_account_id IS NOT NULL AND read_at IS NULL", [item.reference_id]);
       }
     }
 
@@ -671,7 +689,8 @@ router.delete('/:id', async (req, res) => {
 
     // Commercial Grade: Soft Delete (Archive) instead of permanent removal
     // This preserves the record for audit purposes
-    await pool.query("UPDATE inbox_items SET status = 'archived', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
+    const client = req.dbClient || pool;
+    await client.query("UPDATE inbox_items SET status = 'archived', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [id]);
 
     // Audit Log
     try {
@@ -693,7 +712,8 @@ router.delete('/:id', async (req, res) => {
 
 // POST /:id/notes - Add note/reply
 router.post('/:id/notes', async (req, res) => {
-  const client = await pool.connect();
+  const client = req.dbClient || pool;
+  const isDedicatedClient = req.dbClient ? true : false;
   try {
     const { id } = req.params;
     const { note, isExternal = false } = req.body;
@@ -803,7 +823,8 @@ router.post('/:id/notes', async (req, res) => {
 
 // POST /:id/approve-appointment - Approve portal appointment request and auto-schedule
 router.post('/:id/approve-appointment', async (req, res) => {
-  const client = await pool.connect();
+  const client = req.dbClient || pool;
+  const isDedicatedClient = req.dbClient ? true : false;
   try {
     const { id } = req.params;
     const { providerId, appointmentDate, appointmentTime, duration = 30, visitMethod } = req.body;
@@ -858,17 +879,20 @@ router.post('/:id/approve-appointment', async (req, res) => {
     await client.query('COMMIT');
     res.json({ success: true, message: 'Appointment scheduled successfully' });
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client.query) await client.query('ROLLBACK');
     console.error('Error approving appointment:', error);
     res.status(500).json({ error: 'Failed to approve appointment' });
   } finally {
-    client.release();
+    if (!isDedicatedClient && client.release) {
+      client.release();
+    }
   }
 });
 
 // POST /:id/deny-appointment - Deny portal appointment request
 router.post('/:id/deny-appointment', async (req, res) => {
-  const client = await pool.connect();
+  const client = req.dbClient || pool;
+  const isDedicatedClient = req.dbClient ? true : false;
   try {
     const { id } = req.params;
     const { reason } = req.body;
@@ -948,17 +972,20 @@ router.post('/:id/deny-appointment', async (req, res) => {
     }
     res.json({ success: true, message: 'Appointment request denied' });
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client.query) await client.query('ROLLBACK');
     console.error('Error denying appointment:', error);
     res.status(500).json({ error: 'Failed to deny appointment' });
   } finally {
-    client.release();
+    if (!isDedicatedClient && client.release) {
+      client.release();
+    }
   }
 });
 
 // POST /:id/suggest-slots - Send alternative time slots to patient (stored on request, not via messages)
 router.post('/:id/suggest-slots', async (req, res) => {
-  const client = await pool.connect();
+  const client = req.dbClient || pool;
+  const isDedicatedClient = req.dbClient ? true : false;
   try {
     const { id } = req.params;
     const { slots } = req.body; // Array of {date, time}
@@ -997,17 +1024,20 @@ router.post('/:id/suggest-slots', async (req, res) => {
     await client.query('COMMIT');
     res.json({ success: true, message: 'Slots sent to patient' });
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client.query) await client.query('ROLLBACK');
     console.error('Error suggesting slots:', error);
     res.status(500).json({ error: 'Failed to suggest slots' });
   } finally {
-    client.release();
+    if (!isDedicatedClient && client.release) {
+      client.release();
+    }
   }
 });
 
 // POST /patient-message - Initiate a new message to a patient
 router.post('/patient-message', async (req, res) => {
-  const client = await pool.connect();
+  const client = req.dbClient || pool;
+  const isDedicatedClient = req.dbClient ? true : false;
   try {
     const { patientId, subject, body } = req.body;
 
@@ -1099,11 +1129,13 @@ router.post('/patient-message', async (req, res) => {
     }
     res.json({ success: true, item: fullItem.rows[0], threadId });
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client.query) await client.query('ROLLBACK');
     console.error('Error initiating patient message:', error);
     res.status(500).json({ error: 'Failed to send message' });
   } finally {
-    client.release();
+    if (!isDedicatedClient && client.release) {
+      client.release();
+    }
   }
 });
 

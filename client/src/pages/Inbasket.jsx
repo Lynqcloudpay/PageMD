@@ -907,7 +907,7 @@ const Inbasket = () => {
                                             onClick={() => navigate(`/patient/${selectedItem.patient_id}/visit/${selectedItem.reference_id}`)}
                                             className="px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 shadow-sm"
                                         >
-                                            Sign Now
+                                            Review & Sign
                                         </button>
                                     </div>
                                 )}

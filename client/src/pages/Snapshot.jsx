@@ -2555,7 +2555,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     plan: note.plan,
                     chiefComplaint: note.chiefComplaint,
                     fullNote: note.fullNote,
-                    signed: note.signed
+                    signed: note.signed,
+                    preliminary: note.preliminary
                 }))}
                 onViewVisit={(visitId) => {
                     setShowVisitFoldersModal(false);

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, FileText, Clock, Edit, Eye, Trash2 } from 'lucide-react';
+import { X, FileText, Clock, Edit, Eye, Trash2, FileSignature } from 'lucide-react';
 import { format, parse, compareDesc } from 'date-fns';
 import { visitsAPI } from '../services/api';
 
@@ -10,7 +10,8 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
     const filteredVisits = useMemo(() => {
         let filtered = visits.filter(visit => {
             if (filter === 'all') return true;
-            if (filter === 'draft') return !visit.signed;
+            if (filter === 'draft') return !visit.signed && !visit.preliminary;
+            if (filter === 'preliminary') return visit.preliminary;
             if (filter === 'signed') return visit.signed;
             return true;
         });
@@ -75,13 +76,22 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                             All ({visits.length})
                         </button>
                         <button
+                            onClick={() => setFilter('preliminary')}
+                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'preliminary'
+                                ? 'bg-amber-100 text-amber-700 border-b-2 border-amber-600'
+                                : 'text-neutral-600 hover:text-neutral-900'
+                                }`}
+                        >
+                            Preliminary ({visits.filter(v => v.preliminary).length})
+                        </button>
+                        <button
                             onClick={() => setFilter('draft')}
                             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'draft'
                                 ? 'bg-orange-100 text-orange-700 border-b-2 border-orange-600'
                                 : 'text-neutral-600 hover:text-neutral-900'
                                 }`}
                         >
-                            Draft ({visits.filter(v => !v.signed).length})
+                            Draft ({visits.filter(v => !v.signed && !v.preliminary).length})
                         </button>
                         <button
                             onClick={() => setFilter('signed')}
@@ -166,6 +176,10 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                                     <span className="text-xs font-medium text-gray-900">{visit.type || "Office Visit"}</span>
                                                     {visit.signed ? (
                                                         <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0">Signed</span>
+                                                    ) : visit.preliminary ? (
+                                                        <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded flex-shrink-0 flex items-center gap-1">
+                                                            <FileSignature className="w-3 h-3" /> Preliminary
+                                                        </span>
                                                     ) : (
                                                         <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded flex-shrink-0">Draft</span>
                                                     )}

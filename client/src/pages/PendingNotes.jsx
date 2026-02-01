@@ -38,13 +38,13 @@ const PendingNotes = () => {
         const rawNote = visit.note_draft || "";
         const noteText = typeof rawNote === 'string' ? rawNote : String(rawNote);
 
+        if (visit.status === 'preliminary') {
+            return { label: 'Needs Cosign', color: 'bg-amber-100 text-amber-700', icon: Sparkles };
+        }
+
         // Handle null or undefined note_draft
         if (noteText.trim().length === 0) {
             return { label: 'Not Started', color: 'bg-red-100 text-red-700', icon: AlertCircle };
-        }
-
-        if (visit.status === 'preliminary') {
-            return { label: 'Needs Cosign', color: 'bg-amber-100 text-amber-700', icon: Sparkles };
         }
 
         // Check if note has all required sections
