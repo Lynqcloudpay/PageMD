@@ -50,9 +50,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const [attestationText, setAttestationText] = useState('');
     const [authorshipModel, setAuthorshipModel] = useState('Addendum');
     const [attestationMacros] = useState([
-        { id: macros.REVIEWED, name: 'Reviewed & Agreed', content: 'I have reviewed the trainee note and agree with the assessment and plan as documented.' },
-        { id: macros.PRESENT, name: 'Physically Present', content: 'I was physically present with the trainee for the key portions of this encounter and agree with the documentation.' },
-        { id: macros.EXAMINED, name: 'Personally Examined', content: 'I personally examined the patient and discussed the management plan with the trainee. I agree with their findings.' }
+        { id: 'REVIEWED', name: 'Reviewed & Agreed', content: 'I have reviewed the trainee note and agree with the assessment and plan as documented.' },
+        { id: 'PRESENT', name: 'Physically Present', content: 'I was physically present with the trainee for the key portions of this encounter and agree with the documentation.' },
+        { id: 'EXAMINED', name: 'Personally Examined', content: 'I personally examined the patient and discussed the management plan with the trainee. I agree with their findings.' }
     ]);
     const [noteHistory, setNoteHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
