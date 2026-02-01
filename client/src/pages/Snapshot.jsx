@@ -1192,9 +1192,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     const filteredNotes = (recentNotes || []).filter(note => {
         if (noteFilter === 'all') return true;
-        if (noteFilter === 'draft') return !note.signed && !note.preliminary;
+        if (noteFilter === 'draft') return !note.signed && !note.preliminary && !note.retracted;
         if (noteFilter === 'preliminary') return note.preliminary;
         if (noteFilter === 'signed') return note.signed;
+        if (noteFilter === 'retracted') return note.retracted;
         return true;
     });
 
@@ -1363,6 +1364,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded flex items-center gap-1">
                                                                     <FileSignature className="w-3 h-3" /> Preliminary
                                                                 </span>
+                                                            ) : note.retracted ? (
+                                                                <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Retracted</span>
                                                             ) : (
                                                                 <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Draft</span>
                                                             )}
@@ -1387,13 +1390,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             }}
                                                             className={`text-xs font-medium flex items-center space-x-1 flex-shrink-0 px-3 py-1.5 rounded-md ${note.signed
                                                                 ? 'bg-paper-100 text-paper-700 hover:bg-paper-200 hover:text-paper-900'
-                                                                : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
+                                                                : note.retracted
+                                                                    ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                                                                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200 hover:text-orange-900 font-semibold'
                                                                 }`}
                                                         >
                                                             <Eye className="w-3 h-3" />
-                                                            <span>{note.signed ? 'View Chart' : (note.preliminary ? 'Review Note' : 'Edit')}</span>
+                                                            <span>{note.signed || note.retracted ? 'View Chart' : (note.preliminary ? 'Review Note' : 'Edit')}</span>
                                                         </button>
-                                                        {!note.signed && !note.preliminary && (
+                                                        {!note.signed && !note.preliminary && !note.retracted && (
                                                             <button
                                                                 onClick={(e) => handleDeleteNote(note.id, e)}
                                                                 className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
@@ -1733,7 +1738,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             }}
                                                         >
                                                             <div className={`absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all ${note.status === 'preliminary' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' :
-                                                                (note.signed ? 'bg-emerald-400' : 'bg-slate-300')
+                                                                note.status === 'retracted' ? 'bg-red-500' :
+                                                                    (note.signed ? 'bg-emerald-400' : 'bg-slate-300')
                                                                 }`} />
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
@@ -1742,12 +1748,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                         <span className="text-[8px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Preliminary</span>
                                                                     ) : note.signed ? (
                                                                         <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wider">Signed</span>
+                                                                    ) : note.status === 'retracted' ? (
+                                                                        <span className="text-[8px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 uppercase tracking-wider">Retracted</span>
                                                                     ) : (
                                                                         <span className="text-[8px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">Draft</span>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
-                                                                    {!note.signed && !note.preliminary && (
+                                                                    {!note.signed && !note.preliminary && !note.retracted && (
                                                                         <button
                                                                             onClick={(e) => handleDeleteNote(note.id, e)}
                                                                             className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all rounded"

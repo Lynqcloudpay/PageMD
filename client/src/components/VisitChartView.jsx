@@ -748,7 +748,12 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                                 <span className={`text-[11px] font-bold ${activeVisitId === v.id ? 'text-blue-600' : 'text-slate-800'}`}>
                                                                     {format(new Date(v.visit_date), 'MMM d, yyyy')}
                                                                 </span>
-                                                                {v.locked && <Lock className="w-3 h-3 text-slate-300" />}
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {v.status === 'retracted' && (
+                                                                        <span className="text-[8px] font-black text-white bg-red-500 px-1 rounded uppercase tracking-tighter">Retracted</span>
+                                                                    )}
+                                                                    {(v.locked || v.signed) && <Lock className="w-3 h-3 text-slate-300" />}
+                                                                </div>
                                                             </div>
                                                             <div className="text-[10px] text-slate-500 truncate">
                                                                 {getChiefComplaint(v)}

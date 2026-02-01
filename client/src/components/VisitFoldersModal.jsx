@@ -10,9 +10,10 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
     const filteredVisits = useMemo(() => {
         let filtered = visits.filter(visit => {
             if (filter === 'all') return true;
-            if (filter === 'draft') return !visit.signed && !visit.preliminary;
+            if (filter === 'draft') return !visit.signed && !visit.preliminary && !visit.retracted;
             if (filter === 'preliminary') return visit.preliminary;
             if (filter === 'signed') return visit.signed;
+            if (filter === 'retracted') return visit.retracted;
             return true;
         });
 
@@ -91,7 +92,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                 : 'text-neutral-600 hover:text-neutral-900'
                                 }`}
                         >
-                            Draft ({visits.filter(v => !v.signed && !v.preliminary).length})
+                            Draft ({visits.filter(v => !v.signed && !v.preliminary && !v.retracted).length})
                         </button>
                         <button
                             onClick={() => setFilter('signed')}
@@ -101,6 +102,15 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                 }`}
                         >
                             Signed ({visits.filter(v => v.signed).length})
+                        </button>
+                        <button
+                            onClick={() => setFilter('retracted')}
+                            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${filter === 'retracted'
+                                ? 'bg-red-100 text-red-700 border-b-2 border-red-600'
+                                : 'text-neutral-600 hover:text-neutral-900'
+                                }`}
+                        >
+                            Retracted ({visits.filter(v => v.retracted).length})
                         </button>
                     </div>
                 </div>
@@ -180,6 +190,8 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                                         <span className="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded flex-shrink-0 flex items-center gap-1">
                                                             <FileSignature className="w-3 h-3" /> Preliminary
                                                         </span>
+                                                    ) : visit.retracted ? (
+                                                        <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded flex-shrink-0">Retracted</span>
                                                     ) : (
                                                         <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded flex-shrink-0">Draft</span>
                                                     )}
@@ -191,7 +203,7 @@ const VisitFoldersModal = ({ isOpen, onClose, visits, onViewVisit, onDeleteVisit
                                                     )}
                                                 </div>
                                             </div>
-                                            {!visit.signed && (
+                                            {!visit.signed && !visit.preliminary && !visit.retracted && (
                                                 <button
                                                     onClick={handleDelete}
                                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-all absolute right-2"
