@@ -112,8 +112,25 @@ async function ensureSchema(client, schemaName) {
                     ALTER TABLE appointments ADD CONSTRAINT appointments_appointment_type_check 
                         CHECK (appointment_type IN ('Follow-up', 'New Patient', 'Sick Visit', 'Physical', 'Telehealth Visit', 'Other'));
                 END IF;
+
+                -- Add clinic_id to all relevant tables for multi-tenancy consistency
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'orders') THEN
+                    ALTER TABLE orders ADD COLUMN IF NOT EXISTS clinic_id UUID;
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'documents') THEN
+                    ALTER TABLE documents ADD COLUMN IF NOT EXISTS clinic_id UUID;
+                END IF;
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'visits') THEN
+                    ALTER TABLE visits ADD COLUMN IF NOT EXISTS clinic_id UUID;
+                    -- Also ensure cosignature columns exist for the new workflow
                     ALTER TABLE visits ADD COLUMN IF NOT EXISTS assigned_attending_id UUID REFERENCES users(id);
+                    ALTER TABLE visits ADD COLUMN IF NOT EXISTS cosigned_at TIMESTAMP WITH TIME ZONE;
+                    ALTER TABLE visits ADD COLUMN IF NOT EXISTS cosigned_by UUID REFERENCES users(id);
+                    ALTER TABLE visits ADD COLUMN IF NOT EXISTS attestation_text TEXT;
+                    ALTER TABLE visits ADD COLUMN IF NOT EXISTS authorship_model VARCHAR(50);
+                END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'portal_appointment_requests') THEN
+                    ALTER TABLE portal_appointment_requests ADD COLUMN IF NOT EXISTS clinic_id UUID;
                 END IF;
             END $$;
         `);
