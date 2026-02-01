@@ -136,6 +136,9 @@ async function ensureSchema(client, schemaName) {
                 IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'patients') THEN
                     ALTER TABLE patients ADD COLUMN IF NOT EXISTS clinic_id UUID;
                 END IF;
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'messages') THEN
+                    ALTER TABLE messages ADD COLUMN IF NOT EXISTS clinic_id UUID;
+                END IF;
             END $$;
         `);
     } catch (e) {

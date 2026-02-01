@@ -1093,7 +1093,7 @@ const VisitNote = () => {
 
     // Auto-save function (can be called with or without user action)
     const autoSave = useCallback(async (showToastMessage = false) => {
-        if (isSigned || isSaving || isAutoSavingRef.current) return;
+        if (isSigned || isRetracted || isSaving || isAutoSavingRef.current) return;
         if (!id) return; // Need patient ID
 
         isAutoSavingRef.current = true;
