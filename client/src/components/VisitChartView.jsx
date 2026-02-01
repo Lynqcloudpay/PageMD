@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown, Shield, RotateCcw } from 'lucide-react';
+import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown, Shield, RotateCcw, FileSignature } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
 import PatientChartPanel from './PatientChartPanel';
 import { useAuth } from '../context/AuthContext';
+import CosignModal from './CosignModal';
 
 const VisitChartView = ({ visitId, patientId, onClose }) => {
     const navigate = useNavigate();
@@ -45,6 +46,14 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         logo: null
     });
     const [showAuditModal, setShowAuditModal] = useState(false);
+    const [showCosignModal, setShowCosignModal] = useState(false);
+    const [attestationText, setAttestationText] = useState('');
+    const [authorshipModel, setAuthorshipModel] = useState('Addendum');
+    const [attestationMacros] = useState([
+        { id: macros.REVIEWED, name: 'Reviewed & Agreed', content: 'I have reviewed the trainee note and agree with the assessment and plan as documented.' },
+        { id: macros.PRESENT, name: 'Physically Present', content: 'I was physically present with the trainee for the key portions of this encounter and agree with the documentation.' },
+        { id: macros.EXAMINED, name: 'Personally Examined', content: 'I personally examined the patient and discussed the management plan with the trainee. I agree with their findings.' }
+    ]);
     const [noteHistory, setNoteHistory] = useState([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -413,14 +422,18 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
         }
     };
 
-    const handleCosign = async () => {
-        if (!window.confirm('Are you sure you want to cosign this note? This will finalize it as Signed.')) return;
+    const handleCosign = async (text, model) => {
         try {
-            await visitsAPI.cosign(activeVisitId);
+            await visitsAPI.cosign(activeVisitId, {
+                attestationText: text || attestationText,
+                authorshipModel: model || authorshipModel
+            });
+            setShowCosignModal(false);
+            setAttestationText('');
             await fetchData();
         } catch (error) {
             console.error('Error cosigning note:', error);
-            alert('Failed to cosign note');
+            alert('Failed to cosign note: ' + (error.response?.data?.error || error.message));
         }
     };
 
@@ -778,7 +791,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                             <RotateCcw className="w-3 h-3" /> Return to Draft
                                         </button>
                                         <button
-                                            onClick={handleCosign}
+                                            onClick={() => setShowCosignModal(true)}
                                             className="px-3 py-1 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full border border-blue-600 transition-all flex items-center gap-1 shadow-sm"
                                         >
                                             <CheckCircle2 className="w-3 h-3" /> Cosign & Finalize
@@ -1140,9 +1153,25 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                 <div className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border ${visit.status === 'preliminary' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                                                     <CheckCircle2 className="w-3 h-3" />
                                                     {visit.status === 'preliminary' ? 'Preliminary Electronic Signature' : 'Electronic Signature Verified'}
-                                                    {isSigned && `• ${format(new Date(isSigned), 'MM/dd/yyyy HH:mm')}`}
+                                                    {visit.note_signed_at && ` • ${format(new Date(visit.note_signed_at), 'MM/dd/yyyy HH:mm')}`}
                                                 </div>
-                                                <div className="text-[8px] font-medium text-slate-400 uppercase tracking-tight pl-1">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}</div>
+
+                                                {visit.cosigned_at && (
+                                                    <div className="mt-4 pt-4 border-t border-blue-100/50 space-y-3">
+                                                        <div className="text-[14px] font-bold italic text-slate-700 leading-relaxed pl-3 border-l-2 border-blue-200">
+                                                            "{visit.attestation_text || 'I have reviewed the documentation and concur with the assessment and plan.'}"
+                                                        </div>
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="text-[16px] font-bold italic text-blue-950 tracking-tight">/s/ {visit.cosigned_by_first_name} {visit.cosigned_by_last_name}, {visit.cosigner_role || 'Attending'}</div>
+                                                            <div className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100 w-fit">
+                                                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                                Cosignature Verified • {format(new Date(visit.cosigned_at), 'MM/dd/yyyy HH:mm')}
+                                                                <span className="text-emerald-300 ml-1">[{visit.authorship_model || 'Addendum'}]</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div className="text-[8px] font-medium text-slate-400 uppercase tracking-tight pl-1 mt-2">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}</div>
                                             </div>
                                             <div className="text-right flex flex-col items-end opacity-40">
                                                 <span className="text-lg font-bold italic text-blue-900 tracking-tighter">PageMD</span>
@@ -1327,6 +1356,21 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
             }
 
             {showBillingModal && <BillingModal patientId={patientId} isOpen={showBillingModal} onClose={() => setShowBillingModal(false)} />}
+
+            {showCosignModal && (
+                <CosignModal
+                    isOpen={showCosignModal}
+                    onClose={() => setShowCosignModal(false)}
+                    visitData={visit}
+                    authorshipModel={authorshipModel}
+                    setAuthorshipModel={setAuthorshipModel}
+                    attestationText={attestationText}
+                    setAttestationText={setAttestationText}
+                    macros={attestationMacros}
+                    onConfirm={handleCosign}
+                    isSaving={loading}
+                />
+            )}
 
             {/* Unified Patient Chart Panel */}
             <PatientChartPanel

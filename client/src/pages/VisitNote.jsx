@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import CosignModal from '../components/CosignModal';
 import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
@@ -211,107 +212,6 @@ const RetractionModal = ({ isOpen, onClose, onConfirm, data, setData }) => {
 };
 
 // Cosignature Modal for Attending Physicians
-const CosignModal = ({ isOpen, onClose, onConfirm, visitData, authorshipModel, setAuthorshipModel, attestationText, setAttestationText, macros, isSaving }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden border border-primary-100">
-                <div className="p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2.5 bg-primary-50 rounded-2xl">
-                            <Lock className="w-6 h-6 text-primary-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900 leading-tight">Attending Clinical Cosignature</h2>
-                            <p className="text-[11px] font-black text-primary-500 uppercase tracking-widest mt-0.5">Finalizing Preliminary Report</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="md:col-span-2 space-y-4">
-                            <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Attestation Text</label>
-                                <textarea
-                                    value={attestationText}
-                                    onChange={(e) => setAttestationText(e.target.value)}
-                                    placeholder="Enter attestation or select a macro..."
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all h-40 resize-none"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="authorship"
-                                        value="Addendum"
-                                        checked={authorshipModel === 'Addendum'}
-                                        onChange={(e) => setAuthorshipModel(e.target.value)}
-                                        className="text-primary-600 focus:ring-primary-500"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700">Addendum Model</span>
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="authorship"
-                                        value="Direct"
-                                        checked={authorshipModel === 'Direct'}
-                                        onChange={(e) => setAuthorshipModel(e.target.value)}
-                                        className="text-primary-600 focus:ring-primary-500"
-                                    />
-                                    <span className="text-sm font-medium text-gray-700">Direct Edit Model</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Quick Macros</h4>
-                            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
-                                {macros.length > 0 ? macros.map((macro) => (
-                                    <button
-                                        key={macro.id}
-                                        onClick={() => setAttestationText(macro.content)}
-                                        className="w-full text-left p-2.5 bg-white border border-gray-200 rounded-lg text-[11px] font-medium text-gray-600 hover:border-primary-400 hover:text-primary-600 transition-all hover:shadow-sm"
-                                    >
-                                        {macro.name}
-                                    </button>
-                                )) : (
-                                    <p className="text-[10px] text-gray-400 italic">No attestation macros found</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-8 flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                        <div className="flex items-center gap-3">
-                            <Sparkles className="w-5 h-5 text-amber-600" />
-                            <p className="text-[11px] text-amber-800 font-medium">
-                                By cosigning, you affirm that you have reviewed the trainee's note and are assuming responsibility for the clinical content.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-3 mt-8">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-100 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={() => onConfirm(attestationText, authorshipModel)}
-                            disabled={!attestationText.trim() || isSaving}
-                            className="flex-1 px-4 py-3 rounded-2xl text-sm font-bold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-all shadow-lg shadow-primary-100"
-                        >
-                            {isSaving ? 'Cosigning...' : 'Confirm Cosignature'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const SignPromptModal = ({ isOpen, onClose, onConfirm, attendings, selectedAttendingId, setSelectedAttendingId, isResident, isSaving }) => {
     if (!isOpen) return null;
@@ -2803,7 +2703,6 @@ const VisitNote = () => {
                                         }
                                     }}
                                     onFocus={() => setActiveTextArea('hpi')}
-                                    disabled={isLocked}
                                     rows={6}
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
                                     placeholder="Type .dotphrase to expand, or press F2 to find [] placeholders..."
@@ -2866,7 +2765,6 @@ const VisitNote = () => {
                                                     }
                                                     setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
                                                 }}
-                                                disabled={isLocked}
                                                 className="hidden"
                                             />
                                         </label>
@@ -2874,7 +2772,7 @@ const VisitNote = () => {
                                 </div>
                                 <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
                                     disabled={isLocked}
-                                    disabled={isLocked} rows={10}
+                                    rows={10}
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                     placeholder="ROS notes..."
                                 />
@@ -2925,7 +2823,6 @@ const VisitNote = () => {
                                                     }
                                                     setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
                                                 }}
-                                                disabled={isLocked}
                                                 className="hidden"
                                             />
                                         </label>
@@ -2933,7 +2830,7 @@ const VisitNote = () => {
                                 </div>
                                 <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
                                     disabled={isLocked}
-                                    disabled={isLocked} rows={10}
+                                    rows={10}
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
                                     placeholder="PE findings..."
                                 />
