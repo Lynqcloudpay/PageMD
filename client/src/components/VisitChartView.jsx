@@ -525,9 +525,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const providerName = `${visit.provider_first_name || ''} ${visit.provider_last_name || ''} `.trim() || 'Attending Physician';
     const patientAge = calculateAge(patient.dob);
     const patientDOB = patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : '';
-    const isSigned = visit?.status === 'signed';
-    const isPreliminary = visit?.status === 'preliminary';
-    const isRetracted = visit?.status === 'retracted';
+    const isSigned = (visit?.status || '').toLowerCase() === 'signed';
+    const isPreliminary = (visit?.status || '').toLowerCase() === 'preliminary';
+    const isRetracted = (visit?.status || '').toLowerCase() === 'retracted';
 
     return (
         <><style>{`
@@ -749,7 +749,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                                     {format(new Date(v.visit_date), 'MMM d, yyyy')}
                                                                 </span>
                                                                 <div className="flex items-center gap-1.5">
-                                                                    {v.status === 'retracted' && (
+                                                                    {(v.status || '').toLowerCase() === 'retracted' && (
                                                                         <span className="text-[8px] font-black text-white bg-red-500 px-1 rounded uppercase tracking-tighter">Retracted</span>
                                                                     )}
                                                                     {(v.locked || v.signed) && <Lock className="w-3 h-3 text-slate-300" />}
@@ -768,7 +768,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             </div>
 
                             <div className="flex items-center gap-2">
-                                {isSigned && visit.status === 'signed' && (
+                                {isSigned && (visit.status || '').toLowerCase() === 'signed' && (
                                     <>
                                         <button
                                             onClick={() => setShowAddendumModal(true)}
@@ -787,7 +787,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 )}
 
 
-                                {visit.status === 'preliminary' && user?.id === visit.assigned_attending_id && (
+                                {(visit.status || '').toLowerCase() === 'preliminary' && user?.id === visit.assigned_attending_id && (
                                     <>
                                         <button
                                             onClick={handleReject}
@@ -824,7 +824,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                         </div>
 
                         {/* PRELIMINARY BANNER - HIGH VISIBILITY POSITION */}
-                        {visit.status === 'preliminary' && (
+                        {(visit.status || '').toLowerCase() === 'preliminary' && (
                             <div className="bg-amber-500 text-white px-8 py-2 flex items-center justify-between shadow-md z-10 animate-fade-in no-print">
                                 <div className="flex items-center gap-3">
                                     <AlertCircle className="w-5 h-5" />
@@ -844,7 +844,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             <div className="max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-6 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
 
                                 {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
-                                {visit.status === 'retracted' && (
+                                {(visit.status || '').toLowerCase() === 'retracted' && (
                                     <>
                                         {/* Screen Watermark (Absolute to container) */}
                                         <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden no-print">
@@ -1155,9 +1155,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         <div className="flex justify-between items-end">
                                             <div className="space-y-1">
                                                 <div className="text-[16px] font-bold italic text-blue-900 tracking-tight">/s/ {providerName}</div>
-                                                <div className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border ${visit.status === 'preliminary' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                <div className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border ${(visit.status || '').toLowerCase() === 'preliminary' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                                                     <CheckCircle2 className="w-3 h-3" />
-                                                    {visit.status === 'preliminary' ? 'Preliminary Electronic Signature' : 'Electronic Signature Verified'}
+                                                    {(visit.status || '').toLowerCase() === 'preliminary' ? 'Preliminary Electronic Signature' : 'Electronic Signature Verified'}
                                                     {visit.note_signed_at && ` • ${format(new Date(visit.note_signed_at), 'MM/dd/yyyy HH:mm')}`}
                                                 </div>
 

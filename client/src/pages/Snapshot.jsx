@@ -771,8 +771,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             carePlan: carePlanMatch ? carePlanMatch[1].trim() : "",
                             followUp: followUpMatch ? followUpMatch[1].trim() : "",
                             chiefComplaint: chiefComplaint,
-                            signed: visit.status === 'signed',
-                            preliminary: visit.status === 'preliminary',
+                            signed: (visit.status || '').toLowerCase() === 'signed',
+                            preliminary: (visit.status || '').toLowerCase() === 'preliminary',
                             locked: visit.locked || !!visit.note_signed_by,
                             visitDate: visit.visit_date,
                             visit_date: visit.visit_date, // For ChartReviewModal
@@ -780,8 +780,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             fullNote: noteText,
                             vitals: visit.vitals, // For ChartReviewModal
                             visit_type: visit.visit_type, // For ChartReviewModal
-                            status: visit.status,
-                            retracted: visit.status === 'retracted',
+                            status: (visit.status || '').toLowerCase(),
+                            retracted: (visit.status || '').toLowerCase() === 'retracted',
                         };
                     });
 
