@@ -67,8 +67,8 @@ const CosignModal = ({
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        <div className="lg:col-span-7 space-y-6">
+                    <div className="flex flex-col lg:flex-row gap-8">
+                        <div className="flex-1 space-y-6 min-w-0">
                             <div>
                                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">Attestation Statement</label>
                                 <textarea
@@ -82,7 +82,7 @@ const CosignModal = ({
                             <div>
                                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Authorship & Documentation Model</label>
                                 <div className="flex flex-wrap gap-4">
-                                    <label className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${authorshipModel === 'Addendum' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/10' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                                    <label className={`flex-1 min-w-[140px] flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${authorshipModel === 'Addendum' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/10' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
                                         <input
                                             type="radio"
                                             name="authorship"
@@ -96,7 +96,7 @@ const CosignModal = ({
                                             <span className="text-[10px] text-slate-500">Append to note</span>
                                         </div>
                                     </label>
-                                    <label className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${authorshipModel === 'Direct' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/10' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                                    <label className={`flex-1 min-w-[140px] flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${authorshipModel === 'Direct' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/10' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
                                         <input
                                             type="radio"
                                             name="authorship"
@@ -115,7 +115,7 @@ const CosignModal = ({
                         </div>
 
                         {/* Macros Sidebar */}
-                        <div className="lg:col-span-5 flex flex-col h-full overflow-hidden">
+                        <div className="lg:w-[320px] shrink-0 flex flex-col h-full overflow-hidden">
                             <div className="bg-slate-50/80 rounded-3xl p-6 border border-slate-100 flex flex-col h-[500px]">
                                 <div className="flex items-center justify-between mb-6">
                                     <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -126,7 +126,7 @@ const CosignModal = ({
                                         onClick={() => setIsAddingMacro(!isAddingMacro)}
                                         className="text-[10px] font-black text-blue-600 uppercase tracking-widest px-3 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-all flex items-center gap-2"
                                     >
-                                        {isAddingMacro ? 'Cancel' : '+ Create New'}
+                                        {isAddingMacro ? 'Cancel' : '+ Create'}
                                     </button>
                                 </div>
 
@@ -134,13 +134,13 @@ const CosignModal = ({
                                     <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
                                         <input
                                             type="text"
-                                            placeholder="Template Name (e.g. Standard Attestation)"
+                                            placeholder="Template Name"
                                             value={newMacroName}
                                             onChange={(e) => setNewMacroName(e.target.value)}
                                             className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/5"
                                         />
                                         <textarea
-                                            placeholder="Template content..."
+                                            placeholder="Content..."
                                             value={newMacroContent}
                                             onChange={(e) => setNewMacroContent(e.target.value)}
                                             className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-blue-400 h-48 resize-none focus:ring-2 focus:ring-blue-500/5 shadow-inner"
@@ -178,8 +178,7 @@ const CosignModal = ({
                                                 <div className="p-4 bg-white rounded-3xl border border-slate-100 shadow-sm mb-4">
                                                     <Sparkles className="w-8 h-8 text-slate-200" />
                                                 </div>
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">No Templates Saved</p>
-                                                <p className="text-[9px] text-slate-300 font-bold mt-1">Create your first custom macro above</p>
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">No Templates</p>
                                             </div>
                                         )}
                                     </div>
