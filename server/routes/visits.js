@@ -533,8 +533,14 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
   try {
     const { id } = req.params;
     // Handle both noteDraft (camelCase from frontend) and note_draft (snake_case)
-    const { noteDraft, note_draft, vitals, assignedAttendingId } = req.body;
+    const { noteDraft, note_draft, vitals, assignedAttendingId, cts, ascvd, safetyPlan } = req.body;
     const noteDraftValue = noteDraft || note_draft;
+
+    // Normalize optional UUID/JSONB fields to null if they are empty strings to prevent DB errors
+    const normalizedAttendingId = (assignedAttendingId && assignedAttendingId.trim() !== '') ? assignedAttendingId : null;
+    const normalizedCts = (cts && (typeof cts === 'string' ? cts.trim() !== '' : true)) ? cts : null;
+    const normalizedAscvd = (ascvd && (typeof ascvd === 'string' ? ascvd.trim() !== '' : true)) ? ascvd : null;
+    const normalizedSafetyPlan = (safetyPlan && (typeof safetyPlan === 'string' ? safetyPlan.trim() !== '' : true)) ? safetyPlan : null;
 
     // Allow empty noteDraft (it might be an empty note)
     const noteDraftToSave = noteDraftValue || '';
@@ -709,7 +715,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus, assignedAttendingId, cts, ascvd, safetyPlan]
+          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
         );
       } else {
         result = await pool.query(
@@ -728,11 +734,10 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $2 
            RETURNING *`,
-          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash, assignedAttendingId, cts, ascvd, safetyPlan]
+          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
         );
       }
     } catch (dbError) {
-      const { cts, ascvd, safetyPlan } = req.body;
       if (dbError.code === '22P01' || dbError.code === '22P02') { // Handle invalid UUID format
         if (vitalsValue !== null) {
           result = await pool.query(
@@ -752,7 +757,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
                  updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId, cts, ascvd, safetyPlan]
+            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
           );
         } else {
           result = await pool.query(
@@ -771,7 +776,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
         updated_at = CURRENT_TIMESTAMP
              WHERE id::text = $2 OR CAST(id AS TEXT) = $2
              RETURNING *`,
-            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, assignedAttendingId, cts, ascvd, safetyPlan]
+            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
           );
         }
       } else {

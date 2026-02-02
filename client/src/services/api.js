@@ -626,6 +626,9 @@ export const patientFlagsAPI = {
 export const macrosAPI = {
   getAll: (params) => api.get('/macros', { params }),
   getAttestations: (traineeRole) => api.get('/macros', { params: { category: 'Attestation', traineeRole } }),
+  create: (data) => api.post('/macros', data),
+  update: (id, data) => api.put(`/macros/${id}`, data),
+  delete: (id) => api.delete(`/macros/${id}`),
 };
 
 export default api;

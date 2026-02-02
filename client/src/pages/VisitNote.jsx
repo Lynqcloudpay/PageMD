@@ -21,7 +21,7 @@ import OrderPicker from '../components/OrderPicker';
 import OrderDetailsModal from '../components/OrderDetailsModal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
-import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate, usersAPI } from '../services/api';
+import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate, usersAPI, macrosAPI } from '../services/api';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, SurgicalHistoryInput } from '../components/PAMFOSInputs';
@@ -387,6 +387,46 @@ const VisitNote = () => {
     const [attestationText, setAttestationText] = useState('');
     const [authorshipModel, setAuthorshipModel] = useState('Addendum');
     const [attestationMacros, setAttestationMacros] = useState([]);
+
+    const fetchMacros = useCallback(async () => {
+        try {
+            const response = await macrosAPI.getAll({ category: 'Attestation' });
+            setAttestationMacros(response.data || []);
+        } catch (error) {
+            console.error('Failed to fetch attestation macros:', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (showCosignModal) {
+            fetchMacros();
+        }
+    }, [showCosignModal, fetchMacros]);
+
+    const handleCreateMacro = async (macroData) => {
+        try {
+            await macrosAPI.create({
+                ...macroData,
+                category: 'Attestation'
+            });
+            await fetchMacros();
+            return true;
+        } catch (error) {
+            console.error('Failed to create macro:', error);
+            return false;
+        }
+    };
+
+    const handleDeleteMacro = async (macroId) => {
+        try {
+            await macrosAPI.delete(macroId);
+            await fetchMacros();
+            return true;
+        } catch (error) {
+            console.error('Failed to delete macro:', error);
+            return false;
+        }
+    };
     const [showSignPrompt, setShowSignPrompt] = useState(false);
     const [attendings, setAttendings] = useState([]);
     const [selectedAttendingId, setSelectedAttendingId] = useState('');
@@ -3941,6 +3981,8 @@ const VisitNote = () => {
                         onConfirm={() => {
                             handleCosign(attestationText, authorshipModel);
                         }}
+                        onCreateMacro={handleCreateMacro}
+                        onDeleteMacro={handleDeleteMacro}
                         isSaving={isSaving}
                     />
                 )}

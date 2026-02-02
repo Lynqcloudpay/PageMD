@@ -70,4 +70,25 @@ router.post('/', async (req, res) => {
     }
 });
 
+// Delete macro
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const result = await pool.query(
+            'DELETE FROM macros WHERE id = $1 AND user_id = $2 RETURNING *',
+            [id, req.user.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Macro not found or unauthorized' });
+        }
+
+        res.json({ message: 'Macro deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting macro:', error);
+        res.status(500).json({ error: 'Failed to delete macro' });
+    }
+});
+
 module.exports = router;
