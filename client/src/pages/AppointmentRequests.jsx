@@ -212,12 +212,20 @@ const AppointmentRequests = () => {
     // Filter requests
     const filteredRequests = requests.filter(req => {
         const isDeclined = req.subject?.includes('DECLINED') || req.status === 'declined';
+        const isCompleted = req.status === 'completed' || req.status === 'archived';
 
         // Category filtering
-        if (filterStatus === 'new' && isDeclined) return false;
-        if (filterStatus === 'declined' && !isDeclined) return false;
-        if (filterStatus === 'all' && req.status !== 'completed' && req.status !== 'archived') {
-            // In 'all' view, we usually show history, but let's keep it consistent
+        // Exclude completed/archived from new and declined tabs (only show in History)
+        if (filterStatus === 'new') {
+            if (isCompleted || isDeclined) return false;
+        }
+        if (filterStatus === 'declined') {
+            if (isCompleted) return false; // Hide closed/completed declined requests
+            if (!isDeclined) return false;
+        }
+        if (filterStatus === 'all') {
+            // History view - show only completed/archived items
+            if (!isCompleted) return false;
         }
 
         if (searchQuery) {
