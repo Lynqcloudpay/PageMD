@@ -525,9 +525,9 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
     const providerName = `${visit.provider_first_name || ''} ${visit.provider_last_name || ''} `.trim() || 'Attending Physician';
     const patientAge = calculateAge(patient.dob);
     const patientDOB = patient.dob ? format(new Date(patient.dob), 'MM/dd/yyyy') : '';
-    const isSigned = (visit?.status || '').toLowerCase() === 'signed';
-    const isPreliminary = (visit?.status || '').toLowerCase() === 'preliminary';
-    const isRetracted = (visit?.status || '').toLowerCase() === 'retracted';
+    const isSigned = (visit?.status || '').toLowerCase().trim() === 'signed';
+    const isPreliminary = (visit?.status || '').toLowerCase().trim() === 'preliminary';
+    const isRetracted = (visit?.status || '').toLowerCase().trim() === 'retracted';
 
     return (
         <><style>{`
@@ -749,7 +749,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                                                     {format(new Date(v.visit_date), 'MMM d, yyyy')}
                                                                 </span>
                                                                 <div className="flex items-center gap-1.5">
-                                                                    {(v.status || '').toLowerCase() === 'retracted' && (
+                                                                    {(v.status || '').toLowerCase().trim() === 'retracted' && (
                                                                         <span className="text-[8px] font-black text-white bg-red-500 px-1 rounded uppercase tracking-tighter">Retracted</span>
                                                                     )}
                                                                     {(v.locked || v.signed) && <Lock className="w-3 h-3 text-slate-300" />}
@@ -844,7 +844,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                             <div className="max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-6 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
 
                                 {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
-                                {(visit.status || '').toLowerCase() === 'retracted' && (
+                                {(visit.status || '').toLowerCase().trim() === 'retracted' && (
                                     <>
                                         {/* Screen Watermark (Absolute to container) */}
                                         <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden no-print">

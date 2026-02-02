@@ -771,8 +771,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             carePlan: carePlanMatch ? carePlanMatch[1].trim() : "",
                             followUp: followUpMatch ? followUpMatch[1].trim() : "",
                             chiefComplaint: chiefComplaint,
-                            signed: (visit.status || '').toLowerCase() === 'signed',
-                            preliminary: (visit.status || '').toLowerCase() === 'preliminary',
+                            signed: (visit.status || '').toLowerCase().trim() === 'signed',
+                            preliminary: (visit.status || '').toLowerCase().trim() === 'preliminary',
                             locked: visit.locked || !!visit.note_signed_by,
                             visitDate: visit.visit_date,
                             visit_date: visit.visit_date, // For ChartReviewModal
@@ -780,8 +780,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             fullNote: noteText,
                             vitals: visit.vitals, // For ChartReviewModal
                             visit_type: visit.visit_type, // For ChartReviewModal
-                            status: (visit.status || '').toLowerCase(),
-                            retracted: (visit.status || '').toLowerCase() === 'retracted',
+                            status: (visit.status || '').toLowerCase().trim(),
+                            retracted: (visit.status || '').toLowerCase().trim() === 'retracted',
                         };
                     });
 
@@ -1737,18 +1737,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 handleViewNote(note.id);
                                                             }}
                                                         >
-                                                            <div className={`absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all ${note.status === 'preliminary' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' :
-                                                                note.status === 'retracted' ? 'bg-red-500' :
+                                                            <div className={`absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all ${note.preliminary ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' :
+                                                                note.retracted ? 'bg-red-500' :
                                                                     (note.signed ? 'bg-emerald-400' : 'bg-slate-300')
                                                                 }`} />
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
-                                                                    {note.status === 'preliminary' ? (
+                                                                    {note.preliminary ? (
                                                                         <span className="text-[8px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Preliminary</span>
                                                                     ) : note.signed ? (
                                                                         <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wider">Signed</span>
-                                                                    ) : note.status === 'retracted' ? (
+                                                                    ) : note.retracted ? (
                                                                         <span className="text-[8px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 uppercase tracking-wider">Retracted</span>
                                                                     ) : (
                                                                         <span className="text-[8px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">Draft</span>
@@ -2564,7 +2564,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     chiefComplaint: note.chiefComplaint,
                     fullNote: note.fullNote,
                     signed: note.signed,
-                    preliminary: note.preliminary
+                    preliminary: note.preliminary,
+                    retracted: note.retracted,
+                    status: note.status
                 }))}
                 onViewVisit={(visitId) => {
                     setShowVisitFoldersModal(false);

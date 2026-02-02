@@ -912,14 +912,14 @@ const VisitNote = () => {
                     setVisitData(visit);
                     setCurrentVisitId(visit.id);
                     setVisitType(visit.visit_type || 'Office Visit');
-                    const isFinal = (visit.status || '').toLowerCase() === 'signed';
-                    const isPrelim = (visit.status || '').toLowerCase() === 'preliminary';
+                    const isFinal = (visit.status || '').toLowerCase().trim() === 'signed';
+                    const isPrelim = (visit.status || '').toLowerCase().trim() === 'preliminary';
 
                     setIsSigned(isFinal);
                     setIsPreliminary(isPrelim);
-                    setIsRetracted((visit.status || '').toLowerCase() === 'retracted');
+                    setIsRetracted((visit.status || '').toLowerCase().trim() === 'retracted');
 
-                    if ((visit.status || '').toLowerCase() === 'retracted') {
+                    if ((visit.status || '').toLowerCase().trim() === 'retracted') {
                         // Fetch retraction details if possible
                         visitsAPI.getRetraction(urlVisitId)
                             .then(res => setRetractionInfo(res.data))
@@ -1387,8 +1387,8 @@ const VisitNote = () => {
                 const response = await visitsAPI.get(visitId);
                 const visit = response.data;
                 setVisitData(visit);
-                setIsSigned((visit.status || '').toLowerCase() === 'signed' || visit.locked || !!visit.note_signed_by);
-                setIsPreliminary((visit.status || '').toLowerCase() === 'preliminary');
+                setIsSigned((visit.status || '').toLowerCase().trim() === 'signed' || visit.locked || !!visit.note_signed_by);
+                setIsPreliminary((visit.status || '').toLowerCase().trim() === 'preliminary');
                 // Ensure patient data is loaded
                 if (id && !patientData) {
                     try {
