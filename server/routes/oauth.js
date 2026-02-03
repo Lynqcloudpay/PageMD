@@ -326,11 +326,32 @@ router.post('/introspect', async (req, res) => {
     try {
         const { token } = req.body;
 
+        // Extract client credentials for authorization
+        let clientId, clientSecret;
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Basic ')) {
+            const base64Credentials = authHeader.split(' ')[1];
+            const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+            [clientId, clientSecret] = credentials.split(':');
+        } else {
+            clientId = req.body.client_id;
+            clientSecret = req.body.client_secret;
+        }
+
+        if (!clientId || !clientSecret) {
+            return res.status(401).json({ error: 'invalid_client', error_description: 'Client credentials required for introspection' });
+        }
+
+        // Validate client exists and is active
+        const validation = await oauthService.validateClient(clientId, clientSecret);
+        if (!validation.valid) {
+            return res.status(401).json({ error: validation.error, error_description: validation.error_description });
+        }
+
         if (!token) {
             return res.status(400).json({ error: 'invalid_request', error_description: 'token is required' });
         }
 
-        // TODO: Require client authentication for introspection
         const result = await oauthService.introspectToken(token);
         res.json(result);
 

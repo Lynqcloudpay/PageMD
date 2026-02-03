@@ -136,6 +136,10 @@ const resolveTenant = async (req, res, next) => {
 
     // Default Fallback (Legacy Support)
     if (!slug && !lookupSchema) {
+        if (process.env.NODE_ENV === 'production') {
+            console.error(`[Tenant] SECURITY ERROR: No slug or schema found for path: ${req.path}. Denying access in production.`);
+            return res.status(403).json({ error: 'Clinic access required.' });
+        }
         slug = 'test';
         console.log(`[Tenant] No slug or schema found, falling back to 'test' for path: ${req.path}`);
     } else {
