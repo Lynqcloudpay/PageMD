@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Building2, DollarSign, Ticket, LogOut, Users, Database,
     TrendingUp, AlertCircle, CheckCircle, Activity, Server, Settings,
-    BarChart3, LineChart, Zap, Shield, Globe, Cpu, ChevronRight, Clock
+    BarChart3, LineChart, Zap, Shield, Globe, Cpu, ChevronRight, Clock, Key
 } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
