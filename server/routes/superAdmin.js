@@ -1353,7 +1353,9 @@ router.get('/partners', verifySuperAdmin, async (req, res) => {
         params.push(parseInt(limit, 10), offset);
 
         const result = await pool.controlPool.query(query, params);
-        const countResult = await pool.controlPool.query('SELECT COUNT(*) FROM partners' + (status ? ' WHERE status = $1' : ''), status ? [status] : []);
+
+        const countQuery = status ? 'SELECT COUNT(*) FROM partners WHERE status = $1' : 'SELECT COUNT(*) FROM partners';
+        const countResult = await pool.controlPool.query(countQuery, status ? [status] : []);
 
         res.json({
             data: result.rows,
@@ -1364,8 +1366,8 @@ router.get('/partners', verifySuperAdmin, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('[SuperAdmin] Partners list error:', error);
-        res.status(500).json({ error: 'Failed to list partners' });
+        console.error('[SuperAdmin] GET /partners error:', error);
+        res.status(500).json({ error: 'Failed to list partners', details: error.message });
     }
 });
 
@@ -1441,6 +1443,83 @@ router.post('/apps/:id/rotate-secret', verifySuperAdmin, async (req, res) => {
 });
 
 /**
+ * DELETE /api/super/partners/:partnerId
+ */
+router.delete('/partners/:id', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Delete all apps for this partner first
+        await pool.controlPool.query('DELETE FROM apps WHERE partner_id = $1', [id]);
+        const result = await pool.controlPool.query('DELETE FROM partners WHERE id = $1 RETURNING *', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Partner not found' });
+        }
+
+        res.json({ message: 'Partner and associated apps deleted successfully' });
+    } catch (error) {
+        console.error('[SuperAdmin] DELETE /partners/:id error:', error);
+        res.status(500).json({ error: 'Failed to delete partner' });
+    }
+});
+
+/**
+ * PATCH /api/super/apps/:id
+ */
+router.patch('/apps/:id', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, status, env, allowed_scopes } = req.body;
+
+        const updates = [];
+        const values = [];
+        let pIndex = 1;
+
+        if (name) { updates.push(`name = $${pIndex++}`); values.push(name); }
+        if (description !== undefined) { updates.push(`description = $${pIndex++}`); values.push(description); }
+        if (status) { updates.push(`status = $${pIndex++}`); values.push(status); }
+        if (env) { updates.push(`env = $${pIndex++}`); values.push(env); }
+        if (allowed_scopes) { updates.push(`allowed_scopes = $${pIndex++}`); values.push(allowed_scopes); }
+
+        if (updates.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+        values.push(id);
+        const query = `UPDATE apps SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${pIndex} RETURNING *`;
+        const result = await pool.controlPool.query(query, values);
+
+        if (result.rows.length === 0) return res.status(404).json({ error: 'App not found' });
+        res.json({ data: result.rows[0] });
+    } catch (error) {
+        console.error('[SuperAdmin] PATCH /apps/:id error:', error);
+        res.status(500).json({ error: 'Failed to update app' });
+    }
+});
+
+/**
+ * DELETE /api/super/apps/:id
+ */
+router.delete('/apps/:id', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        // Clean up related tokens first (if not cascading)
+        await pool.controlPool.query('DELETE FROM oauth_access_tokens WHERE app_id = $1', [id]);
+        await pool.controlPool.query('DELETE FROM oauth_refresh_tokens WHERE app_id = $1', [id]);
+        await pool.controlPool.query('DELETE FROM oauth_authorization_codes WHERE app_id = $1', [id]);
+
+        const result = await pool.controlPool.query('DELETE FROM apps WHERE id = $1 RETURNING *', [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'App not found' });
+        }
+
+        res.json({ message: 'Application deleted successfully' });
+    } catch (error) {
+        console.error('[SuperAdmin] DELETE /apps/:id error:', error);
+        res.status(500).json({ error: 'Failed to delete application' });
+    }
+});
+
+/**
  * GET /api/super/rate-limit-policies
  */
 router.get('/rate-limit-policies', verifySuperAdmin, async (req, res) => {
@@ -1448,7 +1527,8 @@ router.get('/rate-limit-policies', verifySuperAdmin, async (req, res) => {
         const result = await pool.controlPool.query('SELECT * FROM rate_limit_policies ORDER BY per_day ASC');
         res.json({ data: result.rows });
     } catch (error) {
-        res.status(500).json({ error: 'Failed' });
+        console.error('[SuperAdmin] GET /rate-limit-policies error:', error);
+        res.status(500).json({ error: 'Failed to fetch policies', details: error.message });
     }
 });
 
@@ -1462,6 +1542,8 @@ router.get('/scopes', verifySuperAdmin, async (req, res) => {
             { scope: 'patient.write', description: 'Create and update patient records' },
             { scope: 'medication.read', description: 'Read medication data' },
             { scope: 'medication.write', description: 'Create prescriptions' },
+            { scope: 'appointment.read', description: 'Read appointments' },
+            { scope: 'appointment.write', description: 'Schedule appointments' },
             { scope: 'admin.apps.manage', description: 'Manage partner apps' }
         ]
     });

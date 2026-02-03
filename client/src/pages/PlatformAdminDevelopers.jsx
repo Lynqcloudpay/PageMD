@@ -101,6 +101,35 @@ const PlatformAdminDevelopers = () => {
         }
     };
 
+    const handleDeleteApp = async (appId) => {
+        if (!confirm('Are you sure you want to delete this application? This cannot be undone.')) return;
+        try {
+            await apiCall('DELETE', `/apps/${appId}`);
+            setApps(apps.filter(app => app.id !== appId));
+        } catch (error) {
+            console.error('Error deleting app:', error);
+            alert('Failed to delete application');
+        }
+    };
+
+    const handleDeletePartner = async (partnerId) => {
+        if (!confirm('Are you sure you want to delete this partner and ALL their applications? This is very destructive.')) return;
+        try {
+            await apiCall('DELETE', `/partners/${partnerId}`);
+            const remainingPartners = partners.filter(p => p.id !== partnerId);
+            setPartners(remainingPartners);
+            if (selectedPartner?.id === partnerId) {
+                const nextPartner = remainingPartners.length > 0 ? remainingPartners[0] : null;
+                setSelectedPartner(nextPartner);
+                if (nextPartner) handleSelectPartner(nextPartner);
+                else setApps([]);
+            }
+        } catch (error) {
+            console.error('Error deleting partner:', error);
+            alert('Failed to delete partner');
+        }
+    };
+
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
     };
@@ -156,8 +185,8 @@ const PlatformAdminDevelopers = () => {
                                         key={partner.id}
                                         onClick={() => handleSelectPartner(partner)}
                                         className={`w-full text-left px-4 py-4 flex items-center gap-3 transition-all border-b border-slate-100 last:border-0 ${selectedPartner?.id === partner.id
-                                                ? 'bg-blue-50 border-l-4 border-l-blue-500'
-                                                : 'hover:bg-slate-50 border-l-4 border-l-transparent'
+                                            ? 'bg-blue-50 border-l-4 border-l-blue-500'
+                                            : 'hover:bg-slate-50 border-l-4 border-l-transparent'
                                             }`}
                                     >
                                         <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 shrink-0">
@@ -187,6 +216,12 @@ const PlatformAdminDevelopers = () => {
                                             <p className="text-slate-500 text-sm mt-1">{selectedPartner.description || 'No description provided'}</p>
                                         </div>
                                         <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleDeletePartner(selectedPartner.id)}
+                                                className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-bold border border-red-100 hover:bg-red-100 transition-all flex items-center gap-1"
+                                            >
+                                                <Trash2 className="w-3 h-3" /> Delete Partner
+                                            </button>
                                             <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100">
                                                 {selectedPartner.status?.toUpperCase()}
                                             </span>
@@ -266,7 +301,11 @@ const PlatformAdminDevelopers = () => {
                                                         >
                                                             <RotateCw className="w-5 h-5" />
                                                         </button>
-                                                        <button className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+                                                        <button
+                                                            onClick={() => handleDeleteApp(app.id)}
+                                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                            title="Delete Application"
+                                                        >
                                                             <Trash2 className="w-5 h-5" />
                                                         </button>
                                                     </div>
