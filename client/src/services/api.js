@@ -631,5 +631,22 @@ export const macrosAPI = {
   delete: (id) => api.delete(`/macros/${id}`),
 };
 
+// Partner & API Management
+export const partnersAPI = {
+  getPartners: (params) => api.get('/admin/partners', { params }),
+  createPartner: (data) => api.post('/admin/partners', data),
+  getPartner: (id) => api.get(`/admin/partners/${id}`),
+  updatePartner: (id, data) => api.patch(`/admin/partners/${id}`, data),
+
+  getApps: (partnerId) => api.get(`/admin/partners/${partnerId}/apps`),
+  createApp: (partnerId, data) => api.post(`/admin/partners/${partnerId}/apps`, data),
+  getApp: (id) => api.get(`/admin/apps/${id}`),
+  updateApp: (id, data) => api.patch(`/admin/apps/${id}`, data),
+  rotateSecret: (id) => api.post(`/admin/apps/${id}/rotate-secret`),
+
+  getRateLimitPolicies: () => api.get('/admin/rate-limit-policies'),
+  getScopes: () => api.get('/admin/scopes'),
+};
+
 export default api;
 

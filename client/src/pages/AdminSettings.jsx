@@ -25,6 +25,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import ImageCropper from '../components/ImageCropper';
 import FlagTypesSettings from '../components/FlagTypesSettings';
+import DeveloperPortalTab from '../components/DeveloperPortalTab';
 
 const AdminSettings = () => {
   const { user } = useAuth();
@@ -160,6 +161,7 @@ const AdminSettings = () => {
     { id: 'flags', label: 'Patient Flags', icon: Shield },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'features', label: 'Features', icon: Zap },
+    { id: 'developer', label: 'Developer', icon: Key },
     { id: 'billing', label: 'Billing', icon: DollarSign },
   ];
 
@@ -278,6 +280,10 @@ const AdminSettings = () => {
               features={featureFlags}
               onToggle={handleToggleFeature}
             />
+          )}
+
+          {activeTab === 'developer' && (
+            <DeveloperPortalTab />
           )}
 
           {activeTab === 'billing' && (
