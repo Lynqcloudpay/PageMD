@@ -296,6 +296,15 @@ const PlatformAdminDashboard = () => {
                             </button>
 
                             <button
+                                onClick={() => handleNavigation('/platform-admin/developers')}
+                                className="group p-5 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100/50 border border-rose-200/60 hover:border-rose-300 hover:shadow-lg hover:shadow-rose-500/10 transition-all"
+                            >
+                                <Key className="w-10 h-10 text-rose-600 mb-3" />
+                                <p className="text-sm font-bold text-slate-800 mb-1">Developer Platform</p>
+                                <p className="text-[11px] text-slate-500">API keys & partners</p>
+                            </button>
+
+                            <button
                                 onClick={() => handleNavigation('/platform-admin/settings')}
                                 className="group p-5 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200/60 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-500/10 transition-all"
                             >

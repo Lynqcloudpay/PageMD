@@ -1321,4 +1321,150 @@ router.delete('/clinic-setup/:tenantId/fax/:faxId', verifySuperAdmin, async (req
     }
 });
 
+// ═══════════════════════════════════════════════════════════════
+// PARTNER & API MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+
+const oauthService = require('../services/oauthService');
+
+/**
+ * GET /api/super/partners
+ */
+router.get('/partners', verifySuperAdmin, async (req, res) => {
+    try {
+        const { status, page = 1, limit = 20 } = req.query;
+        const offset = (page - 1) * limit;
+
+        let query = `
+            SELECT p.*, 
+                   COUNT(a.id) as app_count,
+                   COUNT(a.id) FILTER (WHERE a.status = 'active') as active_app_count
+            FROM partners p
+            LEFT JOIN apps a ON p.id = a.partner_id
+        `;
+        const params = [];
+
+        if (status) {
+            query += ` WHERE p.status = $1`;
+            params.push(status);
+        }
+
+        query += ` GROUP BY p.id ORDER BY p.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        params.push(parseInt(limit, 10), offset);
+
+        const result = await pool.controlPool.query(query, params);
+        const countResult = await pool.controlPool.query('SELECT COUNT(*) FROM partners' + (status ? ' WHERE status = $1' : ''), status ? [status] : []);
+
+        res.json({
+            data: result.rows,
+            pagination: {
+                page: parseInt(page, 10),
+                limit: parseInt(limit, 10),
+                total: parseInt(countResult.rows[0].count, 10)
+            }
+        });
+    } catch (error) {
+        console.error('[SuperAdmin] Partners list error:', error);
+        res.status(500).json({ error: 'Failed to list partners' });
+    }
+});
+
+/**
+ * POST /api/super/partners
+ */
+router.post('/partners', verifySuperAdmin, async (req, res) => {
+    try {
+        const { name, contact_email, description } = req.body;
+        const result = await pool.controlPool.query(
+            `INSERT INTO partners (name, contact_email, description) VALUES ($1, $2, $3) RETURNING *`,
+            [name, contact_email, description]
+        );
+        res.status(201).json({ data: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to create partner' });
+    }
+});
+
+/**
+ * GET /api/super/partners/:id/apps
+ */
+router.get('/partners/:partnerId/apps', verifySuperAdmin, async (req, res) => {
+    try {
+        const { partnerId } = req.params;
+        const result = await pool.controlPool.query(
+            `SELECT a.*, rlp.name as rate_limit_policy
+             FROM apps a
+             LEFT JOIN rate_limit_policies rlp ON a.rate_limit_policy_id = rlp.id
+             WHERE a.partner_id = $1
+             ORDER BY a.created_at DESC`,
+            [partnerId]
+        );
+        res.json({ data: result.rows });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to list apps' });
+    }
+});
+
+/**
+ * POST /api/super/partners/:partnerId/apps
+ */
+router.post('/partners/:partnerId/apps', verifySuperAdmin, async (req, res) => {
+    try {
+        const { partnerId } = req.params;
+        const { name, description, env = 'sandbox', allowed_scopes = [] } = req.body;
+
+        const app = await oauthService.createApp(partnerId, {
+            name,
+            description,
+            env,
+            allowedScopes: allowed_scopes
+        });
+
+        res.status(201).json({ data: app });
+    } catch (error) {
+        console.error('[SuperAdmin] App creation error:', error);
+        res.status(500).json({ error: 'Failed to create app' });
+    }
+});
+
+/**
+ * POST /api/super/apps/:id/rotate-secret
+ */
+router.post('/apps/:id/rotate-secret', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await oauthService.rotateClientSecret(id);
+        res.json({ data: { client_secret: result.client_secret } });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to rotate secret' });
+    }
+});
+
+/**
+ * GET /api/super/rate-limit-policies
+ */
+router.get('/rate-limit-policies', verifySuperAdmin, async (req, res) => {
+    try {
+        const result = await pool.controlPool.query('SELECT * FROM rate_limit_policies ORDER BY per_day ASC');
+        res.json({ data: result.rows });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed' });
+    }
+});
+
+/**
+ * GET /api/super/scopes
+ */
+router.get('/scopes', verifySuperAdmin, async (req, res) => {
+    res.json({
+        data: [
+            { scope: 'patient.read', description: 'Read patient demographics and records' },
+            { scope: 'patient.write', description: 'Create and update patient records' },
+            { scope: 'medication.read', description: 'Read medication data' },
+            { scope: 'medication.write', description: 'Create prescriptions' },
+            { scope: 'admin.apps.manage', description: 'Manage partner apps' }
+        ]
+    });
+});
+
 module.exports = router;

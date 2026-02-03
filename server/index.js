@@ -22,7 +22,6 @@ const flagService = require('./services/flagService');
 
 // Commercial API Platform imports
 const oauthRoutes = require('./routes/oauth');
-const partnerRoutes = require('./routes/partners');
 const apiV1Router = require('./routes/api/v1');
 const { requestIdMiddleware } = require('./utils/apiResponse');
 
@@ -212,8 +211,7 @@ app.use('/fhir', fhirRoutes);
 app.use('/oauth', oauthRoutes);
 app.use('/.well-known', oauthRoutes);
 
-// Partner/App Administration (requires internal auth)
-app.use('/api/admin', partnerRoutes);
+// Partner/App Administration (moved to /api/super)
 
 // Versioned REST API v1 (OAuth + tenant aware)
 app.use('/api/v1', resolveTenant, apiV1Router);

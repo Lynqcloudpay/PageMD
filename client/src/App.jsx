@@ -55,6 +55,7 @@ const PlatformAdminClinicDetails = React.lazy(() => import('./pages/PlatformAdmi
 const PlatformAdminRoles = React.lazy(() => import('./pages/PlatformAdminRoles'));
 const PlatformAdminSupport = React.lazy(() => import('./pages/PlatformAdminSupport'));
 const PlatformAdminRevenue = React.lazy(() => import('./pages/PlatformAdminRevenue'));
+const PlatformAdminDevelopers = React.lazy(() => import('./pages/PlatformAdminDevelopers'));
 const ImpersonateHandler = React.lazy(() => import('./pages/ImpersonateHandler'));
 const SalesAdmin = React.lazy(() => import('./pages/SalesAdmin'));
 
@@ -159,6 +160,7 @@ function App() {
                                                         <Route path="/platform-admin/revenue" element={<PlatformAdminRevenue />} />
                                                         <Route path="/platform-admin/support" element={<PlatformAdminSupport />} />
                                                         <Route path="/platform-admin/team" element={<PlatformAdminTeam />} />
+                                                        <Route path="/platform-admin/developers" element={<PlatformAdminDevelopers />} />
                                                         {/* <Route path="/platform-admin/database" element={<PlatformAdminDatabase />} /> */}
                                                         <Route path="/platform-admin/settings" element={<PlatformAdminProfile />} />
                                                         {/* <Route path="/platform-admin/system" element={<PlatformAdminSystem />} /> */}
