@@ -20,6 +20,13 @@ const icd10HierarchyRoutes = require('./routes/icd10-hierarchy');
 const { resolveTenant } = require('./middleware/tenant');
 const flagService = require('./services/flagService');
 
+// Commercial API Platform imports
+const oauthRoutes = require('./routes/oauth');
+const partnerRoutes = require('./routes/partners');
+const apiV1Router = require('./routes/api/v1');
+const { requestIdMiddleware } = require('./utils/apiResponse');
+
+
 const app = express();
 // Enable trust proxy for Caddy (reverse proxy) to pass correct IP steps
 app.set('trust proxy', 1);
@@ -184,6 +191,32 @@ app.use('/api/icd10', icd10Routes);
 
 // FHIR R4 API endpoints - OpenEMR style
 app.use('/fhir', fhirRoutes);
+
+// ============================================================================
+// Commercial API Platform Routes
+// ============================================================================
+
+// OAuth 2.1 Authorization Server (no tenant context needed for discovery)
+app.use('/oauth', oauthRoutes);
+app.use('/.well-known', oauthRoutes);
+
+// Partner/App Administration (requires internal auth)
+app.use('/api/admin', partnerRoutes);
+
+// Versioned REST API v1 (OAuth + tenant aware)
+app.use('/api/v1', resolveTenant, apiV1Router);
+
+// Enhanced FHIR R4 API (OAuth + tenant aware)
+const fhirR4Routes = require('./routes/fhirR4');
+app.use('/fhir', resolveTenant, fhirR4Routes);
+
+// AI Gateway (OAuth + tenant aware)
+const aiGatewayRoutes = require('./routes/aiGateway');
+app.use('/ai/v1', resolveTenant, aiGatewayRoutes);
+
+// ============================================================================
+
+
 
 // Code lookup endpoints
 const codesRoutes = require('./routes/codes');
