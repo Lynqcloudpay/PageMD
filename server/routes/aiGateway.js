@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const { hybridAuth, requireScopes } = require('../middleware/oauthAuth');
 const { requestIdMiddleware, success, error } = require('../utils/apiResponse');
 const pool = require('../db');
+const { idempotency } = require('../middleware/idempotency');
 
 const router = express.Router();
 
@@ -115,7 +116,7 @@ async function callAI(systemPrompt, userPrompt, options = {}) {
  * Visit Summary
  * POST /ai/v1/visit-summary
  */
-router.post('/visit-summary', async (req, res) => {
+router.post('/visit-summary', idempotency, async (req, res) => {
     try {
         const { visit_id, include_assessment = true, include_plan = true } = req.body;
 

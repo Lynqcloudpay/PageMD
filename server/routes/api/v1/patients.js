@@ -8,6 +8,7 @@ const express = require('express');
 const { requireScopes } = require('../../../middleware/oauthAuth');
 const { success, successWithPagination, error, notFound, validationError, encodeCursor, parseUpdatedSince } = require('../../../utils/apiResponse');
 const pool = require('../../../db');
+const { idempotency } = require('../../../middleware/idempotency');
 
 const router = express.Router();
 
@@ -184,7 +185,7 @@ router.get('/:id', requireScopes('patient.read'), async (req, res) => {
  * POST /api/v1/patients
  * Requires: patient.write
  */
-router.post('/', requireScopes('patient.write'), async (req, res) => {
+router.post('/', requireScopes('patient.write'), idempotency, async (req, res) => {
     try {
         const {
             mrn, first_name, last_name, middle_name, suffix,

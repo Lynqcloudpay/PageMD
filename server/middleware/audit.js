@@ -26,7 +26,28 @@ const auditMiddleware = (req, res, next) => {
     req.auditContext = context;
     req.logAuditEvent = (event) => AuditService.logEvent(event, context);
 
-    // 4. Run Downstream with Context
+    // 4. Trace completion
+    res.on('finish', () => {
+        // Update context with finalized info
+        context.userId = req.user?.id || req.oauth?.userId || context.userId;
+        context.tenantId = req.clinic?.id || req.oauth?.tenantId || context.tenantId;
+        context.role = req.user?.role?.name || req.oauth?.role || context.role;
+
+        const duration = Date.now() - (req._startTime || Date.now());
+
+        AuditService.logEvent({
+            type: 'request_completed',
+            path: req.urlForLogging || req.originalUrl || req.url,
+            method: req.method,
+            status: res.statusCode,
+            duration,
+            requestId: req.requestId
+        }, context);
+    });
+
+    req._startTime = Date.now();
+
+    // 5. Run Downstream with Context
     return AuditService.runWithContext(context, next);
 };
 

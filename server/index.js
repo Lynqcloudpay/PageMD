@@ -82,6 +82,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Global Rate Limiter (General DoS Protection)
+const { rateLimit } = require('express-rate-limit');
+const globalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 1000, // 1000 requests per minute per IP
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.NODE_ENV === 'development' || !!req.headers['authorization']
+});
+app.use(globalLimiter);
+
 // HIPAA Security Middleware
 // NOTE: HTTPS is terminated at Caddy in production, so the API itself only needs to speak HTTP.
 // We disable internal HTTPS redirects here to avoid proxy loops and 502/503 errors.
@@ -353,14 +365,36 @@ app.get('/', (req, res) => {
 app.use((err, req, res, next) => {
   // Use safe logger to prevent PHI leakage
   const { safeLogger } = require('./middleware/phiRedaction');
+
+  const status = err.status || 500;
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // Log full error internally
   safeLogger.error('Unhandled error', {
     message: err.message,
-    status: err.status,
+    status: status,
     path: req.urlForLogging || req.url,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    requestId: req.requestId,
+    tenantId: req.clinic?.id || req.oauth?.tenantId,
+    stack: !isProd ? err.stack : undefined
   });
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal server error',
+
+  // Sanitize message for client
+  let clientMessage = err.message || 'Internal server error';
+
+  if (isProd) {
+    // Hide SQL and internal errors
+    if (status === 500 || /sql|database|table|column|relation/i.test(clientMessage)) {
+      clientMessage = 'An unexpected error occurred. Please contact support.';
+    }
+  }
+
+  res.status(status).json({
+    error: {
+      code: err.code || 'server_error',
+      message: clientMessage,
+      request_id: req.requestId
+    }
   });
 });
 

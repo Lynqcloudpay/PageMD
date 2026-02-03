@@ -31,6 +31,7 @@ function getOrCreateEntry(key, windowMs = 60000) {
         entry = {
             windowStart: now,
             count: 0,
+            burstWindowStart: now,
             burstCount: 0,
             hourlyWindowStart: Math.floor(now / 3600000) * 3600000,
             hourlyCount: 0,
@@ -83,16 +84,19 @@ const rateLimitByApp = async (req, res, next) => {
     entry.dailyCount++;
 
     // Check burst limit (short window, typically 1 second)
-    // For burst, we use a sliding window approximation
     const burstWindow = 1000; // 1 second
     const now = Date.now();
-    if (now - entry.windowStart < burstWindow && entry.burstCount > rateLimit.burst) {
-        return sendRateLimitResponse(res, 'burst', rateLimit.burst, 1);
+
+    // Reset burst window if expired
+    if (now - entry.burstWindowStart >= burstWindow) {
+        entry.burstWindowStart = now;
+        entry.burstCount = 0;
     }
 
-    // Reset burst counter every second
-    if (now - entry.windowStart >= burstWindow) {
-        entry.burstCount = 1;
+    entry.burstCount++;
+
+    if (entry.burstCount > rateLimit.burst) {
+        return sendRateLimitResponse(res, 'burst', rateLimit.burst, 1);
     }
 
     // Check sustained per-minute limit

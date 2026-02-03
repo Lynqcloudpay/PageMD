@@ -3,6 +3,7 @@ const pool = require('../db');
 const { authenticate } = require('../middleware/auth');
 const { requirePermission, audit } = require('../services/authorization');
 const { preparePatientForResponse } = require('../services/patientEncryptionService');
+const { idempotency } = require('../middleware/idempotency');
 
 const router = express.Router();
 router.use(authenticate);
@@ -216,7 +217,7 @@ router.get('/:id', requirePermission('schedule:view'), async (req, res) => {
 });
 
 // Create appointment
-router.post('/', requirePermission('schedule:edit'), async (req, res) => {
+router.post('/', requirePermission('schedule:edit'), idempotency, async (req, res) => {
   try {
     const { patientId, providerId, date, time, duration, type, notes, visitMethod } = req.body;
 

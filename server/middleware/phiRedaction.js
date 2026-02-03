@@ -20,10 +20,13 @@ const PHI_FIELDS = [
   'city', 'state', 'zip', 'zipCode', 'postalCode',
   'phone', 'phoneNumber', 'phone_number', 'mobile', 'homePhone',
   'email', 'emailAddress', 'email_address',
-  'insuranceId', 'insurance_id', 'insuranceNumber', 'insurance_number',
+  'insuranceId', 'insurance_id', 'insuranceNumber', 'insurance_number', 'policyNumber',
   'note', 'notes', 'noteDraft', 'note_draft', 'noteSigned', 'note_signed',
   'diagnosis', 'assessment', 'plan', 'hpi', 'ros', 'pe',
-  'medication', 'allergy', 'problem'
+  'medication', 'allergy', 'problem',
+  'creditCard', 'cardNumber', 'ccNumber', 'cvv',
+  'npi', 'npiNumber', 'dea', 'deaNumber',
+  'patientId', 'patient_id', 'userId', 'user_id'
 ];
 
 /**
@@ -37,10 +40,13 @@ const redactPHI = (obj, depth = 0) => {
   }
 
   if (typeof obj === 'string') {
-    // Check if string looks like PHI (SSN, MRN, etc.)
-    if (/^\d{3}-\d{2}-\d{4}$/.test(obj) || // SSN
-      /^\d{9}$/.test(obj) || // 9-digit number
-      /^[A-Z]{2}\d{7}$/.test(obj)) { // DEA number
+    // Check if string looks like PHI/PII
+    if (/^\d{3}-\d{2}-\d{4}$/.test(obj) || // SSN with dashes
+      /^\d{9}$/.test(obj) || // 9-digit number (SSN/MRN)
+      /^\d{10}$/.test(obj) || // 10-digit number (NPI)
+      /^[A-Z]{2}\d{7}$/i.test(obj) || // DEA number
+      /^\d{4}-\d{4}-\d{4}-\d{4}$/.test(obj) || // Credit Card
+      /^[A-Z][0-9]{8}$/i.test(obj)) { // PASSPORT
       return '[REDACTED]';
     }
     return obj;
