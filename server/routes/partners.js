@@ -19,7 +19,7 @@ router.use(authenticate);
  * List all partners (admin only)
  * GET /api/admin/partners
  */
-router.get('/partners', requireRole('admin', 'superadmin'), async (req, res) => {
+router.get('/partners', requireRole('superadmin'), async (req, res) => {
     try {
         const { status, page = 1, limit = 20 } = req.query;
         const offset = (page - 1) * limit;
@@ -67,7 +67,7 @@ router.get('/partners', requireRole('admin', 'superadmin'), async (req, res) => 
  * Create a new partner
  * POST /api/admin/partners
  */
-router.post('/partners', requireRole('admin', 'superadmin'), async (req, res) => {
+router.post('/partners', requireRole('superadmin'), async (req, res) => {
     try {
         const { name, contact_email, contact_name, company_url, description } = req.body;
 
@@ -98,7 +98,7 @@ router.post('/partners', requireRole('admin', 'superadmin'), async (req, res) =>
  * Get partner details
  * GET /api/admin/partners/:id
  */
-router.get('/partners/:id', requireRole('admin', 'superadmin'), async (req, res) => {
+router.get('/partners/:id', requireRole('superadmin'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -134,7 +134,7 @@ router.get('/partners/:id', requireRole('admin', 'superadmin'), async (req, res)
  * Update partner
  * PATCH /api/admin/partners/:id
  */
-router.patch('/partners/:id', requireRole('admin', 'superadmin'), async (req, res) => {
+router.patch('/partners/:id', requireRole('superadmin'), async (req, res) => {
     try {
         const { id } = req.params;
         const { name, contact_email, contact_name, company_url, description, status } = req.body;
@@ -177,7 +177,7 @@ router.patch('/partners/:id', requireRole('admin', 'superadmin'), async (req, re
  * Create an app for a partner
  * POST /api/admin/partners/:partnerId/apps
  */
-router.post('/partners/:partnerId/apps', requireRole('admin', 'superadmin'), async (req, res) => {
+router.post('/partners/:partnerId/apps', requireRole('superadmin'), async (req, res) => {
     try {
         const { partnerId } = req.params;
         const { name, description, env = 'sandbox', redirect_uris = [], allowed_scopes = [], tenant_id } = req.body;
@@ -223,7 +223,7 @@ router.post('/partners/:partnerId/apps', requireRole('admin', 'superadmin'), asy
  * List apps for a partner
  * GET /api/admin/partners/:partnerId/apps
  */
-router.get('/partners/:partnerId/apps', requireRole('admin', 'superadmin'), async (req, res) => {
+router.get('/partners/:partnerId/apps', requireRole('superadmin'), async (req, res) => {
     try {
         const { partnerId } = req.params;
 
@@ -250,7 +250,7 @@ router.get('/partners/:partnerId/apps', requireRole('admin', 'superadmin'), asyn
  * Get app details
  * GET /api/admin/apps/:id
  */
-router.get('/apps/:id', requireRole('admin', 'superadmin'), async (req, res) => {
+router.get('/apps/:id', requireRole('superadmin'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -282,7 +282,7 @@ router.get('/apps/:id', requireRole('admin', 'superadmin'), async (req, res) => 
  * Update app
  * PATCH /api/admin/apps/:id
  */
-router.patch('/apps/:id', requireRole('admin', 'superadmin'), async (req, res) => {
+router.patch('/apps/:id', requireRole('superadmin'), async (req, res) => {
     try {
         const { id } = req.params;
         const { name, description, status, redirect_uris, allowed_scopes, rate_limit_policy_id, tenant_id } = req.body;
@@ -326,7 +326,7 @@ router.patch('/apps/:id', requireRole('admin', 'superadmin'), async (req, res) =
  * Rotate app client secret
  * POST /api/admin/apps/:id/rotate-secret
  */
-router.post('/apps/:id/rotate-secret', requireRole('admin', 'superadmin'), async (req, res) => {
+router.post('/apps/:id/rotate-secret', requireRole('superadmin'), async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -352,7 +352,7 @@ router.post('/apps/:id/rotate-secret', requireRole('admin', 'superadmin'), async
  * List rate limit policies
  * GET /api/admin/rate-limit-policies
  */
-router.get('/rate-limit-policies', requireRole('admin', 'superadmin'), async (req, res) => {
+router.get('/rate-limit-policies', requireRole('superadmin'), async (req, res) => {
     try {
         const result = await pool.controlPool.query(
             'SELECT * FROM rate_limit_policies ORDER BY per_day ASC'
@@ -368,7 +368,7 @@ router.get('/rate-limit-policies', requireRole('admin', 'superadmin'), async (re
  * Get available scopes
  * GET /api/admin/scopes
  */
-router.get('/scopes', requireRole('admin', 'superadmin'), async (req, res) => {
+router.get('/scopes', requireRole('superadmin'), async (req, res) => {
     res.json({
         data: [
             { scope: 'patient.read', description: 'Read patient demographics and records' },

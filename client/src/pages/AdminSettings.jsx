@@ -161,9 +161,9 @@ const AdminSettings = () => {
     { id: 'flags', label: 'Patient Flags', icon: Shield },
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'features', label: 'Features', icon: Zap },
-    { id: 'developer', label: 'Developer', icon: Key },
+    { id: 'developer', label: 'Developer', icon: Key, superAdminOnly: true },
     { id: 'billing', label: 'Billing', icon: DollarSign },
-  ];
+  ].filter(tab => !tab.superAdminOnly || user?.role === 'superadmin');
 
   if (loading) {
     return (
