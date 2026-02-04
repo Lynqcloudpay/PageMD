@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Shield, Shield as ShieldCheck, FileText, AlertTriangle, Search, Filter, Download,
+    Shield, ShieldCheck, FileText, AlertTriangle, Search, Filter, Download,
     CheckCircle, Clock, User, Link as LinkIcon, ChevronRight,
-    Shield, Calendar, Activity, Lock, Eye, X
+    Calendar, Activity, Lock, Eye, X
 } from 'lucide-react';
 import { complianceAPI, usersAPI, patientsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
