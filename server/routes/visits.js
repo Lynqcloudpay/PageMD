@@ -1408,10 +1408,14 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
         // Also allow users with cosign permission (for Direct Edit workflow)
         const userCanCosign = req.user.permissions?.includes('notes:cosign') || req.user.role === 'admin';
         if (!userCanCosign) {
+          console.log('[Permission] User denied editing preliminary note:', req.user.id, req.user.role);
           return res.status(403).json({
             error: 'This note is in preliminary review and can only be edited by the supervising attending.',
             code: 'NOTE_PRELIMINARY_LOCKED'
           });
+        }
+        else {
+          console.log('[Permission] Allowed Direct Edit for user:', req.user.id);
         }
       }
       if (v.status === 'retracted') {
