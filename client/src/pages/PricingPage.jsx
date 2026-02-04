@@ -212,13 +212,13 @@ const PricingPage = () => {
                                     const percentage = (tier.rate / TIERS[0].rate) * 100;
                                     return (
                                         <div key={idx} className={`relative transition-all duration-500 ${isCurrent ? 'opacity-100' : 'opacity-40 grayscale'}`}>
-                                            <div className="flex justify-between items-center mb-2 text-[10px] font-black uppercase tracking-widest">
-                                                <span className={isCurrent ? 'text-blue-600' : 'text-gray-400'}>{tier.name}</span>
-                                                <span className={isCurrent ? 'text-blue-600' : 'text-gray-400'}>${tier.rate}/MO</span>
+                                            <div className="flex justify-between items-center mb-1 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                                <span>{tier.name}</span>
+                                                <span className={isCurrent ? 'text-blue-600' : ''}>${tier.rate}/MO</span>
                                             </div>
-                                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                            <div className="h-3 bg-white rounded-full overflow-hidden border border-gray-100 shadow-sm">
                                                 <div
-                                                    className={`h-full rounded-full transition-all duration-700 ease-out ${isCurrent ? 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-blue-200' : 'bg-gray-400'}`}
+                                                    className={`h-full transition-all duration-1000 ease-out rounded-full ${isCurrent ? 'bg-gradient-to-r from-blue-400 to-indigo-500' : 'bg-gray-200'}`}
                                                     style={{ width: `${percentage}%` }}
                                                 ></div>
                                             </div>
