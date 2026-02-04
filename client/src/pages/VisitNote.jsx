@@ -1480,6 +1480,25 @@ const VisitNote = () => {
             // For Direct Edit, we might not need an attestation text, or we can use a default one
             const finalAttestationText = isDirectEditing ? (attestationText || 'Note reviewed and edited directly.') : attestationText;
 
+            // *** CRITICAL: Save note changes BEFORE cosigning when in Direct Edit mode ***
+            if (isDirectEditing) {
+                const noteDraft = combineNoteSections();
+                const vitalsToSave = {
+                    bloodPressure: vitals.bloodPressure || null,
+                    pulse: vitals.pulse || null,
+                    temperature: vitals.temperature || null,
+                    respiratoryRate: vitals.respiratoryRate || null,
+                    oxygenSaturation: vitals.oxygenSaturation || null,
+                    weight: vitals.weight || null,
+                    height: vitals.height || null,
+                    bmi: vitals.bmi || null,
+                    weightUnit: vitals.weightUnit || 'lbs',
+                    heightUnit: vitals.heightUnit || 'in'
+                };
+                await visitsAPI.update(visitId, { noteDraft, vitals: vitalsToSave });
+                console.log('[Direct Edit] Saved note changes before cosigning');
+            }
+
             await visitsAPI.cosign(visitId, {
                 attestationText: finalAttestationText,
                 authorshipModel: finalAuthorshipModel
