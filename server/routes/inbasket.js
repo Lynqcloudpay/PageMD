@@ -431,7 +431,9 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
     // until someone marks it 'completed'.
 
 
-    // 8. Sync Portal Appointment Requests
+    // 8. [DISABLED] Sync Portal Appointment Requests
+    // Handled in a separate dedicated module now, not in the general inbox.
+    /*
     await client.query(`
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
@@ -457,6 +459,15 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
         updated_at = CURRENT_TIMESTAMP,
         status = 'new' -- Re-open if it was archived/read but now declined
     `, [tenantId]);
+    */
+
+    // CLEANUP: Remove any existing Portal Appointments from the inbox table 
+    // to avoid confusing the "Total" count
+    await client.query(`
+      DELETE FROM inbox_items 
+      WHERE type = 'portal_appointment' 
+        AND status != 'completed'
+    `);
 
   } finally {
     if (shouldRelease) {
@@ -558,8 +569,7 @@ router.get('/stats', async (req, res) => {
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'message') as msgs_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'task') as tasks_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'refill') as refills_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type IN ('portal_message', 'portal_appointment')) as portal_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'portal_appointment') as appt_req_count
+        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'portal_message') as portal_count
       FROM inbox_items
     `, [req.user.id]);
 

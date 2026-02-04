@@ -41,14 +41,6 @@ const INBOX_SECTIONS = [
         types: ['message', 'portal_message']
     },
     {
-        id: 'portal_requests',
-        label: 'Appt Requests',
-        icon: Calendar,
-        color: 'amber',
-        description: 'New portal booking requests',
-        types: ['portal_appointment']
-    },
-    {
         id: 'tasks',
         label: 'Tasks',
         icon: ListTodo,
