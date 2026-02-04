@@ -1405,10 +1405,14 @@ router.put('/:id', requirePermission('notes:edit'), async (req, res) => {
       }
 
       if (v.status === 'preliminary' && !userIsAttending) {
-        return res.status(403).json({
-          error: 'This note is in preliminary review and can only be edited by the supervising attending.',
-          code: 'NOTE_PRELIMINARY_LOCKED'
-        });
+        // Also allow users with cosign permission (for Direct Edit workflow)
+        const userCanCosign = req.user.permissions?.includes('notes:cosign') || req.user.role === 'admin';
+        if (!userCanCosign) {
+          return res.status(403).json({
+            error: 'This note is in preliminary review and can only be edited by the supervising attending.',
+            code: 'NOTE_PRELIMINARY_LOCKED'
+          });
+        }
       }
       if (v.status === 'retracted') {
         return res.status(403).json({ error: 'Retracted notes are immutable.' });
