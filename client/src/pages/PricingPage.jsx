@@ -131,18 +131,22 @@ const PricingPage = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-center">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Current Tier</p>
-                                    <p className="text-base font-bold text-gray-900">{currentTier.name}</p>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100 flex flex-col justify-center">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Tier</p>
+                                        <p className="text-lg font-bold text-gray-900">{currentTier.name}</p>
+                                    </div>
+                                    <div className="p-5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-100 flex flex-col justify-center transition-all">
+                                        <p className="text-[10px] font-bold text-blue-100 uppercase tracking-widest mb-1">Avg. Monthly / Seat</p>
+                                        <p className="text-3xl font-black">${avgCostPerSeat}</p>
+                                    </div>
                                 </div>
-                                <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100 flex flex-col justify-center">
-                                    <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">Avg. / Seat</p>
-                                    <p className="text-xl font-black text-blue-700">${avgCostPerSeat}</p>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-100 flex flex-col justify-center">
-                                    <p className="text-[10px] font-bold text-blue-100 uppercase mb-1">Total Monthly</p>
-                                    <p className="text-xl font-black">${totalMonthly.toLocaleString()}</p>
+                                <div className="p-5 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col justify-center items-center">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Total Monthly Investment</p>
+                                        <span className="text-xl font-black text-blue-600">${totalMonthly.toLocaleString()}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
