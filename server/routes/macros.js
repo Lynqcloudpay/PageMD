@@ -55,17 +55,27 @@ router.put('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
+        console.log('[Macros] Request received');
+        console.log('[Macros] User:', { id: req.user?.id, email: req.user?.email });
+        console.log('[Macros] Body:', req.body);
+
         const { name, content, category } = req.body;
-        console.log('[Macros] Creating macro:', { name, content, category, userId: req.user?.id });
+
+        if (!req.user || !req.user.id) {
+            console.error('[Macros] Missing user ID');
+            return res.status(401).json({ error: 'User not authenticated' });
+        }
 
         const result = await pool.query(
             'INSERT INTO macros (name, content, category, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
             [name, content, category, req.user.id]
         );
 
+        console.log('[Macros] Insert successful:', result.rows[0].id);
         res.status(201).json(result.rows[0]);
     } catch (error) {
-        console.error('Error creating macro:', error);
+        console.error('[Macros] Error creating macro:', error);
+        console.error('[Macros] Stack trace:', error.stack);
         res.status(500).json({
             error: 'Failed to create macro',
             details: error.message,

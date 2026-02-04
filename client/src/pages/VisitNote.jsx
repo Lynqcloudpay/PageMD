@@ -4,7 +4,7 @@ import CosignModal from '../components/CosignModal';
 import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
-    Activity, ActivitySquare, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
+    Activity, ActivitySquare, CheckCircle2, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
     DollarSign, Eye, Calendar, AlertCircle, Stethoscope, ScrollText, Copy, RotateCcw,
     PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves, FilePlus
 } from 'lucide-react';
