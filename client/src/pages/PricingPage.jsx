@@ -121,14 +121,18 @@ const PricingPage = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-                                    <p className="text-xs font-bold text-gray-500 uppercase mb-1">Current Tier</p>
-                                    <p className="text-xl font-bold text-gray-900">{currentTier.name}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="p-4 rounded-xl bg-gray-50 border border-gray-100 flex flex-col justify-center">
+                                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Current Tier</p>
+                                    <p className="text-base font-bold text-gray-900">{currentTier.name}</p>
                                 </div>
-                                <div className="p-6 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-100">
-                                    <p className="text-xs font-bold text-blue-100 uppercase mb-1">Avg. Monthly / Seat</p>
-                                    <p className="text-xl font-black">${avgCostPerSeat}</p>
+                                <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col justify-center">
+                                    <p className="text-[10px] font-bold text-blue-600 uppercase mb-1">Avg. / Seat</p>
+                                    <p className="text-xl font-black text-blue-700">${avgCostPerSeat}</p>
+                                </div>
+                                <div className="p-4 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-100 flex flex-col justify-center">
+                                    <p className="text-[10px] font-bold text-blue-100 uppercase mb-1">Total Monthly</p>
+                                    <p className="text-xl font-black">${totalMonthly.toLocaleString()}</p>
                                 </div>
                             </div>
                         </div>
