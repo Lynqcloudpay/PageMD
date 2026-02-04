@@ -81,11 +81,11 @@ const PricingPage = () => {
                         <Zap className="w-3.5 h-3.5" />
                         Introducing The Growth Engine
                     </div>
-                    <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight mb-8">
+                    <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tight mb-8">
                         $0 Implementation. <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Zero Barriers.</span>
                     </h1>
-                    <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
                         Most EMRs penalize your growth with flat-rate fees. <span className="font-bold text-gray-900">PageMD rewards it.</span>
                         As your practice expands, your average cost per doctor drops automatically.
                     </p>
@@ -99,13 +99,13 @@ const PricingPage = () => {
                         <div className="lg:w-1/2 p-8 lg:p-12 border-b lg:border-b-0 lg:border-r border-gray-100">
                             <div className="flex items-center gap-3 mb-8">
                                 <Calculator className="w-6 h-6 text-blue-600" />
-                                <h2 className="text-2xl font-bold">Calculate Your Savings</h2>
+                                <h2 className="text-xl font-bold">Calculate Your Savings</h2>
                             </div>
 
                             <div className="mb-12">
                                 <div className="flex justify-between items-end mb-4">
-                                    <label className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Number of Providers</label>
-                                    <span className="text-4xl font-black text-blue-600">{seats}</span>
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Number of Providers</label>
+                                    <span className="text-3xl font-black text-blue-600">{seats}</span>
                                 </div>
                                 <input
                                     type="range"
@@ -128,14 +128,14 @@ const PricingPage = () => {
                                 </div>
                                 <div className="p-6 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-100">
                                     <p className="text-xs font-bold text-blue-100 uppercase mb-1">Avg. Monthly / Seat</p>
-                                    <p className="text-2xl font-black">${avgCostPerSeat}</p>
+                                    <p className="text-xl font-black">${avgCostPerSeat}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div className="lg:w-1/2 bg-gradient-to-br from-blue-50 to-indigo-50 p-8 lg:p-12 flex flex-col justify-center">
                             <div className="mb-8">
-                                <h3 className="text-xl font-bold mb-4">The Volume Reward</h3>
+                                <h3 className="text-lg font-bold mb-4">The Volume Reward</h3>
                                 <div className="space-y-4">
                                     {TIERS.slice(0, 6).map((tier, idx) => {
                                         const isCurrent = currentTier.name === tier.name;
@@ -169,8 +169,8 @@ const PricingPage = () => {
             <section className="py-24 px-6 bg-gray-50">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl font-bold mb-4">Transparent Tiers</h2>
-                        <p className="text-gray-600">PageMD's declining rate structure incentive</p>
+                        <h2 className="text-2xl font-bold mb-4">Transparent Tiers</h2>
+                        <p className="text-sm text-gray-600">PageMD's declining rate structure incentive</p>
                     </div>
 
                     <div className="overflow-x-auto rounded-3xl border border-gray-200 shadow-xl bg-white">
@@ -194,7 +194,7 @@ const PricingPage = () => {
                                             {tier.label}
                                         </td>
                                         <td className="px-8 py-6 text-center border-x border-gray-50">
-                                            <span className="text-xl font-black text-gray-900">${tier.rate}.00</span>
+                                            <span className="text-lg font-black text-gray-900">${tier.rate}.00</span>
                                             <span className="text-xs text-gray-400 font-bold ml-1">/mo</span>
                                         </td>
                                         <td className="px-8 py-6 text-center">
@@ -239,9 +239,9 @@ const PricingPage = () => {
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center border border-gray-100">
                             <Shield className="w-8 h-8 text-indigo-600" />
                         </div>
-                        <h2 className="text-2xl font-bold text-indigo-900 mb-4">Onboarding & Compliance</h2>
-                        <p className="text-4xl font-black text-indigo-900 mb-6">$25.00</p>
-                        <p className="text-lg font-bold text-indigo-800 mb-2">Provider Credentialing Fee (One-time, per new prescriber)</p>
+                        <h2 className="text-xl font-bold text-indigo-900 mb-4">Onboarding & Compliance</h2>
+                        <p className="text-3xl font-black text-indigo-900 mb-6">$25.00</p>
+                        <p className="text-base font-bold text-indigo-800 mb-2">Provider Credentialing Fee (One-time, per new prescriber)</p>
                         <p className="text-gray-600 bg-white/50 backdrop-blur-sm p-4 rounded-xl text-sm italic border border-indigo-100">
                             "Includes secure identity verification required for Surescripts and DEA compliance."
                         </p>
@@ -253,7 +253,7 @@ const PricingPage = () => {
             <section className="py-24 px-6">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-16 underline decoration-blue-500 decoration-4 underline-offset-8">
-                        <h2 className="text-4xl font-black">Modern Clinical Infrastructure</h2>
+                        <h2 className="text-3xl font-black">Modern Clinical Infrastructure</h2>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-8">
@@ -262,8 +262,8 @@ const PricingPage = () => {
                                 <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
                                     <h.icon className="w-7 h-7" />
                                 </div>
-                                <h3 className="text-xl font-bold mb-3">{h.title}</h3>
-                                <p className="text-gray-600 leading-relaxed">{h.description}</p>
+                                <h3 className="text-lg font-bold mb-3">{h.title}</h3>
+                                <p className="text-sm text-gray-600 leading-relaxed">{h.description}</p>
                             </div>
                         ))}
                     </div>
@@ -277,10 +277,10 @@ const PricingPage = () => {
                 </div>
 
                 <div className="max-w-4xl mx-auto text-center relative z-10">
-                    <h2 className="text-4xl lg:text-5xl font-black text-white mb-8">
+                    <h2 className="text-3xl lg:text-4xl font-black text-white mb-8">
                         Ready to Transform Your Practice?
                     </h2>
-                    <p className="text-xl text-blue-100 mb-12">
+                    <p className="text-lg text-blue-100 mb-12">
                         Join the next generation of clinics choosing growth over penalty.
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-6">
