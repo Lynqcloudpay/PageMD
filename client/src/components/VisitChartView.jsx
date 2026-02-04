@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown, Shield, RotateCcw, FileSignature } from 'lucide-react';
+import { Activity, FileText, Printer, X, AlertCircle, CheckCircle2, User, Phone, Mail, MapPin, Building2, Stethoscope, CreditCard, Users, FilePlus, Receipt, DollarSign, Globe, Clock, Heart, Thermometer, Wind, Pill, Lock, ClipboardList, ChevronDown, Shield, RotateCcw, FileSignature, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { visitsAPI, patientsAPI, billingAPI, codesAPI, settingsAPI, documentsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
