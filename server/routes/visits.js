@@ -1003,7 +1003,15 @@ router.post('/:id/cosign', requirePermission('notes:cosign'), async (req, res) =
       });
     }
 
-    res.json(visit);
+    // Enrich response with cosigner details for display
+    const enrichedVisit = {
+      ...visit,
+      cosigned_by_first_name: req.user.first_name,
+      cosigned_by_last_name: req.user.last_name,
+      cosigner_role: req.user.role_name || req.user.role || 'Attending'
+    };
+
+    res.json(enrichedVisit);
   } catch (error) {
     console.error('Error cosigning visit:', error);
     res.status(500).json({ error: 'Failed to cosign visit' });
