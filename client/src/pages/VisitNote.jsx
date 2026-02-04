@@ -783,43 +783,43 @@ const VisitNote = () => {
         }).join('\n\n');
     };
 
-    const combineNoteSections = () => {
+    const combineNoteSections = (sourceData = noteData) => {
         const sections = [];
-        if (noteData.chiefComplaint) sections.push(`Chief Complaint: ${noteData.chiefComplaint}`);
-        if (noteData.hpi) sections.push(`HPI: ${noteData.hpi}`);
+        if (sourceData.chiefComplaint) sections.push(`Chief Complaint: ${sourceData.chiefComplaint}`);
+        if (sourceData.hpi) sections.push(`HPI: ${sourceData.hpi}`);
 
         // ROS - use rosNotes directly (ros checkbox object may not exist)
-        if (noteData.rosNotes) {
-            sections.push(`Review of Systems: ${noteData.rosNotes}`);
+        if (sourceData.rosNotes) {
+            sections.push(`Review of Systems: ${sourceData.rosNotes}`);
         }
 
         // PE - use peNotes directly (pe checkbox object may not exist)
-        if (noteData.peNotes) {
-            sections.push(`Physical Exam: ${noteData.peNotes}`);
+        if (sourceData.peNotes) {
+            sections.push(`Physical Exam: ${sourceData.peNotes}`);
         }
 
-        if (noteData.results) {
-            sections.push(`Results: ${noteData.results}`);
+        if (sourceData.results) {
+            sections.push(`Results: ${sourceData.results}`);
         }
 
-        if (noteData.assessment) sections.push(`Assessment: ${noteData.assessment}`);
+        if (sourceData.assessment) sections.push(`Assessment: ${sourceData.assessment}`);
 
         // Use structured plan if available, otherwise use plain plan text
         let planText = '';
-        if (noteData.planStructured && noteData.planStructured.length > 0) {
-            planText = formatPlanText(noteData.planStructured);
-        } else if (noteData.plan) {
-            planText = noteData.plan;
+        if (sourceData.planStructured && sourceData.planStructured.length > 0) {
+            planText = formatPlanText(sourceData.planStructured);
+        } else if (sourceData.plan) {
+            planText = sourceData.plan;
         }
         if (planText) sections.push(`Plan: ${planText}`);
 
         // New Phase 7 Sections
-        if (noteData.cts) sections.push(`Caregiver Training: ${noteData.cts}`);
-        if (noteData.ascvd) sections.push(`ASCVD Risk: ${noteData.ascvd}`);
-        if (noteData.safetyPlan) sections.push(`Safety Plan: ${noteData.safetyPlan}`);
+        if (sourceData.cts) sections.push(`Caregiver Training: ${sourceData.cts}`);
+        if (sourceData.ascvd) sections.push(`ASCVD Risk: ${sourceData.ascvd}`);
+        if (sourceData.safetyPlan) sections.push(`Safety Plan: ${sourceData.safetyPlan}`);
 
-        if (noteData.carePlan) sections.push(`Care Plan: ${noteData.carePlan}`);
-        if (noteData.followUp) sections.push(`Follow Up: ${noteData.followUp}`);
+        if (sourceData.carePlan) sections.push(`Care Plan: ${sourceData.carePlan}`);
+        if (sourceData.followUp) sections.push(`Follow Up: ${sourceData.followUp}`);
 
         const combined = sections.join('\n\n');
         console.log('Combined note sections length:', combined.length);
@@ -1482,8 +1482,19 @@ const VisitNote = () => {
 
             // *** CRITICAL: Save note changes BEFORE cosigning when in Direct Edit mode ***
             if (isDirectEditing) {
-                const noteDraft = combineNoteSections();
-                console.log('[Direct Edit] Saving note draft before cosign:', noteDraft); // DEBUG LOG
+                // Cancel any pending auto-save to prevent race conditions
+                if (autoSaveTimeoutRef.current) {
+                    clearTimeout(autoSaveTimeoutRef.current);
+                }
+
+                // Gather latest values directly from refs to ensure we catch the very latest edits
+                const latestData = { ...noteData };
+                if (hpiRef.current) latestData.hpi = hpiRef.current.value;
+                if (assessmentRef.current) latestData.assessment = assessmentRef.current.value;
+                if (planRef.current) latestData.plan = planRef.current.value;
+
+                const noteDraft = combineNoteSections(latestData);
+                console.log('[Direct Edit] Saving note draft before cosign (from refs):', noteDraft); // DEBUG LOG
 
                 const vitalsToSave = {
                     bloodPressure: vitals.bloodPressure || null,
