@@ -1483,6 +1483,8 @@ const VisitNote = () => {
             // *** CRITICAL: Save note changes BEFORE cosigning when in Direct Edit mode ***
             if (isDirectEditing) {
                 const noteDraft = combineNoteSections();
+                console.log('[Direct Edit] Saving note draft before cosign:', noteDraft); // DEBUG LOG
+
                 const vitalsToSave = {
                     bloodPressure: vitals.bloodPressure || null,
                     pulse: vitals.pulse || null,
@@ -1495,8 +1497,16 @@ const VisitNote = () => {
                     weightUnit: vitals.weightUnit || 'lbs',
                     heightUnit: vitals.heightUnit || 'in'
                 };
-                await visitsAPI.update(visitId, { noteDraft, vitals: vitalsToSave });
-                console.log('[Direct Edit] Saved note changes before cosigning');
+
+                try {
+                    await visitsAPI.update(visitId, { noteDraft, vitals: vitalsToSave });
+                    console.log('[Direct Edit] Updated note successfully');
+                } catch (updateErr) {
+                    console.error('[Direct Edit] Failed to save note changes:', updateErr);
+                    showToast('Warning: Could not save note edits. ' + (updateErr.response?.data?.error || updateErr.message), 'error');
+                    setIsSaving(false);
+                    return; // Stop cosign if save fails
+                }
             }
 
             await visitsAPI.cosign(visitId, {
