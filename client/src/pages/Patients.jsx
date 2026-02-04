@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Clock, Calendar, Plus, ChevronRight, ShieldAlert, AlertTriangle, Info, Shield } from 'lucide-react';
+import { Search, User, Clock, Calendar, Plus, ChevronRight, AlertTriangle, Info, Shield } from 'lucide-react';
 import { patientsAPI } from '../services/api';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';

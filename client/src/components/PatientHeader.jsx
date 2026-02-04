@@ -3,7 +3,7 @@ import {
     Phone, Mail, MapPin, Shield, Activity,
     AlertCircle, Edit2, Camera, X, Check,
     ExternalLink, Calendar, FileText, Upload, Pill, Receipt, Users,
-    Lock, User, ShieldAlert, FlaskConical, ChevronDown, MessageSquare
+    Lock, User, AlertTriangle, FlaskConical, ChevronDown, MessageSquare
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
@@ -511,7 +511,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                         }`}
                                 >
                                     {activeFlags.length > 0 ? (
-                                        <ShieldAlert size={11} className="text-rose-500" />
+                                        <AlertTriangle size={11} className="text-rose-500" />
                                     ) : (
                                         <Shield size={11} className="text-slate-400" />
                                     )}
@@ -662,7 +662,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                     {/* Emergency */}
                     <div className="bg-white p-2 px-4">
-                        <InfoItem icon={ShieldAlert} label="Emergency Contact" color="text-rose-500">
+                        <InfoItem icon={AlertTriangle} label="Emergency Contact" color="text-rose-500">
                             <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.emergency_contact_name || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
                             {patient.emergency_contact_phone && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.emergency_contact_phone}</div>}
                         </InfoItem>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     AlertTriangle, Shield, Activity, Info, X,
-    CheckCircle, Clock, Plus, Trash2, ShieldAlert, Shield as ShieldCheck
+    CheckCircle, Clock, Plus, Trash2, Shield as ShieldCheck
 } from 'lucide-react';
 import { patientFlagsAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -79,7 +79,7 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
 
     const getIcon = (severity) => {
         switch (severity) {
-            case 'critical': return <ShieldAlert size={14} />;
+            case 'critical': return <AlertTriangle size={14} />;
             case 'warn': return <AlertTriangle size={14} />;
             case 'info': return <Info size={14} />;
             default: return <Shield size={14} />;

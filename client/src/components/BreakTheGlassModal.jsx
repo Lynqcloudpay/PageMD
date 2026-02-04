@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Lock, Unlock, X, AlertTriangle, Shield as ShieldCheck } from 'lucide-react';
+import { Lock, Unlock, X, AlertTriangle, Shield as ShieldCheck } from 'lucide-react';
 import { privacyAPI } from '../services/api';
 
 const BreakTheGlassModal = () => {
@@ -78,7 +78,7 @@ const BreakTheGlassModal = () => {
                 {/* Header - Alert Style */}
                 <div className="bg-gradient-to-r from-red-600 to-red-500 p-8 text-center text-white relative">
                     <div className="absolute top-6 right-6 opacity-20">
-                        <ShieldAlert size={120} />
+                        <AlertTriangle size={120} />
                     </div>
                     <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-2xl mb-6 backdrop-blur-sm border border-white/30">
                         <Lock className="w-10 h-10 text-white" />

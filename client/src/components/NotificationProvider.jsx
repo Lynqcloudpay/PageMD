@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { X, CheckCircle, AlertCircle, AlertTriangle, ShieldAlert, Heart, Info } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, AlertTriangle, Heart, Info } from 'lucide-react';
 
 const NotificationContext = createContext();
 
@@ -49,7 +49,7 @@ export const NotificationProvider = ({ children }) => {
     }, []);
 
     const getIcon = (severity, type) => {
-        if (severity === 'critical') return <ShieldAlert className="text-red-600" size={24} />;
+        if (severity === 'critical') return <AlertTriangle className="text-red-600" size={24} />;
         if (severity === 'warn') return <AlertTriangle className="text-orange-500" size={24} />;
         if (type === 'success') return <CheckCircle className="text-emerald-500" size={24} />;
         if (type === 'error') return <AlertCircle className="text-red-500" size={24} />;

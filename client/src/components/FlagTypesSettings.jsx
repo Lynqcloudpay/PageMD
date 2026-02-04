@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Plus, Trash2, Edit2, Shield, ShieldAlert, AlertTriangle,
+    Plus, Trash2, Edit2, Shield, AlertTriangle,
     Info, Save, X, Check, Loader2, Settings2
 } from 'lucide-react';
 import { patientFlagsAPI } from '../services/api';
@@ -96,7 +96,7 @@ const FlagTypesSettings = () => {
 
     const getIcon = (severity) => {
         switch (severity) {
-            case 'critical': return <ShieldAlert className="text-red-600" size={18} />;
+            case 'critical': return <AlertTriangle className="text-red-600" size={18} />;
             case 'warn': return <AlertTriangle className="text-orange-500" size={18} />;
             default: return <Info className="text-blue-500" size={18} />;
         }
@@ -250,16 +250,16 @@ const FlagTypesSettings = () => {
                 {types.map(type => (
                     <div key={type.id} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
                         <div className={`absolute left-0 top-0 bottom-0 w-1 ${type.severity === 'critical' ? 'bg-red-500' :
-                                type.severity === 'warn' ? 'bg-orange-500' :
-                                    'bg-blue-500'
+                            type.severity === 'warn' ? 'bg-orange-500' :
+                                'bg-blue-500'
                             }`} />
 
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-2">
                                 {getIcon(type.severity)}
                                 <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${type.severity === 'critical' ? 'bg-red-50 text-red-600' :
-                                        type.severity === 'warn' ? 'bg-orange-50 text-orange-600' :
-                                            'bg-blue-50 text-blue-600'
+                                    type.severity === 'warn' ? 'bg-orange-50 text-orange-600' :
+                                        'bg-blue-50 text-blue-600'
                                     }`}>
                                     {type.severity}
                                 </span>

@@ -4,7 +4,7 @@ import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
     Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer, Scissors,
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
-    Shield, ShieldAlert, ShieldPlus, AlertTriangle, ShieldCheck, Check, Pin, Settings2, Calendar, Edit3, Trash
+    Shield, ShieldPlus, AlertTriangle, ShieldCheck, Check, Pin, Settings2, Calendar, Edit3, Trash
 } from 'lucide-react';
 import {
     visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api

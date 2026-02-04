@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Shield, Shield as ShieldCheck, FileText, AlertTriangle, Search, Filter, Download,
     CheckCircle, Clock, User, Link as LinkIcon, ChevronRight,
-    ShieldAlert, Calendar, Activity, Lock, Eye, X
+    Shield, Calendar, Activity, Lock, Eye, X
 } from 'lucide-react';
 import { complianceAPI, usersAPI, patientsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
@@ -338,7 +338,7 @@ const Compliance = () => {
                 {[
                     { label: 'Total Chart Access', value: stats.totalOpens, icon: Eye, color: 'blue' },
                     { label: 'Restricted Access', value: stats.restrictedOpens, icon: Lock, color: 'orange' },
-                    { label: 'Break Glass Events', value: stats.breakGlasses, icon: ShieldAlert, color: 'red' },
+                    { label: 'Break Glass Events', value: stats.breakGlasses, icon: AlertTriangle, color: 'red' },
                     { label: 'Pending Alerts', value: stats.activeAlerts, icon: AlertTriangle, color: 'amber' }
                 ].map((stat, i) => (
                     <div key={i} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
@@ -608,7 +608,7 @@ const Compliance = () => {
                                     </div>
                                     {log.break_glass_used && (
                                         <div className="px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[9px] font-black flex items-center gap-1 border border-red-100">
-                                            <ShieldAlert size={10} />
+                                            <AlertTriangle size={10} />
                                             BREAK GLASS
                                         </div>
                                     )}
@@ -691,7 +691,7 @@ const Compliance = () => {
                         <div className="p-6">
                             <div className="flex justify-between items-center mb-6">
                                 <div className="flex items-center gap-3">
-                                    <ShieldAlert className="text-orange-500 w-5 h-5" />
+                                    <AlertTriangle className="text-orange-500 w-5 h-5" />
                                     <h3 className="text-lg font-black text-slate-900">Restricted Patient Inventory</h3>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -820,7 +820,7 @@ const Compliance = () => {
                                                         <div key={log.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center gap-6">
                                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${log.break_glass_used ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
                                                                 }`}>
-                                                                {log.break_glass_used ? <ShieldAlert size={20} /> : <Eye size={20} />}
+                                                                {log.break_glass_used ? <AlertTriangle size={20} /> : <Eye size={20} />}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2 mb-1">
@@ -891,7 +891,7 @@ const Compliance = () => {
                                                 {
                                                     title: 'Break-Glass Hits',
                                                     desc: 'Emergency access events requiring immediate administrative review.',
-                                                    icon: ShieldAlert,
+                                                    icon: AlertTriangle,
                                                     color: 'red',
                                                     action: () => {
                                                         setReportView('break-glass');
