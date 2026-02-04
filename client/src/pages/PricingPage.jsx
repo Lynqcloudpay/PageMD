@@ -75,6 +75,32 @@ const PricingPage = () => {
     const incrementSeats = () => setSeats(prev => Math.min(prev + 1, 11));
     const decrementSeats = () => setSeats(prev => Math.max(prev - 1, 1));
 
+    const pricingEquation = useMemo(() => {
+        if (seats === 1) return `1 × $399`;
+
+        let parts = [];
+        let remaining = seats;
+
+        // Tier 1 (Solo) is always fully consumed if seats >= 1
+        parts.push(`1 × $399`);
+        remaining -= 1;
+
+        for (let i = 1; i < TIERS.length; i++) {
+            if (remaining <= 0) break;
+
+            const tier = TIERS[i];
+            const tierCapacity = tier.max - tier.min + 1;
+            const inThisTier = Math.min(remaining, tierCapacity);
+
+            if (inThisTier > 0) {
+                parts.push(`${inThisTier} × $${tier.rate}`);
+                remaining -= inThisTier;
+            }
+        }
+
+        return parts.join(" + ");
+    }, [seats]);
+
     return (
         <div className="min-h-screen bg-white font-inter text-gray-900 selection:bg-blue-100">
             <LandingNav />
@@ -126,47 +152,55 @@ const PricingPage = () => {
                                 </div>
                             </div>
 
-                            <div className="mb-10">
-                                <div className="flex justify-between items-center mb-6">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Practice Size</label>
-                                    <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
-                                        <button
-                                            onClick={decrementSeats}
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-blue-600 transition-all active:scale-95 disabled:opacity-20"
-                                            disabled={seats <= 1}
-                                        >
-                                            <ChevronLeft className="w-4 h-4" />
-                                        </button>
-                                        <div className="px-3 py-1 flex items-baseline gap-1 min-w-[60px] justify-center">
-                                            <span className={`text-2xl font-black tabular-nums transition-transform ${isAnimating ? 'scale-110 text-blue-600' : 'text-gray-900'}`}>
-                                                {seats === 11 ? '11' : seats}{seats === 11 && '+'}
-                                            </span>
-                                            <span className="text-[9px] font-black text-gray-400 uppercase">MD</span>
-                                        </div>
-                                        <button
-                                            onClick={incrementSeats}
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white hover:text-blue-600 transition-all active:scale-95 disabled:opacity-20"
-                                            disabled={seats >= 11}
-                                        >
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
+                            <div className="mb-12 relative z-10">
+                                <div className="flex justify-between items-end mb-6">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] leading-none">Practice Size</label>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className={`text-4xl font-black tracking-tighter tabular-nums transition-all duration-300 ${isAnimating ? 'text-blue-600' : 'text-gray-900'}`}>
+                                            {seats === 11 ? '11' : seats}{seats === 11 && '+'}
+                                        </span>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">MD</span>
                                     </div>
                                 </div>
 
-                                <input
-                                    type="range"
-                                    min="1"
-                                    max="11"
-                                    value={seats}
-                                    onChange={(e) => setSeats(parseInt(e.target.value))}
-                                    className="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                                />
-                                <div className="flex justify-between mt-4 text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">
-                                    <span>Solo</span>
-                                    <span>Scale</span>
-                                    <span>Enterprise</span>
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={decrementSeats}
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+                                        disabled={seats <= 1}
+                                        aria-label="Decrease providers"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+
+                                    <div className="relative flex-1 h-3">
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="11"
+                                            value={seats}
+                                            onChange={(e) => setSeats(parseInt(e.target.value))}
+                                            className="w-full h-full bg-gray-100 rounded-full appearance-none cursor-pointer accent-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={incrementSeats}
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+                                        disabled={seats >= 11}
+                                        aria-label="Increase providers"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <div className="flex justify-between mt-4 px-12 text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">
+                                    <span className={seats === 1 ? 'text-blue-500' : ''}>Solo</span>
+                                    <span className={seats > 1 && seats < 11 ? 'text-blue-500' : ''}>Scaling</span>
+                                    <span className={seats === 11 ? 'text-blue-500' : ''}>Enterprise</span>
                                 </div>
                             </div>
+
 
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
@@ -191,9 +225,9 @@ const PricingPage = () => {
                                         <p className="text-[10px] font-bold text-indigo-900/60 leading-relaxed italic">Add providers to see the discounted breakdown.</p>
                                     ) : (
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between text-xs font-bold text-indigo-900">
-                                                <span className="font-mono text-[10px] text-indigo-600/70">(1 × $399) + ({seats - 1} × ${currentTier.rate})</span>
-                                                <span className="text-lg font-black tabular-nums">${totalMonthly.toLocaleString()}</span>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold text-indigo-900 gap-2">
+                                                <span className="font-mono text-[10px] text-indigo-600/70 break-all leading-tight">{pricingEquation}</span>
+                                                <span className="text-lg font-black tabular-nums whitespace-nowrap">${totalMonthly.toLocaleString()}</span>
                                             </div>
                                             <div className="h-1.5 w-full bg-indigo-100/50 rounded-full overflow-hidden">
                                                 <div className="h-full bg-blue-600 transition-all duration-700" style={{ width: `${(avgCostPerSeat / 399) * 100}%` }}></div>
