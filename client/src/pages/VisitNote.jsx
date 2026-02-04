@@ -1471,6 +1471,12 @@ const VisitNote = () => {
             return;
         }
 
+        // UNIVERSAL DEBUG ALERT - Start of Function
+        // This alerts IMMEDIATELY upon clicking Finalize to verify state
+        if (isDirectEditing) {
+            alert(`DEBUG START COSING\nisDirectEditing: ${isDirectEditing}\nHPI Ref Value: ${hpiRef.current?.value || 'null'}\nIf HPI is 'null', we are not reading the text box correctly.`);
+        }
+
         if (isSaving) return;
         setIsSaving(true);
         try {
@@ -1480,8 +1486,11 @@ const VisitNote = () => {
             // For Direct Edit, we might not need an attestation text, or we can use a default one
             const finalAttestationText = isDirectEditing ? (attestationText || 'Note reviewed and edited directly.') : attestationText;
 
-            // *** CRITICAL: Save note changes BEFORE cosigning when in Direct Edit mode ***
-            if (isDirectEditing) {
+            // *** CRITICAL: Universal Save Logic ***
+            // Check refs as backup: even if isDirectEditing is false, if we have active content in refs, we must save it.
+            const hasActiveRefs = !!(hpiRef.current?.value || assessmentRef.current?.value || planRef.current?.value);
+
+            if (isDirectEditing || hasActiveRefs) {
                 // Cancel any pending auto-save to prevent race conditions
                 if (autoSaveTimeoutRef.current) {
                     clearTimeout(autoSaveTimeoutRef.current);
@@ -1496,8 +1505,7 @@ const VisitNote = () => {
                 const noteDraft = combineNoteSections(latestData);
                 console.log('[Direct Edit] Saving note draft before cosign (from refs):', noteDraft); // DEBUG LOG
 
-                // DEBUG ALERT: Remove after fixing
-                alert(`DEBUG ALERT (Direct Edit Saving):\n------------------\nHPI Content: ${latestData.hpi}\nNote Draft Length: ${noteDraft.length}\n------------------\nIf you see your edits here, the frontend is capturing them correctly.`);
+                // DEBUG ALERT REMOVED (Moved to top)
 
                 const vitalsToSave = {
                     bloodPressure: vitals.bloodPressure || null,
@@ -2548,7 +2556,7 @@ const VisitNote = () => {
                                     </button>
                                 </>
                             )}
-                            {isPreliminary && (user?.role_name === 'Physician' || user?.role_name === 'CLINICIAN' || user?.role_name === 'Admin' || user?.role === 'admin' || user?.role === 'clinician') && (
+                            {isPreliminary && !isDirectEditing && (user?.role_name === 'Physician' || user?.role_name === 'CLINICIAN' || user?.role_name === 'Admin' || user?.role === 'admin' || user?.role === 'clinician') && (
                                 <button
                                     onClick={() => setShowCosignModal(true)}
                                     className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium"
