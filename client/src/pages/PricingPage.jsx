@@ -323,27 +323,53 @@ const PricingPage = () => {
                         </table>
                     </div>
 
-                    <div className="mt-12 p-10 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-2xl shadow-blue-200 lg:flex items-center justify-between">
-                        <div className="mb-8 lg:mb-0">
-                            <h3 className="text-xl font-bold mb-4">The Complete Experience</h3>
-                            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-                                {FEATURES.map((feature, i) => (
-                                    <div key={i} className="flex items-center gap-3 text-sm font-medium text-blue-50">
-                                        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                                            <Check className="w-3 h-3 text-white" />
+                    <div className="mt-12 group p-10 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-2xl shadow-blue-200 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+
+                        <div className="relative z-10 lg:flex items-start justify-between gap-12">
+                            <div className="lg:w-1/2 mb-8 lg:mb-0">
+                                <span className="inline-block px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 shadow-lg">
+                                    No "Half EMRs"
+                                </span>
+                                <h3 className="text-3xl font-black mb-6 leading-tight">
+                                    Every Plan Includes <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white">Everything.</span>
+                                </h3>
+                                <p className="text-blue-100/90 text-sm leading-relaxed mb-8 font-medium">
+                                    Other platforms force you to choose between "Basic" and "Pro" versions, often stripping away essential tools like <span className="text-white font-bold decoration-blue-300 underline decoration-2 underline-offset-2">Telehealth</span> or <span className="text-white font-bold decoration-blue-300 underline decoration-2 underline-offset-2">ePrescribe</span> to make you pay more.
+                                    <br /><br />
+                                    <span className="text-white font-bold">We don't play that game.</span> Whether you're a solo practitioner or a large enterprise, you get the full power of PageMD — no hidden upgrades, no missing features.
+                                </p>
+                                <button
+                                    onClick={() => navigate('/contact')}
+                                    className="w-full sm:w-auto px-8 py-4 bg-white text-blue-600 font-black rounded-xl hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95 text-xs uppercase tracking-widest"
+                                >
+                                    Get Started Now
+                                    <ArrowRight className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="lg:w-1/2 bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/10 shadow-inner">
+                                <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-6 text-blue-200 border-b border-white/10 pb-4">
+                                    Unrestricted Access To:
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                                    {FEATURES.map((feature, i) => (
+                                        <div key={i} className="flex items-center gap-3">
+                                            <div className="w-6 h-6 rounded-full bg-green-400 flex items-center justify-center shadow-lg shadow-green-900/20 shrink-0">
+                                                <Check className="w-3.5 h-3.5 text-green-900 stroke-[3]" />
+                                            </div>
+                                            <span className="text-sm font-bold text-white tracking-tight">{feature}</span>
                                         </div>
-                                        {feature}
+                                    ))}
+                                    <div className="flex items-center gap-3 opacity-80">
+                                        <div className="w-6 h-6 rounded-full bg-blue-400/30 flex items-center justify-center shrink-0">
+                                            <div className="w-1.5 h-1.5 bg-blue-200 rounded-full"></div>
+                                        </div>
+                                        <span className="text-sm font-medium text-blue-100 italic">And everything else...</span>
                                     </div>
-                                ))}
+                                </div>
                             </div>
                         </div>
-                        <button
-                            onClick={() => navigate('/contact')}
-                            className="w-full lg:w-auto px-12 py-5 bg-white text-blue-600 font-black rounded-2xl hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
-                        >
-                            Get Started Now
-                            <ArrowRight className="w-5 h-5" />
-                        </button>
                     </div>
                 </div>
             </section>
