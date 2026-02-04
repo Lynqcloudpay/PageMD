@@ -141,101 +141,124 @@ const PricingPage = () => {
             {/* Savings Slider Section */}
             <section className="pb-24 px-6 overflow-hidden">
                 <div className="max-w-6xl mx-auto">
-                    <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100/50 border border-blue-50 overflow-hidden transition-all">
-                        <div className="lg:w-full p-8 lg:p-14 bg-white relative">
-                            <div className="max-w-3xl mx-auto">
-                                <div className="flex items-center justify-between mb-10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
-                                            <Calculator className="w-5 h-5 text-white" />
-                                        </div>
-                                        <h2 className="text-lg font-bold">Interactive Cost Explorer</h2>
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100/50 border border-blue-50 overflow-hidden lg:flex items-stretch transition-all">
+                        <div className="lg:w-1/2 p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-gray-100 relative bg-white">
+                            <div className="flex items-center justify-between mb-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
+                                        <Calculator className="w-5 h-5 text-white" />
+                                    </div>
+                                    <h2 className="text-lg font-bold">Interactive Cost Explorer</h2>
+                                </div>
+                            </div>
+
+                            <div className="mb-12 relative z-10">
+                                <div className="flex justify-between items-end mb-6">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] leading-none">Practice Size</label>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className={`text-4xl font-black tracking-tighter tabular-nums transition-all duration-300 ${isAnimating ? 'text-blue-600' : 'text-gray-900'}`}>
+                                            {seats === 11 ? '11' : seats}{seats === 11 && '+'}
+                                        </span>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">MD</span>
                                     </div>
                                 </div>
 
-                                <div className="mb-12 relative z-10">
-                                    <div className="flex justify-between items-end mb-6">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] leading-none">Practice Size</label>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className={`text-4xl font-black tracking-tighter tabular-nums transition-all duration-300 ${isAnimating ? 'text-blue-600' : 'text-gray-900'}`}>
-                                                {seats === 11 ? '11' : seats}{seats === 11 && '+'}
-                                            </span>
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">MD</span>
-                                        </div>
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={decrementSeats}
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+                                        disabled={seats <= 1}
+                                        aria-label="Decrease providers"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+
+                                    <div className="relative flex-1 h-3">
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="11"
+                                            value={seats}
+                                            onChange={(e) => setSeats(parseInt(e.target.value))}
+                                            className="w-full h-full bg-gray-100 rounded-full appearance-none cursor-pointer accent-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        />
                                     </div>
 
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={decrementSeats}
-                                            className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
-                                            disabled={seats <= 1}
-                                            aria-label="Decrease providers"
-                                        >
-                                            <ChevronLeft className="w-4 h-4" />
-                                        </button>
+                                    <button
+                                        onClick={incrementSeats}
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+                                        disabled={seats >= 11}
+                                        aria-label="Increase providers"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
 
-                                        <div className="relative flex-1 h-3">
-                                            <input
-                                                type="range"
-                                                min="1"
-                                                max="11"
-                                                value={seats}
-                                                onChange={(e) => setSeats(parseInt(e.target.value))}
-                                                className="w-full h-full bg-gray-100 rounded-full appearance-none cursor-pointer accent-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                            />
-                                        </div>
+                                <div className="flex justify-between mt-4 px-12 text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">
+                                    <span className={seats === 1 ? 'text-blue-500' : ''}>Solo</span>
+                                    <span className={seats > 1 && seats < 11 ? 'text-blue-500' : ''}>Scaling</span>
+                                    <span className={seats === 11 ? 'text-blue-500' : ''}>Enterprise</span>
+                                </div>
+                            </div>
 
-                                        <button
-                                            onClick={incrementSeats}
-                                            className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
-                                            disabled={seats >= 11}
-                                            aria-label="Increase providers"
-                                        >
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
+
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100">
+                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Tier</p>
+                                        <p className="text-base font-bold text-gray-900">{currentTier.name}</p>
                                     </div>
-
-                                    <div className="flex justify-between mt-4 px-12 text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">
-                                        <span className={seats === 1 ? 'text-blue-500' : ''}>Solo</span>
-                                        <span className={seats > 1 && seats < 11 ? 'text-blue-500' : ''}>Scaling</span>
-                                        <span className={seats === 11 ? 'text-blue-500' : ''}>Enterprise</span>
+                                    <div className="p-5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-100 transition-transform active:scale-[0.98]">
+                                        <p className="text-[9px] font-bold text-blue-100 uppercase tracking-widest mb-1">Avg. Monthly / Doctor</p>
+                                        <p className={`text-2xl font-black tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${avgCostPerSeat}</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100">
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Tier</p>
-                                            <p className="text-base font-bold text-gray-900">{currentTier.name}</p>
+                                <div className="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center">
+                                            <TrendingDown className="w-3.5 h-3.5 text-white" />
                                         </div>
-                                        <div className="p-5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-100 transition-transform active:scale-[0.98]">
-                                            <p className="text-[9px] font-bold text-blue-100 uppercase tracking-widest mb-1">Avg. Monthly / Doctor</p>
-                                            <p className={`text-2xl font-black tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${avgCostPerSeat}</p>
-                                        </div>
+                                        <h3 className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Staircase Calculation</h3>
                                     </div>
-
-                                    <div className="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center">
-                                                <TrendingDown className="w-3.5 h-3.5 text-white" />
+                                    {seats === 1 ? (
+                                        <p className="text-[10px] font-bold text-indigo-900/60 leading-relaxed italic">Add providers to see the discounted breakdown.</p>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold text-indigo-900 gap-2">
+                                                <span className="font-mono text-[10px] text-indigo-600/70 break-all leading-tight">{pricingEquation}</span>
+                                                <span className="text-lg font-black tabular-nums whitespace-nowrap">${totalMonthly.toLocaleString()}</span>
                                             </div>
-                                            <h3 className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Staircase Calculation</h3>
-                                        </div>
-                                        {seats === 1 ? (
-                                            <p className="text-[10px] font-bold text-indigo-900/60 leading-relaxed italic">Add providers to see the discounted breakdown.</p>
-                                        ) : (
-                                            <div className="space-y-2">
-                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold text-indigo-900 gap-2">
-                                                    <span className="font-mono text-[10px] text-indigo-600/70 break-all leading-tight">{pricingEquation}</span>
-                                                    <span className="text-lg font-black tabular-nums whitespace-nowrap">${totalMonthly.toLocaleString()}</span>
-                                                </div>
-                                                <div className="h-1.5 w-full bg-indigo-100/50 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-blue-600 transition-all duration-700" style={{ width: `${(avgCostPerSeat / 399) * 100}%` }}></div>
-                                                </div>
+                                            <div className="h-1.5 w-full bg-indigo-100/50 rounded-full overflow-hidden">
+                                                <div className="h-full bg-blue-600 transition-all duration-700" style={{ width: `${(avgCostPerSeat / 399) * 100}%` }}></div>
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="lg:w-1/2 bg-gray-50/50 p-8 lg:p-14 flex flex-col justify-center border-l border-gray-100">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-10">The Reward Curve</h3>
+                            <div className="space-y-6">
+                                {TIERS.slice(0, 6).map((tier, idx) => {
+                                    const isCurrent = currentTier.name === tier.name;
+                                    const percentage = (tier.rate / TIERS[0].rate) * 100;
+                                    return (
+                                        <div key={idx} className={`relative transition-all duration-500 ${isCurrent ? 'opacity-100' : 'opacity-40 grayscale'}`}>
+                                            <div className="flex justify-between items-center mb-1 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                                <span>{tier.name}</span>
+                                                <span className={isCurrent ? 'text-blue-600' : ''}>${tier.rate}/MO</span>
+                                            </div>
+                                            <div className="h-3 bg-white rounded-full overflow-hidden border border-gray-100 shadow-sm">
+                                                <div
+                                                    className={`h-full transition-all duration-1000 ease-out rounded-full ${isCurrent ? 'bg-gradient-to-r from-blue-400 to-indigo-500' : 'bg-gray-200'}`}
+                                                    style={{ width: `${percentage}%` }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -298,30 +321,6 @@ const PricingPage = () => {
                                 })}
                             </tbody>
                         </table>
-                    </div>
-
-                    <div className="mb-16 p-8 rounded-[2rem] bg-gray-50/80 border border-gray-100">
-                        <h3 className="text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-8">The Savings Curve</h3>
-                        <div className="grid grid-cols-6 gap-2 h-40 items-end px-4">
-                            {TIERS.slice(0, 6).map((tier, idx) => {
-                                const isCurrent = currentTier.name === tier.name;
-                                const heightPercentage = (tier.rate / TIERS[0].rate) * 100;
-                                return (
-                                    <div key={idx} className="flex flex-col items-center gap-3 h-full justify-end group">
-                                        <div className="relative w-full flex flex-col justify-end items-center h-full">
-                                            <div
-                                                className={`w-full max-w-[40px] rounded-t-xl transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] ${isCurrent ? 'bg-blue-300 shadow-lg shadow-blue-100' : 'bg-gray-200'}`}
-                                                style={{ height: `${heightPercentage}%` }}
-                                            ></div>
-                                        </div>
-                                        <div className="text-center">
-                                            <p className={`text-[8px] font-black uppercase tracking-wider mb-1 ${isCurrent ? 'text-blue-600' : 'text-gray-400'}`}>{tier.name}</p>
-                                            <p className={`text-[10px] font-bold ${isCurrent ? 'text-blue-600' : 'text-gray-400'}`}>${tier.rate}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
                     </div>
 
 
