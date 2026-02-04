@@ -410,9 +410,11 @@ const VisitNote = () => {
                 category: 'Attestation'
             });
             await fetchMacros();
+            showToast('Template saved successfully');
             return true;
         } catch (error) {
             console.error('Failed to create macro:', error);
+            showToast('Failed to save template: ' + (error.response?.data?.error || 'Unknown error'), 'error');
             return false;
         }
     };
@@ -421,9 +423,11 @@ const VisitNote = () => {
         try {
             await macrosAPI.delete(macroId);
             await fetchMacros();
+            showToast('Template deleted');
             return true;
         } catch (error) {
             console.error('Failed to delete macro:', error);
+            showToast('Failed to delete template', 'error');
             return false;
         }
     };
