@@ -679,7 +679,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         // BP Thresholds (Clinical Guidelines)
         if (!isNaN(sys)) {
             if (sys >= 180 || (!isNaN(dia) && dia >= 120)) {
-                status = { label: 'Crisis', color: 'rose' };
+                status = { label: 'Critical', color: 'rose' };
             } else if (sys >= 160 || (!isNaN(dia) && dia >= 100)) {
                 status = { label: 'Unstable', color: 'rose' };
             } else if (sys >= 140 || (!isNaN(dia) && dia >= 90)) {
