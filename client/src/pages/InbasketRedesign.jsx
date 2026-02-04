@@ -30,7 +30,7 @@ const INBOX_SECTIONS = [
         icon: FileText,
         color: 'orange',
         description: 'Consult notes, reports, scans',
-        types: ['document', 'new_patient_registration']
+        types: ['document', 'new_patient_registration', 'cosignature_required', 'note']
     },
     {
         id: 'messages',
@@ -39,6 +39,14 @@ const INBOX_SECTIONS = [
         color: 'purple',
         description: 'Patient & staff messages',
         types: ['message', 'portal_message']
+    },
+    {
+        id: 'portal_requests',
+        label: 'Appt Requests',
+        icon: Calendar,
+        color: 'amber',
+        description: 'New portal booking requests',
+        types: ['portal_appointment']
     },
     {
         id: 'tasks',
@@ -138,6 +146,18 @@ const InbasketRedesign = () => {
         priority: 'routine',
         due_date: ''
     });
+
+    // Appointment Request Approval State
+    const [approvalData, setApprovalData] = useState({
+        providerId: '',
+        appointmentDate: '',
+        appointmentTime: '',
+        duration: 30,
+        visitMethod: 'office'
+    });
+    const [showApproveDialog, setShowApproveDialog] = useState(false);
+    const [denyReason, setDenyReason] = useState('');
+    const [showDenyDialog, setShowDenyDialog] = useState(false);
 
     // Reply State
     const [replyText, setReplyText] = useState('');
@@ -403,9 +423,40 @@ const InbasketRedesign = () => {
         return colors[priority] || colors.normal;
     };
 
+    const handleApproveAppointment = async () => {
+        if (!selectedItem || !approvalData.appointmentDate || !approvalData.appointmentTime) {
+            showError('Date and time are required');
+            return;
+        }
+        try {
+            await inboxAPI.approveAppointment(selectedItem.id, {
+                ...approvalData,
+                providerId: approvalData.providerId || user.id
+            });
+            showSuccess('Appointment approved and scheduled');
+            setShowApproveDialog(false);
+            setSelectedItem(null);
+            fetchData(true);
+        } catch (e) {
+            showError('Failed to approve appointment');
+        }
+    };
+
+    const handleDenyAppointment = async () => {
+        if (!selectedItem) return;
+        try {
+            await inboxAPI.denyAppointment(selectedItem.id, denyReason);
+            showSuccess('Appointment request denied');
+            setShowDenyDialog(false);
+            setSelectedItem(null);
+            fetchData(true);
+        } catch (e) {
+            showError('Failed to deny appointment');
+        }
+    };
+
     return (
         <div className="h-[calc(100vh-64px)] flex bg-gray-50">
-            {/* Sidebar */}
             <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
                 <div className="p-4 border-b border-gray-100">
                     <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -675,429 +726,626 @@ const InbasketRedesign = () => {
             </div>
 
             {/* Detail Panel */}
-            {selectedItem && (
-                <div className="w-[480px] bg-white border-l border-gray-200 flex flex-col">
-                    {/* Detail Header */}
-                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full ${getPriorityBadge(selectedItem.priority)}`}>
-                                    {selectedItem.priority}
-                                </span>
-                                <h2 className="text-lg font-bold text-gray-900 mt-2">{selectedItem.subject}</h2>
-                                <button
-                                    onClick={() => openPatientChart(selectedItem)}
-                                    className="text-blue-600 hover:underline text-sm flex items-center gap-1 mt-1"
-                                >
-                                    {getPatientDisplayName(selectedItem)}
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <button
-                                onClick={() => setSelectedItem(null)}
-                                className="p-1 text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Detail Content */}
-                    <div className="flex-1 overflow-y-auto p-4">
-                        {loadingDetails ? (
-                            <div className="flex justify-center py-8">
-                                <RefreshCw className="w-6 h-6 animate-spin text-gray-300" />
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                <div className="prose prose-sm max-w-none">
-                                    <p className="whitespace-pre-wrap text-gray-700">
-                                        {details?.body || selectedItem.body}
-                                    </p>
-                                </div>
-
-                                {/* Message Thread - iMessage Style */}
-                                {details?.notes?.length > 0 && (
-                                    <div className="border-t pt-4">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Conversation History</h4>
-                                            <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">Secure</span>
-                                        </div>
-                                        <div className="space-y-4">
-                                            {details.notes.map((note, idx) => {
-                                                const isStaff = note.sender_type === 'staff' || note.sender_type === 'provider';
-                                                const isPatient = note.sender_type === 'patient' || !note.sender_type;
-
-                                                return (
-                                                    <div key={idx} className={`flex gap-3 ${isStaff ? 'flex-row-reverse' : ''}`}>
-                                                        {/* Avatar */}
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 shadow-sm border ${isStaff
-                                                            ? 'bg-blue-600 border-blue-700 text-white'
-                                                            : 'bg-white border-gray-200 text-gray-500'
-                                                            }`}>
-                                                            {note.first_name ? note.first_name[0] : 'P'}
-                                                        </div>
-
-                                                        {/* Bubble */}
-                                                        <div className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                                                            <div className={`flex items-baseline gap-2 mb-1 ${isStaff ? 'flex-row-reverse' : ''}`}>
-                                                                <span className={`text-[11px] font-bold ${isStaff ? 'text-blue-700' : 'text-gray-900'}`}>
-                                                                    {note.first_name || 'Patient'}
-                                                                </span>
-                                                                <span className="text-[9px] text-gray-400">
-                                                                    {format(new Date(note.created_at), 'h:mm a')}
-                                                                </span>
-                                                            </div>
-                                                            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${isStaff
-                                                                ? 'bg-blue-600 text-white rounded-tr-none'
-                                                                : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200'
-                                                                }`}>
-                                                                {note.note}
-                                                            </div>
-                                                            {isStaff && (
-                                                                <div className="mt-1 flex items-center gap-1 text-[9px] text-gray-400">
-                                                                    <CheckCircle className="w-2.5 h-2.5 text-blue-500" /> Delivered
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                        <div ref={chatEndRef} className="h-2" />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Action Bar */}
-                    <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-3">
-                        {/* Reply Input for messages */}
-                        {['portal_message', 'message'].includes(selectedItem.type) && (
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={replyText}
-                                    onChange={e => setReplyText(e.target.value)}
-                                    placeholder="Type a reply..."
-                                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg"
-                                    onKeyDown={e => e.key === 'Enter' && handleReply(true)}
-                                />
-                                <button
-                                    onClick={() => handleReply(true)}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                                >
-                                    Send
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Action Buttons - Context aware by type */}
-                        <div className="flex flex-wrap gap-2">
-                            {/* Results/Documents/Labs get Review & Sign + Track Metric */}
-                            {['lab', 'imaging', 'document'].includes(selectedItem.type) && (
-                                <>
+            {
+                selectedItem && (
+                    <div className="w-[480px] bg-white border-l border-gray-200 flex flex-col">
+                        {/* Detail Header */}
+                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${getPriorityBadge(selectedItem.priority)}`}>
+                                        {selectedItem.priority}
+                                    </span>
+                                    <h2 className="text-lg font-bold text-gray-900 mt-2">{selectedItem.subject}</h2>
                                     <button
-                                        onClick={() => setShowReviewModal(true)}
+                                        onClick={() => openPatientChart(selectedItem)}
+                                        className="text-blue-600 hover:underline text-sm flex items-center gap-1 mt-1"
+                                    >
+                                        {getPatientDisplayName(selectedItem)}
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedItem(null)}
+                                    className="p-1 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Detail Content */}
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {loadingDetails ? (
+                                <div className="flex justify-center py-8">
+                                    <RefreshCw className="w-6 h-6 animate-spin text-gray-300" />
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="prose prose-sm max-w-none">
+                                        <p className="whitespace-pre-wrap text-gray-700">
+                                            {details?.body || selectedItem.body}
+                                        </p>
+                                    </div>
+
+                                    {/* Message Thread - iMessage Style */}
+                                    {details?.notes?.length > 0 && (
+                                        <div className="border-t pt-4">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Conversation History</h4>
+                                                <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">Secure</span>
+                                            </div>
+                                            <div className="space-y-4">
+                                                {details.notes.map((note, idx) => {
+                                                    const isStaff = note.sender_type === 'staff' || note.sender_type === 'provider';
+                                                    const isPatient = note.sender_type === 'patient' || !note.sender_type;
+
+                                                    return (
+                                                        <div key={idx} className={`flex gap-3 ${isStaff ? 'flex-row-reverse' : ''}`}>
+                                                            {/* Avatar */}
+                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 shadow-sm border ${isStaff
+                                                                ? 'bg-blue-600 border-blue-700 text-white'
+                                                                : 'bg-white border-gray-200 text-gray-500'
+                                                                }`}>
+                                                                {note.first_name ? note.first_name[0] : 'P'}
+                                                            </div>
+
+                                                            {/* Bubble */}
+                                                            <div className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                                                                <div className={`flex items-baseline gap-2 mb-1 ${isStaff ? 'flex-row-reverse' : ''}`}>
+                                                                    <span className={`text-[11px] font-bold ${isStaff ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                                        {note.first_name || 'Patient'}
+                                                                    </span>
+                                                                    <span className="text-[9px] text-gray-400">
+                                                                        {format(new Date(note.created_at), 'h:mm a')}
+                                                                    </span>
+                                                                </div>
+                                                                <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${isStaff
+                                                                    ? 'bg-blue-600 text-white rounded-tr-none'
+                                                                    : 'bg-gray-100 text-gray-800 rounded-tl-none border border-gray-200'
+                                                                    }`}>
+                                                                    {note.note}
+                                                                </div>
+                                                                {isStaff && (
+                                                                    <div className="mt-1 flex items-center gap-1 text-[9px] text-gray-400">
+                                                                        <CheckCircle className="w-2.5 h-2.5 text-blue-500" /> Delivered
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div ref={chatEndRef} className="h-2" />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Action Bar */}
+                        <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-3">
+                            {/* Reply Input for messages */}
+                            {['portal_message', 'message'].includes(selectedItem.type) && (
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={replyText}
+                                        onChange={e => setReplyText(e.target.value)}
+                                        placeholder="Type a reply..."
+                                        className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                                        onKeyDown={e => e.key === 'Enter' && handleReply(true)}
+                                    />
+                                    <button
+                                        onClick={() => handleReply(true)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                                    >
+                                        Send
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Action Buttons - Context aware by type */}
+                            <div className="flex flex-wrap gap-2">
+                                {/* Results/Documents/Labs get Review & Sign + Track Metric */}
+                                {['lab', 'imaging', 'document', 'note', 'cosignature_required'].includes(selectedItem.type) && (
+                                    <>
+                                        <button
+                                            onClick={() => setShowReviewModal(true)}
+                                            className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                            {selectedItem.type === 'cosignature_required' ? 'Cosign & Complete' : 'Review & Sign'}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowMetricModal(true)}
+                                            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
+                                        >
+                                            <Tag className="w-4 h-4" />
+                                            Track Metric
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Appointment Requests Processing */}
+                                {selectedItem.type === 'portal_appointment' && (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                const bodyParts = selectedItem.body?.split('Preferred Date: ')[1]?.split(' (');
+                                                const prefDateStr = bodyParts?.[0];
+                                                let prefDate = '';
+                                                if (prefDateStr) {
+                                                    try {
+                                                        prefDate = new Date(prefDateStr).toISOString().split('T')[0];
+                                                    } catch (e) { }
+                                                }
+
+                                                setApprovalData({
+                                                    providerId: selectedItem.assigned_user_id || user.id,
+                                                    appointmentDate: prefDate || '',
+                                                    appointmentTime: '09:00',
+                                                    duration: 30,
+                                                    visitMethod: selectedItem.visit_method || 'office'
+                                                });
+                                                setShowApproveDialog(true);
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                            Approve & Schedule
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDenyDialog(true)}
+                                            className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700"
+                                        >
+                                            <X className="w-4 h-4" />
+                                            Deny Request
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Messages just get Mark Done */}
+                                {['portal_message', 'message'].includes(selectedItem.type) && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await inboxAPI.update(selectedItem.id, { status: 'completed' });
+                                                showSuccess('Marked as done');
+                                                setSelectedItem(null);
+                                                fetchData(true);
+                                            } catch (e) {
+                                                showError('Failed to complete');
+                                            }
+                                        }}
                                         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
                                     >
                                         <Check className="w-4 h-4" />
-                                        Review & Sign
+                                        Mark Done
                                     </button>
-                                    <button
-                                        onClick={() => setShowMetricModal(true)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
-                                    >
-                                        <Tag className="w-4 h-4" />
-                                        Track Metric
-                                    </button>
-                                </>
-                            )}
+                                )}
 
-                            {/* Messages just get Mark Done */}
-                            {['portal_message', 'message'].includes(selectedItem.type) && (
+                                {/* All types can create tasks and view chart */}
                                 <button
-                                    onClick={async () => {
-                                        try {
-                                            await inboxAPI.update(selectedItem.id, { status: 'completed' });
-                                            showSuccess('Marked as done');
-                                            setSelectedItem(null);
-                                            fetchData(true);
-                                        } catch (e) {
-                                            showError('Failed to complete');
-                                        }
+                                    onClick={() => {
+                                        setNewTask(prev => ({
+                                            ...prev,
+                                            title: `Follow-up: ${selectedItem.subject}`,
+                                            description: `From inbox item: ${selectedItem.body?.substring(0, 100)}...`
+                                        }));
+                                        setShowTaskModal(true);
                                     }}
-                                    className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
+                                    className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
                                 >
-                                    <Check className="w-4 h-4" />
-                                    Mark Done
+                                    <ListTodo className="w-4 h-4" />
+                                    Create Task
                                 </button>
-                            )}
-
-                            {/* All types can create tasks and view chart */}
-                            <button
-                                onClick={() => {
-                                    setNewTask(prev => ({
-                                        ...prev,
-                                        title: `Follow-up: ${selectedItem.subject}`,
-                                        description: `From inbox item: ${selectedItem.body?.substring(0, 100)}...`
-                                    }));
-                                    setShowTaskModal(true);
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
-                            >
-                                <ListTodo className="w-4 h-4" />
-                                Create Task
-                            </button>
-                            <button
-                                onClick={() => openPatientChart(selectedItem)}
-                                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
-                            >
-                                <FolderOpen className="w-4 h-4" />
-                                View Chart
-                            </button>
+                                <button
+                                    onClick={() => openPatientChart(selectedItem)}
+                                    className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-50"
+                                >
+                                    <FolderOpen className="w-4 h-4" />
+                                    View Chart
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* New Message Compose Pane */}
-            {showNewChat && !selectedItem && (
-                <div className="w-[420px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
-                    {/* Header */}
-                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="text-lg font-bold text-gray-900">
-                                {composeData.type === 'portal_message' ? 'New Patient Message' : 'New Staff Message'}
-                            </h3>
-                            <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
+            {
+                showNewChat && !selectedItem && (
+                    <div className="w-[420px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-lg font-bold text-gray-900">
+                                    {composeData.type === 'portal_message' ? 'New Patient Message' : 'New Staff Message'}
+                                </h3>
+                                <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                        {/* Type Toggle */}
-                        <div className="flex gap-2 mb-3">
-                            <button
-                                onClick={() => { setComposeData(prev => ({ ...prev, type: 'portal_message' })); setSelectedPatient(null); setSelectedStaff(null); }}
-                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition ${composeData.type === 'portal_message' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                <Mail className="w-4 h-4 inline mr-1" /> Patient (Portal)
-                            </button>
-                            <button
-                                onClick={() => { setComposeData(prev => ({ ...prev, type: 'message' })); setSelectedPatient(null); setSelectedStaff(null); }}
-                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition ${composeData.type === 'message' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                            >
-                                <User className="w-4 h-4 inline mr-1" /> Staff (Internal)
-                            </button>
-                        </div>
+                            {/* Type Toggle */}
+                            <div className="flex gap-2 mb-3">
+                                <button
+                                    onClick={() => { setComposeData(prev => ({ ...prev, type: 'portal_message' })); setSelectedPatient(null); setSelectedStaff(null); }}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition ${composeData.type === 'portal_message' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    <Mail className="w-4 h-4 inline mr-1" /> Patient (Portal)
+                                </button>
+                                <button
+                                    onClick={() => { setComposeData(prev => ({ ...prev, type: 'message' })); setSelectedPatient(null); setSelectedStaff(null); }}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition ${composeData.type === 'message' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                >
+                                    <User className="w-4 h-4 inline mr-1" /> Staff (Internal)
+                                </button>
+                            </div>
 
-                        {/* Search / Selection */}
-                        {composeData.type === 'portal_message' ? (
-                            !selectedPatient ? (
-                                <div className="space-y-2">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search patient by name, MRN, or DOB..."
-                                            autoFocus
-                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                            value={searchFields.name}
-                                            onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
-                                        />
-                                    </div>
-                                    {isSearchingPatients && (
-                                        <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
-                                            <RefreshCw className="w-3 h-3 animate-spin" /> Searching...
+                            {/* Search / Selection */}
+                            {composeData.type === 'portal_message' ? (
+                                !selectedPatient ? (
+                                    <div className="space-y-2">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search patient by name, MRN, or DOB..."
+                                                autoFocus
+                                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={searchFields.name}
+                                                onChange={e => setSearchFields({ ...searchFields, name: e.target.value })}
+                                            />
                                         </div>
-                                    )}
-                                    {patientResults.length > 0 && (
-                                        <div className="border border-gray-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white shadow-lg">
-                                            {patientResults.map(p => (
+                                        {isSearchingPatients && (
+                                            <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+                                                <RefreshCw className="w-3 h-3 animate-spin" /> Searching...
+                                            </div>
+                                        )}
+                                        {patientResults.length > 0 && (
+                                            <div className="border border-gray-100 rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white shadow-lg">
+                                                {patientResults.map(p => (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => setSelectedPatient(p)}
+                                                        className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center gap-3 transition-colors"
+                                                    >
+                                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                                            {getPatientDisplayName(p)[0]}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-semibold text-gray-900 truncate">{getPatientDisplayName(p)}</p>
+                                                            <p className="text-xs text-gray-500">MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</p>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                                            {getPatientDisplayName(selectedPatient)[0]}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
+                                            <p className="text-xs text-blue-600">Patient Portal</p>
+                                        </div>
+                                        <button onClick={() => setSelectedPatient(null)} className="p-1.5 hover:bg-blue-100 rounded-full text-blue-600">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )
+                            ) : (
+                                !selectedStaff ? (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-gray-500 font-medium">Select recipient:</p>
+                                        <div className="max-h-48 overflow-y-auto space-y-1">
+                                            {users.filter(u => u.id !== user.id).map(u => (
                                                 <button
-                                                    key={p.id}
-                                                    onClick={() => setSelectedPatient(p)}
-                                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 flex items-center gap-3 transition-colors"
+                                                    key={u.id}
+                                                    onClick={() => setSelectedStaff(u)}
+                                                    className="w-full text-left px-3 py-2.5 hover:bg-purple-50 rounded-lg flex items-center gap-3 transition-colors border border-transparent hover:border-purple-200"
                                                 >
-                                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
-                                                        {getPatientDisplayName(p)[0]}
+                                                    <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
+                                                        {u.first_name?.[0]}{u.last_name?.[0]}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm font-semibold text-gray-900 truncate">{getPatientDisplayName(p)}</p>
-                                                        <p className="text-xs text-gray-500">MRN: {p.mrn || 'N/A'} • DOB: {p.dob ? format(new Date(p.dob), 'MM/dd/yyyy') : 'N/A'}</p>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">{u.first_name} {u.last_name}</p>
+                                                        <p className="text-xs text-gray-500 capitalize">{u.role || 'Staff'}</p>
                                                     </div>
                                                 </button>
                                             ))}
                                         </div>
-                                    )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
+                                            {selectedStaff.first_name?.[0]}{selectedStaff.last_name?.[0]}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
+                                            <p className="text-xs text-purple-600 capitalize">{selectedStaff.role || 'Staff'}</p>
+                                        </div>
+                                        <button onClick={() => setSelectedStaff(null)} className="p-1.5 hover:bg-purple-100 rounded-full text-purple-600">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )
+                            )}
+                        </div>
+
+                        {/* Empty State */}
+                        <div className="flex-1 flex items-center justify-center bg-gray-50/50">
+                            {(composeData.type === 'portal_message' && !selectedPatient) || (composeData.type !== 'portal_message' && !selectedStaff) ? (
+                                <div className="text-center text-gray-400">
+                                    <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">Select a {composeData.type === 'portal_message' ? 'patient' : 'staff member'} to start</p>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                                        {getPatientDisplayName(selectedPatient)[0]}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold text-gray-900">{getPatientDisplayName(selectedPatient)}</p>
-                                        <p className="text-xs text-blue-600">Patient Portal</p>
-                                    </div>
-                                    <button onClick={() => setSelectedPatient(null)} className="p-1.5 hover:bg-blue-100 rounded-full text-blue-600">
-                                        <X className="w-4 h-4" />
+                                <div className="text-center text-gray-400">
+                                    <Send className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                    <p className="text-sm">Type your message below</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Message Input */}
+                        {((composeData.type === 'portal_message' && selectedPatient) || (composeData.type !== 'portal_message' && selectedStaff)) && (
+                            <div className="p-4 border-t border-gray-200 bg-white">
+                                <div className="mb-3">
+                                    <input
+                                        type="text"
+                                        placeholder="Subject (optional)"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={composeData.subject}
+                                        onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <textarea
+                                        placeholder="Type your message..."
+                                        className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none"
+                                        rows={3}
+                                        value={newChatMessage}
+                                        onChange={e => setNewChatMessage(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex justify-end mt-3">
+                                    <button
+                                        disabled={!newChatMessage.trim()}
+                                        onClick={async () => {
+                                            if (!newChatMessage.trim()) return;
+                                            try {
+                                                if (composeData.type === 'portal_message') {
+                                                    await inboxAPI.sendPatientMessage({
+                                                        patientId: selectedPatient.id,
+                                                        subject: composeData.subject || 'Message',
+                                                        body: newChatMessage
+                                                    });
+                                                } else {
+                                                    await inboxAPI.create({
+                                                        type: 'message',
+                                                        subject: composeData.subject || 'Message',
+                                                        body: newChatMessage,
+                                                        assignedUserId: selectedStaff.id,
+                                                        priority: 'normal'
+                                                    });
+                                                }
+                                                showSuccess('Message sent!');
+                                                setShowNewChat(false);
+                                                setNewChatMessage('');
+                                                setSelectedPatient(null);
+                                                setSelectedStaff(null);
+                                                setComposeData({ type: 'portal_message', subject: '', body: '' });
+                                                fetchData(true);
+                                            } catch (err) {
+                                                showError('Failed to send message');
+                                            }
+                                        }}
+                                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                                    >
+                                        <Send className="w-4 h-4" /> Send
                                     </button>
                                 </div>
-                            )
-                        ) : (
-                            !selectedStaff ? (
-                                <div className="space-y-2">
-                                    <p className="text-xs text-gray-500 font-medium">Select recipient:</p>
-                                    <div className="max-h-48 overflow-y-auto space-y-1">
-                                        {users.filter(u => u.id !== user.id).map(u => (
+                            </div>
+                        )}
+                    </div>
+                )
+            }
+
+            {/* Review Modal */}
+            {
+                showReviewModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+                            <div className="p-4 border-b border-gray-200">
+                                <h3 className="text-lg font-bold">Review & Sign Off</h3>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Findings</label>
+                                    <textarea
+                                        value={reviewData.findings}
+                                        onChange={e => setReviewData(prev => ({ ...prev, findings: e.target.value }))}
+                                        placeholder="Document your clinical findings..."
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
+                                    <textarea
+                                        value={reviewData.plan}
+                                        onChange={e => setReviewData(prev => ({ ...prev, plan: e.target.value }))}
+                                        placeholder="What action will be taken?"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Track Metrics</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {METRIC_TYPES.map(metric => (
                                             <button
-                                                key={u.id}
-                                                onClick={() => setSelectedStaff(u)}
-                                                className="w-full text-left px-3 py-2.5 hover:bg-purple-50 rounded-lg flex items-center gap-3 transition-colors border border-transparent hover:border-purple-200"
+                                                key={metric.id}
+                                                onClick={() => {
+                                                    setReviewData(prev => ({
+                                                        ...prev,
+                                                        metricTags: prev.metricTags.includes(metric.id)
+                                                            ? prev.metricTags.filter(m => m !== metric.id)
+                                                            : [...prev.metricTags, metric.id]
+                                                    }));
+                                                }}
+                                                className={`px-2 py-1 rounded-full text-xs font-medium border transition-all ${reviewData.metricTags.includes(metric.id)
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                                                    }`}
                                             >
-                                                <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-xs">
-                                                    {u.first_name?.[0]}{u.last_name?.[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-gray-900">{u.first_name} {u.last_name}</p>
-                                                    <p className="text-xs text-gray-500 capitalize">{u.role || 'Staff'}</p>
-                                                </div>
+                                                {metric.label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
-                                    <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-                                        {selectedStaff.first_name?.[0]}{selectedStaff.last_name?.[0]}
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold text-gray-900">{selectedStaff.first_name} {selectedStaff.last_name}</p>
-                                        <p className="text-xs text-purple-600 capitalize">{selectedStaff.role || 'Staff'}</p>
-                                    </div>
-                                    <button onClick={() => setSelectedStaff(null)} className="p-1.5 hover:bg-purple-100 rounded-full text-purple-600">
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )
-                        )}
-                    </div>
-
-                    {/* Empty State */}
-                    <div className="flex-1 flex items-center justify-center bg-gray-50/50">
-                        {(composeData.type === 'portal_message' && !selectedPatient) || (composeData.type !== 'portal_message' && !selectedStaff) ? (
-                            <div className="text-center text-gray-400">
-                                <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                <p className="text-sm">Select a {composeData.type === 'portal_message' ? 'patient' : 'staff member'} to start</p>
                             </div>
-                        ) : (
-                            <div className="text-center text-gray-400">
-                                <Send className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                <p className="text-sm">Type your message below</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Message Input */}
-                    {((composeData.type === 'portal_message' && selectedPatient) || (composeData.type !== 'portal_message' && selectedStaff)) && (
-                        <div className="p-4 border-t border-gray-200 bg-white">
-                            <div className="mb-3">
-                                <input
-                                    type="text"
-                                    placeholder="Subject (optional)"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={composeData.subject}
-                                    onChange={e => setComposeData({ ...composeData, subject: e.target.value })}
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <textarea
-                                    placeholder="Type your message..."
-                                    className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none"
-                                    rows={3}
-                                    value={newChatMessage}
-                                    onChange={e => setNewChatMessage(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex justify-end mt-3">
+                            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
                                 <button
-                                    disabled={!newChatMessage.trim()}
-                                    onClick={async () => {
-                                        if (!newChatMessage.trim()) return;
-                                        try {
-                                            if (composeData.type === 'portal_message') {
-                                                await inboxAPI.sendPatientMessage({
-                                                    patientId: selectedPatient.id,
-                                                    subject: composeData.subject || 'Message',
-                                                    body: newChatMessage
-                                                });
-                                            } else {
-                                                await inboxAPI.create({
-                                                    type: 'message',
-                                                    subject: composeData.subject || 'Message',
-                                                    body: newChatMessage,
-                                                    assignedUserId: selectedStaff.id,
-                                                    priority: 'normal'
-                                                });
-                                            }
-                                            showSuccess('Message sent!');
-                                            setShowNewChat(false);
-                                            setNewChatMessage('');
-                                            setSelectedPatient(null);
-                                            setSelectedStaff(null);
-                                            setComposeData({ type: 'portal_message', subject: '', body: '' });
-                                            fetchData(true);
-                                        } catch (err) {
-                                            showError('Failed to send message');
-                                        }
-                                    }}
-                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                                    onClick={() => setShowReviewModal(false)}
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
                                 >
-                                    <Send className="w-4 h-4" /> Send
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleReview}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                                >
+                                    Sign & Complete
                                 </button>
                             </div>
                         </div>
-                    )}
-                </div>
-            )}
+                    </div>
+                )
+            }
 
-            {/* Review Modal */}
-            {showReviewModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
-                        <div className="p-4 border-b border-gray-200">
-                            <h3 className="text-lg font-bold">Review & Sign Off</h3>
+            {/* Task Modal */}
+            {
+                showTaskModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
+                            <div className="p-4 border-b border-gray-200">
+                                <h3 className="text-lg font-bold">Create Task</h3>
+                            </div>
+                            <div className="p-4 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                                    <input
+                                        type="text"
+                                        value={newTask.title}
+                                        onChange={e => setNewTask(prev => ({ ...prev, title: e.target.value }))}
+                                        placeholder="Task title..."
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
+                                    <select
+                                        value={newTask.assigned_to}
+                                        onChange={e => setNewTask(prev => ({ ...prev, assigned_to: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    >
+                                        <option value="">Select user...</option>
+                                        {users.map(u => (
+                                            <option key={u.id} value={u.id}>
+                                                {u.first_name} {u.last_name} ({u.role})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                        <select
+                                            value={newTask.category}
+                                            onChange={e => setNewTask(prev => ({ ...prev, category: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                        >
+                                            {TASK_CATEGORIES.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                                        <select
+                                            value={newTask.priority}
+                                            onChange={e => setNewTask(prev => ({ ...prev, priority: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                        >
+                                            <option value="routine">Routine</option>
+                                            <option value="urgent">Urgent</option>
+                                            <option value="stat">STAT</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                                    <input
+                                        type="date"
+                                        value={newTask.due_date}
+                                        onChange={e => setNewTask(prev => ({ ...prev, due_date: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <textarea
+                                        value={newTask.description}
+                                        onChange={e => setNewTask(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder="Additional details..."
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                        rows={3}
+                                    />
+                                </div>
+                            </div>
+                            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                                <button
+                                    onClick={() => setShowTaskModal(false)}
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreateTask}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                                >
+                                    Create Task
+                                </button>
+                            </div>
                         </div>
-                        <div className="p-4 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Findings</label>
-                                <textarea
-                                    value={reviewData.findings}
-                                    onChange={e => setReviewData(prev => ({ ...prev, findings: e.target.value }))}
-                                    placeholder="Document your clinical findings..."
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    rows={3}
-                                />
+                    </div>
+                )
+            }
+
+            {/* Metric Tracking Modal */}
+            {
+                showMetricModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+                            <div className="p-4 border-b border-gray-200">
+                                <h3 className="text-lg font-bold">Track Quality Metric</h3>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Plan</label>
-                                <textarea
-                                    value={reviewData.plan}
-                                    onChange={e => setReviewData(prev => ({ ...prev, plan: e.target.value }))}
-                                    placeholder="What action will be taken?"
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    rows={3}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Track Metrics</label>
-                                <div className="flex flex-wrap gap-2">
+                            <div className="p-4">
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Select metrics to track for {getPatientDisplayName(selectedItem)}:
+                                </p>
+                                <div className="grid grid-cols-2 gap-2">
                                     {METRIC_TYPES.map(metric => (
                                         <button
                                             key={metric.id}
                                             onClick={() => {
+                                                // Toggle metric
                                                 setReviewData(prev => ({
                                                     ...prev,
                                                     metricTags: prev.metricTags.includes(metric.id)
@@ -1105,186 +1353,37 @@ const InbasketRedesign = () => {
                                                         : [...prev.metricTags, metric.id]
                                                 }));
                                             }}
-                                            className={`px-2 py-1 rounded-full text-xs font-medium border transition-all ${reviewData.metricTags.includes(metric.id)
-                                                ? 'bg-blue-600 text-white border-blue-600'
-                                                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                                            className={`p-3 rounded-lg border text-left transition-all ${reviewData.metricTags.includes(metric.id)
+                                                ? 'bg-blue-50 border-blue-300'
+                                                : 'border-gray-200 hover:border-blue-200'
                                                 }`}
                                         >
-                                            {metric.label}
+                                            <p className="font-medium text-sm">{metric.label}</p>
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-                        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowReviewModal(false)}
-                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleReview}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
-                            >
-                                Sign & Complete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Task Modal */}
-            {showTaskModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4">
-                        <div className="p-4 border-b border-gray-200">
-                            <h3 className="text-lg font-bold">Create Task</h3>
-                        </div>
-                        <div className="p-4 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                                <input
-                                    type="text"
-                                    value={newTask.title}
-                                    onChange={e => setNewTask(prev => ({ ...prev, title: e.target.value }))}
-                                    placeholder="Task title..."
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
-                                <select
-                                    value={newTask.assigned_to}
-                                    onChange={e => setNewTask(prev => ({ ...prev, assigned_to: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                                <button
+                                    onClick={() => setShowMetricModal(false)}
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
                                 >
-                                    <option value="">Select user...</option>
-                                    {users.map(u => (
-                                        <option key={u.id} value={u.id}>
-                                            {u.first_name} {u.last_name} ({u.role})
-                                        </option>
-                                    ))}
-                                </select>
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        showSuccess(`${reviewData.metricTags.length} metric(s) tracked`);
+                                        setShowMetricModal(false);
+                                    }}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                                >
+                                    Save Metrics
+                                </button>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                                    <select
-                                        value={newTask.category}
-                                        onChange={e => setNewTask(prev => ({ ...prev, category: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    >
-                                        {TASK_CATEGORIES.map(cat => (
-                                            <option key={cat.id} value={cat.id}>{cat.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                                    <select
-                                        value={newTask.priority}
-                                        onChange={e => setNewTask(prev => ({ ...prev, priority: e.target.value }))}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    >
-                                        <option value="routine">Routine</option>
-                                        <option value="urgent">Urgent</option>
-                                        <option value="stat">STAT</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                                <input
-                                    type="date"
-                                    value={newTask.due_date}
-                                    onChange={e => setNewTask(prev => ({ ...prev, due_date: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <textarea
-                                    value={newTask.description}
-                                    onChange={e => setNewTask(prev => ({ ...prev, description: e.target.value }))}
-                                    placeholder="Additional details..."
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                                    rows={3}
-                                />
-                            </div>
-                        </div>
-                        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowTaskModal(false)}
-                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleCreateTask}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                            >
-                                Create Task
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
-
-            {/* Metric Tracking Modal */}
-            {showMetricModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-                        <div className="p-4 border-b border-gray-200">
-                            <h3 className="text-lg font-bold">Track Quality Metric</h3>
-                        </div>
-                        <div className="p-4">
-                            <p className="text-sm text-gray-600 mb-4">
-                                Select metrics to track for {getPatientDisplayName(selectedItem)}:
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {METRIC_TYPES.map(metric => (
-                                    <button
-                                        key={metric.id}
-                                        onClick={() => {
-                                            // Toggle metric
-                                            setReviewData(prev => ({
-                                                ...prev,
-                                                metricTags: prev.metricTags.includes(metric.id)
-                                                    ? prev.metricTags.filter(m => m !== metric.id)
-                                                    : [...prev.metricTags, metric.id]
-                                            }));
-                                        }}
-                                        className={`p-3 rounded-lg border text-left transition-all ${reviewData.metricTags.includes(metric.id)
-                                            ? 'bg-blue-50 border-blue-300'
-                                            : 'border-gray-200 hover:border-blue-200'
-                                            }`}
-                                    >
-                                        <p className="font-medium text-sm">{metric.label}</p>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowMetricModal(false)}
-                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    showSuccess(`${reviewData.metricTags.length} metric(s) tracked`);
-                                    setShowMetricModal(false);
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                            >
-                                Save Metrics
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Intake Review Modal */}
             {showIntakeReview && selectedItem && (
@@ -1296,6 +1395,78 @@ const InbasketRedesign = () => {
                         fetchData(true);
                     }}
                 />
+            )}
+
+            {/* Appointment Approval Modal */}
+            {showApproveDialog && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+                        <div className="p-4 border-b border-gray-200">
+                            <h3 className="text-lg font-bold">Approve Appointment</h3>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                <input
+                                    type="date"
+                                    value={approvalData.appointmentDate}
+                                    onChange={e => setApprovalData(prev => ({ ...prev, appointmentDate: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                                <input
+                                    type="time"
+                                    value={approvalData.appointmentTime}
+                                    onChange={e => setApprovalData(prev => ({ ...prev, appointmentTime: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Method</label>
+                                <select
+                                    value={approvalData.visitMethod}
+                                    onChange={e => setApprovalData(prev => ({ ...prev, visitMethod: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                >
+                                    <option value="office">In-Office</option>
+                                    <option value="telehealth">Telehealth</option>
+                                    <option value="phone">Phone</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                            <button onClick={() => setShowApproveDialog(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
+                            <button onClick={handleApproveAppointment} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">Schedule Appointment</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Appointment Denial Modal */}
+            {showDenyDialog && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+                        <div className="p-4 border-b border-gray-200">
+                            <h3 className="text-lg font-bold">Deny Appointment Request</h3>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <p className="text-sm text-gray-600">Please provide a reason for denial. This will be sent to the patient.</p>
+                            <textarea
+                                value={denyReason}
+                                onChange={e => setDenyReason(e.target.value)}
+                                placeholder="Reason for denial..."
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                                rows={3}
+                            />
+                        </div>
+                        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                            <button onClick={() => setShowDenyDialog(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm">Cancel</button>
+                            <button onClick={handleDenyAppointment} className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Deny Request</button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
