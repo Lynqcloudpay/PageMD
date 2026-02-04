@@ -956,8 +956,11 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                             {note.visit_date ? new Date(note.visit_date).toLocaleDateString() : 'Unknown Date'}
                                                                         </span>
                                                                         <span className="text-xs text-gray-500">• {note.visit_type || 'Office Visit'}</span>
-                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${note.locked || note.note_signed_at ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                                                                            {note.locked || note.note_signed_at ? 'Signed' : 'Draft'}
+                                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${(note.status || '').toLowerCase().trim() === 'retracted' ? 'bg-red-50 text-red-700' :
+                                                                                note.locked || note.note_signed_at ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                                                                            }`}>
+                                                                            {(note.status || '').toLowerCase().trim() === 'retracted' ? 'Retracted' :
+                                                                                note.locked || note.note_signed_at ? 'Signed' : 'Draft'}
                                                                         </span>
                                                                     </div>
                                                                     <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500">
@@ -1026,7 +1029,15 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                             )}
 
                                                                             <button
-                                                                                onClick={() => setSelectedVisitForView({ visitId: note.id, patientId: patientId })}
+                                                                                onClick={() => {
+                                                                                    const isRetracted = (note.status || '').toLowerCase().trim() === 'retracted';
+                                                                                    const isSigned = note.locked || note.note_signed_at;
+                                                                                    if (!isSigned && !isRetracted) {
+                                                                                        navigate(`/patient/${patientId}/visit/${note.id}`);
+                                                                                    } else {
+                                                                                        setSelectedVisitForView({ visitId: note.id, patientId: patientId });
+                                                                                    }
+                                                                                }}
                                                                                 className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                                                                             >
                                                                                 <FileText className="w-4 h-4" />

@@ -891,12 +891,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
         const note = recentNotes.find(n => n.id === noteId);
 
         // If it's a draft, go to the full visit editor
-        if (note && !note.signed) {
-            console.log('Opening draft note editor for visit:', noteId);
+        if (note && !note.signed && !note.retracted) {
             navigate(`/patient/${id}/visit/${noteId}`);
         } else {
-            // If it's signed or not found (fallback), open the modal view
-            console.log('Opening signed note modal for visit:', noteId);
+            // If it's signed, retracted, or not found (fallback), open the modal view
             setSelectedVisitForView({ visitId: noteId, patientId: id });
         }
     };
@@ -3022,7 +3020,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             setShowPatientChart(true);
                         }}
                         onOpenVisit={(visitId) => {
-                            navigate(`/patient/${id}/visit/${visitId}`);
+                            const note = recentNotes.find(n => n.id === visitId);
+                            if (note && (note.signed || note.retracted)) {
+                                setSelectedVisitForView({ visitId: visitId, patientId: id });
+                            } else {
+                                navigate(`/patient/${id}/visit/${visitId}`);
+                            }
                             setShowChartReview(false);
                         }}
                     />
