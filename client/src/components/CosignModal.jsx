@@ -158,7 +158,7 @@ const CosignModal = ({
                                         {macros.length > 0 ? macros.map((macro) => (
                                             <div key={macro.id} className="group relative">
                                                 <button
-                                                    onClick={() => setAttestationText(macro.content)}
+                                                    onClick={() => setAttestationText(prev => prev ? `${prev}\n\n${macro.content}` : macro.content)}
                                                     className="w-full text-left p-4 bg-white border border-slate-200 rounded-2xl hover:border-blue-300 hover:shadow-md transition-all active:scale-[0.98] flex flex-col gap-1 pr-10 shadow-sm"
                                                 >
                                                     <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{macro.name}</span>
