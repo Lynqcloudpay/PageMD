@@ -250,7 +250,9 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
   `, [tenantId]);
 
-    // 5. Sync Unsigned/Preliminary Notes (Co-signing)
+    // 5. [DISABLED] Sync Unsigned/Preliminary Notes (Co-signing)
+    // User requested removal: "i dont want to have notifications of tasks already done... Just use documents for efax incoming"
+    /*
     await client.query(`
     INSERT INTO inbox_items (
       id, tenant_id, patient_id, type, priority, status, 
@@ -277,7 +279,15 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
         subject = EXCLUDED.subject,
         body = EXCLUDED.body,
         updated_at = CURRENT_TIMESTAMP
-  `, [tenantId]);
+    `, [tenantId]);
+    */
+
+    // CLEANUP: Remove any existing "Sign Note" or "Cosignature" clutter from the active inbox
+    await client.query(`
+      DELETE FROM inbox_items 
+      WHERE type IN ('note', 'cosignature_required') 
+        AND status != 'completed'
+    `);
 
     // 6. Sync Old Messages/Tasks
     await client.query(`

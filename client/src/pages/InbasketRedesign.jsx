@@ -30,7 +30,7 @@ const INBOX_SECTIONS = [
         icon: FileText,
         color: 'orange',
         description: 'Consult notes, reports, scans',
-        types: ['document', 'new_patient_registration', 'cosignature_required', 'note']
+        types: ['document', 'new_patient_registration']
     },
     {
         id: 'messages',
@@ -848,14 +848,14 @@ const InbasketRedesign = () => {
                             {/* Action Buttons - Context aware by type */}
                             <div className="flex flex-wrap gap-2">
                                 {/* Results/Documents/Labs get Review & Sign + Track Metric */}
-                                {['lab', 'imaging', 'document', 'note', 'cosignature_required'].includes(selectedItem.type) && (
+                                {['lab', 'imaging', 'document'].includes(selectedItem.type) && (
                                     <>
                                         <button
                                             onClick={() => setShowReviewModal(true)}
                                             className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700"
                                         >
                                             <Check className="w-4 h-4" />
-                                            {selectedItem.type === 'cosignature_required' ? 'Cosign & Complete' : 'Review & Sign'}
+                                            Review & Sign
                                         </button>
                                         <button
                                             onClick={() => setShowMetricModal(true)}
