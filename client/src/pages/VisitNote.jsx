@@ -1471,12 +1471,6 @@ const VisitNote = () => {
             return;
         }
 
-        // UNIVERSAL DEBUG ALERT - Start of Function
-        // This alerts IMMEDIATELY upon clicking Finalize to verify state
-        if (isDirectEditing) {
-            alert(`DEBUG START COSING\nisDirectEditing: ${isDirectEditing}\nHPI Ref Value: ${hpiRef.current?.value || 'null'}\nIf HPI is 'null', we are not reading the text box correctly.`);
-        }
-
         if (isSaving) return;
         setIsSaving(true);
         try {
