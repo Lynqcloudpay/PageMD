@@ -1496,6 +1496,9 @@ const VisitNote = () => {
                 const noteDraft = combineNoteSections(latestData);
                 console.log('[Direct Edit] Saving note draft before cosign (from refs):', noteDraft); // DEBUG LOG
 
+                // DEBUG ALERT: Remove after fixing
+                alert(`DEBUG ALERT (Direct Edit Saving):\n------------------\nHPI Content: ${latestData.hpi}\nNote Draft Length: ${noteDraft.length}\n------------------\nIf you see your edits here, the frontend is capturing them correctly.`);
+
                 const vitalsToSave = {
                     bloodPressure: vitals.bloodPressure || null,
                     pulse: vitals.pulse || null,
@@ -1515,6 +1518,7 @@ const VisitNote = () => {
                 } catch (updateErr) {
                     console.error('[Direct Edit] Failed to save note changes:', updateErr);
                     showToast('Warning: Could not save note edits. ' + (updateErr.response?.data?.error || updateErr.message), 'error');
+                    alert('ERROR: Save failed! ' + (updateErr.response?.data?.error || updateErr.message));
                     setIsSaving(false);
                     return; // Stop cosign if save fails
                 }
