@@ -333,8 +333,8 @@ const InbasketRedesign = () => {
     const getSectionCount = (sectionId) => {
         const section = INBOX_SECTIONS.find(s => s.id === sectionId);
         if (sectionId === 'tasks') return taskStats.my_open || 0;
-        // Only count 'new' items for the badges
-        return items.filter(i => section?.types.includes(i.type) && i.status === 'new').length;
+        // Count all items in the current filtered list for the badges
+        return items.filter(i => section?.types.includes(i.type)).length;
     };
 
     // Actions

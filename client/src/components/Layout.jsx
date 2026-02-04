@@ -108,10 +108,9 @@ const Layout = ({ children }) => {
             }
         };
 
-        // Fetch pending appointment requests count
         const fetchAppointmentRequestsCount = async () => {
             try {
-                const response = await inboxAPI.getAll({ status: 'new', type: 'portal_appointment' });
+                const response = await inboxAPI.getAll({ status: 'active', type: 'portal_appointment' });
                 setAppointmentRequestsCount(response.data?.length || 0);
             } catch (error) {
                 console.error('Error fetching appointment requests count:', error);
