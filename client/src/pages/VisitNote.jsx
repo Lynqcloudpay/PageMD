@@ -90,18 +90,26 @@ const ResultImage = ({ doc }) => {
 };
 
 // Collapsible Section Component
-const Section = ({ title, children, defaultOpen = true }) => {
+const Section = ({ title, children, defaultOpen = true, isEdited = false }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
-        <div className="border border-gray-200 rounded-lg bg-white shadow-sm mb-2 overflow-hidden">
+        <div className={`border ${isEdited ? 'border-blue-300 shadow-blue-50 ring-1 ring-blue-400/20' : 'border-gray-200'} rounded-xl bg-white shadow-sm mb-3 overflow-hidden transition-all duration-300`}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full px-2 py-1.5 bg-neutral-50 border-b border-gray-200 flex items-center justify-between hover:bg-neutral-100 transition-colors"
+                className={`w-full px-3 py-2 ${isEdited ? 'bg-blue-50/50' : 'bg-neutral-50'} border-b ${isEdited ? 'border-blue-100' : 'border-gray-200'} flex items-center justify-between hover:bg-opacity-80 transition-all`}
             >
-                <h3 className="text-xs font-semibold text-primary-900">{title}</h3>
-                {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                <div className="flex items-center gap-2.5">
+                    <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{title}</h3>
+                    {isEdited && (
+                        <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[8px] font-black uppercase rounded border border-blue-600 shadow-sm shadow-blue-600/20 flex items-center gap-1">
+                            <Sparkles className="w-2 h-2" />
+                            Modified by Attending
+                        </span>
+                    )}
+                </div>
+                {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
             </button>
-            {isOpen && <div className="p-2 bg-white">{children}</div>}
+            {isOpen && <div className="p-3 bg-white">{children}</div>}
         </div>
     );
 };
@@ -386,6 +394,8 @@ const VisitNote = () => {
     const [showCosignModal, setShowCosignModal] = useState(false);
     const [attestationText, setAttestationText] = useState('');
     const [authorshipModel, setAuthorshipModel] = useState('Addendum');
+    const [isDirectEditing, setIsDirectEditing] = useState(false);
+    const [editedSections, setEditedSections] = useState(new Set());
     const [attestationMacros, setAttestationMacros] = useState([]);
 
     const fetchMacros = useCallback(async () => {
@@ -463,7 +473,7 @@ const VisitNote = () => {
     // - Note is read-only if fully signed (final)
     // - Note is read-only if preliminary AND user is NOT an attending
     // - Note is read-only if retracted
-    const isLocked = isSigned || (isPreliminary && !isAttending) || isRetracted;
+    const isLocked = isSigned || (isPreliminary && !isAttending && !isDirectEditing) || isRetracted;
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [showPrintOrdersModal, setShowPrintOrdersModal] = useState(false);
     const [showPatientChart, setShowPatientChart] = useState(false);
@@ -1453,11 +1463,27 @@ const VisitNote = () => {
     };
 
     const handleCosign = async (attestationText, authorshipModel = 'Addendum') => {
+        // If transitioning from Modal to Direct Edit Mode
+        if (authorshipModel === 'Direct Edit' && !isDirectEditing) {
+            setIsDirectEditing(true);
+            setShowCosignModal(false);
+            showToast('Direct edit mode enabled. You can now modify the trainee\'s note.', 'info');
+            return;
+        }
+
         if (isSaving) return;
         setIsSaving(true);
         try {
             const visitId = currentVisitId || urlVisitId;
-            await visitsAPI.cosign(visitId, { attestationText, authorshipModel });
+            // Use 'Direct Edit' if we are in that mode
+            const finalAuthorshipModel = isDirectEditing ? 'Direct Edit' : authorshipModel;
+            // For Direct Edit, we might not need an attestation text, or we can use a default one
+            const finalAttestationText = isDirectEditing ? (attestationText || 'Note reviewed and edited directly.') : attestationText;
+
+            await visitsAPI.cosign(visitId, {
+                attestationText: finalAttestationText,
+                authorshipModel: finalAuthorshipModel
+            });
             showToast('Note cosigned successfully', 'success');
 
             // Reload visit data
@@ -1466,6 +1492,7 @@ const VisitNote = () => {
             setVisitData(visit);
             setIsSigned(true);
             setIsPreliminary(false);
+            setIsDirectEditing(false);
             setShowCosignModal(false);
         } catch (error) {
             showToast('Failed to cosign note: ' + (error.response?.data?.error || error.message || 'Unknown error'), 'error');
@@ -1598,12 +1625,13 @@ const VisitNote = () => {
 
     const handleTextChange = (value, field) => {
         const decoded = decodeHtmlEntities(value);
-        if (field === 'hpi') {
-            setNoteData({ ...noteData, hpi: decoded });
-        } else if (field === 'assessment') {
-            setNoteData({ ...noteData, assessment: decoded });
-        } else if (field === 'plan') {
-            setNoteData({ ...noteData, plan: decoded });
+        setNoteData(prev => ({ ...prev, [field]: decoded }));
+        if (isDirectEditing) {
+            setEditedSections(prev => {
+                const next = new Set(prev);
+                next.add(field);
+                return next;
+            });
         }
     };
 
@@ -2380,6 +2408,36 @@ const VisitNote = () => {
                     </button>
                 </div>
 
+                {isDirectEditing && (
+                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between shadow-sm animate-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-100 rounded-full">
+                                <Sparkles className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-black text-blue-900 uppercase tracking-tight">Direct Editing Mode</h3>
+                                <p className="text-xs text-blue-700 font-medium">You are currently modifying the trainee's primary documentation. Your changes will be saved directly to the note.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setIsDirectEditing(false)}
+                                className="px-3 py-1.5 text-blue-600 hover:bg-blue-100 rounded-md text-xs font-bold transition-colors uppercase tracking-widest"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleCosign(attestationText, 'Direct Edit')}
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"
+                            >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Finalize & Cosign
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 p-4">
                     <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
@@ -2701,17 +2759,27 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Chief Complaint */}
-                        <div className="mb-3">
-                            <label className="block text-sm font-semibold text-neutral-900 mb-1">Chief Complaint</label>
-                            <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
-                                onChange={(e) => setNoteData({ ...noteData, chiefComplaint: e.target.value })}
-                                disabled={isLocked}
-                                className="w-full px-2 py-1.5 text-sm font-medium border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors text-neutral-900"
-                            />
+                        <div className="mb-4">
+                            <div className="flex items-center gap-2 mb-1">
+                                <label className="block text-sm font-black text-slate-800 uppercase tracking-tight">Chief Complaint</label>
+                                {editedSections.has('chiefComplaint') && (
+                                    <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[8px] font-black uppercase rounded border border-blue-600 shadow-sm shadow-blue-600/20 flex items-center gap-1">
+                                        <Sparkles className="w-2 h-2" />
+                                        Modified by Attending
+                                    </span>
+                                )}
+                            </div>
+                            <div className={`p-3 bg-neutral-50 rounded-xl border ${editedSections.has('chiefComplaint') ? 'border-blue-200 bg-blue-50/30' : 'border-neutral-100'} transition-all duration-300`}>
+                                <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
+                                    onChange={(e) => handleTextChange(e.target.value, 'chiefComplaint')}
+                                    disabled={isLocked}
+                                    className="w-full bg-transparent border-none text-xs font-medium focus:ring-0 text-slate-900 placeholder:text-slate-400"
+                                />
+                            </div>
                         </div>
 
                         {/* HPI */}
-                        <Section title="History of Present Illness (HPI)" defaultOpen={true}>
+                        <Section title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')}>
                             <div className="relative">
                                 <textarea ref={hpiRef} value={noteData.hpi}
                                     disabled={isLocked}
@@ -2814,7 +2882,7 @@ const VisitNote = () => {
                                         </label>
                                     ))}
                                 </div>
-                                <textarea value={noteData.rosNotes} onChange={(e) => setNoteData({ ...noteData, rosNotes: e.target.value })}
+                                <textarea value={noteData.rosNotes} onChange={(e) => handleTextChange(e.target.value, 'rosNotes')}
                                     disabled={isLocked}
                                     rows={10}
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
@@ -2872,7 +2940,7 @@ const VisitNote = () => {
                                         </label>
                                     ))}
                                 </div>
-                                <textarea value={noteData.peNotes} onChange={(e) => setNoteData({ ...noteData, peNotes: e.target.value })}
+                                <textarea value={noteData.peNotes} onChange={(e) => handleTextChange(e.target.value, 'peNotes')}
                                     disabled={isLocked}
                                     rows={10}
                                     className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
@@ -3267,7 +3335,7 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Assessment */}
-                        <Section title="Assessment" defaultOpen={true}>
+                        <Section title="Assessment" defaultOpen={true} isEdited={editedSections.has('assessment')}>
                             {/* Quick Add block removed */}
 
                             {/* ICD-10 Search - Show first for easy access */}
@@ -3366,7 +3434,7 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Plan */}
-                        <Section title="Plan" defaultOpen={true}>
+                        <Section title="Plan" defaultOpen={true} isEdited={editedSections.has('plan')}>
                             <div className="relative">
                                 {/* Show structured plan preview only when editing and there's structured data */}
                                 {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
@@ -3478,11 +3546,11 @@ const VisitNote = () => {
 
 
                         {/* Caregiver Training (CTS) */}
-                        <Section title="Caregiver Training Services (CTS)" defaultOpen={false}>
+                        <Section title="Caregiver Training Services (CTS)" defaultOpen={false} isEdited={editedSections.has('cts')}>
                             <div className="relative">
                                 <textarea
                                     value={noteData.cts || ''}
-                                    onChange={(e) => setNoteData({ ...noteData, cts: e.target.value })}
+                                    onChange={(e) => handleTextChange(e.target.value, 'cts')}
                                     placeholder="Document topic (e.g. Wound Care), time spent, and if telehealth..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
                                     disabled={isLocked}
@@ -3499,7 +3567,7 @@ const VisitNote = () => {
                                             ].map((template) => (
                                                 <button
                                                     key={template}
-                                                    onClick={() => setNoteData(prev => ({ ...prev, cts: prev.cts ? `${prev.cts}\n${template}` : template }))}
+                                                    onClick={() => handleTextChange(noteData.cts ? `${noteData.cts}\n${template}` : template, 'cts')}
                                                     className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 rounded text-xs transition-colors"
                                                 >
                                                     {template}
@@ -3512,11 +3580,11 @@ const VisitNote = () => {
                         </Section>
 
                         {/* ASCVD Risk Management */}
-                        <Section title="ASCVD Risk Management" defaultOpen={false}>
+                        <Section title="ASCVD Risk Management" defaultOpen={false} isEdited={editedSections.has('ascvd')}>
                             <div className="relative">
                                 <textarea
                                     value={noteData.ascvd || ''}
-                                    onChange={(e) => setNoteData({ ...noteData, ascvd: e.target.value })}
+                                    onChange={(e) => handleTextChange(e.target.value, 'ascvd')}
                                     placeholder="Risk score, category, and management plan..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
                                     disabled={isLocked}
@@ -3528,7 +3596,7 @@ const VisitNote = () => {
                                             {['Low Risk (<5%)', 'Borderline (5-7.4%)', 'Intermediate (7.5-19.9%)', 'High Risk (≥20%)'].map((risk) => (
                                                 <button
                                                     key={risk}
-                                                    onClick={() => setNoteData(prev => ({ ...prev, ascvd: prev.ascvd ? `${prev.ascvd}\nRisk Category: ${risk}` : `Risk Category: ${risk}` }))}
+                                                    onClick={() => handleTextChange(noteData.ascvd ? `${noteData.ascvd}\nRisk Category: ${risk}` : `Risk Category: ${risk}`, 'ascvd')}
                                                     className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs transition-colors"
                                                 >
                                                     {risk}
@@ -3541,11 +3609,11 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Behavioral Safety Plan */}
-                        <Section title="Behavioral Safety Plan" defaultOpen={false}>
+                        <Section title="Behavioral Safety Plan" defaultOpen={false} isEdited={editedSections.has('safetyPlan')}>
                             <div className="relative">
                                 <textarea
                                     value={noteData.safetyPlan || ''}
-                                    onChange={(e) => setNoteData({ ...noteData, safetyPlan: e.target.value })}
+                                    onChange={(e) => handleTextChange(e.target.value, 'safetyPlan')}
                                     placeholder="Warning signs, coping strategies, and contacts..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
                                     disabled={isLocked}
@@ -3557,7 +3625,7 @@ const VisitNote = () => {
                                             {['Warning Signs', 'Coping Strategies', 'Social Contacts', 'Professional Contacts'].map((comp) => (
                                                 <button
                                                     key={comp}
-                                                    onClick={() => setNoteData(prev => ({ ...prev, safetyPlan: prev.safetyPlan ? `${prev.safetyPlan}\n${comp}: ` : `${comp}: ` }))}
+                                                    onClick={() => handleTextChange(noteData.safetyPlan ? `${noteData.safetyPlan}\n${comp}: ` : `${comp}: `, 'safetyPlan')}
                                                     className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded text-xs transition-colors"
                                                 >
                                                     {comp}
@@ -3570,11 +3638,11 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Care Plan */}
-                        <Section title="Care Plan" defaultOpen={true}>
+                        <Section title="Care Plan" defaultOpen={true} isEdited={editedSections.has('carePlan')}>
                             <div className="relative">
                                 <textarea
                                     value={noteData.carePlan || ''}
-                                    onChange={(e) => setNoteData({ ...noteData, carePlan: e.target.value })}
+                                    onChange={(e) => handleTextChange(e.target.value, 'carePlan')}
                                     placeholder="Summary of what needs to be done in preparation for the next visit..."
                                     className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
                                     disabled={isLocked}

@@ -96,12 +96,12 @@ const CosignModal = ({
                                             <span className="text-[10px] text-slate-500">Append to note</span>
                                         </div>
                                     </label>
-                                    <label className={`flex-1 min-w-[140px] flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${authorshipModel === 'Direct' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/10' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                                    <label className={`flex-1 min-w-[140px] flex items-center gap-3 px-4 py-3 rounded-2xl border cursor-pointer transition-all ${authorshipModel === 'Direct Edit' ? 'bg-blue-50 border-blue-200 ring-2 ring-blue-500/10' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
                                         <input
                                             type="radio"
                                             name="authorship"
-                                            value="Direct"
-                                            checked={authorshipModel === 'Direct'}
+                                            value="Direct Edit"
+                                            checked={authorshipModel === 'Direct Edit'}
                                             onChange={(e) => setAuthorshipModel(e.target.value)}
                                             className="w-4 h-4 text-blue-600 focus:ring-blue-500"
                                         />
@@ -213,12 +213,12 @@ const CosignModal = ({
                             {isSaving ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    Signing Note...
+                                    {authorshipModel === 'Direct Edit' ? 'Preparing Editor...' : 'Signing Note...'}
                                 </>
                             ) : (
                                 <>
                                     <CheckCircle2 className="w-4 h-4" />
-                                    Finalize Cosignature
+                                    {authorshipModel === 'Direct Edit' ? 'Enter Direct Edit Mode' : 'Finalize Cosignature'}
                                 </>
                             )}
                         </button>
