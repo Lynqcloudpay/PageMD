@@ -659,6 +659,48 @@ const Snapshot = ({ showNotesOnly = false }) => {
         return [...manualItems, ...autoItems];
     }, [healthMaintenance, hmSpecialtyFilter, patient]);
 
+    // Calculate Cardiovascular Stability Status based on latest vitals
+    const vitalStatus = useMemo(() => {
+        if (!vitals || vitals.length === 0) return { label: 'No Data', color: 'slate' };
+
+        // Find the most recent vital that has BP or HR
+        const latest = vitals.find(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== null && v.hr !== 'N/A'));
+        if (!latest) return { label: 'Stable', color: 'emerald' };
+
+        // Parse BP and HR using the same logic as the trend chart
+        const bpRaw = String(latest.fullBp || latest.bp || '');
+        const bpClean = bpRaw.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/').replace(/&slash;/g, '/').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        const sys = parseInt(bpClean.split('/')[0]);
+        const dia = parseInt(bpClean.split('/')[1]);
+        const hr = parseInt(latest.hr);
+
+        let status = { label: 'Stable', color: 'emerald' };
+
+        // BP Thresholds (Clinical Guidelines)
+        if (!isNaN(sys)) {
+            if (sys >= 180 || (!isNaN(dia) && dia >= 120)) {
+                status = { label: 'Crisis', color: 'rose' };
+            } else if (sys >= 160 || (!isNaN(dia) && dia >= 100)) {
+                status = { label: 'Unstable', color: 'rose' };
+            } else if (sys >= 140 || (!isNaN(dia) && dia >= 90)) {
+                status = { label: 'Elevated', color: 'amber' };
+            } else if (sys < 90 || (!isNaN(dia) && dia < 60)) {
+                status = { label: 'Low', color: 'amber' };
+            }
+        }
+
+        // HR Thresholds (if not already rose from BP)
+        if (status.color !== 'rose' && !isNaN(hr)) {
+            if (hr > 120 || hr < 40) {
+                status = { label: 'Unstable', color: 'rose' };
+            } else if (hr > 100 || hr < 50) {
+                status = { label: 'Caution', color: 'amber' };
+            }
+        }
+
+        return status;
+    }, [vitals]);
+
     // Handle Break-the-Glass authorization
     useEffect(() => {
         const handlePrivacyAuthorized = (event) => {
@@ -1897,7 +1939,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5 text-left">Clinical Trend Wave</h3>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-bold text-slate-800">Cardiovascular Performance</span>
-                                                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-bold uppercase rounded-lg border border-emerald-100">Stable</span>
+                                                        <span className={`px-2 py-0.5 bg-${vitalStatus.color}-50 text-${vitalStatus.color}-600 text-[9px] font-bold uppercase rounded-lg border border-${vitalStatus.color}-100`}>
+                                                            {vitalStatus.label}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
