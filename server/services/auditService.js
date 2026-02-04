@@ -43,7 +43,7 @@ class AuditService {
             const context = overrideContext || store;
 
             const {
-                action,
+                action = event.type || 'UNKNOWN',
                 entityType = 'General',
                 entityId,
                 patientId,
@@ -62,8 +62,6 @@ class AuditService {
             } = context;
 
             // 1. Get the hash of the latest record
-            // We order by id allowing for some sequence, but practically we want the 'last inserted'
-            // For strict chains, this should be serialized.
             const lastLogRes = await pool.query(
                 `SELECT current_hash FROM audit_events ORDER BY occurred_at DESC, id DESC LIMIT 1`
             );
@@ -71,8 +69,9 @@ class AuditService {
             const previousHash = lastLogRes.rows.length > 0 ? lastLogRes.rows[0].current_hash : 'GENESIS_HASH';
 
             // 2. Prepare data for hashing (Canonical fields)
+            const upperAction = String(action).toUpperCase();
             const recordData = {
-                action: action.toUpperCase(),
+                action: upperAction,
                 entityType,
                 entityId,
                 patientId,
@@ -92,7 +91,7 @@ class AuditService {
                     request_id, details, reason_for_access, previous_hash, current_hash
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
                 [
-                    action.toUpperCase(),
+                    upperAction,
                     entityType,
                     entityId,
                     patientId,
