@@ -184,43 +184,39 @@ const PricingPage = () => {
             <section className="py-24 px-6 bg-gray-50">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-16">
-                        <h2 className="text-2xl font-bold mb-4">Transparent Tiers</h2>
-                        <p className="text-sm text-gray-600">PageMD's declining rate structure</p>
+                        <h2 className="text-2xl font-black text-gray-900 mb-4">Transparent Growth Model</h2>
+                        <p className="text-sm text-gray-500 font-medium">Clear tiers designed to scale with your practice</p>
                     </div>
 
-                    <div className="overflow-x-auto rounded-[2rem] border border-gray-200 shadow-xl bg-white overflow-hidden">
-                        <table className="w-full text-left border-separate border-spacing-0">
+                    <div className="bg-white rounded-[2.5rem] shadow-xl shadow-blue-100/50 border border-gray-100 overflow-hidden">
+                        <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black">
-                                    <th className="px-8 py-5 uppercase tracking-wider text-[11px]">Tier</th>
-                                    <th className="px-8 py-5 uppercase tracking-wider text-[11px] text-center border-x border-white/10">Practice Size</th>
-                                    <th className="px-8 py-5 uppercase tracking-wider text-[11px] text-center">Per-Seat/mo</th>
-                                    <th className="px-8 py-5 uppercase tracking-wider text-[11px] text-center border-l border-white/10">Avg Cost / Doctor</th>
+                                <tr className="border-b border-gray-100 bg-white">
+                                    <th className="px-8 py-6 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400">Tier Level</th>
+                                    <th className="px-8 py-6 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400 text-center">Practice Size</th>
+                                    <th className="px-8 py-6 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400 text-center">Standard Rate</th>
+                                    <th className="px-8 py-6 uppercase tracking-[0.2em] text-[10px] font-black text-blue-500 text-center bg-blue-50/30">Your Effective Cost</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-gray-50">
                                 {TIERS.map((tier, idx) => (
-                                    <tr key={idx} className="group hover:bg-blue-50/50 transition-all">
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black shadow-sm ${idx % 2 === 0 ? 'bg-blue-100 text-blue-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                                                    {tier.name[0]}
-                                                </div>
-                                                <div>
-                                                    <span className="font-bold text-gray-900 block text-base">{tier.name}</span>
-                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Plan Level {idx + 1}</span>
-                                                </div>
-                                            </div>
+                                    <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                                        <td className="px-8 py-7">
+                                            <span className="text-lg font-bold text-gray-900 uppercase tracking-tight">{tier.name}</span>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Level {idx + 1}</p>
                                         </td>
-                                        <td className="px-8 py-6 text-center text-gray-600 font-semibold text-sm">
-                                            {tier.label}
+                                        <td className="px-8 py-7 text-center">
+                                            <span className="inline-flex px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-bold font-mono">
+                                                {tier.label}
+                                            </span>
                                         </td>
-                                        <td className="px-8 py-6 text-center border-x border-gray-50/50">
-                                            <span className="text-lg font-black text-gray-900">${tier.rate}</span>
-                                            <span className="text-xs text-gray-400 font-bold ml-1">/mo</span>
+                                        <td className="px-8 py-7 text-center">
+                                            <span className="text-base font-bold text-gray-400 line-through mr-1">${TIERS[0].rate}</span>
+                                            <span className="text-base font-black text-gray-900">${tier.rate}</span>
+                                            <span className="text-[10px] text-gray-400 font-bold ml-1">/mo</span>
                                         </td>
-                                        <td className="px-8 py-6 text-center">
-                                            <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-600 text-xs font-black shadow-sm ring-1 ring-emerald-100/50">
+                                        <td className="px-8 py-7 text-center bg-blue-50/20">
+                                            <div className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-200 uppercase tracking-wider">
                                                 <TrendingDown className="w-4 h-4" />
                                                 {idx === 0 ? '$399' : idx === 1 ? '~$332' : idx === 2 ? '~$299' : idx === 3 ? '~$261' : idx === 4 ? '~$239' : '<$169'}
                                             </div>
@@ -231,13 +227,15 @@ const PricingPage = () => {
                         </table>
                     </div>
 
-                    <div className="mt-12 p-8 rounded-[2rem] bg-blue-50 border border-blue-100 lg:flex items-center justify-between">
-                        <div className="mb-6 lg:mb-0">
-                            <h3 className="text-base font-bold text-blue-900 mb-2">Everything you need, included in every tier:</h3>
-                            <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    <div className="mt-12 p-10 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-2xl shadow-blue-200 lg:flex items-center justify-between">
+                        <div className="mb-8 lg:mb-0">
+                            <h3 className="text-xl font-bold mb-4">The Complete Experience</h3>
+                            <div className="grid grid-cols-2 gap-x-8 gap-y-3">
                                 {FEATURES.map((feature, i) => (
-                                    <div key={i} className="flex items-center gap-2 text-xs text-blue-800 font-bold">
-                                        <Check className="w-4 h-4 text-blue-600" />
+                                    <div key={i} className="flex items-center gap-3 text-sm font-medium text-blue-50">
+                                        <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                                            <Check className="w-3 h-3 text-white" />
+                                        </div>
                                         {feature}
                                     </div>
                                 ))}
@@ -245,10 +243,10 @@ const PricingPage = () => {
                         </div>
                         <button
                             onClick={() => navigate('/contact')}
-                            className="w-full lg:w-auto px-10 py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-2"
+                            className="w-full lg:w-auto px-12 py-5 bg-white text-blue-600 font-black rounded-2xl hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-3 active:scale-95"
                         >
-                            Get Started
-                            <ArrowRight className="w-4 h-4" />
+                            Get Started Now
+                            <ArrowRight className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
