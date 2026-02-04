@@ -53,10 +53,10 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Create macro
 router.post('/', async (req, res) => {
     try {
         const { name, content, category } = req.body;
+        console.log('[Macros] Creating macro:', { name, content, category, userId: req.user?.id });
 
         const result = await pool.query(
             'INSERT INTO macros (name, content, category, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
@@ -66,7 +66,11 @@ router.post('/', async (req, res) => {
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Error creating macro:', error);
-        res.status(500).json({ error: 'Failed to create macro' });
+        res.status(500).json({
+            error: 'Failed to create macro',
+            details: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 
