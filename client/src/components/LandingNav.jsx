@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 
-const LandingNav = () => {
+const LandingNav = ({ onGetDemo }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const location = useLocation();
@@ -30,6 +30,13 @@ const LandingNav = () => {
     ];
 
     const isActive = (path) => location.pathname === path;
+
+    const handleGetDemo = (e) => {
+        if (onGetDemo) {
+            e.preventDefault();
+            onGetDemo();
+        }
+    };
 
     return (
         <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm py-3' : 'bg-white border-b border-gray-100 py-4'
@@ -62,7 +69,11 @@ const LandingNav = () => {
                         <Link to="/login" className="px-5 py-2.5 text-gray-700 text-sm font-semibold hover:text-blue-600 transition-colors">
                             Sign In
                         </Link>
-                        <Link to="/contact" className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95">
+                        <Link
+                            to="/contact"
+                            onClick={handleGetDemo}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95"
+                        >
                             Get Demo
                         </Link>
                     </div>
@@ -97,7 +108,11 @@ const LandingNav = () => {
                         <Link to="/login" className="px-5 py-3.5 text-center text-gray-700 text-base font-semibold border border-gray-200 rounded-xl hover:bg-gray-50">
                             Sign In
                         </Link>
-                        <Link to="/contact" className="px-5 py-3.5 text-center bg-blue-600 text-white text-base font-semibold rounded-xl shadow-lg shadow-blue-200">
+                        <Link
+                            to="/contact"
+                            onClick={handleGetDemo}
+                            className="px-5 py-3.5 text-center bg-blue-600 text-white text-base font-semibold rounded-xl shadow-lg shadow-blue-200"
+                        >
                             Get Demo
                         </Link>
                     </div>

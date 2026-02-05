@@ -18,13 +18,28 @@ import {
 } from 'lucide-react';
 import LandingNav from '../components/LandingNav';
 import tokenManager from '../services/tokenManager';
+import LeadCaptureModal from '../components/LeadCaptureModal';
 
 const LandingPage = () => {
     const currentYear = new Date().getFullYear();
     const [loading, setLoading] = React.useState(false);
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+
+    const hasCapturedLead = () => {
+        return document.cookie.split(';').some((item) => item.trim().startsWith('pagemd_demo_captured='));
+    };
+
+    const handleInstantDemoTrigger = () => {
+        if (hasCapturedLead()) {
+            handleInstantDemo();
+        } else {
+            setIsModalOpen(true);
+        }
+    };
 
     const handleInstantDemo = async () => {
         setLoading(true);
+        setIsModalOpen(false); // Close modal if it was open
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/sandbox/provision`, {
                 method: 'POST',
@@ -49,7 +64,7 @@ const LandingPage = () => {
 
     return (
         <div className="min-h-screen bg-white font-sans overflow-x-hidden">
-            <LandingNav />
+            <LandingNav onGetDemo={handleInstantDemoTrigger} />
 
             {/* Hero Section - Professional Light Mode */}
             <section className="relative pt-24 pb-16 lg:pt-36 lg:pb-28 bg-white overflow-hidden">
@@ -72,7 +87,7 @@ const LandingPage = () => {
 
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
                         <button
-                            onClick={handleInstantDemo}
+                            onClick={handleInstantDemoTrigger}
                             disabled={loading}
                             className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:scale-95 text-sm flex items-center justify-center gap-2 group"
                         >
@@ -196,7 +211,7 @@ const LandingPage = () => {
                     <h2 className="text-5xl md:text-[6rem] font-black text-slate-900 mb-12 leading-[1] tracking-tighter">Ready to reclaim your day?</h2>
                     <div className="flex flex-col sm:flex-row justify-center gap-6">
                         <button
-                            onClick={handleInstantDemo}
+                            onClick={handleInstantDemoTrigger}
                             disabled={loading}
                             className="px-12 py-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[3rem] shadow-2xl shadow-emerald-500/20 transition-all hover:-translate-y-1 text-xl flex items-center justify-center gap-3"
                         >
@@ -231,6 +246,11 @@ const LandingPage = () => {
                     <div className="font-bold text-xs uppercase tracking-widest">© {currentYear} PageMD Inc.</div>
                 </div>
             </footer>
+            <LeadCaptureModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onLaunch={handleInstantDemo}
+            />
         </div>
     );
 };
