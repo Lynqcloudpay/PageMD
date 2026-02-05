@@ -4,7 +4,7 @@ import {
     CheckCircle2, XCircle, MessageSquare, RefreshCw,
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
-    Settings, Key, Plus, User, Gift
+    Settings, Key, Plus, User, Gift, Database, Shield
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -41,6 +41,20 @@ const SalesAdmin = () => {
     // Create User Form
     const [userForm, setUserForm] = useState({ username: '', password: '', email: '' });
     const [userMsg, setUserMsg] = useState({ text: '', type: '' });
+
+    // Onboard Clinic Modal State
+    const [showOnboardModal, setShowOnboardModal] = useState(false);
+    const [onboardForm, setOnboardForm] = useState({
+        displayName: '',
+        slug: '',
+        specialty: '',
+        adminFirstName: '',
+        adminLastName: '',
+        adminEmail: '',
+        adminPassword: ''
+    });
+    const [onboardLoading, setOnboardLoading] = useState(false);
+    const [onboardError, setOnboardError] = useState('');
 
     const baseUrl = import.meta.env.VITE_API_URL || '';
 
@@ -156,6 +170,77 @@ const SalesAdmin = () => {
             alert(err.message);
         } finally {
             setUpdating(false);
+        }
+    };
+
+    // Open onboard modal with pre-filled data from inquiry
+    const openOnboardModal = (inquiry) => {
+        const nameParts = (inquiry.name || '').split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        const slug = (inquiry.practice_name || inquiry.name || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/-+$/, '')
+            .substring(0, 30);
+
+        setOnboardForm({
+            displayName: inquiry.practice_name || '',
+            slug: slug,
+            specialty: '',
+            adminFirstName: firstName,
+            adminLastName: lastName,
+            adminEmail: inquiry.email || '',
+            adminPassword: ''
+        });
+        setOnboardError('');
+        setShowOnboardModal(true);
+    };
+
+    // Handle clinic onboarding
+    const handleOnboard = async (e) => {
+        e.preventDefault();
+        setOnboardLoading(true);
+        setOnboardError('');
+
+        try {
+            const response = await authenticatedFetch('/sales/onboard', {
+                method: 'POST',
+                body: JSON.stringify({
+                    inquiryId: selectedInquiry?.id,
+                    clinic: {
+                        name: onboardForm.displayName,
+                        displayName: onboardForm.displayName,
+                        slug: onboardForm.slug,
+                        specialty: onboardForm.specialty
+                    },
+                    adminUser: {
+                        firstName: onboardForm.adminFirstName,
+                        lastName: onboardForm.adminLastName,
+                        email: onboardForm.adminEmail,
+                        password: onboardForm.adminPassword
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            alert(data.message);
+            setShowOnboardModal(false);
+            await fetchInquiries();
+            if (selectedInquiry) {
+                setSelectedInquiry(prev => ({
+                    ...prev,
+                    status: 'converted',
+                    referral_activated: data.referralActivated
+                }));
+            }
+        } catch (err) {
+            console.error('Onboarding error:', err);
+            setOnboardError(err.message);
+        } finally {
+            setOnboardLoading(false);
         }
     };
 
@@ -643,14 +728,29 @@ const SalesAdmin = () => {
 
                                     {/* Actions */}
                                     <div className="pt-4 space-y-2">
+                                        {/* Primary Action: Onboard & Activate (if not converted) */}
+                                        {selectedInquiry.status !== 'converted' && (
+                                            <button
+                                                onClick={() => openOnboardModal(selectedInquiry)}
+                                                disabled={updating}
+                                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg shadow-emerald-200 font-medium"
+                                            >
+                                                <Database className="w-4 h-4" />
+                                                Onboard & Activate
+                                                {selectedInquiry.referral_code && (
+                                                    <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded text-[10px] uppercase font-bold">+Referral</span>
+                                                )}
+                                            </button>
+                                        )}
+                                        {/* Legacy: Activate Referral for already converted (if somehow missed) */}
                                         {selectedInquiry.referral_code && selectedInquiry.status === 'converted' && !selectedInquiry.referral_activated && (
                                             <button
                                                 onClick={() => activateReferral(selectedInquiry.id)}
                                                 disabled={updating}
-                                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200 animate-pulse-once"
+                                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors shadow-lg shadow-amber-200"
                                             >
                                                 <Gift className="w-4 h-4" />
-                                                Activate Referral Credit
+                                                Activate Referral (Legacy)
                                             </button>
                                         )}
                                         {selectedInquiry.referral_activated && (
@@ -848,6 +948,167 @@ const SalesAdmin = () => {
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Onboard Clinic Modal */}
+            {showOnboardModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
+                        <button
+                            onClick={() => setShowOnboardModal(false)}
+                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <XCircle className="w-6 h-6" />
+                        </button>
+
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                                <Database className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
+                                <p className="text-slate-500 text-sm">
+                                    {selectedInquiry?.referral_code
+                                        ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
+                                        : 'Create a new clinic with dedicated database'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+
+                        {onboardError && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                                {onboardError}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleOnboard} className="space-y-6">
+                            {/* Clinic Details */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <Building2 className="w-4 h-4" /> Clinic Details
+                                </h3>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. Heart Center of Nevada"
+                                            value={onboardForm.displayName}
+                                            onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. heart-center-nv"
+                                            value={onboardForm.slug}
+                                            onChange={e => setOnboardForm({
+                                                ...onboardForm,
+                                                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                                            })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Cardiology"
+                                            value={onboardForm.specialty}
+                                            onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Initial Admin User */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <Shield className="w-4 h-4" /> Initial Admin User
+                                </h3>
+                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={onboardForm.adminFirstName}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={onboardForm.adminLastName}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            placeholder="admin@clinic.com"
+                                            value={onboardForm.adminEmail}
+                                            onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            minLength={8}
+                                            placeholder="Min 8 characters"
+                                            value={onboardForm.adminPassword}
+                                            onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={onboardLoading}
+                                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {onboardLoading ? (
+                                        <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
+                                    ) : (
+                                        <>
+                                            <Database className="w-5 h-5" />
+                                            {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
+                                        </>
+                                    )}
+                                </button>
+                                <p className="text-center text-[10px] text-slate-400 mt-3">
+                                    This will create a new dedicated database schema and initial admin account.
+                                </p>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

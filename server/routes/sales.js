@@ -343,4 +343,114 @@ router.post('/inquiries/:id/activate-referral', verifyToken, async (req, res) =>
     }
 });
 
+/**
+ * POST /api/sales/onboard
+ * Onboard a new clinic from a sales inquiry (with optional referral activation)
+ * This combines clinic creation + referral activation in one atomic flow.
+ */
+router.post('/onboard', verifyToken, async (req, res) => {
+    const { inquiryId, clinic, adminUser } = req.body;
+
+    if (!clinic || !clinic.slug) {
+        return res.status(400).json({ error: 'Missing required onboarding data (slug).' });
+    }
+
+    try {
+        // 1. Get inquiry if provided
+        let inquiry = null;
+        if (inquiryId) {
+            const inquiryRes = await pool.query('SELECT * FROM sales_inquiries WHERE id = $1', [inquiryId]);
+            inquiry = inquiryRes.rows[0];
+            if (!inquiry) {
+                return res.status(404).json({ error: 'Inquiry not found' });
+            }
+        }
+
+        // 2. Import tenantManager dynamically to avoid circular deps
+        const tenantManager = require('../services/tenantManager');
+
+        // 3. Provision the clinic
+        console.log(`[SALES] Provisioning clinic: ${clinic.slug}`);
+        const clinicData = {
+            ...clinic,
+            displayName: clinic.displayName || clinic.name
+        };
+
+        const clinicId = await tenantManager.provisionClinic(clinicData, {}, adminUser);
+        console.log(`[SALES] Clinic ${clinicId} provisioned successfully`);
+
+        // 4. Create trial subscription
+        const trialPlan = await pool.query(
+            "SELECT id FROM subscription_plans WHERE name = 'Trial' LIMIT 1"
+        );
+
+        if (trialPlan.rows.length > 0) {
+            await pool.query(`
+                INSERT INTO clinic_subscriptions(clinic_id, plan_id, status, trial_end_date, current_period_start, current_period_end)
+                VALUES($1, $2, 'trial', NOW() + INTERVAL '30 days', NOW(), NOW() + INTERVAL '30 days')
+            `, [clinicId, trialPlan.rows[0].id]);
+        }
+
+        // 5. Handle referral activation if inquiry has referral code
+        let referralActivated = false;
+        if (inquiry && inquiry.referral_code && !inquiry.referral_activated) {
+            const referrerRes = await pool.query(
+                'SELECT id, display_name FROM clinics WHERE referral_code = $1',
+                [inquiry.referral_code]
+            );
+
+            if (referrerRes.rows.length > 0) {
+                const referrer = referrerRes.rows[0];
+                console.log(`[SALES] Activating referral for ${referrer.display_name}`);
+
+                // Create active referral record with referred_clinic_id
+                await pool.query(`
+                    INSERT INTO clinic_referrals (
+                        referrer_clinic_id,
+                        referred_clinic_id,
+                        referred_clinic_name,
+                        referral_email,
+                        status,
+                        created_at
+                    ) VALUES ($1, $2, $3, $4, 'active', NOW())
+                `, [referrer.id, clinicId, clinic.displayName || clinic.name, adminUser?.email || inquiry.email]);
+
+                // Mark inquiry as activated
+                await pool.query(`
+                    UPDATE sales_inquiries
+                    SET referral_activated = true,
+                        referral_activated_at = NOW(),
+                        status = 'converted',
+                        updated_at = NOW()
+                    WHERE id = $1
+                `, [inquiryId]);
+
+                referralActivated = true;
+                console.log(`[SALES] Referral activated for inquiry ${inquiryId}`);
+            }
+        }
+
+        // 6. Update inquiry status to converted if not already
+        if (inquiry && inquiry.status !== 'converted') {
+            await pool.query(`
+                UPDATE sales_inquiries
+                SET status = 'converted', updated_at = NOW()
+                WHERE id = $1
+            `, [inquiryId]);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: `Clinic "${clinic.displayName || clinic.name}" onboarded successfully!${referralActivated ? ' Referral credit activated.' : ''}`,
+            clinicId,
+            referralActivated
+        });
+
+    } catch (error) {
+        console.error('[SALES] Onboarding failed:', error);
+        res.status(500).json({ error: error.message || 'Failed to onboard clinic.' });
+    }
+});
+
 module.exports = router;
+
