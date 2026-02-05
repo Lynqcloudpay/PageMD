@@ -212,43 +212,65 @@ class EmailService {
      * Send Demo Invitation
      */
     async sendDemoInvitation(email, leadName, sellerName, date, zoomLink, confirmUrl, denyUrl) {
-        const subject = `Demo Confirmation: PageMD EMR with ${sellerName}`;
+        const subject = `Demo Invitation: PageMD EMR with ${sellerName}`;
         const logoUrl = 'https://pagemdemr.com/logo.png';
 
         const html = `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 40px 20px;">
-                <div style="background: white; border-radius: 24px; padding: 40px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #334155; background-color: #f8fafc; padding: 40px 20px;">
+                <div style="background-color: #ffffff; border-radius: 20px; padding: 40px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                     <div style="text-align: center; margin-bottom: 32px;">
-                        <img src="${logoUrl}" alt="PageMD" style="height: 48px; margin-bottom: 24px;">
-                        <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.025em;">Demo Scheduled</h1>
+                        <img src="${logoUrl}" alt="PageMD" style="height: 42px; margin-bottom: 24px;">
+                        <h1 style="color: #0f172a; font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.025em;">Demo Invitation</h1>
                     </div>
                     
-                    <p style="font-size: 16px; color: #475569; margin-bottom: 24px; text-align: center;">
-                        Hello ${leadName}, your demo session for PageMD EMR has been scheduled with ${sellerName}.
+                    <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 32px; text-align: center;">
+                        Hi ${leadName}, your PageMD EMR demo has been scheduled with <strong>${sellerName}</strong>. We're excited to show you the platform.
                     </p>
                     
-                    <div style="background-color: #f1f5f9; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
-                        <div style="margin-bottom: 12px; display: flex; align-items: center;">
-                            <strong style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; width: 80px;">When:</strong>
-                            <span style="color: #0f172a; font-weight: 600;">${date}</span>
-                        </div>
-                        <div style="margin-bottom: 12px; display: flex; align-items: center;">
-                            <strong style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; width: 80px;">Where:</strong>
-                            <a href="${zoomLink}" style="color: #2563eb; font-weight: 600; text-decoration: none;">Join Zoom Meeting</a>
-                        </div>
-                        <div style="display: flex; align-items: center;">
-                            <strong style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; width: 80px;">Hosted by:</strong>
-                            <span style="color: #0f172a; font-weight: 600;">${sellerName}</span>
-                        </div>
+                    <div style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
+                        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                                <td style="padding-bottom: 16px;">
+                                    <span style="display: block; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">When</span>
+                                    <span style="display: block; color: #0f172a; font-size: 16px; font-weight: 600;">${date}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-bottom: 16px;">
+                                    <span style="display: block; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Meeting Link</span>
+                                    <a href="${zoomLink}" style="color: #2563eb; font-size: 16px; font-weight: 600; text-decoration: none;">Join Zoom Meeting</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span style="display: block; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Hosted By</span>
+                                    <span style="color: #0f172a; font-size: 16px; font-weight: 600;">${sellerName}</span>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
                     
-                    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 32px;">
-                        <a href="${confirmUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; text-align: center; flex: 1; max-width: 160px;">Accept Invite</a>
-                        <a href="${denyUrl}" style="background-color: #ffffff; color: #475569; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; text-align: center; border: 1px solid #e2e8f0; flex: 1; max-width: 160px;">Reschedule</a>
-                    </div>
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 24px;">
+                        <tr>
+                            <td align="center" style="padding-bottom: 12px;">
+                                <a href="${confirmUrl}" style="display: block; background-color: #2563eb; color: #ffffff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; text-align: center; border: 1px solid #2563eb;">Confirm Attendance</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="center">
+                                <a href="${denyUrl}" style="display: block; background-color: #ffffff; color: #64748b; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: 1px solid #e2e8f0;">Reschedule Demo</a>
+                            </td>
+                        </tr>
+                    </table>
                     
-                    <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 0;">
-                        Please confirm your attendance by clicking one of the buttons above.
+                    <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 0; line-height: 1.5;">
+                        Need help? Reply to this email or visit our <a href="https://pagemdemr.com/support" style="color: #3b82f6; text-decoration: none;">support center</a>.
+                    </p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 32px;">
+                    <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                        PageMD EMR • 1101 Brickell Ave, Miami, FL 33131
                     </p>
                 </div>
             </div>
