@@ -247,7 +247,9 @@ app.use('/api/audit', auditRoutes);
 // Billing endpoints
 const billingRoutes = require('./routes/billing');
 const feeSheetRoutes = require('./routes/fee-sheet');
+const growthRoutes = require('./routes/growth');
 app.use('/api/billing', billingRoutes);
+app.use('/api/growth', growthRoutes);
 app.use('/api/fee-sheet', feeSheetRoutes);
 app.use('/api/billing-openemr', require('./routes/billing-openemr'));
 app.use('/api/claim-submissions', require('./routes/claim-submissions'));

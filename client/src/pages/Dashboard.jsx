@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 
+
 const Dashboard = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -354,6 +355,8 @@ const Dashboard = () => {
                                 )}
                             </div>
                         </div>
+
+
 
                         {/* Quick Start Card - Light Theme */}
                         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-5 overflow-hidden relative group">

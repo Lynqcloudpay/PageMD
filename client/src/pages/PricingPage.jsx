@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, ArrowRight, Shield, Zap, TrendingDown, DollarSign, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ArrowRight, Shield, Zap, TrendingDown, DollarSign, Calculator, ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import LandingNav from '../components/LandingNav';
 
 const TIERS = [
@@ -71,6 +71,7 @@ const PricingPage = () => {
 
     const totalMonthly = useMemo(() => calculateTotal(seats), [seats]);
     const avgCostPerSeat = useMemo(() => Math.round(totalMonthly / seats), [totalMonthly, seats]);
+    const totalSavings = useMemo(() => (seats * 399) - totalMonthly, [seats, totalMonthly]);
 
     const incrementSeats = () => setSeats(prev => Math.min(prev + 1, 11));
     const decrementSeats = () => setSeats(prev => Math.max(prev - 1, 1));
@@ -224,11 +225,34 @@ const PricingPage = () => {
                                     {seats === 1 ? (
                                         <p className="text-[10px] font-bold text-indigo-900/60 leading-relaxed italic">Add providers to see the discounted breakdown.</p>
                                     ) : (
-                                        <div className="space-y-2">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-bold text-indigo-900 gap-2">
+                                        <div className="space-y-3">
+                                            <div className="flex flex-col gap-1">
                                                 <span className="font-mono text-[10px] text-indigo-600/70 break-all leading-tight">{pricingEquation}</span>
-                                                <span className="text-lg font-black tabular-nums whitespace-nowrap">${totalMonthly.toLocaleString()}</span>
                                             </div>
+
+                                            {/* Price Comparison: Original vs Discounted */}
+                                            <div className="flex items-center justify-between pt-2 border-t border-indigo-100">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Without Discount</span>
+                                                    <span className="text-base font-bold text-gray-400 line-through tabular-nums">${(seats * 399).toLocaleString()}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Your Price</span>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span className={`text-2xl font-black text-indigo-900 tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${totalMonthly.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Savings Badge */}
+                                            {totalSavings > 0 && (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                                                        ↓ Save ${totalSavings.toLocaleString()}/mo
+                                                    </span>
+                                                </div>
+                                            )}
+
                                             <div className="h-1.5 w-full bg-indigo-100/50 rounded-full overflow-hidden">
                                                 <div className="h-full bg-blue-600 transition-all duration-700" style={{ width: `${(avgCostPerSeat / 399) * 100}%` }}></div>
                                             </div>
@@ -259,6 +283,99 @@ const PricingPage = () => {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Referral Rewards Advertising (The Growth Loop) */}
+            <section className="py-24 px-6 relative overflow-hidden bg-slate-900 border-y border-white/5">
+                <div className="absolute top-0 right-0 w-full h-full opacity-20 pointer-events-none">
+                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[120px]"></div>
+                    <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500 rounded-full blur-[120px]"></div>
+                </div>
+
+                <div className="max-w-6xl mx-auto relative z-10">
+                    <div className="lg:flex items-center gap-20">
+                        <div className="lg:w-5/12 mb-12 lg:mb-0">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-blue-500/20">
+                                <Users className="w-3 h-3" />
+                                Exclusive Referral Benefit
+                            </div>
+                            <h2 className="text-4xl font-black text-white tracking-tight mb-8 leading-tight">
+                                Unlock <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 uppercase tracking-wider">Ghost Seats</span> <br />
+                                & Subsidize Your Practice.
+                            </h2>
+                            <p className="text-slate-400 text-lg leading-relaxed mb-10">
+                                Why pay full price when your network can pay it for you? Refer a colleague to PageMD, and we’ll credit your account with a <span className="text-white font-bold">Ghost Seat</span>.
+                                <br /><br />
+                                These seats count toward your billing tiers just like a physical provider, automatically lowering your monthly rate per doctor for as long as your referral stays active.
+                            </p>
+
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-6 h-6 rounded-full bg-[#059669]/20 flex items-center justify-center shrink-0 mt-1">
+                                        <Check className="w-3.5 h-3.5 text-[#059669]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white">Compound Savings</p>
+                                        <p className="text-xs text-slate-500">The more you refer, the more your individual cost drops.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-4">
+                                    <div className="w-6 h-6 rounded-full bg-[#059669]/20 flex items-center justify-center shrink-0 mt-1">
+                                        <Check className="w-3.5 h-3.5 text-[#059669]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white">30-Day Churn Grace Period</p>
+                                        <p className="text-xs text-slate-500">If a referral leaves, we keep your discount active for 30 days while you find a replacement.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="lg:w-7/12">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-xl group hover:bg-white/10 transition-all">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center mb-6 shadow-xl shadow-blue-900/40">
+                                        <TrendingDown className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-white mb-4 uppercase tracking-wider">Physical vs. Ghost</h3>
+                                    <p className="text-sm text-slate-400 leading-relaxed mb-6 italic">
+                                        "I have 2 doctors in our practice, but I referred 4 friends. My billing tier jumped from 'Partner' to 'Premier', saving me $3,600 this year."
+                                    </p>
+                                    <div className="flex items-center gap-2 pt-6 border-t border-white/10">
+                                        <div className="flex -space-x-2">
+                                            {[1, 2].map(i => (
+                                                <div key={i} className="w-8 h-8 rounded-full bg-slate-700 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-tighter">MD</div>
+                                            ))}
+                                            {[1, 2, 3, 4].map(i => (
+                                                <div key={i} className="w-8 h-8 rounded-full bg-blue-500 border-2 border-slate-900 flex items-center justify-center text-[10px] font-black text-white uppercase tracking-tighter shadow-lg shadow-blue-500/50">G</div>
+                                            ))}
+                                        </div>
+                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-auto">Level 6 Pricing Unlocked</span>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 rounded-[2rem] bg-gradient-to-br from-indigo-600 to-blue-700 shadow-2xl shadow-indigo-500/20 flex flex-col justify-between group hover:scale-[1.02] transition-all">
+                                    <div>
+                                        <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
+                                            <Calculator className="w-6 h-6 text-white" />
+                                        </div>
+                                        <h3 className="text-xl font-black text-white mb-4 uppercase tracking-wider">Viral Subsidy Logic</h3>
+                                        <p className="text-sm text-blue-100 leading-relaxed">
+                                            Refer just 10 colleagues and unlock <span className="font-black text-white underline decoration-cyan-400 decoration-4 underline-offset-4">Enterprise Pricing</span> regardless of your actual practice size.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate('/contact')}
+                                        className="mt-8 w-full py-4 bg-white text-blue-600 font-black rounded-xl hover:shadow-xl hover:shadow-white/20 transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                                    >
+                                        Start Referring
+                                        <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -170,7 +170,20 @@ const PlatformAdminClinics = () => {
                                 className="group w-full text-left bg-white/80 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg shadow-slate-200/50 p-6 hover:shadow-xl hover:shadow-blue-500/10 hover:border-blue-200 transition-all duration-300"
                             >
                                 <div className="flex items-start gap-4 mb-4">
-                                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform">
+                                    {clinic.logo_url ? (
+                                        <img
+                                            src={clinic.logo_url}
+                                            alt={`${clinic.display_name} logo`}
+                                            className="w-14 h-14 rounded-2xl object-cover shadow-lg group-hover:scale-105 transition-transform border border-slate-100"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div
+                                        className={`w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform ${clinic.logo_url ? 'hidden' : 'flex'}`}
+                                    >
                                         <Building2 className="w-7 h-7 text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">

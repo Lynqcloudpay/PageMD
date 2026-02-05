@@ -17,7 +17,7 @@ import {
   Settings, Building2, Users, Shield, Stethoscope, Mail,
   ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2,
   DollarSign, Database, Activity, Lock, Globe, Clock, Bell,
-  Eye, EyeOff, Server, Zap, Upload, ShieldCheck
+  Eye, EyeOff, Server, Zap, Upload, ShieldCheck, Gift
 } from 'lucide-react';
 import { settingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useNavigate } from 'react-router-dom';
 import ImageCropper from '../components/ImageCropper';
 import FlagTypesSettings from '../components/FlagTypesSettings';
+import GrowthRewardWidget from '../components/GrowthRewardWidget';
 
 const AdminSettings = () => {
   const { user } = useAuth();
@@ -161,6 +162,7 @@ const AdminSettings = () => {
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'features', label: 'Features', icon: Zap },
     { id: 'billing', label: 'Billing', icon: DollarSign },
+    { id: 'rewards', label: 'Referrals/Reward', icon: Gift },
   ];
 
   if (loading) {
@@ -282,6 +284,12 @@ const AdminSettings = () => {
 
           {activeTab === 'billing' && (
             <BillingSettingsTab />
+          )}
+
+          {activeTab === 'rewards' && (
+            <div className="max-w-xl mx-auto py-8">
+              <GrowthRewardWidget />
+            </div>
           )}
         </div>
       </div>

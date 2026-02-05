@@ -133,16 +133,82 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
             return res.status(404).json({ error: 'Clinic not found' });
         }
 
+        const clinicData = clinic.rows[0];
+
         // Stubbed recent usage metrics
         const usage = [];
 
         // Stubbed payment history
         const payments = [];
 
+        // 3. Growth Stats (Referrals & Ghost Seats)
+        const ghostRes = await pool.controlPool.query(`
+            SELECT count(*) FROM public.clinic_referrals 
+            WHERE referrer_clinic_id = $1 
+            AND (status = 'active' OR (status = 'churned' AND grace_period_expires_at > NOW()))
+        `, [id]);
+        const ghostSeats = parseInt(ghostRes.rows[0].count) || 0;
+
+        const activeReferrals = await pool.controlPool.query(`
+            SELECT * FROM public.clinic_referrals WHERE referrer_clinic_id = $1 ORDER BY created_at DESC
+        `, [id]);
+
+        // 4. Physical Seats (Count of provider-level users in this clinic's schema)
+        let physicalSeats = 1;
+        try {
+            const schemaName = clinicData.schema_name;
+            if (schemaName) {
+                const usersRes = await pool.controlPool.query(`
+                    SELECT count(*) FROM ${schemaName}.users 
+                    WHERE status = 'active' 
+                    AND UPPER(role) IN ('CLINICIAN', 'PHYSICIAN', 'DOCTOR', 'NP', 'PROVIDER', 'PA', 'NURSE PRACTITIONER')
+                `);
+                physicalSeats = parseInt(usersRes.rows[0].count) || 1;
+            }
+        } catch (e) {
+            console.warn(`[SuperAdmin] Could not count physical seats for clinic ${id}:`, e.message);
+        }
+
+        // 5. Calculate Billing Tier (Staircase Model)
+        const TIERS = [
+            { name: 'Solo', min: 1, max: 1, rate: 399 },
+            { name: 'Partner', min: 2, max: 3, rate: 299 },
+            { name: 'Professional', min: 4, max: 5, rate: 249 },
+            { name: 'Premier', min: 6, max: 8, rate: 199 },
+            { name: 'Elite', min: 9, max: 10, rate: 149 },
+            { name: 'Enterprise', min: 11, max: 999, rate: 99 },
+        ];
+
+        const totalBillingSeats = physicalSeats + ghostSeats;
+
+        // Calculate total monthly using staircase logic
+        let totalMonthly = 0;
+        for (let i = 1; i <= totalBillingSeats; i++) {
+            const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
+            totalMonthly += tier.rate;
+        }
+
+        const currentTier = TIERS.find(t => totalBillingSeats >= t.min && totalBillingSeats <= t.max) || TIERS[TIERS.length - 1];
+        const avgRatePerSeat = Math.round(totalMonthly / totalBillingSeats);
+
         res.json({
-            clinic: clinic.rows[0],
+            clinic: clinicData,
             usage: usage,
-            recent_payments: payments
+            recent_payments: payments,
+            growth: {
+                ghostSeats,
+                referrals: activeReferrals.rows
+            },
+            billing: {
+                physicalSeats,
+                ghostSeats,
+                totalBillingSeats,
+                currentTier: currentTier.name,
+                marginalRate: currentTier.rate,
+                avgRatePerSeat,
+                totalMonthly,
+                tiers: TIERS
+            }
         });
     } catch (error) {
         console.error('Error fetching clinic details:', error);

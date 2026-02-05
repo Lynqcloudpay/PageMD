@@ -648,5 +648,11 @@ export const partnersAPI = {
   getScopes: () => api.get('/admin/scopes'),
 };
 
+// Growth Reward (Referrals)
+export const growthAPI = {
+  getStats: () => api.get('/growth/stats'),
+  invite: (data) => api.post('/growth/invite', data),
+};
+
 export default api;
 

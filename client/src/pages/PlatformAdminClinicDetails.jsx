@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap } from 'lucide-react';
+import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap, Users } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall }) => {
@@ -276,6 +276,122 @@ const DriftManager = ({ clinicId, apiCall }) => {
                     )}
                 </div>
             ))}
+        </div>
+    );
+};
+
+
+const ClinicGrowthOverview = ({ growth, billing }) => {
+    if (!growth && !billing) return null;
+
+    const { ghostSeats, referrals } = growth || { ghostSeats: 0, referrals: [] };
+    const {
+        physicalSeats = 1,
+        totalBillingSeats = 1,
+        currentTier = 'Solo',
+        marginalRate = 399,
+        avgRatePerSeat = 399,
+        totalMonthly = 399,
+        tiers = []
+    } = billing || {};
+
+    return (
+        <div className="space-y-6">
+            {/* Billing Tier Summary */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white shadow-xl shadow-indigo-200/50 relative overflow-hidden">
+                <div className="absolute top-0 right-0 opacity-10">
+                    <Zap className="w-32 h-32 -mr-10 -mt-10" />
+                </div>
+                <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-1">Current Billing Tier</p>
+                            <p className="text-3xl font-black">{currentTier}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-1">Monthly Total</p>
+                            <p className="text-3xl font-black">${totalMonthly.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/20">
+                        <div className="text-center">
+                            <p className="text-2xl font-black">{physicalSeats}</p>
+                            <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-wider">Physical</p>
+                        </div>
+                        <div className="text-center border-x border-white/20">
+                            <p className="text-2xl font-black">{ghostSeats}</p>
+                            <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-wider">Ghost</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-2xl font-black">{totalBillingSeats}</p>
+                            <p className="text-[9px] font-bold text-indigo-200 uppercase tracking-wider">Total Seats</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tier Breakdown */}
+            {tiers.length > 0 && (
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Tier Breakdown</p>
+                    <div className="space-y-2">
+                        {tiers.map((tier, i) => {
+                            const isActive = tier.name === currentTier;
+                            return (
+                                <div key={i} className={`flex items-center justify-between py-1.5 px-2 rounded-lg transition-all ${isActive ? 'bg-indigo-100 border border-indigo-200' : 'opacity-50'}`}>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-indigo-500' : 'bg-slate-300'}`}></span>
+                                        <span className={`text-xs font-bold ${isActive ? 'text-indigo-700' : 'text-slate-400'}`}>{tier.name}</span>
+                                        <span className="text-[10px] text-slate-400">({tier.min === tier.max ? tier.min : `${tier.min}-${tier.max}`} seats)</span>
+                                    </div>
+                                    <span className={`text-xs font-black ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>${tier.rate}/seat</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Referrals Table */}
+            <div className="overflow-hidden border border-slate-100 rounded-2xl bg-white shadow-sm">
+                <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                        <tr>
+                            <th className="px-4 py-3">Referred Clinic / Email</th>
+                            <th className="px-4 py-3 text-center">Status</th>
+                            <th className="px-4 py-3 text-right">Referral Link Used</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                        {referrals?.length > 0 ? referrals.map((ref, i) => (
+                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-4 py-3">
+                                    <div className="font-bold text-slate-800">{ref.referred_clinic_name || 'Prospect'}</div>
+                                    <div className="text-slate-400 text-[10px]">{ref.referral_email}</div>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${ref.status === 'active' ? 'bg-emerald-100 text-emerald-600' :
+                                        ref.status === 'churned' ? 'bg-amber-100 text-amber-600' :
+                                            'bg-slate-100 text-slate-400'
+                                        }`}>
+                                        {ref.status}
+                                        {ref.status === 'churned' && ref.grace_period_expires_at && (
+                                            <span className="ml-1 text-[8px] opacity-70">
+                                                (Grace until {new Date(ref.grace_period_expires_at).toLocaleDateString()})
+                                            </span>
+                                        )}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-right text-slate-400 font-mono">
+                                    {new Date(ref.created_at).toLocaleDateString()}
+                                </td>
+                            </tr>
+                        )) : (
+                            <tr><td colSpan="3" className="px-4 py-6 text-center text-slate-400 italic">No referral data recorded.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };
@@ -828,7 +944,18 @@ const PlatformAdminClinicDetails = () => {
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-start gap-8 relative z-10">
-                        <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-4xl shadow-lg shadow-blue-500/25 shrink-0">
+                        {clinic.logo_url ? (
+                            <img
+                                src={clinic.logo_url}
+                                alt={`${clinic.display_name} logo`}
+                                className="w-24 h-24 rounded-[2rem] object-cover shadow-lg shadow-blue-500/10 border border-slate-100 shrink-0 bg-white"
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                }}
+                            />
+                        ) : null}
+                        <div className={`w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 items-center justify-center text-white font-black text-4xl shadow-lg shadow-blue-500/25 shrink-0 ${clinic.logo_url ? 'hidden' : 'flex'}`}>
                             {clinic.display_name?.[0]}
                         </div>
                         <div className="space-y-3">
@@ -849,9 +976,9 @@ const PlatformAdminClinicDetails = () => {
                                     <Database className="w-4 h-4 text-blue-500" />
                                     <span className="font-mono text-xs">{clinic.slug}</span>
                                 </span>
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Tenant Type">
+                                <span className="flex items-center gap-2 bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 font-bold" title="Billing Tier">
                                     <Building2 className="w-4 h-4 text-indigo-500" />
-                                    {clinic.tenant_type || 'Solo'}
+                                    {clinicData?.billing?.currentTier || 'Solo'} Tier
                                 </span>
                                 <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Compliance Zone">
                                     <Shield className="w-4 h-4 text-emerald-500" />
@@ -877,6 +1004,24 @@ const PlatformAdminClinicDetails = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Info */}
                     <div className="lg:col-span-2 space-y-8">
+
+                        {/* Growth & Referrals Section */}
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-cyan-500/10 transition-colors"></div>
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center shadow-lg shadow-cyan-200">
+                                        <Users className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-bold text-slate-800 tracking-tight">Growth & Referral Loop</h2>
+                                        <p className="text-[10px] font-bold text-cyan-600 uppercase tracking-widest leading-none mt-1">Staircase Discount Stats</p>
+                                    </div>
+                                </div>
+                                <span className="text-xs font-bold text-cyan-600 bg-cyan-50 px-2 py-1 rounded-lg border border-cyan-100 uppercase tracking-tighter">Viral Engine</span>
+                            </div>
+                            <ClinicGrowthOverview growth={clinicData.growth} billing={clinicData.billing} />
+                        </div>
 
                         {/* Clinic Personnel */}
                         <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40">
@@ -1098,16 +1243,14 @@ const PlatformAdminClinicDetails = () => {
                                     </div>
 
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Tenant Type</label>
-                                        <select
-                                            value={clinic.tenant_type || 'Solo'}
-                                            onChange={(e) => handleControlChange({ tenant_type: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
-                                        >
-                                            <option value="Solo">Solo Practice</option>
-                                            <option value="Group">Group Practice</option>
-                                            <option value="Enterprise">Enterprise</option>
-                                        </select>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Billing Tier (Auto-Calculated)</label>
+                                        <div className="w-full bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-lg px-3 py-2 text-xs font-bold flex items-center justify-between">
+                                            <span>{clinicData?.billing?.currentTier || 'Solo'}</span>
+                                            <span className="text-indigo-200 text-[10px]">
+                                                {clinicData?.billing?.totalBillingSeats || 1} seat{(clinicData?.billing?.totalBillingSeats || 1) !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        <p className="text-[9px] text-slate-400 italic">Based on {clinicData?.billing?.physicalSeats || 1} physical + {clinicData?.billing?.ghostSeats || 0} ghost seats</p>
                                     </div>
 
                                     <div className="space-y-2">
@@ -1220,21 +1363,14 @@ const PlatformAdminClinicDetails = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 shrink-0">
+                                <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100">
+                                    <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white shrink-0">
                                         <Shield className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Tenant Type</p>
-                                        <select
-                                            value={clinic.tenant_type}
-                                            onChange={(e) => handleControlChange({ tenant_type: e.target.value })}
-                                            className="text-xs font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 cursor-pointer"
-                                        >
-                                            <option value="Solo">Solo Practice</option>
-                                            <option value="Group">Group Practice</option>
-                                            <option value="Enterprise">Enterprise</option>
-                                        </select>
+                                        <p className="text-[10px] uppercase font-bold text-indigo-400 mb-0.5">Billing Tier</p>
+                                        <p className="text-sm font-black text-indigo-700">{clinicData?.billing?.currentTier || 'Solo'}</p>
+                                        <p className="text-[9px] text-indigo-400">Auto-calculated from {clinicData?.billing?.totalBillingSeats || 1} billing seats</p>
                                     </div>
                                 </div>
                             </div>
