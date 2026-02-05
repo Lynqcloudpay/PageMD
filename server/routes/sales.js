@@ -996,6 +996,28 @@ router.post('/track-visit', async (req, res) => {
             ? `Lead returned to sandbox via persistent cookie - Message: "${message}"`
             : 'Lead returned to sandbox via persistent cookie';
 
+        // DE-DUPLICATION: Check if a similar log entry was created very recently (within 5 mins)
+        // This handles the "ping on page load" vs "ping on launch button" double notification.
+        const recentLogRes = await pool.query(`
+            SELECT id FROM sales_inquiry_logs 
+            WHERE inquiry_id = $1 AND type = 'return_visit' 
+            AND created_at > NOW() - INTERVAL '5 minutes'
+            ORDER BY created_at DESC LIMIT 1
+        `, [inquiry.id]);
+
+        if (recentLogRes.rows.length > 0) {
+            const logId = recentLogRes.rows[0].id;
+            if (message) {
+                // If we have a message now, upgrade the existing recent log entry
+                await pool.query(
+                    'UPDATE sales_inquiry_logs SET content = $1 WHERE id = $2',
+                    [logContent, logId]
+                );
+            }
+            // If no message, we skip creating a duplicate "return visit" log
+            return res.json({ success: true, leadName: inquiry.name });
+        }
+
         await pool.query(`
             INSERT INTO sales_inquiry_logs (inquiry_id, type, content)
             VALUES ($1, 'return_visit', $2)
