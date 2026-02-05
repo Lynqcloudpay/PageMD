@@ -226,15 +226,20 @@ router.post('/inquiry', async (req, res) => {
             });
         }
 
-        // 3. Generate verification token (45 min expiry)
+        // 3. Generate verification code (6 digits)
         const isSandboxRequest = source === 'Sandbox_Demo';
         let verificationToken = null;
+        let verificationCode = null;
         let verificationExpires = null;
         const initialStatus = isSandboxRequest ? 'pending_verification' : 'new';
 
         if (isSandboxRequest) {
+            // Generate random 6-digit code
+            verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // Still generate a token for tracking the session if needed, but the user will use the code
             verificationToken = jwt.sign(
-                { email, name, type: 'demo_verification' },
+                { email, type: 'demo_verification_code' },
                 process.env.JWT_SECRET || 'pagemd-secret',
                 { expiresIn: '45m' }
             );
@@ -246,42 +251,164 @@ router.post('/inquiry', async (req, res) => {
             INSERT INTO sales_inquiries (
                 name, email, phone, practice_name, provider_count,
                 message, interest_type, source, status, referral_code,
-                verification_token, verification_expires_at, recaptcha_score, is_disposable_email,
+                verification_token, verification_code, verification_expires_at, 
+                recaptcha_score, is_disposable_email,
                 created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
             RETURNING id, created_at
         `, [
             name, email, phone, practice, providers, message, interest, source,
-            initialStatus, referral_code, verificationToken, verificationExpires,
+            initialStatus, referral_code, verificationToken, verificationCode, verificationExpires,
             recaptchaScore, isDisposable
         ]);
 
         const inquiry = result.rows[0];
         console.log(`[SALES] Inquiry #${inquiry.id} created with status: ${initialStatus}`);
 
-        // 5. Send magic link email for sandbox requests
-        if (isSandboxRequest && verificationToken) {
+        // 5. Send verification code email for sandbox requests
+        if (isSandboxRequest && verificationCode) {
             const emailService = require('../services/emailService');
-            const frontendUrl = process.env.FRONTEND_URL || 'https://pagemdemr.com';
-            const magicLink = `${frontendUrl}/verify-demo?token=${verificationToken}`;
-
-            await emailService.sendDemoMagicLink(email, name, magicLink);
-            console.log(`[SALES] Magic link sent to: ${email}`);
+            await emailService.sendDemoVerificationCode(email, name, verificationCode);
+            console.log(`[SALES] Verification code sent to: ${email}`);
         }
 
         res.status(201).json({
             success: true,
             message: isSandboxRequest
-                ? 'Check your email for the demo access link!'
+                ? 'Check your email for the verification code!'
                 : 'Thank you for your interest!',
             inquiryId: inquiry.id,
-            requiresVerification: isSandboxRequest
+            requiresVerification: isSandboxRequest,
+            email: email // Return email to frontend for displayed context
         });
 
     } catch (error) {
         console.error('Error submitting sales inquiry:', error);
         res.status(500).json({ error: 'Failed to submit inquiry' });
+    }
+});
+
+/**
+ * POST /api/sales/verify-code
+ * Verify 6-digit code and provision sandbox demo
+ */
+router.post('/verify-code', async (req, res) => {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+        return res.status(400).json({ error: 'Email and verification code are required' });
+    }
+
+    try {
+        // 1. Find and update inquiry
+        const inquiryRes = await pool.query(
+            `SELECT * FROM sales_inquiries 
+             WHERE email = $1 AND verification_code = $2 AND status = 'pending_verification'`,
+            [email, code]
+        );
+
+        if (inquiryRes.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Invalid or expired verification code.',
+                code: 'INVALID_CODE'
+            });
+        }
+
+        const inquiry = inquiryRes.rows[0];
+
+        // 2. Check expiry
+        if (inquiry.verification_expires_at && new Date(inquiry.verification_expires_at) < new Date()) {
+            return res.status(400).json({
+                error: 'Verification code has expired. Please request a new demo.',
+                code: 'EXPIRED_CODE'
+            });
+        }
+
+        // 3. Update inquiry status to verified
+        await pool.query(
+            `UPDATE sales_inquiries 
+             SET status = 'verified', email_verified = true, updated_at = NOW()
+             WHERE id = $1`,
+            [inquiry.id]
+        );
+
+        console.log(`[SALES] Inquiry #${inquiry.id} verified via code for ${inquiry.email}`);
+
+        // 4. Provision sandbox
+        const crypto = require('crypto');
+        const tenantSchemaSQL = require('../config/tenantSchema');
+        const { seedSandbox } = require('../scripts/seed-sandbox-core');
+
+        const sandboxId = crypto.randomBytes(8).toString('hex');
+        const schemaName = `sandbox_${sandboxId}`;
+
+        const client = await pool.controlPool.connect();
+        try {
+            console.log(`[SALES] Provisioning sandbox: ${schemaName}`);
+            await client.query('BEGIN');
+
+            // Create Schema and Tables
+            await client.query(`CREATE SCHEMA ${schemaName}`);
+            await client.query(`SET search_path TO ${schemaName}, public`);
+            await client.query(tenantSchemaSQL);
+
+            // Create Default Sandbox Provider
+            const providerRes = await client.query(`
+                INSERT INTO users (email, password_hash, first_name, last_name, role, is_admin, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id
+            `, ['demo@pagemd.com', 'sandbox_auto_login_placeholder', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
+            const providerId = providerRes.rows[0].id;
+            const sandboxClinicId = '60456326-868d-4e21-942a-fd35190ed4fc';
+
+            // Seed Basic Settings
+            await client.query(`
+                INSERT INTO practice_settings (practice_name, practice_type, timezone)
+                VALUES ('Sandbox Medical Center', 'General Practice', 'America/New_York')
+            `);
+
+            await client.query(`
+                INSERT INTO clinical_settings (require_dx_on_visit, enable_clinical_alerts)
+                VALUES (true, true)
+            `);
+
+            // Seed Clinical Data
+            await seedSandbox(client, schemaName, providerId, sandboxClinicId);
+
+            await client.query('COMMIT');
+
+            // Issue JWT
+            const sandboxToken = jwt.sign({
+                userId: providerId,
+                email: 'demo@pagemd.com',
+                isSandbox: true,
+                sandboxId: sandboxId,
+                clinicId: sandboxClinicId,
+                clinicSlug: 'demo',
+                role: 'Clinician'
+            }, process.env.JWT_SECRET || 'pagemd-secret', { expiresIn: '1h' });
+
+            console.log(`[SALES] Sandbox ${schemaName} provisioned for ${inquiry.email}`);
+
+            res.json({
+                success: true,
+                token: sandboxToken,
+                sandboxId,
+                redirect: '/dashboard',
+                message: 'Demo environment ready!'
+            });
+
+        } catch (provisionError) {
+            await client.query('ROLLBACK');
+            throw provisionError;
+        } finally {
+            client.release();
+        }
+
+    } catch (error) {
+        console.error('[SALES] Code verification error:', error);
+        res.status(500).json({ error: 'Failed to verify code and provision demo' });
     }
 });
 

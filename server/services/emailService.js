@@ -119,6 +119,49 @@ class EmailService {
     }
 
     /**
+     * Send Demo Verification Code for Sandbox Access
+     * @param {string} email - User's email
+     * @param {string} userName - User's name
+     * @param {string} code - The 6-digit verification code
+     */
+    async sendDemoVerificationCode(email, userName, code) {
+        const subject = `${code} is your PageMD Demo access code`;
+        const html = `
+            <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 40px 20px;">
+                <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 12px 24px; border-radius: 14px; margin-bottom: 24px;">
+                            <span style="color: white; font-weight: 700; font-size: 24px; letter-spacing: -0.5px;">PageMD</span>
+                        </div>
+                        <h1 style="color: #0f172a; font-size: 26px; font-weight: 800; margin: 0;">Verification Code</h1>
+                    </div>
+                    
+                    <p style="font-size: 16px; line-height: 1.7; color: #475569; margin-bottom: 30px; text-align: center;">
+                        Hello ${userName || 'Doctor'}, use the following code to verify your email and launch your sandbox demo.
+                    </p>
+                    
+                    <div style="background: #f1f5f9; border-radius: 16px; padding: 32px; text-align: center; margin: 30px 0; border: 1px solid #e2e8f0;">
+                        <span style="font-family: 'Courier New', monospace; font-size: 48px; font-weight: 800; color: #1e293b; letter-spacing: 12px; display: block; margin-bottom: 8px;">${code}</span>
+                        <p style="font-size: 13px; color: #64748b; margin: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Expires in 45 minutes</p>
+                    </div>
+                    
+                    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin-top: 30px; text-align: center;">
+                        Enter this code in the demo window to continue.
+                    </p>
+
+                    <div style="border-top: 1px solid #f1f5f9; margin-top: 40px; padding-top: 30px; text-align: center;">
+                        <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                            © ${new Date().getFullYear()} PageMD EMR • HIPAA Compliant Sandbox
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
+
+    /**
      * Send Demo Magic Link for Sandbox Verification
      * @param {string} email - User's email
      * @param {string} userName - User's name
