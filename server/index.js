@@ -151,6 +151,9 @@ app.use('/uploads', staticMiddleware, staticFiles);
 const PATIENT_PORTAL_ENABLED = process.env.PATIENT_PORTAL_ENABLED === 'true';
 console.log(`[System] Patient Portal: ${PATIENT_PORTAL_ENABLED ? 'ENABLED' : 'DISABLED'}`);
 
+// Sales inquiries (public - no auth required)
+app.use('/api/sales', require('./routes/sales'));
+
 // Multi-tenancy resolver - resolves clinic specific database
 app.use('/api', resolveTenant);
 
@@ -341,9 +344,6 @@ app.use('/api', require('./routes/clinicalWorkspace'));
 
 // Telehealth (Daily.co video conferencing)
 app.use('/api/telehealth', require('./routes/telehealth'));
-
-// Sales inquiries (public - no auth required)
-app.use('/api/sales', require('./routes/sales'));
 
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {

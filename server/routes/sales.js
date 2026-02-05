@@ -164,6 +164,7 @@ router.get('/users', verifyToken, async (req, res) => {
  * Submit a sales inquiry (PUBLIC)
  */
 router.post('/inquiry', async (req, res) => {
+    console.log('[SALES] Inquiry received:', req.body.email);
     try {
         const {
             name,
