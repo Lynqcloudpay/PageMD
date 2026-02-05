@@ -978,7 +978,7 @@ router.post('/track-visit', async (req, res) => {
         if (!uuid) return res.status(400).json({ error: 'UUID required' });
 
         const result = await pool.query(
-            'SELECT id, name, status FROM sales_inquiries WHERE uuid = $1',
+            'SELECT id, name, email, status FROM sales_inquiries WHERE uuid = $1',
             [uuid]
         );
         const inquiry = result.rows[0];
@@ -996,14 +996,17 @@ router.post('/track-visit', async (req, res) => {
             ? `Lead returned to sandbox via persistent cookie - Message: "${message}"`
             : 'Lead returned to sandbox via persistent cookie';
 
-        // DE-DUPLICATION: Check if a similar log entry was created very recently (within 5 mins)
-        // This handles the "ping on page load" vs "ping on launch button" double notification.
+        // DE-DUPLICATION: Check if ANY inquiry record with this email has a recent return_visit log
+        // This handles cases where people have multiple historical records/UUIDs.
         const recentLogRes = await pool.query(`
             SELECT id FROM sales_inquiry_logs 
-            WHERE inquiry_id = $1 AND type = 'return_visit' 
+            WHERE inquiry_id IN (
+                SELECT id FROM sales_inquiries WHERE LOWER(email) = LOWER($1)
+            )
+            AND type = 'return_visit' 
             AND created_at > NOW() - INTERVAL '5 minutes'
             ORDER BY created_at DESC LIMIT 1
-        `, [inquiry.id]);
+        `, [inquiry.email]);
 
         if (recentLogRes.rows.length > 0) {
             const logId = recentLogRes.rows[0].id;
@@ -1014,7 +1017,7 @@ router.post('/track-visit', async (req, res) => {
                     [logContent, logId]
                 );
             }
-            // If no message, we skip creating a duplicate "return visit" log
+            // Log found, we either updated it or skip if no new message info
             return res.json({ success: true, leadName: inquiry.name });
         }
 
