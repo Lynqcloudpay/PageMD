@@ -212,6 +212,7 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
                 marginalRate: currentTier.rate,
                 avgRatePerSeat: parseFloat(avgRatePerSeat.toFixed(2)),
                 totalMonthly,
+                virtualTotal,
                 tiers: TIERS
             }
         });

@@ -22,8 +22,8 @@ const TIERS = [
  */
 const calculateTotalBilling = (physicalSeats, ghostSeats = 0) => {
     const totalBillingSeats = physicalSeats + ghostSeats;
-    if (totalBillingSeats <= 0) return 0;
-    if (physicalSeats <= 0) return 0;
+    if (totalBillingSeats <= 0) return { total: 0, virtualTotal: 0, effectiveRate: 0 };
+    if (physicalSeats <= 0) return { total: 0, virtualTotal: 0, effectiveRate: 0 };
 
     let virtualTotal = 0;
 
@@ -37,7 +37,11 @@ const calculateTotalBilling = (physicalSeats, ghostSeats = 0) => {
     const effectiveAverageRate = virtualTotal / totalBillingSeats;
 
     // 3. Final bill is Physical Doctors * Effective Average Rate
-    return Math.round(physicalSeats * effectiveAverageRate);
+    return {
+        total: Math.round(physicalSeats * effectiveAverageRate),
+        virtualTotal,
+        effectiveRate: effectiveAverageRate
+    };
 };
 
 /**
@@ -71,7 +75,8 @@ router.get('/stats', async (req, res) => {
 
         // 3. Billing Logic
         const totalBillingSeats = physicalSeats + ghostSeats;
-        const totalMonthly = calculateTotalBilling(physicalSeats, ghostSeats);
+        const billingData = calculateTotalBilling(physicalSeats, ghostSeats);
+        const totalMonthly = billingData.total;
         const currentAvgPerSeat = totalBillingSeats > 0 ? Math.round(totalMonthly / physicalSeats) : 0;
         const currentTier = TIERS.find(t => totalBillingSeats >= t.min && totalBillingSeats <= t.max) || TIERS[TIERS.length - 1];
 
@@ -94,8 +99,8 @@ router.get('/stats', async (req, res) => {
         let nextMilestone = null;
         const maxCheck = 100; // Check up to Enterprise level
         for (let s = totalBillingSeats + 1; s <= maxCheck; s++) {
-            const nextTotal = calculateTotalBilling(physicalSeats, s - physicalSeats);
-            const nextAvg = Math.round(nextTotal / physicalSeats);
+            const nextBilling = calculateTotalBilling(physicalSeats, s - physicalSeats);
+            const nextAvg = Math.round(nextBilling.total / physicalSeats);
             if (nextAvg < currentAvgPerSeat) {
                 nextMilestone = {
                     referralsNeeded: s - totalBillingSeats,
@@ -127,6 +132,8 @@ router.get('/stats', async (req, res) => {
             marginalRate: currentTier.rate,
             tierName: currentTier.name,
             totalMonthly,
+            virtualTotal: billingData.virtualTotal,
+            effectiveRate: parseFloat(billingData.effectiveRate.toFixed(4)),
             referralCode,
             referralLink: referralCode ? `https://pagemdemr.com/register?ref=${referralCode}` : null,
             nextMilestone,

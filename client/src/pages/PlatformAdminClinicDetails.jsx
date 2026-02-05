@@ -313,6 +313,25 @@ const ClinicGrowthOverview = ({ growth, billing }) => {
                             <p className="text-3xl font-black">${totalMonthly.toLocaleString()}</p>
                         </div>
                     </div>
+
+                    {/* Math Breakdown Tooltip/Section */}
+                    <div className="mb-4 p-3 bg-white/10 rounded-xl border border-white/20 space-y-2">
+                        <p className="text-[9px] font-black text-indigo-100 uppercase tracking-widest">Average Cost Equation</p>
+                        <div className="flex flex-col gap-1 text-[11px] font-medium text-white/90">
+                            <div className="flex justify-between">
+                                <span>Virtual Total ({totalBillingSeats} seats)</span>
+                                <span>${(billing?.virtualTotal || totalMonthly).toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Effective Rate</span>
+                                <span>${(avgRatePerSeat).toFixed(2)}/MD</span>
+                            </div>
+                            <div className="pt-1 mt-1 border-t border-white/20 flex justify-between font-black">
+                                <span>{physicalSeats} MDs × ${avgRatePerSeat.toFixed(2)}</span>
+                                <span>${totalMonthly.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
                     <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/20">
                         <div className="text-center">
                             <p className="text-2xl font-black">{physicalSeats}</p>

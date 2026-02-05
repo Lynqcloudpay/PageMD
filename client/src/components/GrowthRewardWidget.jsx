@@ -52,6 +52,8 @@ const GrowthRewardWidget = () => {
     const safeStats = stats || {
         currentRate: 399,
         totalBillingSeats: 1,
+        physicalSeats: 1,
+        virtualTotal: 399,
         referralCode: null,
         ghostSeats: 0,
         activeGracePeriods: [],
@@ -65,6 +67,8 @@ const GrowthRewardWidget = () => {
         totalMonthly,
         nextMilestone,
         totalBillingSeats,
+        physicalSeats,
+        virtualTotal,
         referralLink,
         ghostSeats,
         activeGracePeriods
@@ -88,16 +92,31 @@ const GrowthRewardWidget = () => {
                             <span className="text-3xl font-bold text-gray-900">${marginalRate || currentRate}</span>
                             <span className="text-sm font-medium text-gray-500">/ MD / month</span>
                         </div>
-                        <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Bill</span>
-                                <span className="text-sm font-bold text-gray-900">${totalMonthly}</span>
+                        <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+                            {/* Billing Equation Logic (The Why) */}
+                            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">The Equation</p>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-[11px] text-gray-600">
+                                        <span>Virtual Total ({safeStats.totalBillingSeats} seats)</span>
+                                        <span className="font-bold">${safeStats.virtualTotal?.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[11px] text-gray-600">
+                                        <span>Effective Avg. Rate</span>
+                                        <span className="font-bold">${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</span>
+                                    </div>
+                                    <div className="pt-1 border-t border-gray-200 flex justify-between text-[11px] font-black text-primary-700">
+                                        <span>{safeStats.physicalSeats} MDs × ${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</span>
+                                        <span>${totalMonthly}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex justify-between items-center py-2 px-3 bg-primary-50 border border-primary-100 rounded-lg">
-                                <span className="text-[10px] font-black text-primary-700 uppercase tracking-widest">Blended Average</span>
-                                <span className="text-base font-black text-primary-700">${currentRate}</span>
+
+                            <div className="flex justify-between items-center px-3 py-2 bg-primary-50 border border-primary-100 rounded-lg">
+                                <span className="text-[10px] font-black text-primary-700 uppercase tracking-widest">Final Bill</span>
+                                <span className="text-base font-black text-primary-700">${totalMonthly}</span>
                             </div>
-                            <p className="text-[9px] text-gray-400 font-medium italic text-right">* Includes first-MD solo rate + tier discounts</p>
+                            <p className="text-[9px] text-gray-400 font-medium italic text-right">* Ghost seats reduce your average rate per doctor.</p>
                         </div>
                     </div>
 
