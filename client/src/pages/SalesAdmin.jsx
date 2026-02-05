@@ -56,6 +56,12 @@ const SalesAdmin = () => {
     const [onboardLoading, setOnboardLoading] = useState(false);
     const [onboardError, setOnboardError] = useState('');
 
+    // Status Change Modal State
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [pendingStatus, setPendingStatus] = useState(null);
+    const [statusNote, setStatusNote] = useState('');
+    const [statusNoteLoading, setStatusNoteLoading] = useState(false);
+
     const baseUrl = import.meta.env.VITE_API_URL || '';
 
     // --- Authentication ---
@@ -244,24 +250,66 @@ const SalesAdmin = () => {
         }
     };
 
-    const updateInquiryStatus = async (id, newStatus) => {
+    const updateInquiryStatus = async (id, newStatus, notes = null) => {
         try {
             setUpdating(true);
             const response = await authenticatedFetch(`/sales/inquiries/${id}`, {
                 method: 'PATCH',
-                body: JSON.stringify({ status: newStatus })
+                body: JSON.stringify({ status: newStatus, notes: notes })
             });
 
             if (!response.ok) throw new Error('Failed to update');
 
             await fetchInquiries();
             if (selectedInquiry?.id === id) {
-                setSelectedInquiry(prev => ({ ...prev, status: newStatus }));
+                setSelectedInquiry(prev => ({ ...prev, status: newStatus, notes: notes || prev.notes }));
             }
         } catch (err) {
             console.error('Error updating inquiry:', err);
         } finally {
             setUpdating(false);
+        }
+    };
+
+    // Open status change modal (for statuses requiring notes)
+    const openStatusModal = (newStatus) => {
+        if (selectedInquiry?.status === 'converted') {
+            // Cannot change status once converted
+            alert('This inquiry has been converted and cannot be changed.');
+            return;
+        }
+        setPendingStatus(newStatus);
+        setStatusNote('');
+        setShowStatusModal(true);
+    };
+
+    // Submit status change with note
+    const submitStatusChange = async () => {
+        if (!statusNote.trim()) {
+            alert('Please add a note before changing status.');
+            return;
+        }
+        setStatusNoteLoading(true);
+        await updateInquiryStatus(selectedInquiry.id, pendingStatus, statusNote);
+        setStatusNoteLoading(false);
+        setShowStatusModal(false);
+        setPendingStatus(null);
+        setStatusNote('');
+    };
+
+    // Get status note placeholder based on status
+    const getStatusNotePlaceholder = (status) => {
+        switch (status) {
+            case 'contacted':
+                return 'What was discussed? Any follow-up actions? Next call date?';
+            case 'demo_scheduled':
+                return 'When is the demo? Who will attend? Any special requirements?';
+            case 'follow_up':
+                return 'What needs to be followed up? When? Any blockers?';
+            case 'closed':
+                return 'Why was the deal not closed? Customer feedback? Reason for rejection?';
+            default:
+                return 'Add notes about this status change...';
         }
     };
 
@@ -329,7 +377,8 @@ const SalesAdmin = () => {
         switch (status) {
             case 'new': return 'bg-blue-100 text-blue-700';
             case 'contacted': return 'bg-yellow-100 text-yellow-700';
-            case 'qualified': return 'bg-purple-100 text-purple-700';
+            case 'demo_scheduled': return 'bg-indigo-100 text-indigo-700';
+            case 'follow_up': return 'bg-orange-100 text-orange-700';
             case 'converted': return 'bg-emerald-100 text-emerald-700';
             case 'closed': return 'bg-slate-100 text-slate-700';
             default: return 'bg-slate-100 text-slate-600';
@@ -537,7 +586,8 @@ const SalesAdmin = () => {
                             <option value="">All Statuses</option>
                             <option value="new">New</option>
                             <option value="contacted">Contacted</option>
-                            <option value="qualified">Qualified</option>
+                            <option value="demo_scheduled">Demo Scheduled</option>
+                            <option value="follow_up">Follow Up</option>
                             <option value="converted">Converted</option>
                             <option value="closed">Closed</option>
                         </select>
@@ -627,18 +677,34 @@ const SalesAdmin = () => {
                             <>
                                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                                     <h2 className="font-semibold text-slate-900">Details</h2>
-                                    <select
-                                        value={selectedInquiry.status || 'new'}
-                                        onChange={(e) => updateInquiryStatus(selectedInquiry.id, e.target.value)}
-                                        disabled={updating}
-                                        className={`text-sm px-3 py-1.5 rounded-lg border ${getStatusColor(selectedInquiry.status)} border-current`}
-                                    >
-                                        <option value="new">New</option>
-                                        <option value="contacted">Contacted</option>
-                                        <option value="qualified">Qualified</option>
-                                        <option value="converted">Converted</option>
-                                        <option value="closed">Closed</option>
-                                    </select>
+                                    {selectedInquiry.status === 'converted' ? (
+                                        <span className="text-sm px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 font-medium flex items-center gap-1.5">
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            Converted
+                                        </span>
+                                    ) : (
+                                        <select
+                                            value={selectedInquiry.status || 'new'}
+                                            onChange={(e) => {
+                                                const newStatus = e.target.value;
+                                                if (['contacted', 'demo_scheduled', 'follow_up', 'closed'].includes(newStatus)) {
+                                                    openStatusModal(newStatus);
+                                                    // Reset dropdown to current value (modal will handle the change)
+                                                    e.target.value = selectedInquiry.status || 'new';
+                                                } else {
+                                                    updateInquiryStatus(selectedInquiry.id, newStatus);
+                                                }
+                                            }}
+                                            disabled={updating}
+                                            className={`text-sm px-3 py-1.5 rounded-lg border ${getStatusColor(selectedInquiry.status)} border-current`}
+                                        >
+                                            <option value="new">New</option>
+                                            <option value="contacted">📞 Contacted</option>
+                                            <option value="demo_scheduled">📅 Demo Scheduled</option>
+                                            <option value="follow_up">🔄 Follow Up</option>
+                                            <option value="closed">❌ Closed</option>
+                                        </select>
+                                    )}
                                 </div>
                                 <div className="p-5 space-y-5">
                                     {/* Contact Info */}
@@ -703,6 +769,18 @@ const SalesAdmin = () => {
                                         </div>
                                     )}
 
+                                    {/* Sales Notes */}
+                                    {selectedInquiry.notes && (
+                                        <div>
+                                            <h3 className="text-sm font-medium text-slate-900 mb-2 flex items-center gap-2">
+                                                <MessageSquare className="w-4 h-4 text-blue-500" />
+                                                Sales Notes
+                                            </h3>
+                                            <div className="text-sm text-slate-700 bg-blue-50 rounded-lg p-3 whitespace-pre-wrap border border-blue-100">
+                                                {selectedInquiry.notes}
+                                            </div>
+                                        </div>
+                                    )}
                                     {/* Meta */}
                                     <div className="pt-4 border-t border-slate-100">
                                         <div className="text-xs text-slate-400 space-y-1">
@@ -1109,6 +1187,92 @@ const SalesAdmin = () => {
                                 </p>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Status Change Modal */}
+            {showStatusModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
+                        <button
+                            onClick={() => {
+                                setShowStatusModal(false);
+                                setPendingStatus(null);
+                                setStatusNote('');
+                            }}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <XCircle className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
+                                }`}>
+                                {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
+                                {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
+                                {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
+                                {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800">
+                                    {pendingStatus === 'contacted' && 'Log Contact'}
+                                    {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
+                                    {pendingStatus === 'follow_up' && 'Set Follow Up'}
+                                    {pendingStatus === 'closed' && 'Close Inquiry'}
+                                </h2>
+                                <p className="text-sm text-slate-500">
+                                    {selectedInquiry?.name} • {selectedInquiry?.email}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                {pendingStatus === 'contacted' && 'Contact Notes *'}
+                                {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
+                                {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
+                                {pendingStatus === 'closed' && 'Reason for Closing *'}
+                            </label>
+                            <textarea
+                                value={statusNote}
+                                onChange={(e) => setStatusNote(e.target.value)}
+                                placeholder={getStatusNotePlaceholder(pendingStatus)}
+                                rows={5}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowStatusModal(false);
+                                    setPendingStatus(null);
+                                    setStatusNote('');
+                                }}
+                                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={submitStatusChange}
+                                disabled={statusNoteLoading || !statusNote.trim()}
+                                className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
+                                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                            >
+                                {statusNoteLoading ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Save & Update Status
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
