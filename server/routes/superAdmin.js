@@ -278,9 +278,32 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
             [status, id]
         );
 
-        // Log the action
         // Log the action (Phase 3: Secure Audit)
         await AuditService.log(null, `clinic_${status} `, id, { reason });
+
+        // AUTOMATIC CHURN HANDLING
+        // If the clinic is suspended/deactivated, update any referrals pointing TO this clinic.
+        if (['suspended', 'deactivated'].includes(status)) {
+            await pool.controlPool.query(`
+                UPDATE clinic_referrals 
+                SET status = 'churned', 
+                    grace_period_expires_at = NOW() + INTERVAL '90 days',
+                    updated_at = NOW()
+                WHERE referred_clinic_id = $1
+            `, [id]);
+            console.log(`[SuperAdmin] Churned referrals for clinic ${id} (Soft Landing: 90 days)`);
+        }
+        // If reactivated, restore the referral status
+        else if (status === 'active') {
+            await pool.controlPool.query(`
+                UPDATE clinic_referrals 
+                SET status = 'active', 
+                    grace_period_expires_at = NULL,
+                    updated_at = NOW()
+                WHERE referred_clinic_id = $1
+            `, [id]);
+            console.log(`[SuperAdmin] Restored referrals for clinic ${id}`);
+        }
 
         res.json({ message: `Clinic ${status} successfully`, status });
     } catch (error) {
