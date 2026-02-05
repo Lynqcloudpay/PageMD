@@ -38,7 +38,9 @@ if [ -d "client" ] && [ -f "client/package.json" ]; then
 fi
 
 echo "🗜️  Packaging local server changes..."
-tar -czf server.tar.gz server
+# COPYFILE_DISABLE=1 prevents macOS from adding ._ files to the archive
+# Use --exclude to keep the archive small
+COPYFILE_DISABLE=1 tar --exclude='node_modules' --exclude='.git' --exclude='.DS_Store' -czf server.tar.gz server
 
 echo "🌐 Connecting to server for deployment..."
 
