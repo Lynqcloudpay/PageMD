@@ -125,34 +125,35 @@ class EmailService {
      * @param {string} code - The 6-digit verification code
      */
     async sendDemoVerificationCode(email, userName, code) {
-        const subject = `Welcome! ${code} is your PageMD verification code`;
+        const subject = `PageMD Verification Code: ${code}`;
         const logoUrl = 'https://pagemdemr.com/logo.png';
 
         const html = `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 500px; margin: 0 auto; color: #1e293b; line-height: 1.6; background-color: #f8fafc; padding: 40px 20px;">
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <img src="${logoUrl}" alt="PageMD" style="height: 48px; width: auto;">
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b; line-height: 1.6; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                <div style="background-color: #f8fafc; padding: 32px 20px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+                    <img src="${logoUrl}" alt="PageMD" style="height: 40px; width: auto;">
                 </div>
                 
-                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 40px; text-align: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                    <h1 style="margin: 0 0 16px 0; color: #0f172a; font-size: 24px; font-weight: 800;">Welcome to PageMD!</h1>
+                <div style="padding: 40px 32px; text-align: center;">
+                    <h1 style="margin: 0 0 16px 0; color: #0f172a; font-size: 22px; font-weight: 800; letter-spacing: -0.025em;">Verify Your Email</h1>
                     
-                    <p style="margin-bottom: 32px; font-size: 16px; color: #475569;">
-                        We're excited to have you. Use the code below to verify your email and launch your personal sandbox demo.
+                    <p style="margin-bottom: 32px; font-size: 15px; color: #475569;">
+                        Hi ${userName || 'there'}, use the verification code below to launch your PageMD sandbox demo.
                     </p>
                     
-                    <div style="background: #eff6ff; padding: 24px; border-radius: 12px; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #2563eb; font-family: 'SF Mono', Consolas, monospace; border: 1px dashed #bfdbfe;">
+                    <div style="background-color: #eff6ff; padding: 24px 10px; border-radius: 16px; font-size: 32px; font-weight: 800; letter-spacing: 0.1em; color: #2563eb; font-family: 'SF Mono', Consolas, monospace; border: 1px solid #dbeafe; display: block; white-space: nowrap; margin: 0 auto; width: 100%; box-sizing: border-box;">
                         ${code}
                     </div>
                     
-                    <p style="font-size: 12px; color: #94a3b8; margin-top: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <p style="font-size: 12px; color: #94a3b8; margin-top: 24px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">
                         Expires in 45 minutes
                     </p>
                 </div>
                 
-                <div style="text-align: center; padding: 24px; font-size: 12px; color: #94a3b8;">
-                    <p style="margin: 0;">PageMD EMR • HIPAA Compliant Sandbox</p>
-                    <p style="margin: 4px 0 0 0;">This is an automated security email from PageMD Support.</p>
+                <div style="padding: 32px; background-color: #f8fafc; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+                    <p style="margin: 0; font-weight: 600;">PageMD EMR • HIPAA Compliant Sandbox</p>
+                    <p style="margin: 8px 0 0 0;">PageMD HQ • 1101 Brickell Ave, Miami, FL 33131</p>
+                    <p style="margin: 4px 0 0 0;">If you didn't request this, please ignore this email.</p>
                 </div>
             </div>
         `;
@@ -186,11 +187,11 @@ class EmailService {
                         </a>
                     </div>
                     
-                    <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+                    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
                         Link expires in 45 minutes for security purposes.
                     </p>
                     
-                    <p style="font-size: 13px; color: #94a3b8; margin-top: 30px;">
+                    <p style="font-size: 13px; color: #94a3b8; margin-top: 20px;">
                         If the button doesn't work, copy and paste this link into your browser:<br/>
                         <a href="${magicLink}" style="color: #3b82f6; word-break: break-all;">${magicLink}</a>
                     </p>
@@ -221,10 +222,14 @@ class EmailService {
         }
 
         const mailOptions = {
-            from: `"PageMD Support" <support@pagemdemr.com>`, // As specifically requested
+            from: `"PageMD Support" <support@pagemdemr.com>`, // Fixed as requested
             to,
             subject,
-            html
+            html,
+            headers: {
+                'X-Entity-Ref-ID': Date.now().toString(),
+                'List-Unsubscribe': '<mailto:support@pagemdemr.com?subject=unsubscribe>'
+            }
         };
 
         if (this.enabled && this.transporter) {

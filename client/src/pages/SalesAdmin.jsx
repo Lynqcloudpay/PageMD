@@ -511,7 +511,8 @@ const SalesAdmin = () => {
         total: inquiries.length,
         new: inquiries.filter(i => {
             const s = (i.status || 'new').toLowerCase().trim();
-            return ['new', 'pending_verification', 'verified', 'pending'].includes(s);
+            // Catch-all: If it's NOT in pipeline, converted, or closed, it's New/Pending
+            return !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
         }).length,
         contacted: inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'contacted').length,
         converted: inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'converted').length
@@ -698,7 +699,7 @@ const SalesAdmin = () => {
                                     <span className={`text-lg font-black ${activeCategory === 'pending' ? 'text-blue-700' : 'text-slate-900'}`}>
                                         {inquiries.filter(i => {
                                             const s = (i.status || 'new').toLowerCase().trim();
-                                            return ['new', 'contacted', 'pending_verification', 'verified', 'pending'].includes(s);
+                                            return !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
                                         }).length}
                                     </span>
                                 </button>
@@ -787,6 +788,9 @@ const SalesAdmin = () => {
 
                                     const displayItems = filteredInquiries.filter(i => {
                                         const s = (i.status || 'new').toLowerCase().trim();
+                                        if (activeCategory === 'pending') {
+                                            return !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
+                                        }
                                         return categoryMap[activeCategory].includes(s);
                                     });
 
