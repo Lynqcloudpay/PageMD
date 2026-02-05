@@ -74,19 +74,8 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
             const baseUrl = import.meta.env.VITE_API_URL || '/api';
 
             if (!uuid) {
-                console.error('[Concierge] No lead UUID found in cookies. Tracking visit instead.');
-                try {
-                    await fetch(`${baseUrl}/sales/track-visit`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ source: 'concierge_inquiry_no_uuid' })
-                    });
-                } catch (trackError) {
-                    console.error('Failed to track visit without UUID:', trackError);
-                }
-                // We still want to allow the user to submit an inquiry even without a UUID,
-                // but the backend might handle it differently or reject it.
-                // For now, we'll proceed with a null UUID for the inquiry.
+                console.warn('[Concierge] No lead UUID found in cookies.');
+                // We'll proceed without UUID, the backend might reject it but we want to log it
             }
 
             console.log(`[Concierge] Sending inquiry for ${uuid || 'no_uuid'} to ${baseUrl}`);
@@ -96,15 +85,23 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
                 body: JSON.stringify({ uuid, message })
             });
 
-            if (!res.ok) throw new Error('Failed to send inquiry');
-
-            setSubmitted(true);
-            setMessage('');
+            if (res.ok) {
+                setSubmitted(true);
+                setMessage('');
+            }
         } catch (error) {
             console.error('Failed to send inquiry:', error);
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleLaunchClick = async () => {
+        if (message.trim() && !submitted) {
+            // FIRE AND FORGET - don't let a slow inquiry block the demo launch
+            handleInquiry();
+        }
+        onLaunch();
     };
 
     if (!isOpen) return null;
@@ -170,7 +167,7 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
                         )}
 
                         <button
-                            onClick={onLaunch}
+                            onClick={handleLaunchClick}
                             disabled={isLaunching}
                             className="w-full mt-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-xl shadow-emerald-500/20 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3 group disabled:opacity-70"
                         >
