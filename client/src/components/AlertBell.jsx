@@ -13,7 +13,11 @@ const AlertBell = () => {
     const [error, setError] = useState(null);
     const dropdownRef = useRef(null);
 
+    // Only show for admins
+    const isAdmin = user?.isAdmin || user?.role === 'admin';
+
     const fetchAlerts = async () => {
+        if (!isAdmin) return;
         try {
             setLoading(true);
             setError(null);
@@ -33,7 +37,7 @@ const AlertBell = () => {
         // Refresh every 60 seconds
         const interval = setInterval(fetchAlerts, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isAdmin]);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -46,6 +50,8 @@ const AlertBell = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    if (!isAdmin) return null;
+
     const alertCount = alerts.length;
     const hasWarnings = alerts.some(a => a.severity === 'warning');
 
@@ -56,8 +62,20 @@ const AlertBell = () => {
         setShowDropdown(false);
     };
 
+    const handleDismiss = async (e, alertId) => {
+        e.stopPropagation(); // Prevent navigation
+        try {
+            await growthAPI.dismissAlert(alertId);
+            setAlerts(prev => prev.filter(a => a.id !== alertId));
+        } catch (err) {
+            console.error('Failed to dismiss alert:', err);
+        }
+    };
+
     const getAlertIcon = (type) => {
         switch (type) {
+            case 'success':
+                return <TrendingDown className="w-4 h-4 rotate-180" />; // Up trend
             case 'churn':
             case 'expiring':
                 return <TrendingDown className="w-4 h-4" />;
@@ -68,6 +86,8 @@ const AlertBell = () => {
 
     const getAlertColor = (severity) => {
         switch (severity) {
+            case 'success':
+                return 'text-emerald-600 bg-emerald-50 border-emerald-200';
             case 'warning':
                 return 'text-amber-600 bg-amber-50 border-amber-200';
             case 'error':
@@ -82,8 +102,8 @@ const AlertBell = () => {
             <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className={`relative p-2 rounded-lg transition-all ${alertCount > 0
-                    ? 'text-amber-600 hover:bg-amber-50'
-                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                        ? 'text-amber-600 hover:bg-amber-50'
+                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                     }`}
             >
                 <Bell className="w-5 h-5" />
@@ -121,16 +141,25 @@ const AlertBell = () => {
                         ) : (
                             <div className="divide-y divide-slate-100">
                                 {alerts.map((alert) => (
-                                    <button
+                                    <div
                                         key={alert.id}
+                                        className="w-full p-4 text-left hover:bg-slate-50 transition-colors group relative"
                                         onClick={() => handleAlertClick(alert)}
-                                        className="w-full p-4 text-left hover:bg-slate-50 transition-colors group"
                                     >
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={(e) => handleDismiss(e, alert.id)}
+                                                className="p-1 hover:bg-slate-200 rounded-full text-slate-400 hover:text-slate-600"
+                                                title="Dismiss"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </div>
                                         <div className="flex items-start gap-3">
                                             <div className={`p-2 rounded-lg ${getAlertColor(alert.severity)}`}>
                                                 {getAlertIcon(alert.type)}
                                             </div>
-                                            <div className="flex-1 min-w-0">
+                                            <div className="flex-1 min-w-0 pr-4">
                                                 <p className="font-semibold text-slate-800 text-sm mb-0.5">
                                                     {alert.title}
                                                 </p>
@@ -138,14 +167,15 @@ const AlertBell = () => {
                                                     {alert.message}
                                                 </p>
                                                 {alert.actionLabel && (
-                                                    <span className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary-600 group-hover:text-primary-700">
+                                                    <span className={`inline-flex items-center gap-1 mt-2 text-xs font-medium group-hover:underline ${alert.severity === 'success' ? 'text-emerald-600' : 'text-primary-600'
+                                                        }`}>
                                                         {alert.actionLabel}
                                                         <ChevronRight className="w-3 h-3" />
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
-                                    </button>
+                                    </div>
                                 ))}
                             </div>
                         )}

@@ -196,6 +196,7 @@ router.get('/alerts', async (req, res) => {
 
         const alerts = [];
 
+
         // 1. Check for churned referrals (with grace period active)
         const churnedRes = await pool.controlPool.query(`
             SELECT referred_clinic_name, grace_period_expires_at, status, updated_at
@@ -223,7 +224,36 @@ router.get('/alerts', async (req, res) => {
             });
         }
 
-        // 2. Check for grace periods expiring soon (within 14 days)
+        // 2. Check for NEW active referrals (signed up in last 30 days)
+        const newReferralsRes = await pool.controlPool.query(`
+            SELECT referred_clinic_name, updated_at
+            FROM public.clinic_referrals 
+            WHERE referrer_clinic_id = $1 
+            AND status = 'active'
+            AND updated_at > NOW() - INTERVAL '30 days'
+            ORDER BY updated_at DESC
+        `, [clinicId]);
+
+        for (const row of newReferralsRes.rows) {
+            alerts.push({
+                id: `new-${row.referred_clinic_name}`,
+                type: 'success',
+                severity: 'success',
+                title: 'New Referral Signup!',
+                message: `${row.referred_clinic_name} has signed up! You are now receiving a referral discount.`,
+                createdAt: row.updated_at,
+                actionUrl: '/admin-settings',
+                actionLabel: 'View Discount'
+            });
+        }
+
+        // 3. Get dismissed alerts for this clinic
+        const dismissedRes = await pool.controlPool.query(`
+            SELECT alert_id FROM public.growth_alert_dismissals WHERE clinic_id = $1
+        `, [clinicId]);
+        const dismissedIds = new Set(dismissedRes.rows.map(r => r.alert_id));
+
+        // 4. Check for grace periods expiring soon (within 14 days)
         const expiringRes = await pool.controlPool.query(`
             SELECT referred_clinic_name, grace_period_expires_at
             FROM public.clinic_referrals 
@@ -235,6 +265,7 @@ router.get('/alerts', async (req, res) => {
 
         for (const row of expiringRes.rows) {
             const daysRemaining = Math.ceil((new Date(row.grace_period_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+            // Only add if not already covered by the main churn alert
             if (!alerts.find(a => a.id === `churn-${row.referred_clinic_name}`)) {
                 alerts.push({
                     id: `expire-${row.referred_clinic_name}`,
@@ -250,10 +281,39 @@ router.get('/alerts', async (req, res) => {
             }
         }
 
-        res.json({ alerts, count: alerts.length });
+        // Filter out dismissed alerts
+        const activeAlerts = alerts.filter(a => !dismissedIds.has(a.id));
+
+        res.json({ alerts: activeAlerts, count: activeAlerts.length });
     } catch (error) {
         console.error('[Growth] Alerts failed:', error);
         res.status(500).json({ error: 'Failed to fetch alerts' });
+    }
+});
+
+/**
+ * POST /alerts/:id/dismiss
+ * Dismiss a specific alert for the current clinic
+ */
+router.post('/alerts/:id/dismiss', async (req, res) => {
+    try {
+        const clinicId = req.user?.clinic_id || req.clinic?.id;
+        const alertId = req.params.id;
+
+        if (!clinicId) {
+            return res.status(400).json({ error: 'Clinic context required' });
+        }
+
+        await pool.controlPool.query(`
+            INSERT INTO public.growth_alert_dismissals (clinic_id, alert_id, dismissed_at)
+            VALUES ($1, $2, NOW())
+            ON CONFLICT (clinic_id, alert_id) DO UPDATE SET dismissed_at = NOW()
+        `, [clinicId, alertId]);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('[Growth] Dismiss alert failed:', error);
+        res.status(500).json({ error: 'Failed to dismiss alert' });
     }
 });
 

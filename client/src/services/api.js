@@ -653,6 +653,7 @@ export const growthAPI = {
   getStats: () => api.get('/growth/stats'),
   invite: (data) => api.post('/growth/invite', data),
   getAlerts: () => api.get('/growth/alerts'),
+  dismissAlert: (id) => api.post(`/growth/alerts/${id}/dismiss`),
 };
 
 export default api;
