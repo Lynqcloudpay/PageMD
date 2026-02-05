@@ -194,6 +194,8 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
         const paidPrices = prices.slice(ghostSeats);
         const totalMonthly = paidPrices.reduce((sum, rate) => sum + rate, 0);
 
+        console.log(`[SuperAdmin-Billing] Clinic: ${id}, Physical: ${physicalSeats}, Ghost: ${ghostSeats}, Total Month: ${totalMonthly}`);
+
         const currentTier = TIERS.find(t => totalBillingSeats >= t.min && totalBillingSeats <= t.max) || TIERS[TIERS.length - 1];
         const avgRatePerSeat = physicalSeats > 0 ? Math.round(totalMonthly / physicalSeats) : 0;
 
