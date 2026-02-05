@@ -19,18 +19,49 @@ import {
 import LandingNav from '../components/LandingNav';
 import tokenManager from '../services/tokenManager';
 import LeadCaptureModal from '../components/LeadCaptureModal';
+import ConciergeOverlay from '../components/ConciergeOverlay';
 
 const LandingPage = () => {
     const currentYear = new Date().getFullYear();
     const [loading, setLoading] = React.useState(false);
     const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [isConciergeOpen, setIsConciergeOpen] = React.useState(false);
+    const [leadName, setLeadName] = React.useState('');
 
-    const hasCapturedLead = () => {
-        return document.cookie.split(';').some((item) => item.trim().startsWith('pagemd_demo_captured='));
+    const getLeadCookie = (name) => {
+        return document.cookie.split('; ').find(row => row.startsWith(`${name}=`))?.split('=')[1];
     };
 
+    const hasCapturedLead = () => {
+        return !!getLeadCookie('pagemd_lead_id');
+    };
+
+    React.useEffect(() => {
+        const id = getLeadCookie('pagemd_lead_id');
+        const name = getLeadCookie('pagemd_lead_name');
+        if (id) {
+            setLeadName(decodeURIComponent(name || ''));
+            // Ping the backend to log the returning visit
+            const pingVisit = async () => {
+                try {
+                    const baseUrl = import.meta.env.VITE_API_URL || '';
+                    await fetch(`${baseUrl}/sales/track-visit`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uuid: id })
+                    });
+                } catch (e) { console.error('Ping failed', e); }
+            };
+            pingVisit();
+        }
+    }, []);
+
     const handleInstantDemoTrigger = () => {
-        setIsModalOpen(true);
+        if (hasCapturedLead()) {
+            setIsConciergeOpen(true);
+        } else {
+            setIsModalOpen(true);
+        }
     };
 
     const handleInstantDemo = async () => {
@@ -252,6 +283,13 @@ const LandingPage = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onLaunch={handleInstantDemo}
+            />
+            <ConciergeOverlay
+                isOpen={isConciergeOpen}
+                onClose={() => setIsConciergeOpen(false)}
+                leadName={leadName}
+                onLaunch={handleInstantDemo}
+                isLaunching={loading}
             />
         </div>
     );

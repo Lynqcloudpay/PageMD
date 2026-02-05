@@ -184,8 +184,16 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
 
                 if (!formData.email.includes('test')) {
                     const expiry = new Date();
-                    expiry.setDate(expiry.getDate() + 30);
+                    expiry.setFullYear(expiry.getFullYear() + 1); // 1 year persistence
+
                     document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+
+                    if (data.leadUuid) {
+                        document.cookie = `pagemd_lead_id=${data.leadUuid}; expires=${expiry.toUTCString()}; path=/`;
+                    }
+                    if (data.leadName) {
+                        document.cookie = `pagemd_lead_name=${data.leadName}; expires=${expiry.toUTCString()}; path=/`;
+                    }
                 }
             }
 

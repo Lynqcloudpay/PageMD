@@ -298,6 +298,10 @@ router.post('/inquiry', async (req, res) => {
             inquiryId = insertResult.rows[0].id;
         }
 
+        // Fetch the UUID for cookie persistence
+        const uuidRes = await pool.query('SELECT uuid FROM sales_inquiries WHERE id = $1', [inquiryId]);
+        const leadUuid = uuidRes.rows[0]?.uuid;
+
         // 6. Send verification code email for sandbox requests
         if (isSandboxRequest && verificationCode) {
             const emailService = require('../services/emailService');
@@ -313,7 +317,8 @@ router.post('/inquiry', async (req, res) => {
             message: isSandboxRequest
                 ? (isDuplicate ? 'Welcome back! We\'ve sent a fresh access code to your inbox.' : 'Check your email for the verification code!')
                 : 'Thank you for your interest!',
-            inquiryId
+            inquiryId,
+            leadUuid
         });
 
     } catch (error) {
@@ -361,7 +366,7 @@ router.post('/verify-code', async (req, res) => {
         // 3. Update inquiry status to verified
         await pool.query(
             `UPDATE sales_inquiries 
-             SET status = 'verified', email_verified = true, updated_at = NOW()
+             SET status = 'verified', email_verified = true, updated_at = NOW(), last_activity_at = NOW()
              WHERE id = $1`,
             [inquiry.id]
         );
@@ -946,6 +951,78 @@ router.post('/onboard', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('[SALES] Onboarding failed:', error);
         res.status(500).json({ error: error.message || 'Failed to onboard clinic.' });
+    }
+});
+
+/**
+ * POST /api/sales/track-visit
+ * Log a return visit for a lead identified by UUID
+ */
+router.post('/track-visit', async (req, res) => {
+    try {
+        const { uuid } = req.body;
+        if (!uuid) return res.status(400).json({ error: 'UUID required' });
+
+        const result = await pool.query(
+            'SELECT id, name, status FROM sales_inquiries WHERE uuid = $1',
+            [uuid]
+        );
+        const inquiry = result.rows[0];
+
+        if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+
+        // Update last activity
+        await pool.query(
+            'UPDATE sales_inquiries SET last_activity_at = NOW(), updated_at = NOW() WHERE id = $1',
+            [inquiry.id]
+        );
+
+        // Log the return visit
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, type, content)
+            VALUES ($1, 'return_visit', 'Lead returned to sandbox via persistent cookie')
+        `, [inquiry.id]);
+
+        res.json({ success: true, leadName: inquiry.name });
+    } catch (error) {
+        console.error('Error tracking visit:', error);
+        res.status(500).json({ error: 'Failed to track visit' });
+    }
+});
+
+/**
+ * POST /api/sales/concierge-inquiry
+ * Log a direct question from the Concierge UI
+ */
+router.post('/concierge-inquiry', async (req, res) => {
+    try {
+        const { uuid, message } = req.body;
+        if (!uuid || !message) return res.status(400).json({ error: 'UUID and message required' });
+
+        const result = await pool.query(
+            'SELECT id FROM sales_inquiries WHERE uuid = $1',
+            [uuid]
+        );
+        const inquiry = result.rows[0];
+
+        if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+
+        // Log the user inquiry
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, type, content)
+            VALUES ($1, 'user_inquiry', $2)
+        `, [inquiry.id, message]);
+
+        // Update last activity
+        await pool.query(
+            'UPDATE sales_inquiries SET last_activity_at = NOW(), updated_at = NOW() WHERE id = $1',
+            [inquiry.id]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error posting concierge inquiry:', error);
+        res.status(500).json({ error: 'Failed to post inquiry' });
     }
 });
 

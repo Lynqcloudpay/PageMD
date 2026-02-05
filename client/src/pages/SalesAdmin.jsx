@@ -823,6 +823,11 @@ const SalesAdmin = () => {
                                                                 <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
                                                                     {inquiry.status?.replace('_', ' ') || 'new'}
                                                                 </span>
+                                                                {inquiry.last_activity_at && new Date(inquiry.last_activity_at) - new Date(inquiry.created_at) > 1000 * 60 * 5 && (
+                                                                    <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-rose-100 text-rose-600 animate-pulse">
+                                                                        Returning
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <span className="text-[9px] text-slate-300 font-bold uppercase whitespace-nowrap">
@@ -1028,13 +1033,15 @@ const SalesAdmin = () => {
                                                                         <span className="text-[11px] font-black text-slate-900 uppercase tracking-wide">{log.admin_name || 'Admin'}</span>
                                                                         {log.type === 'demo_scheduled' && <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">Demo</span>}
                                                                         {log.type === 'demo_attempt' && <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">Re-Signup</span>}
+                                                                        {log.type === 'return_visit' && <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">Returning</span>}
+                                                                        {log.type === 'user_inquiry' && <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded uppercase">Inquiry</span>}
                                                                         {log.type === 'note' && <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">Note</span>}
                                                                     </div>
                                                                     <span className="text-[9px] font-black text-slate-300 uppercase tracking-tight">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
                                                                 </div>
                                                                 <div className={`text-sm p-4 rounded-2xl rounded-tl-none border leading-relaxed shadow-sm transition-all hover:shadow-md ${log.type === 'demo_scheduled'
                                                                     ? 'bg-indigo-50/50 border-indigo-100 text-indigo-900'
-                                                                    : log.type === 'demo_attempt'
+                                                                    : (log.type === 'demo_attempt' || log.type === 'return_visit' || log.type === 'user_inquiry')
                                                                         ? 'bg-blue-50/30 border-blue-100 text-slate-700 italic border-dashed'
                                                                         : 'bg-white border-slate-200 text-slate-700'
                                                                     }`}>
