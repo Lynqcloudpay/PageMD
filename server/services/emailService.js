@@ -119,6 +119,62 @@ class EmailService {
     }
 
     /**
+     * Send Demo Magic Link for Sandbox Verification
+     * @param {string} email - User's email
+     * @param {string} userName - User's name
+     * @param {string} magicLink - The verification link
+     */
+    async sendDemoMagicLink(email, userName, magicLink) {
+        const subject = `Your PageMD Demo Access Link`;
+        const html = `
+            <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 40px 20px;">
+                <div style="background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 12px 20px; border-radius: 12px; margin-bottom: 20px;">
+                            <span style="color: white; font-weight: 700; font-size: 22px; letter-spacing: -0.5px;">PageMD</span>
+                        </div>
+                        <h1 style="color: #0f172a; font-size: 24px; font-weight: 700; margin: 0;">Welcome, ${userName || 'Doctor'}!</h1>
+                    </div>
+                    
+                    <p style="font-size: 16px; line-height: 1.7; color: #475569; margin-bottom: 20px;">
+                        Thank you for your interest in PageMD. Click the button below to launch your personal sandbox demo environment.
+                    </p>
+                    
+                    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin-bottom: 30px;">
+                        Your demo will be pre-populated with sample patients, visits, and clinical data so you can experience the full power of PageMD instantly.
+                    </p>
+                    
+                    <div style="text-align: center; margin: 40px 0;">
+                        <a href="${magicLink}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 16px 40px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);">
+                            Launch My Demo →
+                        </a>
+                    </div>
+                    
+                    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 30px 0;">
+                        <p style="font-size: 13px; color: #92400e; margin: 0; font-weight: 500;">
+                            ⏱️ This link expires in 45 minutes for security purposes.
+                        </p>
+                    </div>
+                    
+                    <p style="font-size: 13px; color: #94a3b8; margin-top: 30px;">
+                        If the button doesn't work, copy and paste this link into your browser:<br/>
+                        <a href="${magicLink}" style="color: #3b82f6; word-break: break-all;">${magicLink}</a>
+                    </p>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <p style="font-size: 12px; color: #94a3b8;">
+                        © ${new Date().getFullYear()} PageMD EMR. All rights reserved.<br/>
+                        HIPAA Compliant • Secure • Simple
+                    </p>
+                </div>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
+
+    /**
      * Internal send method
      */
     async _send(to, subject, html) {

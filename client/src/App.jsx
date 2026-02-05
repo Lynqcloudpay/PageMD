@@ -60,6 +60,7 @@ const PlatformAdminDevelopers = React.lazy(() => import('./pages/PlatformAdminDe
 const ImpersonateHandler = React.lazy(() => import('./pages/ImpersonateHandler'));
 const SalesAdmin = React.lazy(() => import('./pages/SalesAdmin'));
 const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
+const VerifyDemo = React.lazy(() => import('./pages/VerifyDemo'));
 
 const PortalLogin = React.lazy(() => import('./portal/PortalLogin'));
 const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
@@ -191,6 +192,7 @@ function App() {
                                                             </React.Suspense>
                                                         } />
                                                         <Route path="/sales-admin" element={<SalesAdmin />} />
+                                                        <Route path="/verify-demo" element={<VerifyDemo />} />
 
                                                         {/* Patient Portal Routes */}
                                                         <Route path="/portal/login" element={<PortalLogin />} />

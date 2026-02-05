@@ -8,11 +8,18 @@ import {
     Phone,
     Zap,
     CheckCircle2,
-    Loader2
+    Loader2,
+    MailCheck,
+    AlertCircle
 } from 'lucide-react';
+
+// reCAPTCHA site key from environment
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitState, setSubmitState] = useState('form'); // 'form' | 'success' | 'error'
+    const [errorMessage, setErrorMessage] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         practice: '',
@@ -21,18 +28,46 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
         phone: ''
     });
 
+    // Load reCAPTCHA v3 script
+    useEffect(() => {
+        if (!RECAPTCHA_SITE_KEY) return;
+
+        // Check if already loaded
+        if (document.querySelector(`script[src*="recaptcha"]`)) return;
+
+        const script = document.createElement('script');
+        script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+        script.async = true;
+        document.head.appendChild(script);
+
+        return () => {
+            // Cleanup badge on unmount (optional)
+        };
+    }, []);
+
     if (!isOpen) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (isSubmitting) return;
         setIsSubmitting(true);
+        setErrorMessage('');
 
         try {
             const baseUrl = import.meta.env.VITE_API_URL || '';
             const referralCode = localStorage.getItem('pagemd_referral');
 
-            // 1. Submit Lead to Sales Admin
+            // Execute reCAPTCHA v3 if available
+            let recaptchaToken = null;
+            if (RECAPTCHA_SITE_KEY && window.grecaptcha) {
+                try {
+                    recaptchaToken = await window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action: 'demo_signup' });
+                } catch (recaptchaError) {
+                    console.warn('reCAPTCHA execution failed:', recaptchaError);
+                }
+            }
+
+            // Submit Lead to Sales Admin
             const leadRes = await fetch(`${baseUrl}/sales/inquiry`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -45,27 +80,113 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                     interest: 'sandbox',
                     source: 'Sandbox_Demo',
                     message: `Automated lead from Sandbox Demo Gate${formData.specialty ? ` | Specialty: ${formData.specialty}` : ''}`,
-                    referral_code: referralCode
+                    referral_code: referralCode,
+                    recaptchaToken
                 })
             });
 
-            // 2. Set Cookie (recognized for 30 days) if lead submission was okay
-            if (leadRes.ok) {
-                const expiry = new Date();
-                expiry.setDate(expiry.getDate() + 30);
-                document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+            const data = await leadRes.json();
+
+            if (!leadRes.ok) {
+                // Handle specific error codes
+                if (data.code === 'DISPOSABLE_EMAIL') {
+                    setErrorMessage('Please use a valid work email address (not a temporary email).');
+                } else if (data.code === 'BOT_DETECTED') {
+                    setErrorMessage('Security verification failed. Please try again.');
+                } else {
+                    setErrorMessage(data.error || 'Something went wrong. Please try again.');
+                }
+                setSubmitState('error');
+                return;
             }
 
-            // 3. Launch the Demo
-            onLaunch();
+            // Set Cookie (recognized for 30 days)
+            const expiry = new Date();
+            expiry.setDate(expiry.getDate() + 30);
+            document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+
+            // Show success state - user needs to check email
+            if (data.requiresVerification) {
+                setSubmitState('success');
+            } else {
+                // Legacy flow - direct launch
+                onLaunch();
+            }
         } catch (error) {
             console.error('Lead capture error:', error);
-            onLaunch();
+            setErrorMessage('Network error. Please check your connection and try again.');
+            setSubmitState('error');
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    // Success State - Check Your Email
+    if (submitState === 'success') {
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-y-auto pt-10 pb-10">
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" />
+                <div className="relative w-full max-w-xl bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/50 overflow-hidden transform transition-all">
+                    <button
+                        onClick={onClose}
+                        className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors z-10"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+
+                    <div className="p-8 md:p-12 text-center">
+                        {/* Success Animation */}
+                        <div className="mb-8">
+                            <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 rounded-full mb-6 animate-pulse">
+                                <MailCheck className="w-10 h-10 text-emerald-600" />
+                            </div>
+                            <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">
+                                Check Your Email!
+                            </h2>
+                            <p className="text-slate-500 text-base font-medium leading-relaxed mb-2">
+                                We've sent a magic link to <span className="text-blue-600 font-bold">{formData.email}</span>
+                            </p>
+                            <p className="text-slate-400 text-sm">
+                                Click the link in the email to launch your personalized demo.
+                            </p>
+                        </div>
+
+                        {/* Timer Notice */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
+                            <p className="text-amber-700 text-sm font-medium flex items-center justify-center gap-2">
+                                <span className="text-lg">⏱️</span>
+                                Link expires in 45 minutes
+                            </p>
+                        </div>
+
+                        {/* Tips */}
+                        <div className="text-left bg-slate-50 rounded-2xl p-5">
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-3">Didn't get the email?</p>
+                            <ul className="text-sm text-slate-600 space-y-2">
+                                <li className="flex items-start gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                    Check your spam or promotions folder
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                    Make sure you entered the correct email
+                                </li>
+                            </ul>
+                        </div>
+
+                        <button
+                            onClick={onClose}
+                            className="mt-6 text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors"
+                        >
+                            Close this window
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Form State
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-y-auto pt-10 pb-10">
             {/* Backdrop */}
@@ -90,16 +211,23 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                     <div className="mb-10 text-center">
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4 border border-emerald-100">
                             <Zap className="w-3 h-3 fill-current" />
-                            Instant Access
+                            Secure Access
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3 tracking-tight">
-                            Experience PageMD <span className="text-blue-600">Instantly</span>
+                            Experience PageMD <span className="text-blue-600">Now</span>
                         </h2>
                         <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                            Enter your details to launch your private, pre-populated sandbox environment.
-                            Zero wait time.
+                            Enter your details to receive a magic link to your private sandbox.
                         </p>
                     </div>
+
+                    {/* Error Message */}
+                    {submitState === 'error' && errorMessage && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-red-700 text-sm font-medium">{errorMessage}</p>
+                        </div>
+                    )}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -152,7 +280,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                         </div>
 
                         <div className="relative group">
-                            <Phone className="absolute left-4 top-4 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <Phone className="absolute left-4 top-4 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
                             <input
                                 required
                                 type="tel"
@@ -172,15 +300,15 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                                 <Loader2 className="w-6 h-6 animate-spin" />
                             ) : (
                                 <>
-                                    Launch Sandbox Demo
-                                    <Zap className="w-5 h-5 fill-current" />
+                                    Send Me the Magic Link
+                                    <Mail className="w-5 h-5" />
                                 </>
                             )}
                         </button>
 
                         <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold mt-6 flex items-center justify-center gap-2">
                             <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                            Instant HIPAA Compliant Session
+                            Secure • HIPAA Compliant
                         </p>
                     </form>
                 </div>

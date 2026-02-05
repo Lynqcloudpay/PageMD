@@ -162,6 +162,7 @@ router.get('/users', verifyToken, async (req, res) => {
 /**
  * POST /api/sales/inquiry
  * Submit a sales inquiry (PUBLIC)
+ * Enhanced with reCAPTCHA v3, disposable email detection, and magic link verification
  */
 router.post('/inquiry', async (req, res) => {
     console.log('[SALES] Inquiry received:', req.body.email);
@@ -175,35 +176,254 @@ router.post('/inquiry', async (req, res) => {
             message,
             interest,
             source,
-            referral_code
+            referral_code,
+            recaptchaToken
         } = req.body;
 
         if (!name || !email) {
             return res.status(400).json({ error: 'Name and email are required' });
         }
 
+        // 1. Verify reCAPTCHA v3 (if configured)
+        let recaptchaScore = null;
+        const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY;
+
+        if (recaptchaSecret && recaptchaToken) {
+            try {
+                const recaptchaRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `secret=${recaptchaSecret}&response=${recaptchaToken}`
+                });
+                const recaptchaData = await recaptchaRes.json();
+                recaptchaScore = recaptchaData.score;
+
+                console.log(`[SALES] reCAPTCHA score for ${email}: ${recaptchaScore}`);
+
+                // Reject likely bots (score < 0.3)
+                if (recaptchaData.success && recaptchaScore < 0.3) {
+                    console.warn(`[SALES] Bot detected for ${email} (score: ${recaptchaScore})`);
+                    return res.status(403).json({
+                        error: 'Security verification failed. Please try again.',
+                        code: 'BOT_DETECTED'
+                    });
+                }
+            } catch (recaptchaError) {
+                console.error('[SALES] reCAPTCHA verification failed:', recaptchaError.message);
+                // Continue anyway - don't block if reCAPTCHA service is down
+            }
+        }
+
+        // 2. Check for disposable email
+        const { isDisposableEmail } = require('../utils/disposableEmails');
+        const isDisposable = isDisposableEmail(email);
+
+        if (isDisposable) {
+            console.warn(`[SALES] Disposable email rejected: ${email}`);
+            return res.status(400).json({
+                error: 'Please use a valid work email address.',
+                code: 'DISPOSABLE_EMAIL'
+            });
+        }
+
+        // 3. Generate verification token (45 min expiry)
+        const isSandboxRequest = source === 'Sandbox_Demo';
+        let verificationToken = null;
+        let verificationExpires = null;
+        const initialStatus = isSandboxRequest ? 'pending_verification' : 'new';
+
+        if (isSandboxRequest) {
+            verificationToken = jwt.sign(
+                { email, name, type: 'demo_verification' },
+                process.env.JWT_SECRET || 'pagemd-secret',
+                { expiresIn: '45m' }
+            );
+            verificationExpires = new Date(Date.now() + 45 * 60 * 1000);
+        }
+
+        // 4. Insert lead
         const result = await pool.query(`
             INSERT INTO sales_inquiries (
                 name, email, phone, practice_name, provider_count,
-                message, interest_type, source, status, referral_code, created_at
+                message, interest_type, source, status, referral_code,
+                verification_token, verification_expires_at, recaptcha_score, is_disposable_email,
+                created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'new', $9, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
             RETURNING id, created_at
-        `, [name, email, phone, practice, providers, message, interest, source, referral_code]);
+        `, [
+            name, email, phone, practice, providers, message, interest, source,
+            initialStatus, referral_code, verificationToken, verificationExpires,
+            recaptchaScore, isDisposable
+        ]);
 
         const inquiry = result.rows[0];
+        console.log(`[SALES] Inquiry #${inquiry.id} created with status: ${initialStatus}`);
 
-        // console.log(`New sales inquiry #${inquiry.id}: ${name}`);
+        // 5. Send magic link email for sandbox requests
+        if (isSandboxRequest && verificationToken) {
+            const emailService = require('../services/emailService');
+            const frontendUrl = process.env.FRONTEND_URL || 'https://pagemdemr.com';
+            const magicLink = `${frontendUrl}/verify-demo?token=${verificationToken}`;
+
+            await emailService.sendDemoMagicLink(email, name, magicLink);
+            console.log(`[SALES] Magic link sent to: ${email}`);
+        }
 
         res.status(201).json({
             success: true,
-            message: 'Thank you for your interest!',
-            inquiryId: inquiry.id
+            message: isSandboxRequest
+                ? 'Check your email for the demo access link!'
+                : 'Thank you for your interest!',
+            inquiryId: inquiry.id,
+            requiresVerification: isSandboxRequest
         });
 
     } catch (error) {
         console.error('Error submitting sales inquiry:', error);
         res.status(500).json({ error: 'Failed to submit inquiry' });
+    }
+});
+
+/**
+ * GET /api/sales/verify/:token
+ * Verify magic link token and provision sandbox demo
+ */
+router.get('/verify/:token', async (req, res) => {
+    const { token } = req.params;
+
+    if (!token) {
+        return res.status(400).json({ error: 'Verification token required' });
+    }
+
+    try {
+        // 1. Decode and verify JWT
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'pagemd-secret');
+
+        if (decoded.type !== 'demo_verification') {
+            return res.status(400).json({ error: 'Invalid token type' });
+        }
+
+        // 2. Find and update inquiry
+        const inquiryRes = await pool.query(
+            `SELECT * FROM sales_inquiries 
+             WHERE verification_token = $1 AND status = 'pending_verification'`,
+            [token]
+        );
+
+        if (inquiryRes.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Link expired or already used',
+                code: 'INVALID_TOKEN'
+            });
+        }
+
+        const inquiry = inquiryRes.rows[0];
+
+        // 3. Check expiry (backup check, JWT should handle this)
+        if (inquiry.verification_expires_at && new Date(inquiry.verification_expires_at) < new Date()) {
+            return res.status(400).json({
+                error: 'Verification link has expired. Please request a new demo.',
+                code: 'EXPIRED_TOKEN'
+            });
+        }
+
+        // 4. Update inquiry status to verified
+        await pool.query(
+            `UPDATE sales_inquiries 
+             SET status = 'verified', email_verified = true, updated_at = NOW()
+             WHERE id = $1`,
+            [inquiry.id]
+        );
+
+        console.log(`[SALES] Inquiry #${inquiry.id} verified for ${inquiry.email}`);
+
+        // 5. Provision sandbox (import sandboxAuth logic)
+        const crypto = require('crypto');
+        const tenantSchemaSQL = require('../config/tenantSchema');
+        const { seedSandbox } = require('../scripts/seed-sandbox-core');
+
+        const sandboxId = crypto.randomBytes(8).toString('hex');
+        const schemaName = `sandbox_${sandboxId}`;
+
+        const client = await pool.controlPool.connect();
+        try {
+            console.log(`[SALES] Provisioning sandbox: ${schemaName}`);
+            await client.query('BEGIN');
+
+            // Create Schema and Tables
+            await client.query(`CREATE SCHEMA ${schemaName}`);
+            await client.query(`SET search_path TO ${schemaName}, public`);
+            await client.query(tenantSchemaSQL);
+
+            // Create Default Sandbox Provider
+            const providerRes = await client.query(`
+                INSERT INTO users (email, password_hash, first_name, last_name, role, is_admin, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id
+            `, ['demo@pagemd.com', 'sandbox_auto_login_placeholder', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
+            const providerId = providerRes.rows[0].id;
+            const sandboxClinicId = '60456326-868d-4e21-942a-fd35190ed4fc';
+
+            // Seed Basic Settings
+            await client.query(`
+                INSERT INTO practice_settings (practice_name, practice_type, timezone)
+                VALUES ('Sandbox Medical Center', 'General Practice', 'America/New_York')
+            `);
+
+            await client.query(`
+                INSERT INTO clinical_settings (require_dx_on_visit, enable_clinical_alerts)
+                VALUES (true, true)
+            `);
+
+            // Seed Clinical Data
+            await seedSandbox(client, schemaName, providerId, sandboxClinicId);
+
+            await client.query('COMMIT');
+
+            // Issue JWT
+            const sandboxToken = jwt.sign({
+                userId: providerId,
+                email: 'demo@pagemd.com',
+                isSandbox: true,
+                sandboxId: sandboxId,
+                clinicId: sandboxClinicId,
+                clinicSlug: 'demo',
+                role: 'Clinician'
+            }, process.env.JWT_SECRET || 'pagemd-secret', { expiresIn: '1h' });
+
+            console.log(`[SALES] Sandbox ${schemaName} provisioned for ${inquiry.email}`);
+
+            res.json({
+                success: true,
+                token: sandboxToken,
+                sandboxId,
+                redirect: '/dashboard',
+                message: 'Demo environment ready!'
+            });
+
+        } catch (provisionError) {
+            await client.query('ROLLBACK');
+            throw provisionError;
+        } finally {
+            client.release();
+        }
+
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            return res.status(400).json({
+                error: 'Verification link has expired. Please request a new demo.',
+                code: 'EXPIRED_TOKEN'
+            });
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(400).json({
+                error: 'Invalid verification link.',
+                code: 'INVALID_TOKEN'
+            });
+        }
+        console.error('[SALES] Verification error:', error);
+        res.status(500).json({ error: 'Failed to verify and provision demo' });
     }
 });
 
