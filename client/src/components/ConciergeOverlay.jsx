@@ -51,17 +51,40 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
         return () => clearInterval(interval);
     }, []);
 
+    const getCookie = (name) => {
+        const decodedCookie = decodeURIComponent(document.cookie);
+        const ca = decodedCookie.split(';');
+        for (let i = 0; i < ca.length; i++) {
+            let c = ca[i];
+            while (c.charAt(0) === ' ') {
+                c = c.substring(1);
+            }
+            if (c.indexOf(name + "=") === 0) {
+                return c.substring(name.length + 1, c.length);
+            }
+        }
+        return '';
+    };
+
     const handleInquiry = async () => {
         if (!message || isSubmitting) return;
         setIsSubmitting(true);
         try {
-            const uuid = document.cookie.split('; ').find(row => row.startsWith('pagemd_lead_id='))?.split('=')[1];
+            const uuid = getCookie('pagemd_lead_id');
+            if (!uuid) {
+                console.error('No lead UUID found in cookies');
+                return;
+            }
+
             const baseUrl = import.meta.env.VITE_API_URL || '';
-            await fetch(`${baseUrl}/sales/concierge-inquiry`, {
+            const res = await fetch(`${baseUrl}/sales/concierge-inquiry`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ uuid, message })
             });
+
+            if (!res.ok) throw new Error('Failed to send inquiry');
+
             setSubmitted(true);
             setMessage('');
         } catch (error) {
