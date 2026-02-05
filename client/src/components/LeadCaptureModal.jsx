@@ -223,6 +223,9 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                             We've sent a 6-digit code to <br />
                             <span className="text-blue-600 font-bold">{formData.email}</span>
                         </p>
+                        <p className="text-[10px] text-slate-400 mt-4 font-bold uppercase tracking-widest bg-slate-50 py-2 px-4 rounded-lg border border-slate-100 italic">
+                            Tip: Check your <span className="text-blue-600">Spam or Junk</span> email folder
+                        </p>
                     </div>
 
                     {errorMessage && (

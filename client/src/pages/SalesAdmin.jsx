@@ -509,9 +509,12 @@ const SalesAdmin = () => {
     // Stats
     const stats = {
         total: inquiries.length,
-        new: inquiries.filter(i => ['new', 'pending_verification', 'verified'].includes(i.status)).length,
-        contacted: inquiries.filter(i => i.status === 'contacted').length,
-        converted: inquiries.filter(i => i.status === 'converted').length
+        new: inquiries.filter(i => {
+            const s = (i.status || 'new').toLowerCase().trim();
+            return ['new', 'pending_verification', 'verified', 'pending'].includes(s);
+        }).length,
+        contacted: inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'contacted').length,
+        converted: inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'converted').length
     };
 
 
@@ -693,7 +696,10 @@ const SalesAdmin = () => {
                                 >
                                     <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'pending' ? 'text-blue-600' : 'text-slate-400'}`}>Pending</span>
                                     <span className={`text-lg font-black ${activeCategory === 'pending' ? 'text-blue-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => ['new', 'contacted', 'pending_verification', 'verified'].includes(i.status || 'new')).length}
+                                        {inquiries.filter(i => {
+                                            const s = (i.status || 'new').toLowerCase().trim();
+                                            return ['new', 'contacted', 'pending_verification', 'verified', 'pending'].includes(s);
+                                        }).length}
                                     </span>
                                 </button>
                                 <button
@@ -704,7 +710,10 @@ const SalesAdmin = () => {
                                 >
                                     <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'pipeline' ? 'text-indigo-600' : 'text-slate-400'}`}>Pipeline</span>
                                     <span className={`text-lg font-black ${activeCategory === 'pipeline' ? 'text-indigo-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => ['demo_scheduled', 'follow_up'].includes(i.status)).length}
+                                        {inquiries.filter(i => {
+                                            const s = (i.status || '').toLowerCase().trim();
+                                            return ['demo_scheduled', 'follow_up'].includes(s);
+                                        }).length}
                                     </span>
                                 </button>
                                 <button
@@ -715,7 +724,7 @@ const SalesAdmin = () => {
                                 >
                                     <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'converted' ? 'text-emerald-600' : 'text-slate-400'}`}>Converted</span>
                                     <span className={`text-lg font-black ${activeCategory === 'converted' ? 'text-emerald-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => i.status === 'converted').length}
+                                        {inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'converted').length}
                                     </span>
                                 </button>
                                 <button
@@ -726,7 +735,7 @@ const SalesAdmin = () => {
                                 >
                                     <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'closed' ? 'text-slate-500' : 'text-slate-400'}`}>Closed</span>
                                     <span className={`text-lg font-black ${activeCategory === 'closed' ? 'text-slate-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => i.status === 'closed').length}
+                                        {inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'closed').length}
                                     </span>
                                 </button>
                             </div>
@@ -770,15 +779,16 @@ const SalesAdmin = () => {
                             <div className="flex-1 overflow-y-auto bg-white">
                                 {(() => {
                                     const categoryMap = {
-                                        pending: ['new', 'contacted', 'pending_verification', 'verified'],
+                                        pending: ['new', 'contacted', 'pending_verification', 'verified', 'pending'],
                                         pipeline: ['demo_scheduled', 'follow_up'],
                                         converted: ['converted'],
                                         closed: ['closed']
                                     };
 
-                                    const displayItems = filteredInquiries.filter(i =>
-                                        categoryMap[activeCategory].includes(i.status || 'new')
-                                    );
+                                    const displayItems = filteredInquiries.filter(i => {
+                                        const s = (i.status || 'new').toLowerCase().trim();
+                                        return categoryMap[activeCategory].includes(s);
+                                    });
 
                                     if (displayItems.length === 0) {
                                         return (
