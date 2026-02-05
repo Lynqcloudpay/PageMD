@@ -734,58 +734,101 @@ const SalesAdmin = () => {
                                 <p className="text-sm mt-1">New leads will appear here when someone submits a form</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-100 max-h-[800px] overflow-y-auto">
-                                {filteredInquiries.map((inquiry) => (
-                                    <div
-                                        key={inquiry.id}
-                                        onClick={() => setSelectedInquiry(inquiry)}
-                                        className={`p-4 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
-                                            ? 'bg-blue-50/40 border-l-blue-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
-                                            : 'border-l-transparent hover:bg-slate-50/80'
-                                            }`}
-                                    >
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="min-w-0">
-                                                <h3 className="text-[15px] font-bold text-slate-900 truncate leading-tight">{inquiry.name}</h3>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider ${getStatusColor(inquiry.status)} shadow-sm`}>
-                                                        {inquiry.status?.replace('_', ' ') || 'new'}
-                                                    </span>
-                                                    {inquiry.interest_type && (
-                                                        <span className="text-[10px] px-2.5 py-1 bg-white border border-slate-200 text-slate-500 rounded-md font-bold uppercase tracking-wider">
-                                                            {getInterestLabel(inquiry.interest_type)}
-                                                        </span>
-                                                    )}
+                            <div className="max-h-[800px] overflow-y-auto bg-slate-50/10">
+                                {(() => {
+                                    const groups = [
+                                        {
+                                            title: 'Action Required',
+                                            icon: <Shield className="w-3.5 h-3.5" />,
+                                            color: 'text-blue-600',
+                                            bg: 'bg-blue-50/50',
+                                            statuses: ['new', 'contacted']
+                                        },
+                                        {
+                                            title: 'In Pipeline',
+                                            icon: <TrendingUp className="w-3.5 h-3.5" />,
+                                            color: 'text-indigo-600',
+                                            bg: 'bg-indigo-50/50',
+                                            statuses: ['demo_scheduled', 'follow_up']
+                                        },
+                                        {
+                                            title: 'Completed',
+                                            icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+                                            color: 'text-slate-400',
+                                            bg: 'bg-slate-100/50',
+                                            statuses: ['converted', 'closed']
+                                        }
+                                    ];
+
+                                    return groups.map(group => {
+                                        const items = filteredInquiries.filter(i => group.statuses.includes(i.status || 'new'));
+                                        if (items.length === 0) return null;
+
+                                        return (
+                                            <div key={group.title} className="mb-1">
+                                                <div className={`sticky top-0 z-10 px-4 py-2 ${group.bg} border-y border-slate-200/50 flex items-center gap-2 backdrop-blur-md`}>
+                                                    <span className={group.color}>{group.icon}</span>
+                                                    <h3 className={`text-[10px] font-black uppercase tracking-[0.1em] ${group.color}`}>
+                                                        {group.title} ({items.length})
+                                                    </h3>
+                                                </div>
+                                                <div className="divide-y divide-slate-100 bg-white">
+                                                    {items.map((inquiry) => (
+                                                        <div
+                                                            key={inquiry.id}
+                                                            onClick={() => setSelectedInquiry(inquiry)}
+                                                            className={`p-4 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
+                                                                ? 'bg-blue-50/40 border-l-blue-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
+                                                                : 'border-l-transparent hover:bg-slate-50/80'
+                                                                }`}
+                                                        >
+                                                            <div className="flex items-start justify-between mb-3">
+                                                                <div className="min-w-0">
+                                                                    <h3 className="text-[14px] font-bold text-slate-900 truncate leading-tight">{inquiry.name}</h3>
+                                                                    <div className="flex items-center gap-2 mt-1.5 font-bold">
+                                                                        <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
+                                                                            {inquiry.status?.replace('_', ' ') || 'new'}
+                                                                        </span>
+                                                                        {inquiry.interest_type && (
+                                                                            <span className="text-[9px] px-2 py-0.5 bg-slate-50 border border-slate-100 text-slate-400 rounded uppercase tracking-wider">
+                                                                                {getInterestLabel(inquiry.interest_type)}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                    <p className="text-[9px] text-slate-300 font-bold uppercase tracking-tight">
+                                                                        {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center justify-between text-[11px]">
+                                                                <div className="flex items-center gap-3 text-slate-500 truncate font-medium">
+                                                                    {inquiry.practice_name && (
+                                                                        <span className="flex items-center gap-1 opacity-80">
+                                                                            <Building2 className="w-3 h-3 text-slate-300" />
+                                                                            <span className="truncate">{inquiry.practice_name}</span>
+                                                                        </span>
+                                                                    )}
+                                                                    <span className="flex items-center gap-1 opacity-60">
+                                                                        <Mail className="w-3 h-3 text-slate-300" />
+                                                                        <span className="truncate">{inquiry.email}</span>
+                                                                    </span>
+                                                                </div>
+                                                                {inquiry.referral_code && (
+                                                                    <span className="flex items-center gap-1 text-emerald-600 font-black bg-emerald-50 px-1.5 py-0.5 rounded text-[9px] uppercase">
+                                                                        <Gift className="w-3 h-3" />
+                                                                        {inquiry.referral_code}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            <div className="text-right shrink-0">
-                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">
-                                                    {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d, p') : '-'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs">
-                                            <div className="flex items-center gap-4 text-slate-500 truncate font-medium">
-                                                {inquiry.practice_name && (
-                                                    <span className="flex items-center gap-1.5 bg-slate-100/50 px-2 py-1 rounded-md">
-                                                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                                                        <span className="truncate">{inquiry.practice_name}</span>
-                                                    </span>
-                                                )}
-                                                <span className="flex items-center gap-1.5">
-                                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
-                                                    <span className="truncate opacity-80">{inquiry.email}</span>
-                                                </span>
-                                            </div>
-                                            {inquiry.referral_code && (
-                                                <span className="flex items-center gap-1.5 text-emerald-600 font-black bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100/50 text-[10px]">
-                                                    <Gift className="w-3.5 h-3.5" />
-                                                    {inquiry.referral_code}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
+                                        );
+                                    });
+                                })()}
                             </div>
                         )}
                     </div>
