@@ -596,9 +596,13 @@ router.get('/inquiries', verifyToken, async (req, res) => {
         console.log('[SALES] Fetching inquiries. Query:', req.query);
         const { status, limit = 50, offset = 0 } = req.query;
 
+        // Use DISTINCT ON (LOWER(email)) to group duplicates in the sidebar
+        // We wrap it in a subquery to allow sorting the unique leads by latest activity
         let query = `
-            SELECT * FROM sales_inquiries
-            WHERE 1=1
+            SELECT * FROM (
+                SELECT DISTINCT ON (LOWER(email)) * 
+                FROM sales_inquiries
+                WHERE 1=1
         `;
         const params = [];
 
@@ -607,7 +611,12 @@ router.get('/inquiries', verifyToken, async (req, res) => {
             query += ` AND status = $${params.length}`;
         }
 
-        query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+        query += `
+                ORDER BY LOWER(email), created_at DESC
+            ) AS unique_leads
+            ORDER BY created_at DESC 
+            LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+        `;
         params.push(limit, offset);
 
         const result = await pool.query(query, params);
@@ -681,11 +690,19 @@ router.patch('/inquiries/:id', verifyToken, async (req, res) => {
 router.get('/inquiries/:id/logs', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Fetch all logs for this person's email to provide a unified history thread
+        // even if they have historical duplicate inquiry records.
         const result = await pool.query(`
             SELECT l.*, u.username as admin_name 
             FROM sales_inquiry_logs l
             LEFT JOIN sales_team_users u ON l.admin_id = u.id
-            WHERE l.inquiry_id = $1
+            WHERE l.inquiry_id IN (
+                SELECT id FROM sales_inquiries 
+                WHERE LOWER(email) = (
+                    SELECT LOWER(email) FROM sales_inquiries WHERE id = $1
+                )
+            )
             ORDER BY l.created_at ASC
         `, [id]);
         res.json({ logs: result.rows });
