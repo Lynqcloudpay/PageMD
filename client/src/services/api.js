@@ -657,5 +657,12 @@ export const growthAPI = {
   dismissAllAlerts: () => api.post('/growth/alerts/dismiss-all'),
 };
 
+// Unified Notifications (System, Billing, Growth)
+export const notificationsAPI = {
+  getAll: () => api.get('/notifications'),
+  dismiss: (id) => api.post(`/notifications/${id}/dismiss`),
+  dismissAll: (ids) => api.post('/notifications/dismiss-all', { alertIds: ids }),
+};
+
 export default api;
 

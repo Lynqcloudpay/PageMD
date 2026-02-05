@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, TrendingDown, AlertTriangle, ChevronRight, Check } from 'lucide-react';
+import { Bell, X, TrendingDown, AlertTriangle, ChevronRight, Check, Info, Lock, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { growthAPI } from '../services/api';
+import { notificationsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const AlertBell = () => {
@@ -21,7 +21,7 @@ const AlertBell = () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await growthAPI.getAlerts();
+            const response = await notificationsAPI.getAll();
             console.log('[AlertBell] API response:', response.data);
             setAlerts(response.data?.alerts || []);
         } catch (err) {
@@ -65,7 +65,7 @@ const AlertBell = () => {
     const handleDismiss = async (e, alertId) => {
         e.stopPropagation(); // Prevent navigation
         try {
-            await growthAPI.dismissAlert(alertId);
+            await notificationsAPI.dismiss(alertId);
             setAlerts(prev => prev.filter(a => a.id !== alertId));
         } catch (err) {
             console.error('Failed to dismiss alert:', err);
@@ -74,7 +74,7 @@ const AlertBell = () => {
 
     const handleDismissAll = async () => {
         try {
-            await growthAPI.dismissAllAlerts();
+            await notificationsAPI.dismissAll(alerts.map(a => a.id));
             setAlerts([]);
         } catch (err) {
             console.error('Failed to dismiss all alerts:', err);
@@ -84,10 +84,17 @@ const AlertBell = () => {
     const getAlertIcon = (type) => {
         switch (type) {
             case 'success':
+            case 'growth':
                 return <TrendingDown className="w-4 h-4 rotate-180" />; // Up trend
             case 'churn':
             case 'expiring':
                 return <TrendingDown className="w-4 h-4" />;
+            case 'system':
+                return <Info className="w-4 h-4" />;
+            case 'security':
+                return <Lock className="w-4 h-4" />;
+            case 'billing':
+                return <CreditCard className="w-4 h-4" />;
             default:
                 return <AlertTriangle className="w-4 h-4" />;
         }
@@ -101,6 +108,7 @@ const AlertBell = () => {
                 return 'text-amber-600 bg-amber-50 border-amber-200';
             case 'error':
                 return 'text-red-600 bg-red-50 border-red-200';
+            case 'info':
             default:
                 return 'text-blue-600 bg-blue-50 border-blue-200';
         }
@@ -166,13 +174,15 @@ const AlertBell = () => {
                                         onClick={() => handleAlertClick(alert)}
                                     >
                                         <div className="absolute top-2 right-2 flex items-center gap-1">
-                                            <button
-                                                onClick={(e) => handleDismiss(e, alert.id)}
-                                                className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
-                                                title="Dismiss"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
+                                            {alert.dismissible !== false && (
+                                                <button
+                                                    onClick={(e) => handleDismiss(e, alert.id)}
+                                                    className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                                    title="Dismiss"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="flex items-start gap-3">
                                             <div className={`p-2 rounded-lg ${getAlertColor(alert.severity)}`}>

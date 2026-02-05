@@ -251,6 +251,7 @@ app.use('/api/audit', auditRoutes);
 const billingRoutes = require('./routes/billing');
 const feeSheetRoutes = require('./routes/fee-sheet');
 const growthRoutes = require('./routes/growth');
+app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/billing', billingRoutes);
 app.use('/api/growth', growthRoutes);
 app.use('/api/fee-sheet', feeSheetRoutes);
