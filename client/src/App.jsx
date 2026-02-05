@@ -58,6 +58,7 @@ const PlatformAdminRevenue = React.lazy(() => import('./pages/PlatformAdminReven
 const PlatformAdminDevelopers = React.lazy(() => import('./pages/PlatformAdminDevelopers'));
 const ImpersonateHandler = React.lazy(() => import('./pages/ImpersonateHandler'));
 const SalesAdmin = React.lazy(() => import('./pages/SalesAdmin'));
+const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
 
 const PortalLogin = React.lazy(() => import('./portal/PortalLogin'));
 const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
@@ -173,6 +174,7 @@ function App() {
                                                         <Route path="/features" element={<FeaturesPage />} />
                                                         <Route path="/security" element={<SecurityPage />} />
                                                         <Route path="/pricing" element={<PricingPage />} />
+                                                        <Route path="/register" element={<RegisterPage />} />
                                                         <Route path="/contact" element={<ContactPage />} />
                                                         <Route path="/about" element={<AboutPage />} />
                                                         <Route path="/digital-intake" element={

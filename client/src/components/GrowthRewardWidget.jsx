@@ -88,9 +88,16 @@ const GrowthRewardWidget = () => {
                             <span className="text-3xl font-bold text-gray-900">${marginalRate || currentRate}</span>
                             <span className="text-sm font-medium text-gray-500">/ MD / month</span>
                         </div>
-                        <div className="mt-2 flex flex-col gap-0.5">
-                            <p className="text-xs text-gray-500">Total Monthly: <strong>${totalMonthly}</strong></p>
-                            <p className="text-[10px] text-gray-400">Average: ${currentRate}/seat</p>
+                        <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Bill</span>
+                                <span className="text-sm font-bold text-gray-900">${totalMonthly}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 px-3 bg-primary-50 border border-primary-100 rounded-lg">
+                                <span className="text-[10px] font-black text-primary-700 uppercase tracking-widest">Blended Average</span>
+                                <span className="text-base font-black text-primary-700">${currentRate}</span>
+                            </div>
+                            <p className="text-[9px] text-gray-400 font-medium italic text-right">* Includes first-MD solo rate + tier discounts</p>
                         </div>
                     </div>
 
