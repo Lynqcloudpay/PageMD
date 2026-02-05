@@ -175,7 +175,7 @@ PLAN: Continue current medications. Laboratory work ordered for next visit. Foll
                         clinic_id, patient_id, provider_id, created_by, appointment_date, appointment_time, duration,
                         appointment_type, status, notes
                     )
-                    VALUES ($1, $2, $3, $3, CURRENT_DATE + ($4 || ' days')::interval, $5, 30, 'Routine Check', 'scheduled', 'Recurring follow-up')
+                    VALUES ($1, $2, $3, $3, CURRENT_DATE + ($4 || ' days')::interval, $5, 30, 'Follow-up', 'scheduled', 'Recurring follow-up')
                 `, [clinicId, patientId, providerId, futDays, timeStr]);
             }
         }
