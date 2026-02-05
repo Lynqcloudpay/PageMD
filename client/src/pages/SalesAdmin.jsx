@@ -584,8 +584,8 @@ const SalesAdmin = () => {
     return (
         <div className="min-h-screen bg-slate-50 relative">
             {/* Header */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-6 py-4">
+            <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                <div className="max-w-[1600px] mx-auto px-8 py-5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <Link to="/" className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
@@ -624,71 +624,81 @@ const SalesAdmin = () => {
                 </div>
             </header>
 
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-[1600px] mx-auto px-8 py-10">
                 {/* Stats Cards */}
-                <div className="grid grid-cols-4 gap-4 mb-8">
-                    <div className="bg-white rounded-xl p-5 border border-slate-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <Inbox className="w-5 h-5 text-slate-400" />
-                            <span className="text-xs font-medium text-slate-400 uppercase">Total</span>
+                <div className="grid grid-cols-4 gap-6 mb-10">
+                    <div className="bg-white rounded-[2rem] p-8 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-slate-100 transition-colors">
+                                <Inbox className="w-6 h-6 text-slate-400" />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Volume</span>
                         </div>
-                        <div className="text-3xl font-bold text-slate-900">{stats.total}</div>
-                        <div className="text-xs text-slate-500 mt-1">All inquiries</div>
+                        <div className="text-4xl font-black text-slate-900 tracking-tighter">{stats.total}</div>
+                        <div className="text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-tight">Active inquiries</div>
                     </div>
-                    {/* ... other stats ... */}
-                    <div className="bg-white rounded-xl p-5 border border-slate-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <UserPlus className="w-5 h-5 text-blue-500" />
-                            <span className="text-xs font-medium text-blue-500 uppercase">New</span>
+
+                    <div className="bg-white rounded-[2rem] p-8 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-blue-50 rounded-2xl group-hover:bg-blue-100 transition-colors">
+                                <UserPlus className="w-6 h-6 text-blue-500" />
+                            </div>
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">New Leads</span>
                         </div>
-                        <div className="text-3xl font-bold text-blue-600">{stats.new}</div>
-                        <div className="text-xs text-slate-500 mt-1">Awaiting response</div>
+                        <div className="text-4xl font-black text-blue-600 tracking-tighter">{stats.new}</div>
+                        <div className="text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-tight">Awaiting contact</div>
                     </div>
-                    <div className="bg-white rounded-xl p-5 border border-slate-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <MessageSquare className="w-5 h-5 text-yellow-500" />
-                            <span className="text-xs font-medium text-yellow-600 uppercase">Contacted</span>
+
+                    <div className="bg-white rounded-[2rem] p-8 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-yellow-50 rounded-2xl group-hover:bg-yellow-100 transition-colors">
+                                <MessageSquare className="w-6 h-6 text-yellow-500" />
+                            </div>
+                            <span className="text-[10px] font-black text-yellow-500 status-glow uppercase tracking-widest">Nurturing</span>
                         </div>
-                        <div className="text-3xl font-bold text-yellow-600">{stats.contacted}</div>
-                        <div className="text-xs text-slate-500 mt-1">In progress</div>
+                        <div className="text-4xl font-black text-yellow-600 tracking-tighter">{stats.contacted}</div>
+                        <div className="text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-tight">In active discussion</div>
                     </div>
-                    <div className="bg-white rounded-xl p-5 border border-slate-200">
-                        <div className="flex items-center justify-between mb-3">
-                            <TrendingUp className="w-5 h-5 text-emerald-500" />
-                            <span className="text-xs font-medium text-emerald-600 uppercase">Converted</span>
+
+                    <div className="bg-white rounded-[2rem] p-8 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-emerald-50 rounded-2xl group-hover:bg-emerald-100 transition-colors">
+                                <TrendingUp className="w-6 h-6 text-emerald-500" />
+                            </div>
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Conversion</span>
                         </div>
-                        <div className="text-3xl font-bold text-emerald-600">{stats.converted}</div>
-                        <div className="text-xs text-slate-500 mt-1">Won deals</div>
+                        <div className="text-4xl font-black text-emerald-600 tracking-tighter">{stats.converted}</div>
+                        <div className="text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-tight">Closed won deals</div>
                     </div>
                 </div>
 
                 {/* Filters */}
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <div className="flex items-center gap-6 mb-10">
+                    <div className="flex-1 relative group">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             type="text"
                             placeholder="Search by name, email, or practice..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full pl-14 pr-6 py-4 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-sm font-medium shadow-sm outline-none"
                         />
                     </div>
-                    <div className="relative">
+                    <div className="relative group">
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="appearance-none pl-4 pr-10 py-2.5 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="appearance-none pl-6 pr-14 py-4 bg-white border-2 border-slate-100 rounded-[1.5rem] focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-sm font-bold text-slate-700 uppercase tracking-widest shadow-sm outline-none cursor-pointer"
                         >
-                            <option value="">All Statuses</option>
-                            <option value="new">New</option>
+                            <option value="">All Leads</option>
+                            <option value="new">New Inquiry</option>
                             <option value="contacted">Contacted</option>
                             <option value="demo_scheduled">Demo Scheduled</option>
                             <option value="follow_up">Follow Up</option>
                             <option value="converted">Converted</option>
-                            <option value="closed">Closed</option>
+                            <option value="closed">Closed / Lost</option>
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none group-hover:text-slate-500 transition-colors" />
                     </div>
                 </div>
 
@@ -724,52 +734,52 @@ const SalesAdmin = () => {
                                 <p className="text-sm mt-1">New leads will appear here when someone submits a form</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-100 max-h-[700px] overflow-y-auto">
+                            <div className="divide-y divide-slate-100 max-h-[800px] overflow-y-auto">
                                 {filteredInquiries.map((inquiry) => (
                                     <div
                                         key={inquiry.id}
                                         onClick={() => setSelectedInquiry(inquiry)}
-                                        className={`p-5 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
-                                            ? 'bg-blue-50/50 border-l-blue-600 shadow-sm'
-                                            : 'border-l-transparent hover:bg-slate-50'
+                                        className={`p-6 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
+                                            ? 'bg-blue-50/40 border-l-blue-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
+                                            : 'border-l-transparent hover:bg-slate-50/80'
                                             }`}
                                     >
-                                        <div className="flex items-start justify-between mb-3">
+                                        <div className="flex items-start justify-between mb-4">
                                             <div className="min-w-0">
-                                                <h3 className="font-semibold text-slate-900 truncate">{inquiry.name}</h3>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
+                                                <h3 className="text-[15px] font-bold text-slate-900 truncate leading-tight">{inquiry.name}</h3>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className={`text-[10px] px-2.5 py-1 rounded-md font-bold uppercase tracking-wider ${getStatusColor(inquiry.status)} shadow-sm`}>
                                                         {inquiry.status?.replace('_', ' ') || 'new'}
                                                     </span>
                                                     {inquiry.interest_type && (
-                                                        <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-medium">
+                                                        <span className="text-[10px] px-2.5 py-1 bg-white border border-slate-200 text-slate-500 rounded-md font-bold uppercase tracking-wider">
                                                             {getInterestLabel(inquiry.interest_type)}
                                                         </span>
                                                     )}
                                                 </div>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <p className="text-xs text-slate-400 font-medium">
-                                                    {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
+                                                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">
+                                                    {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d, p') : '-'}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between text-xs">
-                                            <div className="flex items-center gap-3 text-slate-500 truncate">
+                                            <div className="flex items-center gap-4 text-slate-500 truncate font-medium">
                                                 {inquiry.practice_name && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Building2 className="w-3 h-3 text-slate-400" />
-                                                        {inquiry.practice_name}
+                                                    <span className="flex items-center gap-1.5 bg-slate-100/50 px-2 py-1 rounded-md">
+                                                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                                        <span className="truncate">{inquiry.practice_name}</span>
                                                     </span>
                                                 )}
-                                                <span className="flex items-center gap-1">
-                                                    <Mail className="w-3 h-3 text-slate-400" />
-                                                    {inquiry.email?.split('@')[0]}...
+                                                <span className="flex items-center gap-1.5">
+                                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                                    <span className="truncate opacity-80">{inquiry.email}</span>
                                                 </span>
                                             </div>
                                             {inquiry.referral_code && (
-                                                <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
-                                                    <Gift className="w-3 h-3" />
+                                                <span className="flex items-center gap-1.5 text-emerald-600 font-black bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100/50 text-[10px]">
+                                                    <Gift className="w-3.5 h-3.5" />
                                                     {inquiry.referral_code}
                                                 </span>
                                             )}
@@ -781,102 +791,119 @@ const SalesAdmin = () => {
                     </div>
 
                     {/* Detail Panel */}
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[700px] shadow-sm">
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[800px] shadow-sm">
                         {selectedInquiry ? (
                             <>
                                 {/* Modern Header */}
-                                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex-1 min-w-0 mr-4">
-                                            <h2 className="text-xl font-bold text-slate-900 truncate">{selectedInquiry.name}</h2>
-                                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                                <div className="px-8 py-6 border-b border-slate-100 bg-white">
+                                    <div className="flex items-start justify-between mb-6">
+                                        <div className="flex-1 min-w-0 mr-6">
+                                            <div className="flex items-center gap-3 mb-1">
+                                                <h2 className="text-2xl font-black text-slate-900 truncate tracking-tight">{selectedInquiry.name}</h2>
+                                                {selectedInquiry.referral_code && (
+                                                    <span className="flex items-center gap-1.5 text-emerald-600 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100/50 text-xs shadow-sm">
+                                                        <Gift className="w-3.5 h-3.5" />
+                                                        {selectedInquiry.referral_code}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-4 text-sm text-slate-500 font-medium">
                                                 {selectedInquiry.practice_name && (
-                                                    <span className="flex items-center gap-1 min-w-0">
-                                                        <Building2 className="w-4 h-4 shrink-0" />
+                                                    <span className="flex items-center gap-1.5 min-w-0 bg-slate-50 px-2 py-1 rounded-md">
+                                                        <Building2 className="w-4 h-4 shrink-0 text-slate-400" />
                                                         <span className="truncate">{selectedInquiry.practice_name}</span>
                                                     </span>
                                                 )}
-                                                <span className="flex items-center gap-1 shrink-0">
-                                                    <Clock className="w-4 h-4" />
+                                                <span className="flex items-center gap-1.5 shrink-0 opacity-70">
+                                                    <Clock className="w-4 h-4 text-slate-400" />
                                                     Received {format(new Date(selectedInquiry.created_at), 'MMM d, h:mm a')}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <div className="relative">
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <div className="relative group">
+                                                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 transition-colors group-focus-within:text-blue-500">
+                                                    {selectedInquiry.status === 'converted' ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Filter className="w-4 h-4" />}
+                                                </div>
                                                 <select
                                                     value={selectedInquiry.status || 'new'}
                                                     onChange={(e) => updateInquiryStatus(selectedInquiry.id, e.target.value)}
                                                     disabled={updating || selectedInquiry.status === 'converted'}
-                                                    className={`appearance-none pl-9 pr-8 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border cursor-pointer focus:ring-2 focus:ring-offset-1 transition-all ${selectedInquiry.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+                                                    className={`appearance-none pl-10 pr-10 py-2.5 text-xs font-black uppercase tracking-widest rounded-xl border-2 cursor-pointer focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm ${selectedInquiry.status === 'converted'
+                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                        : 'bg-white text-slate-700 border-slate-100 hover:border-slate-300'}`}
                                                 >
-                                                    <option value="new">New</option>
+                                                    <option value="new">New Inquiry</option>
                                                     <option value="contacted">Contacted</option>
                                                     <option value="demo_scheduled">Demo Scheduled</option>
                                                     <option value="follow_up">Follow Up</option>
                                                     <option value="converted">Converted</option>
-                                                    <option value="closed">Closed</option>
+                                                    <option value="closed">Closed / Lost</option>
                                                 </select>
-                                                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                                                    {selectedInquiry.status === 'converted' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Inbox className="w-4 h-4" />}
-                                                </div>
-                                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Action/Info Bar */}
-                                    <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-slate-100">
-                                        {/* Demo Button - Now Primary Action on Left */}
+                                    {/* Primary Actions Bar */}
+                                    <div className="flex flex-wrap items-center gap-4">
                                         {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && (
-                                            <button
-                                                onClick={() => setShowDemoModal(true)}
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-white text-indigo-600 border border-indigo-200 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all shadow-sm"
-                                            >
-                                                <CalendarCheck className="w-4 h-4" />
-                                                Schedule Demo
-                                            </button>
+                                            <>
+                                                <button
+                                                    onClick={() => setShowDemoModal(true)}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black hover:bg-slate-900 transition-all shadow-lg shadow-indigo-100 group"
+                                                >
+                                                    <CalendarCheck className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                                    Schedule Demo
+                                                </button>
+                                                <button
+                                                    onClick={() => openOnboardModal(selectedInquiry)}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 group"
+                                                >
+                                                    <UserPlus className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                                    Onboard Lead
+                                                </button>
+                                            </>
                                         )}
 
-                                        <div className="h-6 w-px bg-slate-200 mx-1"></div>
+                                        {selectedInquiry.status === 'converted' && (
+                                            <div className="flex-1 flex items-center justify-center gap-3 px-6 py-3 bg-emerald-50 text-emerald-700 border-2 border-emerald-100 rounded-xl text-sm font-black">
+                                                <CheckCircle2 className="w-5 h-5" />
+                                                Clinic Successfully Onboarded
+                                            </div>
+                                        )}
 
-                                        <a href={`mailto:${selectedInquiry.email}`} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
-                                            <Mail className="w-3.5 h-3.5 text-blue-500" />
-                                            {selectedInquiry.email}
-                                        </a>
-                                        {selectedInquiry.phone && (
-                                            <a href={`tel:${selectedInquiry.phone}`} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
-                                                <Phone className="w-3.5 h-3.5 text-blue-500" />
-                                                {selectedInquiry.phone}
+                                        <div className="flex items-center gap-2 ml-auto">
+                                            <a href={`mailto:${selectedInquiry.email}`} className="p-3 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-100 transition-all shadow-sm" title={selectedInquiry.email}>
+                                                <Mail className="w-5 h-5" />
                                             </a>
-                                        )}
-
-                                        {selectedInquiry.status !== 'converted' && (
-                                            <button
-                                                onClick={() => openOnboardModal(selectedInquiry)}
-                                                className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-emerald-600 text-white border border-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-200"
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                                Onboard
-                                            </button>
-                                        )}
+                                            {selectedInquiry.phone && (
+                                                <a href={`tel:${selectedInquiry.phone}`} className="p-3 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-100 transition-all shadow-sm" title={selectedInquiry.phone}>
+                                                    <Phone className="w-5 h-5" />
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Full Width Activity Stream */}
-                                <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth bg-white">
+                                <div className="flex-1 overflow-y-auto p-8 space-y-8 scroll-smooth bg-slate-50/30">
                                     {/* Inquiry Message */}
                                     {selectedInquiry.message && (
                                         <div className="flex gap-4">
-                                            <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200/50">
-                                                <User className="w-5 h-5 text-slate-500" />
+                                            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shrink-0 border border-slate-200 shadow-sm relative">
+                                                <User className="w-6 h-6 text-slate-400" />
+                                                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white"></div>
                                             </div>
-                                            <div className="flex-1 max-w-[85%]">
-                                                <div className="flex items-baseline justify-between mb-1.5">
-                                                    <span className="text-sm font-bold text-slate-900">{selectedInquiry.name} <span className="text-xs font-medium text-slate-400 ml-1">(Customer)</span></span>
-                                                    <span className="text-[10px] font-medium text-slate-400">ORIGINAL MESSAGE</span>
+                                            <div className="flex-1 max-w-[90%]">
+                                                <div className="flex items-baseline justify-between mb-2">
+                                                    <span className="text-[13px] font-black text-slate-900 uppercase tracking-wide">
+                                                        {selectedInquiry.name}
+                                                        <span className="text-[10px] font-bold text-slate-400 ml-2 bg-slate-100 px-1.5 py-0.5 rounded">Customer</span>
+                                                    </span>
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Initial Inquiry</span>
                                                 </div>
-                                                <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100 text-slate-700 text-sm leading-relaxed shadow-sm">
+                                                <div className="bg-white p-5 rounded-3xl rounded-tl-none border border-slate-200 text-slate-700 text-[15px] leading-relaxed shadow-sm">
                                                     {selectedInquiry.message}
                                                 </div>
                                             </div>
@@ -884,58 +911,65 @@ const SalesAdmin = () => {
                                     )}
 
                                     {/* Timeline Divider */}
-                                    <div className="relative py-4 flex items-center justify-center">
+                                    <div className="relative py-6 flex items-center justify-center">
                                         <div className="absolute inset-0 flex items-center">
-                                            <div className="w-full border-t border-slate-100"></div>
+                                            <div className="w-full border-t border-slate-200/60"></div>
                                         </div>
-                                        <span className="relative px-4 py-1 bg-white border border-slate-100 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest shadow-sm">
+                                        <span className="relative px-6 py-1.5 bg-slate-50 border border-slate-200 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] shadow-sm">
                                             Activity History
                                         </span>
                                     </div>
 
                                     {/* Dynamic Logs */}
                                     {logsLoading ? (
-                                        <div className="flex flex-col items-center justify-center py-10 text-slate-400">
-                                            <RefreshCw className="w-6 h-6 animate-spin mb-2" />
-                                            <span className="text-xs font-medium">Fetching history...</span>
+                                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                                            <RefreshCw className="w-10 h-10 animate-spin mb-4 opacity-20" />
+                                            <span className="text-xs font-black uppercase tracking-widest opacity-40">Syncing History...</span>
                                         </div>
                                     ) : logs.length === 0 ? (
-                                        <div className="text-center py-10">
-                                            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                <MessageSquare className="w-6 h-6 text-slate-300" />
+                                        <div className="text-center py-16">
+                                            <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100">
+                                                <MessageSquare className="w-8 h-8 text-slate-200" />
                                             </div>
-                                            <p className="text-sm text-slate-400 italic">No notes or status updates yet.</p>
+                                            <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">No internal activity yet.</p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-6">
+                                        <div className="space-y-8">
                                             {logs.map((log) => (
                                                 <div key={log.id} className={`flex gap-4 ${log.type === 'status_change' ? 'justify-center' : ''}`}>
                                                     {log.type === 'status_change' ? (
-                                                        <div className="bg-slate-50 px-4 py-2 rounded-xl border border-dashed border-slate-200/60 flex items-center gap-3 text-xs text-slate-500 shadow-sm">
-                                                            <div className="p-1 bg-white rounded-md shadow-xs">
-                                                                <History className="w-3.5 h-3.5 text-slate-400" />
+                                                        <div className="bg-white px-5 py-2.5 rounded-2xl border border-slate-200 flex items-center gap-4 text-xs shadow-sm group hover:border-blue-200 transition-colors">
+                                                            <div className="p-1.5 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                                                                <History className="w-4 h-4 text-blue-600" />
                                                             </div>
-                                                            <span><strong>{log.admin_name}</strong> updated status: <span className="font-medium text-slate-700">{log.content}</span></span>
-                                                            <span className="text-slate-300">•</span>
-                                                            <span className="text-[10px] font-medium text-slate-400 uppercase">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
+                                                            <span className="font-medium text-slate-500">
+                                                                <strong className="text-slate-900 font-black">{log.admin_name}</strong> updated status to
+                                                                <span className="ml-2 font-black text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded shadow-xs">{log.content?.split('to ')[1] || log.content}</span>
+                                                            </span>
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200 mx-1"></div>
+                                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter italic">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm ${log.type === 'demo_scheduled' ? 'bg-indigo-50 border-indigo-100' : 'bg-blue-50 border-blue-100'}`}>
+                                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm relative ${log.type === 'demo_scheduled' ? 'bg-indigo-600 border-indigo-700 shadow-indigo-100' : 'bg-slate-900 border-slate-900 shadow-slate-200'}`}>
                                                                 {log.type === 'demo_scheduled' ? (
-                                                                    <CalendarCheck className="w-5 h-5 text-indigo-600" />
+                                                                    <CalendarCheck className="w-6 h-6 text-white" />
                                                                 ) : (
-                                                                    <User className="w-5 h-5 text-blue-600" />
+                                                                    <Shield className="w-6 h-6 text-white" />
                                                                 )}
                                                             </div>
-                                                            <div className="flex-1 max-w-[85%]">
-                                                                <div className="flex items-baseline justify-between mb-1.5">
-                                                                    <span className="text-sm font-bold text-slate-900">{log.admin_name || 'Admin'}</span>
-                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
+                                                            <div className="flex-1 max-w-[90%]">
+                                                                <div className="flex items-baseline justify-between mb-2">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[13px] font-black text-slate-900 uppercase tracking-wide">{log.admin_name || 'Admin'}</span>
+                                                                        {log.type === 'demo_scheduled' && <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">Demo Event</span>}
+                                                                        {log.type === 'note' && <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">Internal Note</span>}
+                                                                    </div>
+                                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-tight">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
                                                                 </div>
-                                                                <div className={`text-sm p-4 rounded-2xl rounded-tl-none border leading-relaxed shadow-sm ${log.type === 'demo_scheduled'
-                                                                    ? 'bg-indigo-50/30 border-indigo-100 text-indigo-900'
-                                                                    : 'bg-white border-slate-100 text-slate-700'
+                                                                <div className={`text-[15px] p-5 rounded-3xl rounded-tl-none border leading-relaxed shadow-sm transition-all hover:shadow-md ${log.type === 'demo_scheduled'
+                                                                    ? 'bg-indigo-50/50 border-indigo-100 text-indigo-900'
+                                                                    : 'bg-white border-slate-200 text-slate-700'
                                                                     }`}>
                                                                     {log.content}
                                                                 </div>
@@ -949,7 +983,7 @@ const SalesAdmin = () => {
                                 </div>
 
                                 {/* Modern Integrated Input Area */}
-                                <div className="p-4 bg-slate-50/80 border-t border-slate-100 backdrop-blur-sm">
+                                <div className="p-6 bg-white border-t border-slate-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] relative z-10">
                                     <form onSubmit={handleAddLog} className="relative group">
                                         <textarea
                                             value={newLogContent}
@@ -961,34 +995,39 @@ const SalesAdmin = () => {
                                                 }
                                             }}
                                             placeholder="Add a private note or contact summary..."
-                                            className="w-full pl-5 pr-14 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 resize-none shadow-sm text-sm transition-all"
+                                            className="w-full pl-6 pr-16 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500/50 focus:bg-white resize-none shadow-inner text-[15px] transition-all font-medium placeholder:text-slate-400 shadow-slate-200/20"
                                             rows="1"
-                                            style={{ minHeight: '60px' }}
+                                            style={{ minHeight: '70px' }}
                                         />
                                         <button
                                             type="submit"
                                             disabled={!newLogContent.trim() || sendingLog}
-                                            className="absolute right-3 top-3 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-300 transition-all shadow-lg shadow-blue-200"
+                                            className="absolute right-3 top-3 p-3.5 bg-blue-600 text-white rounded-full hover:bg-slate-900 disabled:opacity-30 disabled:bg-slate-200 transition-all shadow-xl shadow-blue-200/50 group"
                                         >
-                                            {sendingLog ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                            {sendingLog ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6 group-hover:scale-110 transition-transform" />}
                                         </button>
                                     </form>
-                                    <div className="mt-2 flex items-center justify-between px-2">
-                                        <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm animate-pulse"></span> Press Enter to Save</span>
-                                            <span>•</span>
-                                            <span>Shift + Enter for new line</span>
+                                    <div className="mt-4 flex items-center justify-between px-6">
+                                        <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
+                                            <span className="flex items-center gap-2 transition-colors hover:text-blue-400 cursor-default">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div> Enter to Save
+                                            </span>
+                                            <span className="opacity-50">•</span>
+                                            <span className="hover:text-slate-400 cursor-default">Shift + Enter for new line</span>
                                         </div>
                                     </div>
                                 </div>
                             </>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-400 p-10 text-center">
-                                <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+                            <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 p-20 text-center">
+                                <div className="w-24 h-24 bg-white rounded-[2.5rem] border border-slate-200 flex items-center justify-center mb-8 shadow-xl shadow-slate-200/50 relative">
                                     <Inbox className="w-10 h-10 text-slate-200" />
+                                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full border-4 border-white"></div>
                                 </div>
-                                <h3 className="font-bold text-lg text-slate-700 mb-2">Select an Inquiry</h3>
-                                <p className="text-sm max-w-[240px] leading-relaxed">Choose someone from the list to view their contact details and full activity history.</p>
+                                <h3 className="font-black text-xl text-slate-800 mb-4 uppercase tracking-tight">Select an Inquiry</h3>
+                                <p className="text-[15px] font-medium text-slate-400 max-w-[320px] leading-relaxed">
+                                    Choose a lead from the list to manage their contact details, history, and conversion flow.
+                                </p>
                             </div>
                         )}
                     </div>
