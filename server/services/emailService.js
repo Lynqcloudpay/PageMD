@@ -229,14 +229,22 @@ class EmailService {
     async _send(to, subject, html) {
         console.log(`[EmailService] 📧 Preparing email for: ${to}`);
 
+        if (!this.transporter) {
+            console.error('[EmailService] ❌ Transporter not initialized. Re-initializing...');
+            this._initialize();
+            if (!this.transporter) return false;
+        }
+
+        const mailOptions = {
+            from: `"PageMD" <${process.env.EMAIL_FROM || 'noreply@pagemdemr.com'}>`, // Friendly sender name
+            to,
+            subject,
+            html
+        };
+
         if (this.enabled && this.transporter) {
             try {
-                const info = await this.transporter.sendMail({
-                    from: `"PageMD Support" <${this.from}>`,
-                    to,
-                    subject,
-                    html
-                });
+                const info = await this.transporter.sendMail(mailOptions);
                 console.log(`[EmailService] ✅ Email sent: ${info.messageId}`);
                 return true;
             } catch (error) {

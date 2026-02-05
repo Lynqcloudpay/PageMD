@@ -509,7 +509,7 @@ const SalesAdmin = () => {
     // Stats
     const stats = {
         total: inquiries.length,
-        new: inquiries.filter(i => i.status === 'new').length,
+        new: inquiries.filter(i => ['new', 'pending_verification', 'verified'].includes(i.status)).length,
         contacted: inquiries.filter(i => i.status === 'contacted').length,
         converted: inquiries.filter(i => i.status === 'converted').length
     };
@@ -693,7 +693,7 @@ const SalesAdmin = () => {
                                 >
                                     <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'pending' ? 'text-blue-600' : 'text-slate-400'}`}>Pending</span>
                                     <span className={`text-lg font-black ${activeCategory === 'pending' ? 'text-blue-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => ['new', 'contacted'].includes(i.status || 'new')).length}
+                                        {inquiries.filter(i => ['new', 'contacted', 'pending_verification', 'verified'].includes(i.status || 'new')).length}
                                     </span>
                                 </button>
                                 <button
@@ -770,7 +770,7 @@ const SalesAdmin = () => {
                             <div className="flex-1 overflow-y-auto bg-white">
                                 {(() => {
                                     const categoryMap = {
-                                        pending: ['new', 'contacted'],
+                                        pending: ['new', 'contacted', 'pending_verification', 'verified'],
                                         pipeline: ['demo_scheduled', 'follow_up'],
                                         converted: ['converted'],
                                         closed: ['closed']
