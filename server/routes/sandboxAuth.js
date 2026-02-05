@@ -31,10 +31,10 @@ router.post('/provision', async (req, res) => {
 
         // 2. Create Default Sandbox Provider
         const providerRes = await client.query(`
-            INSERT INTO users (email, first_name, last_name, role, is_admin, status)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO users (email, password_hash, first_name, last_name, role, is_admin, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id
-        `, ['demo@pagemd.com', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
+        `, ['demo@pagemd.com', 'sandbox_auto_login_placeholder', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
         const providerId = providerRes.rows[0].id;
 
         // 3. Seed Clinical Data
