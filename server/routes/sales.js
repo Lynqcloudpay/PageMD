@@ -624,6 +624,15 @@ router.get('/inquiries', verifyToken, async (req, res) => {
         query += `
                 ORDER BY LOWER(email), created_at DESC
             ) AS unique_leads
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*) as unread_count
+                FROM sales_inquiry_logs
+                WHERE inquiry_id IN (
+                    SELECT id FROM sales_inquiries WHERE LOWER(email) = LOWER(unique_leads.email)
+                )
+                AND created_at > COALESCE(unique_leads.last_viewed_at, '-infinity'::timestamp)
+                AND type != 'status_change'
+            ) AS activity ON true
             ORDER BY last_activity_at DESC 
             LIMIT $${params.length + 1} OFFSET $${params.length + 2}
         `;
@@ -1028,6 +1037,30 @@ router.post('/concierge-inquiry', async (req, res) => {
     } catch (error) {
         console.error('Error posting concierge inquiry:', error);
         res.status(500).json({ error: 'Failed to post inquiry' });
+    }
+});
+
+/**
+ * POST /api/sales/inquiries/:id/view
+ * Mark a lead as viewed by an admin
+ */
+router.post('/inquiries/:id/view', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Update last_viewed_at for all inquiries with this email
+        await pool.query(`
+            UPDATE sales_inquiries 
+            SET last_viewed_at = NOW() 
+            WHERE LOWER(email) = (
+                SELECT LOWER(email) FROM sales_inquiries WHERE id = $1
+            )
+        `, [id]);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error marking as viewed:', error);
+        res.status(500).json({ error: 'Failed to mark as viewed' });
     }
 });
 

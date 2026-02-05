@@ -155,6 +155,14 @@ const SalesAdmin = () => {
         }
     };
 
+    useEffect(() => {
+        if (token) {
+            fetchInquiries();
+            const interval = setInterval(fetchInquiries, 30000); // Poll every 30s
+            return () => clearInterval(interval);
+        }
+    }, [token, statusFilter]);
+
     const fetchTeamUsers = async () => {
         try {
             const response = await authenticatedFetch('/sales/users');
@@ -410,6 +418,29 @@ const SalesAdmin = () => {
         }
     };
 
+    const markLeadAsViewed = async (inquiryId) => {
+        try {
+            const response = await authenticatedFetch(`/sales/inquiries/${inquiryId}/view`, {
+                method: 'POST'
+            });
+            if (response.ok) {
+                // Locally clear the unread count
+                setInquiries(prev => prev.map(inq =>
+                    inq.id === inquiryId ? { ...inq, unread_count: 0 } : inq
+                ));
+            }
+        } catch (err) {
+            console.error('Error marking as viewed:', err);
+        }
+    };
+
+    const handleSelectInquiry = (inquiry) => {
+        setSelectedInquiry(inquiry);
+        if (parseInt(inquiry.unread_count || 0) > 0) {
+            markLeadAsViewed(inquiry.id);
+        }
+    };
+
     const handleScheduleDemo = async (e) => {
         e.preventDefault();
         if (!demoForm.date || !demoForm.time) {
@@ -448,11 +479,6 @@ const SalesAdmin = () => {
         }
     };
 
-    useEffect(() => {
-        if (token) {
-            fetchInquiries();
-        }
-    }, [token, statusFilter]);
 
     useEffect(() => {
         if (showSettings && token) {
@@ -810,7 +836,7 @@ const SalesAdmin = () => {
                                             {displayItems.map((inquiry) => (
                                                 <div
                                                     key={inquiry.id}
-                                                    onClick={() => setSelectedInquiry(inquiry)}
+                                                    onClick={() => handleSelectInquiry(inquiry)}
                                                     className={`p-4 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
                                                         ? 'bg-blue-50/40 border-l-blue-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
                                                         : 'border-l-transparent hover:bg-slate-50/80'
@@ -823,16 +849,28 @@ const SalesAdmin = () => {
                                                                 <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
                                                                     {inquiry.status?.replace('_', ' ') || 'new'}
                                                                 </span>
-                                                                {inquiry.last_activity_at && new Date(inquiry.last_activity_at) - new Date(inquiry.created_at) > 1000 * 60 * 5 && (
+                                                                {inquiry.last_activity_at && (new Date(inquiry.last_activity_at) - new Date(inquiry.created_at) > 1000 * 60 * 5) && (
                                                                     <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-rose-100 text-rose-600 animate-pulse">
-                                                                        Returning
+                                                                        Returning Lead
+                                                                    </span>
+                                                                )}
+                                                                {parseInt(inquiry.unread_count || 0) > 0 && (
+                                                                    <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-blue-600 text-white animate-pulse">
+                                                                        New Activity
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <span className="text-[9px] text-slate-300 font-bold uppercase whitespace-nowrap">
-                                                            {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
-                                                        </span>
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <span className="text-[9px] text-slate-300 font-bold uppercase whitespace-nowrap">
+                                                                {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
+                                                            </span>
+                                                            {parseInt(inquiry.unread_count || 0) > 0 && (
+                                                                <span className="w-6 h-6 bg-red-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(239,68,68,0.4)] animate-bounce border-2 border-white">
+                                                                    {inquiry.unread_count}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <div className="flex items-center justify-between text-[11px]">
                                                         <div className="flex flex-col text-slate-500 truncate">
