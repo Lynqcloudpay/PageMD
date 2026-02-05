@@ -5,7 +5,7 @@ import {
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
-    Send, History, Share2, X, ChevronRight, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video
+    Send, History, Share2, X, ChevronRight, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -363,8 +363,6 @@ const SalesAdmin = () => {
 
             // Re-select to get updated state (the backend returns success, but we need the new list)
             // fetchInquiries will update the 'inquiries' state.
-
-            setShowDemoModal(true); // Proactive: open schedule modal after claim
         } catch (err) {
             console.error('Claim error:', err);
             alert(err.message);
@@ -759,15 +757,20 @@ const SalesAdmin = () => {
 
                 {/* Sidebar & Detail Panel */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    {/* Sidebar: Inquiries List */}
-                    <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col h-[800px]">
-                        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
-                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Inquiry Lifecycle</h2>
+                    {/* Sidebar */}
+                    <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-[800px] border-r border-slate-200">
+                        <div className="p-4 border-b border-slate-100 bg-white sticky top-0 z-10">
+                            <h2 className="text-xl font-black text-slate-900 tracking-tight mb-4 flex items-center gap-2">
+                                Sales Dashboard
+                            </h2>
 
-                            {/* Primary Navigation Tabs */}
+                            {/* View Toggles */}
                             <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-sm mb-4">
                                 <button
-                                    onClick={() => setViewMode('pool')}
+                                    onClick={() => {
+                                        setViewMode('pool');
+                                        setActiveCategory('pending');
+                                    }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'pool'
                                         ? 'bg-white text-blue-600 shadow-md transform scale-[1.02]'
                                         : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
@@ -780,7 +783,10 @@ const SalesAdmin = () => {
                                     </span>
                                 </button>
                                 <button
-                                    onClick={() => setViewMode('personal')}
+                                    onClick={() => {
+                                        setViewMode('personal');
+                                        setActiveCategory('all');
+                                    }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'personal'
                                         ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
                                         : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
@@ -799,8 +805,8 @@ const SalesAdmin = () => {
                                             fetchMasterSchedule();
                                         }}
                                         className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'master'
-                                                ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]'
-                                                : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                            ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]'
+                                            : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                                             }`}
                                     >
                                         <Activity className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-300'}`} />
@@ -808,6 +814,32 @@ const SalesAdmin = () => {
                                     </button>
                                 )}
                             </div>
+
+                            {/* Sub-filters for Lead Pool */}
+                            {viewMode !== 'master' && (
+                                <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+                                    {[
+                                        { id: 'all', label: 'All', icon: Zap },
+                                        { id: 'new', label: 'New', icon: Star },
+                                        { id: 'contacted', label: 'Discussions', icon: MessageSquare },
+                                        { id: 'converted', label: 'Converted', icon: CheckCircle2 },
+                                        { id: 'closed', label: 'Closed', icon: XCircle },
+                                    ].map(cat => (
+                                        <button
+                                            key={cat.id}
+                                            onClick={() => setStatusFilter(cat.id === 'all' ? '' : cat.id)}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-colors flex items-center gap-1.5 ${statusFilter === (cat.id === 'all' ? '' : cat.id)
+                                                ? 'bg-slate-800 text-white'
+                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                                }`}
+                                        >
+                                            {statusFilter === (cat.id === 'all' ? '' : cat.id) && <cat.icon className="w-3 h-3" />}
+                                            {cat.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
 
                             <div className="relative group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
@@ -1013,6 +1045,12 @@ const SalesAdmin = () => {
                                                     <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
                                                         <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                                                         <span className="truncate">{selectedInquiry.practice_name}</span>
+                                                    </span>
+                                                )}
+                                                {selectedInquiry.phone && (
+                                                    <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
+                                                        <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                                        <span className="truncate">{selectedInquiry.phone}</span>
                                                     </span>
                                                 )}
                                                 <span className="flex items-center gap-1 shrink-0 opacity-70">
