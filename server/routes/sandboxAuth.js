@@ -36,7 +36,7 @@ router.post('/provision', async (req, res) => {
             RETURNING id
         `, ['demo@pagemd.com', 'sandbox_auto_login_placeholder', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
         const providerId = providerRes.rows[0].id;
-        const sandboxClinicId = '00000000-0000-0000-0000-000000000000';
+        const sandboxClinicId = '60456326-868d-4e21-942a-fd35190ed4fc'; // Matches public.clinics 'sandboxclinic' slug
 
         // 3. Seed Basic Settings
         await client.query(`
