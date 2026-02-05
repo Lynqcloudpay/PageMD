@@ -272,4 +272,58 @@ router.patch('/inquiries/:id', verifyToken, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/sales/inquiries/:id/activate-referral
+ * Activate a referral credit for a converted inquiry
+ */
+router.post('/inquiries/:id/activate-referral', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // 1. Get Inquiry
+        const inquiryRes = await pool.query('SELECT * FROM sales_inquiries WHERE id = $1', [id]);
+        const inquiry = inquiryRes.rows[0];
+
+        if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
+        if (!inquiry.referral_code) return res.status(400).json({ error: 'No referral code on this inquiry' });
+        if (inquiry.referral_activated) return res.status(400).json({ error: 'Referral already activated' });
+
+        // 2. Find Referrer Clinic (Global lookup)
+        const referrerRes = await pool.query('SELECT id, display_name FROM clinics WHERE referral_code = $1', [inquiry.referral_code]);
+        if (referrerRes.rows.length === 0) {
+            return res.status(404).json({ error: `Referrer clinic with code '${inquiry.referral_code}' not found` });
+        }
+        const referrer = referrerRes.rows[0];
+
+        // 3. Create active referral record
+        await pool.query(`
+            INSERT INTO clinic_referrals (
+                referrer_clinic_id, 
+                referred_clinic_name, 
+                referral_email, 
+                status, 
+                created_at
+            ) VALUES ($1, $2, $3, 'active', NOW())
+        `, [referrer.id, inquiry.practice_name || inquiry.name, inquiry.email]);
+
+        // 4. Mark inquiry as activated
+        await pool.query(`
+            UPDATE sales_inquiries 
+            SET referral_activated = true, 
+                referral_activated_at = NOW(),
+                updated_at = NOW()
+            WHERE id = $1
+        `, [id]);
+
+        res.json({
+            success: true,
+            message: `Referral activated! ${referrer.display_name} has received credit.`
+        });
+
+    } catch (error) {
+        console.error('Error activating referral:', error);
+        res.status(500).json({ error: 'Failed to activate referral' });
+    }
+});
+
 module.exports = router;

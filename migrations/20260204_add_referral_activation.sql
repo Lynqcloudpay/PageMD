@@ -1,0 +1,1 @@
+ALTER TABLE sales_inquiries ADD COLUMN IF NOT EXISTS referral_activated BOOLEAN DEFAULT FALSE; ALTER TABLE sales_inquiries ADD COLUMN IF NOT EXISTS referral_activated_at TIMESTAMP WITH TIME ZONE;

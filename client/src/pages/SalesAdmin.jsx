@@ -136,6 +136,29 @@ const SalesAdmin = () => {
 
     // --- Actions ---
 
+    const activateReferral = async (id) => {
+        try {
+            setUpdating(true);
+            const response = await authenticatedFetch(`/sales/inquiries/${id}/activate-referral`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            alert(data.message);
+            await fetchInquiries();
+            if (selectedInquiry?.id === id) {
+                setSelectedInquiry(prev => ({ ...prev, referral_activated: true }));
+            }
+        } catch (err) {
+            console.error('Error activating referral:', err);
+            alert(err.message);
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const updateInquiryStatus = async (id, newStatus) => {
         try {
             setUpdating(true);
@@ -620,6 +643,22 @@ const SalesAdmin = () => {
 
                                     {/* Actions */}
                                     <div className="pt-4 space-y-2">
+                                        {selectedInquiry.referral_code && selectedInquiry.status === 'converted' && !selectedInquiry.referral_activated && (
+                                            <button
+                                                onClick={() => activateReferral(selectedInquiry.id)}
+                                                disabled={updating}
+                                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-200 animate-pulse-once"
+                                            >
+                                                <Gift className="w-4 h-4" />
+                                                Activate Referral Credit
+                                            </button>
+                                        )}
+                                        {selectedInquiry.referral_activated && (
+                                            <div className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 font-medium">
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                Referral Credit Active
+                                            </div>
+                                        )}
                                         <a
                                             href={`mailto:${selectedInquiry.email}?subject=PageMD - Demo Request Follow-up&body=Hi ${selectedInquiry.name},%0D%0A%0D%0AThank you for your interest in PageMD!`}
                                             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
