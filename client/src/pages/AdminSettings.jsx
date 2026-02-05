@@ -154,6 +154,7 @@ const AdminSettings = () => {
 
   const tabs = [
     { id: 'practice', label: 'Practice', icon: Building2 },
+    { id: 'rewards', label: 'Referrals/Reward', icon: Gift },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'compliance', label: 'Compliance', icon: ShieldCheck },
     { id: 'security', label: 'Security', icon: Shield },
@@ -162,7 +163,6 @@ const AdminSettings = () => {
     { id: 'email', label: 'Email', icon: Mail },
     { id: 'features', label: 'Features', icon: Zap },
     { id: 'billing', label: 'Billing', icon: DollarSign },
-    { id: 'rewards', label: 'Referrals/Reward', icon: Gift },
   ];
 
   if (loading) {
