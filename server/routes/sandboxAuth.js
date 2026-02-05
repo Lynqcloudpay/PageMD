@@ -44,7 +44,7 @@ router.post('/provision', async (req, res) => {
 
         // 4. Issue JWT
         const token = jwt.sign({
-            userId: 'demo-user',
+            userId: providerId,
             email: 'demo@pagemd.com',
             isSandbox: true,
             sandboxId: sandboxId,
