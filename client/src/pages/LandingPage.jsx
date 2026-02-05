@@ -75,12 +75,33 @@ const LandingPage = () => {
         }
     };
 
-    const handleInstantDemo = async () => {
+    const handleInstantDemo = async (inquiryMessage = '') => {
         if (loading) return; // Prevent multiple clicks
         setLoading(true);
         setIsModalOpen(false);
+        setIsConciergeOpen(false);
+
+        // If there's an inquiry message and we have a lead ID, log it as a unified visit
+        const leadId = getLeadCookie('pagemd_lead_id');
+        if (inquiryMessage && leadId) {
+            try {
+                const baseUrl = import.meta.env.VITE_API_URL || '/api';
+                await fetch(`${baseUrl}/sales/track-visit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        uuid: leadId,
+                        message: inquiryMessage
+                    })
+                });
+            } catch (e) {
+                console.error('Failed to log visit with message', e);
+            }
+        }
+
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/sandbox/provision`, {
+            const baseUrl = import.meta.env.VITE_API_URL || '/api';
+            const res = await fetch(`${baseUrl}/auth/sandbox/provision`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });

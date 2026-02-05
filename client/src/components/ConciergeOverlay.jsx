@@ -97,11 +97,7 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
     };
 
     const handleLaunchClick = async () => {
-        if (message.trim() && !submitted) {
-            // FIRE AND FORGET - don't let a slow inquiry block the demo launch
-            handleInquiry();
-        }
-        onLaunch();
+        onLaunch(message.trim());
     };
 
     if (!isOpen) return null;
