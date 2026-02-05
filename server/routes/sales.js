@@ -624,7 +624,7 @@ router.get('/inquiries', verifyToken, async (req, res) => {
         query += `
                 ORDER BY LOWER(email), created_at DESC
             ) AS unique_leads
-            ORDER BY created_at DESC 
+            ORDER BY last_activity_at DESC 
             LIMIT $${params.length + 1} OFFSET $${params.length + 2}
         `;
         params.push(limit, offset);
