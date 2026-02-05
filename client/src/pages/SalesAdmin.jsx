@@ -995,493 +995,492 @@ const SalesAdmin = () => {
                     </div>
                 </div>
             </div>
-        </div >
 
-    {/* Settings Modal */ }
-    {
-        showSettings && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
-                <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                    <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                        <h2 className="text-xl font-bold text-slate-900">Settings & Team</h2>
-                        <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                            <XCircle className="w-6 h-6 text-slate-400" />
-                        </button>
-                    </div>
-
-                    <div className="flex border-b border-slate-100 shrink-0">
-                        <button
-                            onClick={() => setSettingsTab('password')}
-                            className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                        >
-                            Change Password
-                        </button>
-                        <button
-                            onClick={() => setSettingsTab('users')}
-                            className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                        >
-                            Team Management
-                        </button>
-                    </div>
-
-                    <div className="p-6 overflow-y-auto">
-                        {settingsTab === 'password' ? (
-                            <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-                                    <input
-                                        type="password"
-                                        value={passForm.current}
-                                        onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-                                    <input
-                                        type="password"
-                                        value={passForm.new}
-                                        onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                        required
-                                        minLength={8}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
-                                    <input
-                                        type="password"
-                                        value={passForm.confirm}
-                                        onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                        required
-                                    />
-                                </div>
-
-                                {passMsg.text && (
-                                    <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                        {passMsg.text}
-                                    </div>
-                                )}
-
-                                <button
-                                    type="submit"
-                                    className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
-                                >
-                                    Update Password
+            {/* Settings Modal */}
+            {
+                showSettings && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                                <h2 className="text-xl font-bold text-slate-900">Settings & Team</h2>
+                                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                    <XCircle className="w-6 h-6 text-slate-400" />
                                 </button>
-                            </form>
-                        ) : (
-                            <div className="space-y-8">
-                                {/* Create User */}
-                                <div className="bg-slate-50 p-5 rounded-xl">
-                                    <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
-                                        <UserPlus className="w-4 h-4" />
-                                        Add New Team Member
-                                    </h3>
-                                    <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
-                                        <div className="col-span-2 sm:col-span-1">
-                                            <input
-                                                type="text"
-                                                placeholder="Username"
-                                                value={userForm.username}
-                                                onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                required
-                                            />
-                                        </div>
-                                        <div className="col-span-2 sm:col-span-1">
-                                            <input
-                                                type="email"
-                                                placeholder="Email"
-                                                value={userForm.email}
-                                                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                required
-                                            />
-                                        </div>
-                                        <div className="col-span-2">
+                            </div>
+
+                            <div className="flex border-b border-slate-100 shrink-0">
+                                <button
+                                    onClick={() => setSettingsTab('password')}
+                                    className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                >
+                                    Change Password
+                                </button>
+                                <button
+                                    onClick={() => setSettingsTab('users')}
+                                    className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                >
+                                    Team Management
+                                </button>
+                            </div>
+
+                            <div className="p-6 overflow-y-auto">
+                                {settingsTab === 'password' ? (
+                                    <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
                                             <input
                                                 type="password"
-                                                placeholder="Initial Password (min 8 chars)"
-                                                value={userForm.password}
-                                                onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                value={passForm.current}
+                                                onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                                            <input
+                                                type="password"
+                                                value={passForm.new}
+                                                onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
                                                 required
                                                 minLength={8}
                                             />
                                         </div>
-                                        <div className="col-span-2">
-                                            <button
-                                                type="submit"
-                                                className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
-                                            >
-                                                Create User
-                                            </button>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                                            <input
+                                                type="password"
+                                                value={passForm.confirm}
+                                                onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                required
+                                            />
                                         </div>
-                                        {userMsg.text && (
-                                            <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                {userMsg.text}
+
+                                        {passMsg.text && (
+                                            <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                {passMsg.text}
                                             </div>
                                         )}
-                                    </form>
-                                </div>
 
-                                {/* User List */}
-                                <div>
-                                    <h3 className="font-medium text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">
-                                        Existing Users
-                                    </h3>
-                                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                                        <div className="divide-y divide-slate-100">
-                                            {teamUsers.map(user => (
-                                                <div key={user.id} className="p-4 flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
-                                                            {user.username.substring(0, 2)}
-                                                        </div>
-                                                        <div>
-                                                            <div className="font-medium text-slate-900">{user.username}</div>
-                                                            <div className="text-xs text-slate-500">{user.email}</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-xs text-slate-400">
-                                                        Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
-                                                    </div>
+                                        <button
+                                            type="submit"
+                                            className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
+                                        >
+                                            Update Password
+                                        </button>
+                                    </form>
+                                ) : (
+                                    <div className="space-y-8">
+                                        {/* Create User */}
+                                        <div className="bg-slate-50 p-5 rounded-xl">
+                                            <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
+                                                <UserPlus className="w-4 h-4" />
+                                                Add New Team Member
+                                            </h3>
+                                            <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
+                                                <div className="col-span-2 sm:col-span-1">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Username"
+                                                        value={userForm.username}
+                                                        onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        required
+                                                    />
                                                 </div>
-                                            ))}
+                                                <div className="col-span-2 sm:col-span-1">
+                                                    <input
+                                                        type="email"
+                                                        placeholder="Email"
+                                                        value={userForm.email}
+                                                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <input
+                                                        type="password"
+                                                        placeholder="Initial Password (min 8 chars)"
+                                                        value={userForm.password}
+                                                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        required
+                                                        minLength={8}
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <button
+                                                        type="submit"
+                                                        className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
+                                                    >
+                                                        Create User
+                                                    </button>
+                                                </div>
+                                                {userMsg.text && (
+                                                    <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                        {userMsg.text}
+                                                    </div>
+                                                )}
+                                            </form>
+                                        </div>
+
+                                        {/* User List */}
+                                        <div>
+                                            <h3 className="font-medium text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">
+                                                Existing Users
+                                            </h3>
+                                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                                <div className="divide-y divide-slate-100">
+                                                    {teamUsers.map(user => (
+                                                        <div key={user.id} className="p-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                                                    {user.username.substring(0, 2)}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-medium text-slate-900">{user.username}</div>
+                                                                    <div className="text-xs text-slate-500">{user.email}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-xs text-slate-400">
+                                                                Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Onboard Clinic Modal */}
+            {
+                showOnboardModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+                        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
+                            <button
+                                onClick={() => setShowOnboardModal(false)}
+                                className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <XCircle className="w-6 h-6" />
+                            </button>
+
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                                    <Database className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
+                                    <p className="text-slate-500 text-sm">
+                                        {selectedInquiry?.referral_code
+                                            ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
+                                            : 'Create a new clinic with dedicated database'
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+
+                            {onboardError && (
+                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                                    {onboardError}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleOnboard} className="space-y-6">
+                                {/* Clinic Details */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                        <Building2 className="w-4 h-4" /> Clinic Details
+                                    </h3>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="e.g. Heart Center of Nevada"
+                                                value={onboardForm.displayName}
+                                                onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                placeholder="e.g. heart-center-nv"
+                                                value={onboardForm.slug}
+                                                onChange={e => setOnboardForm({
+                                                    ...onboardForm,
+                                                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                                                })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                            />
+                                            <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Cardiology"
+                                                value={onboardForm.specialty}
+                                                onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                            />
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        )
-    }
 
-    {/* Onboard Clinic Modal */ }
-    {
-        showOnboardModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
-                    <button
-                        onClick={() => setShowOnboardModal(false)}
-                        className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                        <XCircle className="w-6 h-6" />
-                    </button>
+                                {/* Initial Admin User */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                        <Shield className="w-4 h-4" /> Initial Admin User
+                                    </h3>
+                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={onboardForm.adminFirstName}
+                                                    onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={onboardForm.adminLastName}
+                                                    onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                />
+                                            </div>
+                                        </div>
 
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                            <Database className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
-                            <p className="text-slate-500 text-sm">
-                                {selectedInquiry?.referral_code
-                                    ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
-                                    : 'Create a new clinic with dedicated database'
-                                }
-                            </p>
-                        </div>
-                    </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
+                                            <input
+                                                type="email"
+                                                required
+                                                placeholder="admin@clinic.com"
+                                                value={onboardForm.adminEmail}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
 
-                    {onboardError && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
-                            {onboardError}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleOnboard} className="space-y-6">
-                        {/* Clinic Details */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                <Building2 className="w-4 h-4" /> Clinic Details
-                            </h3>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Heart Center of Nevada"
-                                        value={onboardForm.displayName}
-                                        onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. heart-center-nv"
-                                        value={onboardForm.slug}
-                                        onChange={e => setOnboardForm({
-                                            ...onboardForm,
-                                            slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-                                        })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Cardiology"
-                                        value={onboardForm.specialty}
-                                        onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Initial Admin User */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                <Shield className="w-4 h-4" /> Initial Admin User
-                            </h3>
-                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={onboardForm.adminFirstName}
-                                            onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={onboardForm.adminLastName}
-                                            onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        />
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
+                                            <input
+                                                type="password"
+                                                required
+                                                minLength={8}
+                                                placeholder="Min 8 characters"
+                                                value={onboardForm.adminPassword}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        placeholder="admin@clinic.com"
-                                        value={onboardForm.adminEmail}
-                                        onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
-                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                    />
+                                <div className="pt-2">
+                                    <button
+                                        type="submit"
+                                        disabled={onboardLoading}
+                                        className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {onboardLoading ? (
+                                            <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
+                                        ) : (
+                                            <>
+                                                <Database className="w-5 h-5" />
+                                                {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
+                                            </>
+                                        )}
+                                    </button>
+                                    <p className="text-center text-[10px] text-slate-400 mt-3">
+                                        This will create a new dedicated database schema and initial admin account.
+                                    </p>
                                 </div>
+                            </form>
+                        </div>
+                    </div>
+                )
+            }
 
+            {/* Status Change Modal */}
+            {
+                showStatusModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
+                            <button
+                                onClick={() => {
+                                    setShowStatusModal(false);
+                                    setPendingStatus(null);
+                                    setStatusNote('');
+                                }}
+                                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
+                                    }`}>
+                                    {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
+                                    {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
+                                    {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
+                                    {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
+                                </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        minLength={8}
-                                        placeholder="Min 8 characters"
-                                        value={onboardForm.adminPassword}
-                                        onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
-                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                    />
+                                    <h2 className="text-lg font-bold text-slate-800">
+                                        {pendingStatus === 'contacted' && 'Log Contact'}
+                                        {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
+                                        {pendingStatus === 'follow_up' && 'Set Follow Up'}
+                                        {pendingStatus === 'closed' && 'Close Inquiry'}
+                                    </h2>
+                                    <p className="text-sm text-slate-500">
+                                        {selectedInquiry?.name} • {selectedInquiry?.email}
+                                    </p>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="pt-2">
-                            <button
-                                type="submit"
-                                disabled={onboardLoading}
-                                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {onboardLoading ? (
-                                    <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
-                                ) : (
-                                    <>
-                                        <Database className="w-5 h-5" />
-                                        {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
-                                    </>
-                                )}
-                            </button>
-                            <p className="text-center text-[10px] text-slate-400 mt-3">
-                                This will create a new dedicated database schema and initial admin account.
-                            </p>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )
-    }
+                            <div className="mb-4">
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                    {pendingStatus === 'contacted' && 'Contact Notes *'}
+                                    {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
+                                    {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
+                                    {pendingStatus === 'closed' && 'Reason for Closing *'}
+                                </label>
+                                <textarea
+                                    value={statusNote}
+                                    onChange={(e) => setStatusNote(e.target.value)}
+                                    placeholder={getStatusNotePlaceholder(pendingStatus)}
+                                    rows={5}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
+                                    autoFocus
+                                />
+                            </div>
 
-    {/* Status Change Modal */ }
-    {
-        showStatusModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
-                    <button
-                        onClick={() => {
-                            setShowStatusModal(false);
-                            setPendingStatus(null);
-                            setStatusNote('');
-                        }}
-                        className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                        <XCircle className="w-5 h-5" />
-                    </button>
-
-                    <div className="flex items-center gap-3 mb-5">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
-                            }`}>
-                            {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
-                            {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
-                            {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
-                            {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-800">
-                                {pendingStatus === 'contacted' && 'Log Contact'}
-                                {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
-                                {pendingStatus === 'follow_up' && 'Set Follow Up'}
-                                {pendingStatus === 'closed' && 'Close Inquiry'}
-                            </h2>
-                            <p className="text-sm text-slate-500">
-                                {selectedInquiry?.name} • {selectedInquiry?.email}
-                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowStatusModal(false);
+                                        setPendingStatus(null);
+                                        setStatusNote('');
+                                    }}
+                                    className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitStatusChange}
+                                    disabled={statusNoteLoading || !statusNote.trim()}
+                                    className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
+                                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        }`}
+                                >
+                                    {statusNoteLoading ? (
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            Save & Update Status
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-semibold text-slate-700 mb-2">
-                            {pendingStatus === 'contacted' && 'Contact Notes *'}
-                            {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
-                            {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
-                            {pendingStatus === 'closed' && 'Reason for Closing *'}
-                        </label>
-                        <textarea
-                            value={statusNote}
-                            onChange={(e) => setStatusNote(e.target.value)}
-                            placeholder={getStatusNotePlaceholder(pendingStatus)}
-                            rows={5}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
-                            autoFocus
-                        />
+                )
+            }
+            {/* Demo Schedule Modal */}
+            {
+                showDemoModal && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-slate-900">Schedule Demo</h3>
+                                <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <form onSubmit={handleScheduleDemo} className="p-6 space-y-4">
+                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4">
+                                    <p className="text-xs text-blue-700 leading-relaxed font-medium">
+                                        <strong>Invite Notification:</strong> Scheduling this demo will automatically send a calendar invitation and email reminder to <strong>{selectedInquiry?.email}</strong>.
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={demoForm.date}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
+                                    <input
+                                        type="time"
+                                        required
+                                        value={demoForm.time}
+                                        onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
+                                    <textarea
+                                        rows="3"
+                                        value={demoForm.notes}
+                                        onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
+                                        placeholder="e.g. Focus on billing integration..."
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
+                                    />
+                                </div>
+                                <div className="pt-4 flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDemoModal(false)}
+                                        className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={demoLoading}
+                                        className="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm flex items-center justify-center gap-2"
+                                    >
+                                        {demoLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-5 h-5" />}
+                                        Send Invitation
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => {
-                                setShowStatusModal(false);
-                                setPendingStatus(null);
-                                setStatusNote('');
-                            }}
-                            className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={submitStatusChange}
-                            disabled={statusNoteLoading || !statusNote.trim()}
-                            className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
-                                ? 'bg-red-500 hover:bg-red-600 text-white'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                }`}
-                        >
-                            {statusNoteLoading ? (
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <>
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    Save & Update Status
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-    {/* Demo Schedule Modal */ }
-    {
-        showDemoModal && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                        <h3 className="text-lg font-bold text-slate-900">Schedule Demo</h3>
-                        <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
-                    <form onSubmit={handleScheduleDemo} className="p-6 space-y-4">
-                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4">
-                            <p className="text-xs text-blue-700 leading-relaxed font-medium">
-                                <strong>Invite Notification:</strong> Scheduling this demo will automatically send a calendar invitation and email reminder to <strong>{selectedInquiry?.email}</strong>.
-                            </p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
-                            <input
-                                type="date"
-                                required
-                                value={demoForm.date}
-                                min={new Date().toISOString().split('T')[0]}
-                                onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
-                            <input
-                                type="time"
-                                required
-                                value={demoForm.time}
-                                onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
-                            <textarea
-                                rows="3"
-                                value={demoForm.notes}
-                                onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
-                                placeholder="e.g. Focus on billing integration..."
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
-                            />
-                        </div>
-                        <div className="pt-4 flex gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setShowDemoModal(false)}
-                                className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all text-sm"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={demoLoading}
-                                className="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm flex items-center justify-center gap-2"
-                            >
-                                {demoLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-5 h-5" />}
-                                Send Invitation
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        )
-    }
+                )
+            }
         </div >
     );
 };
