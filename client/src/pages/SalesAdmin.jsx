@@ -724,41 +724,53 @@ const SalesAdmin = () => {
                                 <p className="text-sm mt-1">New leads will appear here when someone submits a form</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
+                            <div className="divide-y divide-slate-100 max-h-[700px] overflow-y-auto">
                                 {filteredInquiries.map((inquiry) => (
                                     <div
                                         key={inquiry.id}
                                         onClick={() => setSelectedInquiry(inquiry)}
-                                        className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${selectedInquiry?.id === inquiry.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                                        className={`p-5 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
+                                            ? 'bg-blue-50/50 border-l-blue-600 shadow-sm'
+                                            : 'border-l-transparent hover:bg-slate-50'
                                             }`}
                                     >
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <h3 className="font-medium text-slate-900">{inquiry.name}</h3>
-                                                <p className="text-sm text-slate-500">{inquiry.email}</p>
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="min-w-0">
+                                                <h3 className="font-semibold text-slate-900 truncate">{inquiry.name}</h3>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
+                                                        {inquiry.status?.replace('_', ' ') || 'new'}
+                                                    </span>
+                                                    {inquiry.interest_type && (
+                                                        <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full font-medium">
+                                                            {getInterestLabel(inquiry.interest_type)}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(inquiry.status)}`}>
-                                                {inquiry.status || 'new'}
-                                            </span>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-xs text-slate-400 font-medium">
+                                                    {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-4 text-xs text-slate-400">
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d, yyyy') : 'N/A'}
-                                            </span>
-                                            <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-600">
-                                                {getInterestLabel(inquiry.interest_type)}
-                                            </span>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-3 text-slate-500 truncate">
+                                                {inquiry.practice_name && (
+                                                    <span className="flex items-center gap-1">
+                                                        <Building2 className="w-3 h-3 text-slate-400" />
+                                                        {inquiry.practice_name}
+                                                    </span>
+                                                )}
+                                                <span className="flex items-center gap-1">
+                                                    <Mail className="w-3 h-3 text-slate-400" />
+                                                    {inquiry.email?.split('@')[0]}...
+                                                </span>
+                                            </div>
                                             {inquiry.referral_code && (
-                                                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold uppercase border border-blue-100">
+                                                <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
                                                     <Gift className="w-3 h-3" />
                                                     {inquiry.referral_code}
-                                                </span>
-                                            )}
-                                            {inquiry.practice_name && (
-                                                <span className="flex items-center gap-1">
-                                                    <Building2 className="w-3 h-3" />
-                                                    {inquiry.practice_name}
                                                 </span>
                                             )}
                                         </div>
@@ -769,754 +781,708 @@ const SalesAdmin = () => {
                     </div>
 
                     {/* Detail Panel */}
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[600px]">
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[700px] shadow-sm">
                         {selectedInquiry ? (
                             <>
-                                {/* Header */}
-                                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-                                    <div className="flex items-center gap-3">
-                                        <h2 className="font-semibold text-slate-900 border-r border-slate-200 pr-3">Details</h2>
-                                        {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && (
+                                {/* Modern Header */}
+                                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-900">{selectedInquiry.name}</h2>
+                                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                                                {selectedInquiry.practice_name && (
+                                                    <span className="flex items-center gap-1">
+                                                        <Building2 className="w-4 h-4" />
+                                                        {selectedInquiry.practice_name}
+                                                    </span>
+                                                )}
+                                                <span className="flex items-center gap-1">
+                                                    <Clock className="w-4 h-4" />
+                                                    Received {format(new Date(selectedInquiry.created_at), 'MMM d, h:mm a')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && (
+                                                <button
+                                                    onClick={() => setShowDemoModal(true)}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200"
+                                                >
+                                                    <CalendarCheck className="w-4 h-4" />
+                                                    Schedule Demo
+                                                </button>
+                                            )}
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedInquiry.status || 'new'}
+                                                    onChange={(e) => updateInquiryStatus(selectedInquiry.id, e.target.value)}
+                                                    disabled={updating || selectedInquiry.status === 'converted'}
+                                                    className={`appearance-none pl-9 pr-8 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border cursor-pointer focus:ring-2 focus:ring-offset-1 transition-all ${selectedInquiry.status === 'converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+                                                >
+                                                    <option value="new">New</option>
+                                                    <option value="contacted">Contacted</option>
+                                                    <option value="demo_scheduled">Demo Scheduled</option>
+                                                    <option value="follow_up">Follow Up</option>
+                                                    <option value="converted">Converted</option>
+                                                    <option value="closed">Closed</option>
+                                                </select>
+                                                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                                                    {selectedInquiry.status === 'converted' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Inbox className="w-4 h-4" />}
+                                                </div>
+                                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Action/Info Bar */}
+                                    <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-100">
+                                        <a href={`mailto:${selectedInquiry.email}`} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
+                                            <Mail className="w-3.5 h-3.5 text-blue-500" />
+                                            {selectedInquiry.email}
+                                        </a>
+                                        {selectedInquiry.phone && (
+                                            <a href={`tel:${selectedInquiry.phone}`} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full text-xs font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all">
+                                                <Phone className="w-3.5 h-3.5 text-blue-500" />
+                                                {selectedInquiry.phone}
+                                            </a>
+                                        )}
+                                        {selectedInquiry.provider_count && (
+                                            <span className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-xs font-medium text-slate-600">
+                                                <Users className="w-3.5 h-3.5 text-slate-400" />
+                                                {selectedInquiry.provider_count} Providers
+                                            </span>
+                                        )}
+                                        {selectedInquiry.status !== 'converted' && (
                                             <button
-                                                onClick={() => setShowDemoModal(true)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-medium hover:bg-indigo-100 transition-colors border border-indigo-200"
+                                                onClick={() => openOnboardModal(selectedInquiry)}
+                                                className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-all"
                                             >
-                                                <CalendarCheck className="w-3.5 h-3.5" />
-                                                Schedule Demo
+                                                <Plus className="w-4 h-4" />
+                                                Onboard as Client
                                             </button>
                                         )}
                                     </div>
+                                </div>
 
-                                    {selectedInquiry.status === 'converted' ? (
-                                        <span className="text-sm px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 font-medium flex items-center gap-1.5 border border-emerald-200">
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            Converted
-                                        </span>
-                                    ) : (
-                                        <div className="relative group">
-                                            <select
-                                                value={selectedInquiry.status || 'new'}
-                                                onChange={(e) => {
-                                                    const newStatus = e.target.value;
-                                                    updateInquiryStatus(selectedInquiry.id, newStatus);
-                                                }}
-                                                disabled={updating}
-                                                className={`appearance-none pl-9 pr-8 py-1.5 text-sm font-medium rounded-lg border cursor-pointer focus:ring-2 focus:ring-offset-1 ${selectedInquiry.status === 'closed' ? 'bg-slate-100 text-slate-700 border-slate-200' :
-                                                    'bg-white text-slate-700 border-slate-200 hover:border-blue-300'
-                                                    }`}
-                                            >
-                                                <option value="new">New Inquiry</option>
-                                                <option value="contacted">Contacted</option>
-                                                <option value="demo_scheduled">Demo Scheduled</option>
-                                                <option value="follow_up">Follow Up</option>
-                                                <option value="closed">Closed / Lost</option>
-                                            </select>
-                                            {/* Icon Overlay */}
-                                            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                                                {selectedInquiry.status === 'new' && <Inbox className="w-4 h-4" />}
-                                                {selectedInquiry.status === 'contacted' && <PhoneIncoming className="w-4 h-4" />}
-                                                {selectedInquiry.status === 'demo_scheduled' && <CalendarCheck className="w-4 h-4" />}
-                                                {selectedInquiry.status === 'follow_up' && <Reply className="w-4 h-4" />}
-                                                {selectedInquiry.status === 'closed' && <XOctagon className="w-4 h-4" />}
+                                {/* Full Width Activity Stream */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth bg-white">
+                                    {/* Inquiry Message */}
+                                    {selectedInquiry.message && (
+                                        <div className="flex gap-4">
+                                            <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200/50">
+                                                <User className="w-5 h-5 text-slate-500" />
                                             </div>
-                                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                            <div className="flex-1 max-w-[85%]">
+                                                <div className="flex items-baseline justify-between mb-1.5">
+                                                    <span className="text-sm font-bold text-slate-900">{selectedInquiry.name} <span className="text-xs font-medium text-slate-400 ml-1">(Customer)</span></span>
+                                                    <span className="text-[10px] font-medium text-slate-400">ORIGINAL MESSAGE</span>
+                                                </div>
+                                                <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100 text-slate-700 text-sm leading-relaxed shadow-sm">
+                                                    {selectedInquiry.message}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Timeline Divider */}
+                                    <div className="relative py-4 flex items-center justify-center">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <div className="w-full border-t border-slate-100"></div>
+                                        </div>
+                                        <span className="relative px-4 py-1 bg-white border border-slate-100 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest shadow-sm">
+                                            Activity History
+                                        </span>
+                                    </div>
+
+                                    {/* Dynamic Logs */}
+                                    {logsLoading ? (
+                                        <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                                            <RefreshCw className="w-6 h-6 animate-spin mb-2" />
+                                            <span className="text-xs font-medium">Fetching history...</span>
+                                        </div>
+                                    ) : logs.length === 0 ? (
+                                        <div className="text-center py-10">
+                                            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <MessageSquare className="w-6 h-6 text-slate-300" />
+                                            </div>
+                                            <p className="text-sm text-slate-400 italic">No notes or status updates yet.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            {logs.map((log) => (
+                                                <div key={log.id} className={`flex gap-4 ${log.type === 'status_change' ? 'justify-center' : ''}`}>
+                                                    {log.type === 'status_change' ? (
+                                                        <div className="bg-slate-50 px-4 py-2 rounded-xl border border-dashed border-slate-200/60 flex items-center gap-3 text-xs text-slate-500 shadow-sm">
+                                                            <div className="p-1 bg-white rounded-md shadow-xs">
+                                                                <History className="w-3.5 h-3.5 text-slate-400" />
+                                                            </div>
+                                                            <span><strong>{log.admin_name}</strong> updated status: <span className="font-medium text-slate-700">{log.content}</span></span>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span className="text-[10px] font-medium text-slate-400 uppercase">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border shadow-sm ${log.type === 'demo_scheduled' ? 'bg-indigo-50 border-indigo-100' : 'bg-blue-50 border-blue-100'}`}>
+                                                                {log.type === 'demo_scheduled' ? (
+                                                                    <CalendarCheck className="w-5 h-5 text-indigo-600" />
+                                                                ) : (
+                                                                    <User className="w-5 h-5 text-blue-600" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 max-w-[85%]">
+                                                                <div className="flex items-baseline justify-between mb-1.5">
+                                                                    <span className="text-sm font-bold text-slate-900">{log.admin_name || 'Admin'}</span>
+                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
+                                                                </div>
+                                                                <div className={`text-sm p-4 rounded-2xl rounded-tl-none border leading-relaxed shadow-sm ${log.type === 'demo_scheduled'
+                                                                    ? 'bg-indigo-50/30 border-indigo-100 text-indigo-900'
+                                                                    : 'bg-white border-slate-100 text-slate-700'
+                                                                    }`}>
+                                                                    {log.content}
+                                                                </div>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                                    {/* Sidebar Info */}
-                                    <div className="w-full md:w-1/3 border-r border-slate-100 p-5 overflow-y-auto bg-slate-50/30">
-                                        {/* Contact */}
-                                        <div className="mb-6">
-                                            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-3">Contact Info</h3>
-                                            <div className="space-y-3">
-                                                <div className="flex items-start gap-3">
-                                                    <Mail className="w-4 h-4 text-slate-400 mt-0.5" />
-                                                    <div className="min-w-0">
-                                                        <a href={`mailto:${selectedInquiry.email}`} className="text-sm font-medium text-blue-600 hover:underline block truncate" title={selectedInquiry.email}>
-                                                            {selectedInquiry.email}
-                                                        </a>
-                                                        <p className="text-xs text-slate-500">Email</p>
-                                                    </div>
-                                                </div>
-                                                {selectedInquiry.phone && (
-                                                    <div className="flex items-start gap-3">
-                                                        <Phone className="w-4 h-4 text-slate-400 mt-0.5" />
-                                                        <div>
-                                                            <a href={`tel:${selectedInquiry.phone}`} className="text-sm font-medium text-slate-900 hover:underline">
-                                                                {selectedInquiry.phone}
-                                                            </a>
-                                                            <p className="text-xs text-slate-500">Phone</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {selectedInquiry.practice_name && (
-                                                    <div className="flex items-start gap-3">
-                                                        <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
-                                                        <div>
-                                                            <span className="text-sm font-medium text-slate-900 block">
-                                                                {selectedInquiry.practice_name}
-                                                            </span>
-                                                            <p className="text-xs text-slate-500">Practice</p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                {selectedInquiry.provider_count && (
-                                                    <div className="flex items-start gap-3">
-                                                        <Users className="w-4 h-4 text-slate-400 mt-0.5" />
-                                                        <span className="text-sm text-slate-600">{selectedInquiry.provider_count} providers</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Metadata */}
-                                        <div className="mb-6">
-                                            <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wider mb-3">Context</h3>
-                                            <div className="space-y-3">
-                                                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                                                    <span className="text-xs text-slate-500 block mb-1">Interest</span>
-                                                    <div className="font-medium text-slate-700">{getInterestLabel(selectedInquiry.interest_type)}</div>
-                                                </div>
-                                                {selectedInquiry.referral_code && (
-                                                    <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                                                        <span className="text-xs text-emerald-600 block mb-1 font-medium">Referral Code</span>
-                                                        <div className="font-bold text-emerald-700 tracking-wide">{selectedInquiry.referral_code}</div>
-                                                    </div>
-                                                )}
-                                                <div className="text-xs text-slate-400">
-                                                    Source: <span className="text-slate-600 font-medium">{selectedInquiry.source || 'Direct'}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Quick Actions */}
-                                        <div className="space-y-2">
-                                            {selectedInquiry.status !== 'converted' && (
-                                                <button
-                                                    onClick={() => openOnboardModal(selectedInquiry)}
-                                                    disabled={updating}
-                                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors shadow-sm"
-                                                >
-                                                    <Database className="w-4 h-4" />
-                                                    Onboard
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Activity Log (Main Area) */}
-                                    <div className="flex-1 flex flex-col bg-white min-w-0">
-                                        <div className="flex-1 overflow-y-auto p-5 scroll-smooth">
-                                            {/* Initial Message (Always at top) */}
-                                            {selectedInquiry.message && (
-                                                <div className="mb-6">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                                                            <User className="w-4 h-4 text-slate-500" />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-sm font-bold text-slate-900">{selectedInquiry.name}</span>
-                                                            <span className="text-xs text-slate-500 ml-2">
-                                                                {format(new Date(selectedInquiry.created_at), 'MMM d, h:mm a')}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="pl-10">
-                                                        <div className="bg-slate-50 p-3 rounded-lg rounded-tl-none border border-slate-200 text-slate-700 text-sm whitespace-pre-wrap">
-                                                            {selectedInquiry.message}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Divider */}
-                                            <div className="relative py-4">
-                                                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                                    <div className="w-full border-t border-slate-100"></div>
-                                                </div>
-                                                <div className="relative flex justify-center">
-                                                    <span className="bg-white px-2 text-xs text-slate-400 uppercase tracking-wider">Activity Log</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Dynamic Logs */}
-                                            {logsLoading ? (
-                                                <div className="text-center py-4">
-                                                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-slate-400" />
-                                                </div>
-                                            ) : logs.length === 0 ? (
-                                                <div className="text-center py-6 text-slate-400 text-sm italic">
-                                                    No activity recorded yet.
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-4">
-                                                    {logs.map((log) => (
-                                                        <div key={log.id} className={`flex gap-3 ${log.type === 'status_change' ? 'justify-center my-4' : ''}`}>
-                                                            {log.type === 'status_change' ? (
-                                                                <div className="bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 flex items-center gap-2 text-xs text-slate-500">
-                                                                    <History className="w-3 h-3" />
-                                                                    {log.admin_name}: {log.content}
-                                                                    <span className="text-slate-400">• {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
-                                                                </div>
-                                                            ) : (
-                                                                <>
-                                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${log.type === 'demo_scheduled' ? 'bg-indigo-100' : 'bg-blue-100'
-                                                                        }`}>
-                                                                        {log.type === 'demo_scheduled' ? (
-                                                                            <Calendar className="w-4 h-4 text-indigo-600" />
-                                                                        ) : (
-                                                                            <span className="text-xs font-bold text-blue-600">
-                                                                                {(log.admin_name || 'A').charAt(0).toUpperCase()}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="flex items-baseline justify-between mb-1">
-                                                                            <span className="text-sm font-bold text-slate-900">
-                                                                                {log.admin_name || 'Admin'}
-                                                                            </span>
-                                                                            <span className="text-xs text-slate-400">
-                                                                                {format(new Date(log.created_at), 'MMM d, h:mm a')}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className={`text-sm rounded-lg p-3 ${log.type === 'demo_scheduled'
-                                                                            ? 'bg-indigo-50 border border-indigo-100 text-indigo-900'
-                                                                            : 'bg-white border border-slate-200 text-slate-700 shadow-sm'
-                                                                            }`}>
-                                                                            {log.content}
-                                                                        </div>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Input Area */}
-                                        <div className="p-4 bg-slate-50 border-t border-slate-200">
-                                            <form onSubmit={handleAddLog} className="relative">
-                                                <textarea
-                                                    value={newLogContent}
-                                                    onChange={(e) => setNewLogContent(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                                            e.preventDefault();
-                                                            handleAddLog(e);
-                                                        }
-                                                    }}
-                                                    placeholder="Log a note, call summary, or email..."
-                                                    className="w-full pl-4 pr-12 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-sm text-sm"
-                                                    rows="1" // Auto-expand logic could be added here, simplified for now
-                                                    style={{ minHeight: '46px' }}
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    disabled={!newLogContent.trim() || sendingLog}
-                                                    className="absolute right-2 top-2 p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-300 transition-colors"
-                                                >
-                                                    {sendingLog ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                                </button>
-                                            </form>
-                                            <div className="mt-2 flex items-center gap-2 text-xs text-slate-400 px-1">
-                                                <span className="flex items-center gap-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                    Enter to send
-                                                </span>
-                                                <span>•</span>
-                                                <span>Shift + Enter for new line</span>
-                                            </div>
+                                {/* Modern Integrated Input Area */}
+                                <div className="p-4 bg-slate-50/80 border-t border-slate-100 backdrop-blur-sm">
+                                    <form onSubmit={handleAddLog} className="relative group">
+                                        <textarea
+                                            value={newLogContent}
+                                            onChange={(e) => setNewLogContent(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleAddLog(e);
+                                                }
+                                            }}
+                                            placeholder="Add a private note or contact summary..."
+                                            className="w-full pl-5 pr-14 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 resize-none shadow-sm text-sm transition-all"
+                                            rows="1"
+                                            style={{ minHeight: '60px' }}
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={!newLogContent.trim() || sendingLog}
+                                            className="absolute right-3 top-3 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:bg-slate-300 transition-all shadow-lg shadow-blue-200"
+                                        >
+                                            {sendingLog ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                        </button>
+                                    </form>
+                                    <div className="mt-2 flex items-center justify-between px-2">
+                                        <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-sm animate-pulse"></span> Press Enter to Save</span>
+                                            <span>•</span>
+                                            <span>Shift + Enter for new line</span>
                                         </div>
                                     </div>
                                 </div>
                             </>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-400">
-                                <Eye className="w-12 h-12 mb-4 text-slate-200" />
-                                <div className="font-medium text-lg text-slate-600">No Inquiry Selected</div>
-                                <p className="text-slate-400">Select an inquiry from the list to view details</p>
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 p-10 text-center">
+                                <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+                                    <Inbox className="w-10 h-10 text-slate-200" />
+                                </div>
+                                <h3 className="font-bold text-lg text-slate-700 mb-2">Select an Inquiry</h3>
+                                <p className="text-sm max-w-[240px] leading-relaxed">Choose someone from the list to view their contact details and full activity history.</p>
                             </div>
                         )}
                     </div>
                 </div>
             </div>
+        </div >
 
-            {/* Settings Modal */}
-            {showSettings && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                            <h2 className="text-xl font-bold text-slate-900">Settings & Team</h2>
-                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                                <XCircle className="w-6 h-6 text-slate-400" />
-                            </button>
-                        </div>
-
-                        <div className="flex border-b border-slate-100 shrink-0">
-                            <button
-                                onClick={() => setSettingsTab('password')}
-                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                            >
-                                Change Password
-                            </button>
-                            <button
-                                onClick={() => setSettingsTab('users')}
-                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                            >
-                                Team Management
-                            </button>
-                        </div>
-
-                        <div className="p-6 overflow-y-auto">
-                            {settingsTab === 'password' ? (
-                                <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-                                        <input
-                                            type="password"
-                                            value={passForm.current}
-                                            onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-                                        <input
-                                            type="password"
-                                            value={passForm.new}
-                                            onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                            required
-                                            minLength={8}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
-                                        <input
-                                            type="password"
-                                            value={passForm.confirm}
-                                            onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                            required
-                                        />
-                                    </div>
-
-                                    {passMsg.text && (
-                                        <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                            {passMsg.text}
-                                        </div>
-                                    )}
-
-                                    <button
-                                        type="submit"
-                                        className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
-                                    >
-                                        Update Password
-                                    </button>
-                                </form>
-                            ) : (
-                                <div className="space-y-8">
-                                    {/* Create User */}
-                                    <div className="bg-slate-50 p-5 rounded-xl">
-                                        <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
-                                            <UserPlus className="w-4 h-4" />
-                                            Add New Team Member
-                                        </h3>
-                                        <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
-                                            <div className="col-span-2 sm:col-span-1">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Username"
-                                                    value={userForm.username}
-                                                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-span-2 sm:col-span-1">
-                                                <input
-                                                    type="email"
-                                                    placeholder="Email"
-                                                    value={userForm.email}
-                                                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-span-2">
-                                                <input
-                                                    type="password"
-                                                    placeholder="Initial Password (min 8 chars)"
-                                                    value={userForm.password}
-                                                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                    required
-                                                    minLength={8}
-                                                />
-                                            </div>
-                                            <div className="col-span-2">
-                                                <button
-                                                    type="submit"
-                                                    className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
-                                                >
-                                                    Create User
-                                                </button>
-                                            </div>
-                                            {userMsg.text && (
-                                                <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                    {userMsg.text}
-                                                </div>
-                                            )}
-                                        </form>
-                                    </div>
-
-                                    {/* User List */}
-                                    <div>
-                                        <h3 className="font-medium text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">
-                                            Existing Users
-                                        </h3>
-                                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                                            <div className="divide-y divide-slate-100">
-                                                {teamUsers.map(user => (
-                                                    <div key={user.id} className="p-4 flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
-                                                                {user.username.substring(0, 2)}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-medium text-slate-900">{user.username}</div>
-                                                                <div className="text-xs text-slate-500">{user.email}</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-xs text-slate-400">
-                                                            Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Onboard Clinic Modal */}
-            {showOnboardModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
-                        <button
-                            onClick={() => setShowOnboardModal(false)}
-                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <XCircle className="w-6 h-6" />
+    {/* Settings Modal */ }
+    {
+        showSettings && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                    <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                        <h2 className="text-xl font-bold text-slate-900">Settings & Team</h2>
+                        <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                            <XCircle className="w-6 h-6 text-slate-400" />
                         </button>
+                    </div>
 
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                                <Database className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
-                                <p className="text-slate-500 text-sm">
-                                    {selectedInquiry?.referral_code
-                                        ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
-                                        : 'Create a new clinic with dedicated database'
-                                    }
-                                </p>
-                            </div>
-                        </div>
+                    <div className="flex border-b border-slate-100 shrink-0">
+                        <button
+                            onClick={() => setSettingsTab('password')}
+                            className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                        >
+                            Change Password
+                        </button>
+                        <button
+                            onClick={() => setSettingsTab('users')}
+                            className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                        >
+                            Team Management
+                        </button>
+                    </div>
 
-                        {onboardError && (
-                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
-                                {onboardError}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleOnboard} className="space-y-6">
-                            {/* Clinic Details */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                    <Building2 className="w-4 h-4" /> Clinic Details
-                                </h3>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="e.g. Heart Center of Nevada"
-                                            value={onboardForm.displayName}
-                                            onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="e.g. heart-center-nv"
-                                            value={onboardForm.slug}
-                                            onChange={e => setOnboardForm({
-                                                ...onboardForm,
-                                                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-                                            })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                        />
-                                        <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Cardiology"
-                                            value={onboardForm.specialty}
-                                            onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                        />
-                                    </div>
+                    <div className="p-6 overflow-y-auto">
+                        {settingsTab === 'password' ? (
+                            <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                                    <input
+                                        type="password"
+                                        value={passForm.current}
+                                        onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        required
+                                    />
                                 </div>
-                            </div>
-
-                            {/* Initial Admin User */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                    <Shield className="w-4 h-4" /> Initial Admin User
-                                </h3>
-                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={onboardForm.adminFirstName}
-                                                onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={onboardForm.adminLastName}
-                                                onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
-                                        <input
-                                            type="email"
-                                            required
-                                            placeholder="admin@clinic.com"
-                                            value={onboardForm.adminEmail}
-                                            onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
-                                        <input
-                                            type="password"
-                                            required
-                                            minLength={8}
-                                            placeholder="Min 8 characters"
-                                            value={onboardForm.adminPassword}
-                                            onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        />
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                                    <input
+                                        type="password"
+                                        value={passForm.new}
+                                        onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        required
+                                        minLength={8}
+                                    />
                                 </div>
-                            </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                                    <input
+                                        type="password"
+                                        value={passForm.confirm}
+                                        onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                        required
+                                    />
+                                </div>
 
-                            <div className="pt-2">
+                                {passMsg.text && (
+                                    <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                        {passMsg.text}
+                                    </div>
+                                )}
+
                                 <button
                                     type="submit"
-                                    disabled={onboardLoading}
-                                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
                                 >
-                                    {onboardLoading ? (
-                                        <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
-                                    ) : (
-                                        <>
-                                            <Database className="w-5 h-5" />
-                                            {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
-                                        </>
-                                    )}
+                                    Update Password
                                 </button>
-                                <p className="text-center text-[10px] text-slate-400 mt-3">
-                                    This will create a new dedicated database schema and initial admin account.
-                                </p>
+                            </form>
+                        ) : (
+                            <div className="space-y-8">
+                                {/* Create User */}
+                                <div className="bg-slate-50 p-5 rounded-xl">
+                                    <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
+                                        <UserPlus className="w-4 h-4" />
+                                        Add New Team Member
+                                    </h3>
+                                    <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
+                                        <div className="col-span-2 sm:col-span-1">
+                                            <input
+                                                type="text"
+                                                placeholder="Username"
+                                                value={userForm.username}
+                                                onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="col-span-2 sm:col-span-1">
+                                            <input
+                                                type="email"
+                                                placeholder="Email"
+                                                value={userForm.email}
+                                                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <input
+                                                type="password"
+                                                placeholder="Initial Password (min 8 chars)"
+                                                value={userForm.password}
+                                                onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                required
+                                                minLength={8}
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <button
+                                                type="submit"
+                                                className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
+                                            >
+                                                Create User
+                                            </button>
+                                        </div>
+                                        {userMsg.text && (
+                                            <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                {userMsg.text}
+                                            </div>
+                                        )}
+                                    </form>
+                                </div>
+
+                                {/* User List */}
+                                <div>
+                                    <h3 className="font-medium text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">
+                                        Existing Users
+                                    </h3>
+                                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                        <div className="divide-y divide-slate-100">
+                                            {teamUsers.map(user => (
+                                                <div key={user.id} className="p-4 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                                            {user.username.substring(0, 2)}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-medium text-slate-900">{user.username}</div>
+                                                            <div className="text-xs text-slate-500">{user.email}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-xs text-slate-400">
+                                                        Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </form>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
+        )
+    }
 
-            {/* Status Change Modal */}
-            {showStatusModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                    <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
+    {/* Onboard Clinic Modal */ }
+    {
+        showOnboardModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+                <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
+                    <button
+                        onClick={() => setShowOnboardModal(false)}
+                        className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <XCircle className="w-6 h-6" />
+                    </button>
+
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                            <Database className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
+                            <p className="text-slate-500 text-sm">
+                                {selectedInquiry?.referral_code
+                                    ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
+                                    : 'Create a new clinic with dedicated database'
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    {onboardError && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                            {onboardError}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleOnboard} className="space-y-6">
+                        {/* Clinic Details */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <Building2 className="w-4 h-4" /> Clinic Details
+                            </h3>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Heart Center of Nevada"
+                                        value={onboardForm.displayName}
+                                        onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. heart-center-nv"
+                                        value={onboardForm.slug}
+                                        onChange={e => setOnboardForm({
+                                            ...onboardForm,
+                                            slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                                        })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Cardiology"
+                                        value={onboardForm.specialty}
+                                        onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Initial Admin User */}
+                        <div className="space-y-4">
+                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <Shield className="w-4 h-4" /> Initial Admin User
+                            </h3>
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={onboardForm.adminFirstName}
+                                            onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={onboardForm.adminLastName}
+                                            onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="admin@clinic.com"
+                                        value={onboardForm.adminEmail}
+                                        onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
+                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        minLength={8}
+                                        placeholder="Min 8 characters"
+                                        value={onboardForm.adminPassword}
+                                        onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
+                                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-2">
+                            <button
+                                type="submit"
+                                disabled={onboardLoading}
+                                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {onboardLoading ? (
+                                    <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
+                                ) : (
+                                    <>
+                                        <Database className="w-5 h-5" />
+                                        {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
+                                    </>
+                                )}
+                            </button>
+                            <p className="text-center text-[10px] text-slate-400 mt-3">
+                                This will create a new dedicated database schema and initial admin account.
+                            </p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )
+    }
+
+    {/* Status Change Modal */ }
+    {
+        showStatusModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
+                    <button
+                        onClick={() => {
+                            setShowStatusModal(false);
+                            setPendingStatus(null);
+                            setStatusNote('');
+                        }}
+                        className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                        <XCircle className="w-5 h-5" />
+                    </button>
+
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
+                            }`}>
+                            {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
+                            {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
+                            {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
+                            {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-800">
+                                {pendingStatus === 'contacted' && 'Log Contact'}
+                                {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
+                                {pendingStatus === 'follow_up' && 'Set Follow Up'}
+                                {pendingStatus === 'closed' && 'Close Inquiry'}
+                            </h2>
+                            <p className="text-sm text-slate-500">
+                                {selectedInquiry?.name} • {selectedInquiry?.email}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mb-4">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">
+                            {pendingStatus === 'contacted' && 'Contact Notes *'}
+                            {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
+                            {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
+                            {pendingStatus === 'closed' && 'Reason for Closing *'}
+                        </label>
+                        <textarea
+                            value={statusNote}
+                            onChange={(e) => setStatusNote(e.target.value)}
+                            placeholder={getStatusNotePlaceholder(pendingStatus)}
+                            rows={5}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="flex gap-3">
                         <button
                             onClick={() => {
                                 setShowStatusModal(false);
                                 setPendingStatus(null);
                                 setStatusNote('');
                             }}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                            className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
                         >
-                            <XCircle className="w-5 h-5" />
+                            Cancel
                         </button>
-
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
-                                }`}>
-                                {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
-                                {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
-                                {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
-                                {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-800">
-                                    {pendingStatus === 'contacted' && 'Log Contact'}
-                                    {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
-                                    {pendingStatus === 'follow_up' && 'Set Follow Up'}
-                                    {pendingStatus === 'closed' && 'Close Inquiry'}
-                                </h2>
-                                <p className="text-sm text-slate-500">
-                                    {selectedInquiry?.name} • {selectedInquiry?.email}
-                                </p>
-                            </div>
+                        <button
+                            onClick={submitStatusChange}
+                            disabled={statusNoteLoading || !statusNote.trim()}
+                            className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                }`}
+                        >
+                            {statusNoteLoading ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Save & Update Status
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+    {/* Demo Schedule Modal */ }
+    {
+        showDemoModal && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                    <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-slate-900">Schedule Demo</h3>
+                        <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <form onSubmit={handleScheduleDemo} className="p-6 space-y-4">
+                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4">
+                            <p className="text-xs text-blue-700 leading-relaxed font-medium">
+                                <strong>Invite Notification:</strong> Scheduling this demo will automatically send a calendar invitation and email reminder to <strong>{selectedInquiry?.email}</strong>.
+                            </p>
                         </div>
-
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                {pendingStatus === 'contacted' && 'Contact Notes *'}
-                                {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
-                                {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
-                                {pendingStatus === 'closed' && 'Reason for Closing *'}
-                            </label>
-                            <textarea
-                                value={statusNote}
-                                onChange={(e) => setStatusNote(e.target.value)}
-                                placeholder={getStatusNotePlaceholder(pendingStatus)}
-                                rows={5}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
-                                autoFocus
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
+                            <input
+                                type="date"
+                                required
+                                value={demoForm.date}
+                                min={new Date().toISOString().split('T')[0]}
+                                onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
                             />
                         </div>
-
-                        <div className="flex gap-3">
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
+                            <input
+                                type="time"
+                                required
+                                value={demoForm.time}
+                                onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
+                            <textarea
+                                rows="3"
+                                value={demoForm.notes}
+                                onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
+                                placeholder="e.g. Focus on billing integration..."
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
+                            />
+                        </div>
+                        <div className="pt-4 flex gap-3">
                             <button
-                                onClick={() => {
-                                    setShowStatusModal(false);
-                                    setPendingStatus(null);
-                                    setStatusNote('');
-                                }}
-                                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                                type="button"
+                                onClick={() => setShowDemoModal(false)}
+                                className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all text-sm"
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={submitStatusChange}
-                                disabled={statusNoteLoading || !statusNote.trim()}
-                                className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
-                                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                    }`}
+                                type="submit"
+                                disabled={demoLoading}
+                                className="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm flex items-center justify-center gap-2"
                             >
-                                {statusNoteLoading ? (
-                                    <RefreshCw className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        Save & Update Status
-                                    </>
-                                )}
+                                {demoLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-5 h-5" />}
+                                Send Invitation
                             </button>
                         </div>
-                    </div>
+                    </form>
                 </div>
-            )}
-            {/* Demo Schedule Modal */}
-            {showDemoModal && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-slate-900">Schedule Demo</h3>
-                            <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleScheduleDemo} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={demoForm.date}
-                                    min={new Date().toISOString().split('T')[0]}
-                                    onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
-                                <input
-                                    type="time"
-                                    required
-                                    value={demoForm.time}
-                                    onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Notes / Agenda</label>
-                                <textarea
-                                    rows="3"
-                                    value={demoForm.notes}
-                                    onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
-                                    placeholder="Any specific focus for the demo?"
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                />
-                            </div>
-                            <div className="pt-2 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowDemoModal(false)}
-                                    className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={demoLoading}
-                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {demoLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-4 h-4" />}
-                                    Schedule & Send Invite
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-        </div>
+            </div>
+        )
+    }
+        </div >
     );
 };
 
