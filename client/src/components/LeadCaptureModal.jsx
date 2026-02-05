@@ -71,7 +71,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
         setErrorMessage('');
 
         try {
-            const baseUrl = import.meta.env.VITE_API_URL || '';
+            const baseUrl = import.meta.env.VITE_API_URL || '/api';
             const referralCode = localStorage.getItem('pagemd_referral');
 
             // Execute reCAPTCHA v3
@@ -155,7 +155,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
         setErrorMessage('');
 
         try {
-            const baseUrl = import.meta.env.VITE_API_URL || '';
+            const baseUrl = import.meta.env.VITE_API_URL || '/api';
             const res = await fetch(`${baseUrl}/sales/verify-code`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

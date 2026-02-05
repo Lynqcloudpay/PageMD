@@ -71,12 +71,25 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
         setIsSubmitting(true);
         try {
             const uuid = getCookie('pagemd_lead_id');
+            const baseUrl = import.meta.env.VITE_API_URL || '/api';
+
             if (!uuid) {
-                console.error('No lead UUID found in cookies');
-                return;
+                console.error('[Concierge] No lead UUID found in cookies. Tracking visit instead.');
+                try {
+                    await fetch(`${baseUrl}/sales/track-visit`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ source: 'concierge_inquiry_no_uuid' })
+                    });
+                } catch (trackError) {
+                    console.error('Failed to track visit without UUID:', trackError);
+                }
+                // We still want to allow the user to submit an inquiry even without a UUID,
+                // but the backend might handle it differently or reject it.
+                // For now, we'll proceed with a null UUID for the inquiry.
             }
 
-            const baseUrl = import.meta.env.VITE_API_URL || '';
+            console.log(`[Concierge] Sending inquiry for ${uuid || 'no_uuid'} to ${baseUrl}`);
             const res = await fetch(`${baseUrl}/sales/concierge-inquiry`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

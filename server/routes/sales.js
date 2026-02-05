@@ -1009,6 +1009,7 @@ router.post('/track-visit', async (req, res) => {
  * Log a direct question from the Concierge UI
  */
 router.post('/concierge-inquiry', async (req, res) => {
+    console.log('[SALES] Received concierge inquiry:', req.body);
     try {
         const { uuid, message } = req.body;
         if (!uuid || !message) return res.status(400).json({ error: 'UUID and message required' });

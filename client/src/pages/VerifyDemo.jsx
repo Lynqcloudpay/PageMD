@@ -39,7 +39,7 @@ const VerifyDemo = () => {
 
     const verifyToken = async (token) => {
         try {
-            const baseUrl = import.meta.env.VITE_API_URL || '';
+            const baseUrl = import.meta.env.VITE_API_URL || '/api';
             const res = await fetch(`${baseUrl}/sales/verify/${token}`);
             const data = await res.json();
 

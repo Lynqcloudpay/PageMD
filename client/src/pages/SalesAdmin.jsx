@@ -75,7 +75,7 @@ const SalesAdmin = () => {
     const [demoForm, setDemoForm] = useState({ date: '', time: '', notes: '' });
     const [demoLoading, setDemoLoading] = useState(false);
 
-    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const baseUrl = import.meta.env.VITE_API_URL || '/api';
 
     // --- Authentication ---
 

@@ -55,7 +55,7 @@ const LandingPage = () => {
             // Ping the backend to log the returning visit
             const pingVisit = async () => {
                 try {
-                    const baseUrl = import.meta.env.VITE_API_URL || '';
+                    const baseUrl = import.meta.env.VITE_API_URL || '/api';
                     await fetch(`${baseUrl}/sales/track-visit`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
