@@ -61,6 +61,7 @@ const ImpersonateHandler = React.lazy(() => import('./pages/ImpersonateHandler')
 const SalesAdmin = React.lazy(() => import('./pages/SalesAdmin'));
 const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
 const VerifyDemo = React.lazy(() => import('./pages/VerifyDemo'));
+const DemoConfirmation = React.lazy(() => import('./pages/DemoConfirmation'));
 
 const PortalLogin = React.lazy(() => import('./portal/PortalLogin'));
 const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
@@ -193,6 +194,7 @@ function App() {
                                                         } />
                                                         <Route path="/sales-admin" element={<SalesAdmin />} />
                                                         <Route path="/verify-demo" element={<VerifyDemo />} />
+                                                        <Route path="/demo-confirm" element={<DemoConfirmation />} />
 
                                                         {/* Patient Portal Routes */}
                                                         <Route path="/portal/login" element={<PortalLogin />} />

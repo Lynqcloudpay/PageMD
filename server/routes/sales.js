@@ -280,21 +280,38 @@ router.post('/inquiry', async (req, res) => {
             ]);
 
         } else {
-            // 5. Insert new lead
+            // 5. Round-Robin Lead Assignment
+            let suggestedSellerId = null;
+            try {
+                const sellerRes = await pool.query(`
+                    SELECT id FROM sales_team_users 
+                    WHERE is_active = true AND role = 'seller'
+                    ORDER BY last_assigned_at ASC NULLS FIRST, id ASC
+                    LIMIT 1
+                `);
+                if (sellerRes.rows.length > 0) {
+                    suggestedSellerId = sellerRes.rows[0].id;
+                    await pool.query('UPDATE sales_team_users SET last_assigned_at = NOW() WHERE id = $1', [suggestedSellerId]);
+                }
+            } catch (rrError) {
+                console.error('[SALES] Round-robin assignment failed:', rrError);
+            }
+
+            // 6. Insert new lead
             const insertResult = await pool.query(`
                 INSERT INTO sales_inquiries (
                     name, email, phone, practice_name, provider_count,
                     message, interest_type, source, status, referral_code,
                     verification_token, verification_code, verification_expires_at, 
-                    recaptcha_score, is_disposable_email,
+                    recaptcha_score, is_disposable_email, suggested_seller_id,
                     created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
                 RETURNING id, created_at
             `, [
                 name, email, phone, practice, providers, message, interest, source,
                 initialStatus, referral_code, verificationToken, verificationCode, verificationExpires,
-                recaptchaScore, isDisposable
+                recaptchaScore, isDisposable, suggestedSellerId
             ]);
             inquiryId = insertResult.rows[0].id;
         }
@@ -756,7 +773,7 @@ router.post('/inquiries/:id/logs', verifyToken, async (req, res) => {
 
 /**
  * POST /api/sales/inquiries/:id/schedule-demo
- * Schedule a demo and send invites
+ * Schedule a demo and send invites (PROTECTED)
  */
 router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
     try {
@@ -766,24 +783,54 @@ router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
 
         if (!date) return res.status(400).json({ error: 'Date is required' });
 
-        // 1. Update inquiry
+        // 1. Fetch inquiry and seller info
+        const inquiryRes = await pool.query('SELECT name, email FROM sales_inquiries WHERE id = $1', [id]);
+        if (inquiryRes.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found' });
+        const lead = inquiryRes.rows[0];
+
+        const sellerRes = await pool.query('SELECT username, email, zoom_link FROM sales_team_users WHERE id = $1', [adminId]);
+        const seller = sellerRes.rows[0];
+
+        // 2. Create entry in sales_demos
+        const demoResult = await pool.query(`
+            INSERT INTO sales_demos (inquiry_id, seller_id, scheduled_at, notes, zoom_link, status)
+            VALUES ($1, $2, $3, $4, $5, 'pending')
+            RETURNING id
+        `, [id, adminId, date, notes, seller.zoom_link || 'https://zoom.us/j/pagemd-demo']);
+        const demoId = demoResult.rows[0].id;
+
+        // 3. Update inquiry status
         await pool.query(`
             UPDATE sales_inquiries 
             SET demo_scheduled_at = $1, status = 'demo_scheduled', updated_at = NOW()
             WHERE id = $2
         `, [date, id]);
 
-        // 2. Log it
+        // 4. Log it
         await pool.query(`
             INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content, metadata)
             VALUES ($1, $2, 'demo_scheduled', $3, $4)
-        `, [id, adminId, `Demo scheduled for ${new Date(date).toLocaleString()}`, JSON.stringify({ date, notes })]);
+        `, [id, adminId, `Demo scheduled for ${new Date(date).toLocaleString()}`, JSON.stringify({ date, notes, demoId })]);
 
-        // 3. Send Email (Mock for now, or use emailService if valid)
-        // TODO: Integrate actual email sending here
-        console.log(`[SALES] Demo scheduled for ${id} at ${date}`);
+        // 5. Send Invitation Email
+        const baseUrl = process.env.FRONTEND_URL || 'https://pagemdemr.com';
+        const confirmUrl = `${baseUrl}/demo-confirm?id=${demoId}&action=accept`;
+        const denyUrl = `${baseUrl}/demo-confirm?id=${demoId}&action=deny`;
 
-        res.json({ success: true, message: 'Demo scheduled successfully' });
+        const emailService = require('../services/emailService');
+        await emailService.sendDemoInvitation(
+            lead.email,
+            lead.name,
+            seller.username,
+            new Date(date).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' }),
+            seller.zoom_link || 'https://zoom.us/j/pagemd-demo',
+            confirmUrl,
+            denyUrl
+        );
+
+        console.log(`[SALES] Demo scheduled and email sent for Inquiry #${id}`);
+
+        res.json({ success: true, message: 'Demo scheduled and invitation sent successfully' });
     } catch (error) {
         console.error('Error scheduling demo:', error);
         res.status(500).json({ error: 'Failed to schedule demo' });
@@ -856,6 +903,73 @@ router.post('/inquiries/:id/activate-referral', verifyToken, async (req, res) =>
     } catch (error) {
         console.error('Error activating referral:', error);
         res.status(500).json({ error: 'Failed to activate referral' });
+    }
+});
+
+/**
+ * POST /api/sales/demo-confirm
+ * Public endpoint for clients to accept or deny a demo
+ */
+router.post('/demo-confirm', async (req, res) => {
+    try {
+        const { id, action, notes } = req.body;
+
+        if (!id || !action) {
+            return res.status(400).json({ error: 'Missing demo ID or action' });
+        }
+
+        const status = action === 'accept' ? 'confirmed' : 'cancelled';
+
+        // 1. Update sales_demos table
+        const result = await pool.query(`
+            UPDATE sales_demos 
+            SET status = $1, response_notes = $2, responded_at = NOW()
+            WHERE id = $3
+            RETURNING inquiry_id, scheduled_at
+        `, [status, notes, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Demo appointment not found' });
+        }
+
+        const { inquiry_id, scheduled_at } = result.rows[0];
+
+        // 2. Log the response
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, type, content)
+            VALUES ($1, 'demo_response', $2)
+        `, [inquiry_id, `Client ${status} the demo scheduled for ${new Date(scheduled_at).toLocaleString()}`]);
+
+        res.json({ success: true, message: `Demo ${status} successfully` });
+    } catch (error) {
+        console.error('Error confirming demo:', error);
+        res.status(500).json({ error: 'Failed to process confirmation' });
+    }
+});
+
+/**
+ * GET /api/sales/demo-details/:id
+ * Public endpoint to get demo info for the confirmation page
+ */
+router.get('/demo-details/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(`
+            SELECT d.*, i.name as lead_name, u.username as seller_name, u.email as seller_email
+            FROM sales_demos d
+            JOIN sales_inquiries i ON d.inquiry_id = i.id
+            JOIN sales_team_users u ON d.seller_id = u.id
+            WHERE d.id = $1
+        `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Demo not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Error fetching demo details:', error);
+        res.status(500).json({ error: 'Failed to fetch demo details' });
     }
 });
 
@@ -1100,6 +1214,69 @@ router.post('/inquiries/:id/view', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('Error marking as viewed:', error);
         res.status(500).json({ error: 'Failed to mark as viewed' });
+    }
+});
+
+/**
+ * POST /api/sales/inquiries/:id/claim
+ * Explicitly claim a lead (PROTECTED)
+ */
+router.post('/inquiries/:id/claim', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const adminId = req.user.id;
+
+        // Check if already claimed
+        const checkRes = await pool.query('SELECT is_claimed, owner_id FROM sales_inquiries WHERE id = $1', [id]);
+        if (checkRes.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found' });
+
+        if (checkRes.rows[0].is_claimed) {
+            return res.status(400).json({ error: 'Lead is already claimed by another seller.' });
+        }
+
+        await pool.query(`
+            UPDATE sales_inquiries
+            SET owner_id = $1, is_claimed = true, updated_at = NOW()
+            WHERE id = $2
+        `, [adminId, id]);
+
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content)
+            VALUES ($1, $2, 'note', 'Lead explicitly claimed')
+        `, [id, adminId]);
+
+        res.json({ success: true, message: 'Lead claimed successfully' });
+    } catch (error) {
+        console.error('Error claiming lead:', error);
+        res.status(500).json({ error: 'Failed to claim lead' });
+    }
+});
+
+/**
+ * GET /api/sales/master-schedule
+ * Get all demos for manager view (PROTECTED)
+ */
+router.get('/master-schedule', verifyToken, async (req, res) => {
+    try {
+        // Only managers or admins should see this
+        const userRes = await pool.query('SELECT role FROM sales_team_users WHERE id = $1', [req.user.id]);
+        const userRole = userRes.rows[0]?.role;
+
+        if (userRole !== 'sales_manager' && req.user.username !== 'admin') {
+            return res.status(403).json({ error: 'Access denied. Managers only.' });
+        }
+
+        const result = await pool.query(`
+            SELECT d.*, i.name as lead_name, u.username as seller_name, u.calendar_color
+            FROM sales_demos d
+            JOIN sales_inquiries i ON d.inquiry_id = i.id
+            JOIN sales_team_users u ON d.seller_id = u.id
+            ORDER BY d.scheduled_at ASC
+        `);
+        res.json({ demos: result.rows });
+    } catch (error) {
+        console.error('Error fetching master schedule:', error);
+        res.status(500).json({ error: 'Failed to fetch master schedule' });
     }
 });
 

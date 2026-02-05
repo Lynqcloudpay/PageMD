@@ -208,6 +208,54 @@ class EmailService {
 
         return this._send(email, subject, html);
     }
+    /**
+     * Send Demo Invitation
+     */
+    async sendDemoInvitation(email, leadName, sellerName, date, zoomLink, confirmUrl, denyUrl) {
+        const subject = `Demo Confirmation: PageMD EMR with ${sellerName}`;
+        const logoUrl = 'https://pagemdemr.com/logo.png';
+
+        const html = `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 40px 20px;">
+                <div style="background: white; border-radius: 24px; padding: 40px; border: 1px solid #e2e8f0; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                    <div style="text-align: center; margin-bottom: 32px;">
+                        <img src="${logoUrl}" alt="PageMD" style="height: 48px; margin-bottom: 24px;">
+                        <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: -0.025em;">Demo Scheduled</h1>
+                    </div>
+                    
+                    <p style="font-size: 16px; color: #475569; margin-bottom: 24px; text-align: center;">
+                        Hello ${leadName}, your demo session for PageMD EMR has been scheduled with ${sellerName}.
+                    </p>
+                    
+                    <div style="background-color: #f1f5f9; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
+                        <div style="margin-bottom: 12px; display: flex; align-items: center;">
+                            <strong style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; width: 80px;">When:</strong>
+                            <span style="color: #0f172a; font-weight: 600;">${date}</span>
+                        </div>
+                        <div style="margin-bottom: 12px; display: flex; align-items: center;">
+                            <strong style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; width: 80px;">Where:</strong>
+                            <a href="${zoomLink}" style="color: #2563eb; font-weight: 600; text-decoration: none;">Join Zoom Meeting</a>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <strong style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; width: 80px;">Hosted by:</strong>
+                            <span style="color: #0f172a; font-weight: 600;">${sellerName}</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 32px;">
+                        <a href="${confirmUrl}" style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; text-align: center; flex: 1; max-width: 160px;">Accept Invite</a>
+                        <a href="${denyUrl}" style="background-color: #ffffff; color: #475569; padding: 14px 28px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 14px; text-align: center; border: 1px solid #e2e8f0; flex: 1; max-width: 160px;">Reschedule</a>
+                    </div>
+                    
+                    <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 0;">
+                        Please confirm your attendance by clicking one of the buttons above.
+                    </p>
+                </div>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
 
     /**
      * Internal send method

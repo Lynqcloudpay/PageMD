@@ -5,7 +5,7 @@ import {
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
-    Send, History, Share2, X, ChevronRight, PhoneIncoming, CalendarCheck, Reply, XOctagon
+    Send, History, Share2, X, ChevronRight, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -76,6 +76,11 @@ const SalesAdmin = () => {
     const [showDemoModal, setShowDemoModal] = useState(false);
     const [demoForm, setDemoForm] = useState({ date: '', time: '', notes: '' });
     const [demoLoading, setDemoLoading] = useState(false);
+
+    // Lead Pool & Ownership State
+    const [viewMode, setViewMode] = useState('pool'); // 'pool', 'personal', 'master'
+    const [claimLoading, setClaimLoading] = useState(false);
+    const [masterDemos, setMasterDemos] = useState([]);
 
     const baseUrl = import.meta.env.VITE_API_URL || '/api';
 
@@ -339,6 +344,44 @@ const SalesAdmin = () => {
                 return 'Why was the deal not closed? Customer feedback? Reason for rejection?';
             default:
                 return 'Add notes about this status change...';
+        }
+    };
+    const handleClaimLead = async (inquiryId) => {
+        try {
+            setClaimLoading(true);
+            const response = await authenticatedFetch(`/sales/inquiries/${inquiryId}/claim`, {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to claim lead');
+            }
+
+            // Refresh inquiries
+            await fetchInquiries();
+
+            // Re-select to get updated state (the backend returns success, but we need the new list)
+            // fetchInquiries will update the 'inquiries' state.
+
+            setShowDemoModal(true); // Proactive: open schedule modal after claim
+        } catch (err) {
+            console.error('Claim error:', err);
+            alert(err.message);
+        } finally {
+            setClaimLoading(false);
+        }
+    };
+
+    const fetchMasterSchedule = async () => {
+        try {
+            const response = await authenticatedFetch('/sales/master-schedule');
+            if (response.ok) {
+                const data = await response.json();
+                setMasterDemos(data.demos);
+            }
+        } catch (err) {
+            console.error('Failed to fetch master schedule:', err);
         }
     };
 
@@ -721,58 +764,49 @@ const SalesAdmin = () => {
                         <div className="p-4 border-b border-slate-100 bg-slate-50/30">
                             <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Inquiry Lifecycle</h2>
 
-                            {/* Category Tabs - Cancellation Style */}
-                            <div className="grid grid-cols-4 gap-1.5 mb-4">
+                            {/* Primary Navigation Tabs */}
+                            <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-sm mb-4">
                                 <button
-                                    onClick={() => setActiveCategory('pending')}
-                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'pending'
-                                        ? 'bg-blue-50 border-blue-500 shadow-sm'
-                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                    onClick={() => setViewMode('pool')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'pool'
+                                        ? 'bg-white text-blue-600 shadow-md transform scale-[1.02]'
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                        }`}
                                 >
-                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'pending' ? 'text-blue-600' : 'text-slate-400'}`}>Pending</span>
-                                    <span className={`text-lg font-black ${activeCategory === 'pending' ? 'text-blue-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => {
-                                            const s = (i.status || 'new').toLowerCase().trim();
-                                            return !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
-                                        }).length}
+                                    <Inbox className={`w-4 h-4 ${viewMode === 'pool' ? 'text-blue-600' : 'text-slate-300'}`} />
+                                    Lead Pool
+                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'pool' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+                                        {inquiries.filter(i => !i.is_claimed).length}
                                     </span>
                                 </button>
                                 <button
-                                    onClick={() => setActiveCategory('pipeline')}
-                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'pipeline'
-                                        ? 'bg-indigo-50 border-indigo-500 shadow-sm'
-                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                    onClick={() => setViewMode('personal')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'personal'
+                                        ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                        }`}
                                 >
-                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'pipeline' ? 'text-indigo-600' : 'text-slate-400'}`}>Pipeline</span>
-                                    <span className={`text-lg font-black ${activeCategory === 'pipeline' ? 'text-indigo-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => {
-                                            const s = (i.status || '').toLowerCase().trim();
-                                            return ['demo_scheduled', 'follow_up'].includes(s);
-                                        }).length}
+                                    <Shield className={`w-4 h-4 ${viewMode === 'personal' ? 'text-white' : 'text-slate-300'}`} />
+                                    My Pipeline
+                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'personal' ? 'bg-blue-500 text-blue-100' : 'bg-slate-200 text-slate-500'}`}>
+                                        {inquiries.filter(i => i.is_claimed && i.owner_id === currentUser?.id).length}
                                     </span>
                                 </button>
-                                <button
-                                    onClick={() => setActiveCategory('converted')}
-                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'converted'
-                                        ? 'bg-emerald-50 border-emerald-500 shadow-sm'
-                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
-                                >
-                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'converted' ? 'text-emerald-600' : 'text-slate-400'}`}>Converted</span>
-                                    <span className={`text-lg font-black ${activeCategory === 'converted' ? 'text-emerald-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'converted').length}
-                                    </span>
-                                </button>
-                                <button
-                                    onClick={() => setActiveCategory('closed')}
-                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'closed'
-                                        ? 'bg-slate-50 border-slate-400 shadow-sm'
-                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
-                                >
-                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'closed' ? 'text-slate-500' : 'text-slate-400'}`}>Closed</span>
-                                    <span className={`text-lg font-black ${activeCategory === 'closed' ? 'text-slate-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'closed').length}
-                                    </span>
-                                </button>
+                                {currentUser?.role === 'sales_manager' && (
+                                    <button
+                                        onClick={() => {
+                                            setViewMode('master');
+                                            fetchMasterSchedule();
+                                        }}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'master'
+                                                ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]'
+                                                : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                            }`}
+                                    >
+                                        <Activity className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-300'}`} />
+                                        Team
+                                    </button>
+                                )}
                             </div>
 
                             <div className="relative group">
@@ -821,11 +855,9 @@ const SalesAdmin = () => {
                                     };
 
                                     const displayItems = filteredInquiries.filter(i => {
-                                        const s = (i.status || 'new').toLowerCase().trim();
-                                        if (activeCategory === 'pending') {
-                                            return !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
-                                        }
-                                        return categoryMap[activeCategory].includes(s);
+                                        if (viewMode === 'pool') return !i.is_claimed;
+                                        if (viewMode === 'personal') return i.is_claimed && i.owner_id === currentUser?.id;
+                                        return true; // master mode shows all
                                     });
 
                                     if (displayItems.length === 0) {
@@ -852,7 +884,14 @@ const SalesAdmin = () => {
                                                 >
                                                     <div className="flex items-start justify-between mb-2">
                                                         <div className="min-w-0">
-                                                            <h3 className="text-[14px] font-bold text-slate-900 truncate tracking-tight">{inquiry.name}</h3>
+                                                            <div className="flex items-center gap-2">
+                                                                <h3 className="text-[14px] font-bold text-slate-900 truncate tracking-tight">{inquiry.name}</h3>
+                                                                {inquiry.is_claimed && (
+                                                                    <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200" title={`Claimed by ${inquiry.owner_id === currentUser?.id ? 'You' : 'Seller'}`}>
+                                                                        <Lock className="w-2.5 h-2.5 text-slate-400" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                             <div className="flex items-center gap-2 mt-1 font-bold">
                                                                 <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
                                                                     {inquiry.status?.replace('_', ' ') || 'new'}
@@ -862,11 +901,6 @@ const SalesAdmin = () => {
                                                                         Returning Lead
                                                                     </span>
                                                                 )}
-                                                                {parseInt(inquiry.unread_count || 0) > 0 && (
-                                                                    <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-blue-600 text-white animate-pulse">
-                                                                        New Activity
-                                                                    </span>
-                                                                )}
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-col items-end gap-1">
@@ -874,7 +908,7 @@ const SalesAdmin = () => {
                                                                 {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
                                                             </span>
                                                             {parseInt(inquiry.unread_count || 0) > 0 && (
-                                                                <span className="w-6 h-6 bg-red-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(239,68,68,0.4)] animate-bounce border-2 border-white">
+                                                                <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg animate-bounce border-2 border-white">
                                                                     {inquiry.unread_count}
                                                                 </span>
                                                             )}
@@ -907,7 +941,59 @@ const SalesAdmin = () => {
 
                     {/* Detail Panel */}
                     <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[800px] shadow-sm">
-                        {selectedInquiry ? (
+                        {viewMode === 'master' ? (
+                            <div className="flex flex-col h-full bg-slate-50/30">
+                                <div className="p-6 border-b border-slate-100 bg-white">
+                                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Master Schedule</h2>
+                                    <p className="text-xs text-slate-400 font-medium">Control tower view of all upcoming team demos</p>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                    {masterDemos.length === 0 ? (
+                                        <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-50">
+                                            <Calendar className="w-12 h-12 mb-3" />
+                                            <p className="text-sm font-bold uppercase tracking-widest">No demos scheduled yet</p>
+                                        </div>
+                                    ) : (
+                                        masterDemos.map(demo => (
+                                            <div key={demo.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all">
+                                                <div className="flex items-center gap-4">
+                                                    <div
+                                                        className="w-12 h-12 rounded-xl flex flex-col items-center justify-center border shadow-sm"
+                                                        style={{ backgroundColor: `${demo.calendar_color}10`, borderColor: demo.calendar_color }}
+                                                    >
+                                                        <span className="text-[10px] font-black uppercase text-slate-400">{format(new Date(demo.scheduled_at), 'MMM')}</span>
+                                                        <span className="text-lg font-black" style={{ color: demo.calendar_color }}>{format(new Date(demo.scheduled_at), 'd')}</span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-slate-900">{demo.lead_name}</div>
+                                                        <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
+                                                            <Clock className="w-3 h-3" />
+                                                            {format(new Date(demo.scheduled_at), 'h:mm a')}
+                                                            <span className="opacity-30">•</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: demo.calendar_color }} />
+                                                                {demo.seller_name}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${demo.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
+                                                        demo.status === 'cancelled' ? 'bg-rose-100 text-rose-700' :
+                                                            'bg-blue-100 text-blue-700'
+                                                        }`}>
+                                                        {demo.status}
+                                                    </span>
+                                                    <a href={demo.zoom_link} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-slate-50 rounded-lg text-blue-600 transition-colors">
+                                                        <Video className="w-5 h-5" />
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        ) : selectedInquiry ? (
                             <>
                                 {/* Compact Header */}
                                 <div className="px-6 py-4 border-b border-slate-100 bg-white">
@@ -964,20 +1050,39 @@ const SalesAdmin = () => {
                                     <div className="flex flex-wrap items-center gap-3">
                                         {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && (
                                             <>
-                                                <button
-                                                    onClick={() => setShowDemoModal(true)}
-                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black hover:bg-slate-900 transition-all shadow-md shadow-indigo-100 group"
-                                                >
-                                                    <CalendarCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                                    Schedule Demo
-                                                </button>
-                                                <button
-                                                    onClick={() => openOnboardModal(selectedInquiry)}
-                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-black hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 group"
-                                                >
-                                                    <UserPlus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                                    Onboard Lead
-                                                </button>
+                                                {selectedInquiry.is_claimed ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => setShowDemoModal(true)}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black hover:bg-slate-900 transition-all shadow-md shadow-indigo-100 group"
+                                                        >
+                                                            <CalendarCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                            Schedule Demo
+                                                        </button>
+                                                        <button
+                                                            onClick={() => openOnboardModal(selectedInquiry)}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-black hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 group"
+                                                        >
+                                                            <UserPlus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                            Onboard Lead
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleClaimLead(selectedInquiry.id)}
+                                                        disabled={claimLoading}
+                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 group animate-in fade-in slide-in-from-bottom-2 duration-300"
+                                                    >
+                                                        {claimLoading ? (
+                                                            <RefreshCw className="w-5 h-5 animate-spin" />
+                                                        ) : (
+                                                            <>
+                                                                <Lock className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                                                Claim Lead & Start Selling
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                )}
                                             </>
                                         )}
 
