@@ -30,11 +30,7 @@ const LandingPage = () => {
     };
 
     const handleInstantDemoTrigger = () => {
-        if (hasCapturedLead()) {
-            handleInstantDemo();
-        } else {
-            setIsModalOpen(true);
-        }
+        setIsModalOpen(true);
     };
 
     const handleInstantDemo = async () => {

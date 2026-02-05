@@ -14,6 +14,7 @@ import {
     ArrowRight,
     KeyRound
 } from 'lucide-react';
+import tokenManager from '../services/tokenManager';
 
 // reCAPTCHA site key from environment
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
@@ -36,8 +37,15 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
     const [isVerifying, setIsVerifying] = useState(false);
     const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
-    // Load reCAPTCHA v3 script
+    // Load reCAPTCHA v3 script and saved form data
     useEffect(() => {
+        const saved = localStorage.getItem('pagemd_lead_info');
+        if (saved) {
+            try {
+                setFormData(JSON.parse(saved));
+            } catch (e) { }
+        }
+
         if (!RECAPTCHA_SITE_KEY) return;
         if (document.querySelector(`script[src*="recaptcha"]`)) return;
 
@@ -166,13 +174,19 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
             }
 
             // Success! 
-            if (data.token) {
-                localStorage.setItem('token', data.token);
+            if (res.ok) {
+                if (data.token) {
+                    tokenManager.setToken(data.token);
+                }
 
-                // Set Cookie (recognized for 30 days)
-                const expiry = new Date();
-                expiry.setDate(expiry.getDate() + 30);
-                document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+                // Save lead info for future convenience, but still force verification
+                localStorage.setItem('pagemd_lead_info', JSON.stringify(formData));
+
+                if (!formData.email.includes('test')) {
+                    const expiry = new Date();
+                    expiry.setDate(expiry.getDate() + 30);
+                    document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+                }
             }
 
             setSubmitState('success');
