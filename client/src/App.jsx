@@ -46,7 +46,6 @@ const Profile = React.lazy(() => import('./pages/Profile'));
 const FeeSheet = React.lazy(() => import('./pages/FeeSheet'));
 const Compliance = React.lazy(() => import('./pages/Compliance'));
 const SupportPage = React.lazy(() => import('./pages/SupportPage'));
-const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 
 const PlatformAdminLogin = React.lazy(() => import('./pages/PlatformAdminLogin'));
 const PlatformAdminDashboard = React.lazy(() => import('./pages/PlatformAdminDashboard'));
