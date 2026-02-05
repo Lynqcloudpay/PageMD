@@ -90,6 +90,7 @@ const AlertBell = () => {
             case 'expiring':
                 return <TrendingDown className="w-4 h-4" />;
             case 'system':
+            case 'info':
                 return <Info className="w-4 h-4" />;
             case 'security':
                 return <Lock className="w-4 h-4" />;

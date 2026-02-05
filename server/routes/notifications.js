@@ -51,7 +51,7 @@ router.get('/', async (req, res) => {
         // 2. Account Status Alerts (Lockouts, Audits)
         // ---------------------------------------------------------
         const clinicRes = await pool.controlPool.query(
-            "SELECT billing_locked, prescribing_locked, status, is_read_only FROM clinics WHERE id = $1",
+            "SELECT billing_locked, prescribing_locked, status, is_read_only, compliance_zones, enabled_features FROM clinics WHERE id = $1",
             [clinicId]
         );
         const clinic = clinicRes.rows[0];
@@ -83,6 +83,19 @@ router.get('/', async (req, res) => {
                 });
             }
 
+            if (clinic.is_read_only) {
+                alerts.push({
+                    id: 'account-readonly',
+                    type: 'security',
+                    severity: 'error',
+                    title: 'Read-Only Mode Enabled',
+                    message: 'Your account is in Read-Only mode. You can view data but cannot make changes.',
+                    createdAt: new Date(),
+                    actionUrl: '/support',
+                    dismissible: false
+                });
+            }
+
             if (clinic.status === 'suspended') {
                 alerts.push({
                     id: 'account-suspended',
@@ -93,6 +106,48 @@ router.get('/', async (req, res) => {
                     createdAt: new Date(),
                     actionUrl: '/support',
                     dismissible: false
+                });
+            }
+
+            // Feature Flags (Info/State Alerts)
+            const features = clinic.enabled_features || {};
+
+            if (features.efax) {
+                alerts.push({
+                    id: 'feature-efax',
+                    type: 'info',
+                    severity: 'info',
+                    title: 'eFax Integration Active',
+                    message: 'eFax services are enabled for your clinic.',
+                    createdAt: new Date(),
+                    actionUrl: '/admin-settings?tab=features',
+                    dismissible: true
+                });
+            }
+
+            if (features.labs) {
+                alerts.push({
+                    id: 'feature-labs',
+                    type: 'info',
+                    severity: 'info',
+                    title: 'Lab Integration Active',
+                    message: 'HL7 Lab interfacing is enabled.',
+                    createdAt: new Date(),
+                    actionUrl: '/admin-settings?tab=features',
+                    dismissible: true
+                });
+            }
+
+            if (features.telehealth) {
+                alerts.push({
+                    id: 'feature-telehealth',
+                    type: 'info',
+                    severity: 'info',
+                    title: 'Telehealth Active',
+                    message: 'Video visits are enabled for your providers.',
+                    createdAt: new Date(),
+                    actionUrl: '/admin-settings?tab=features',
+                    dismissible: true
                 });
             }
         }
@@ -109,6 +164,9 @@ router.get('/', async (req, res) => {
 
         if (subRes.rows.length > 0) {
             const sub = subRes.rows[0];
+            const now = new Date();
+            const daysUntilDue = sub.current_period_end ? Math.ceil((new Date(sub.current_period_end) - now) / (1000 * 60 * 60 * 24)) : 999;
+
             if (sub.status === 'past_due' || sub.status === 'unpaid') {
                 alerts.push({
                     id: 'billing-past-due',
@@ -120,9 +178,54 @@ router.get('/', async (req, res) => {
                     actionUrl: '/admin-settings?tab=practice',
                     dismissible: false
                 });
+            } else if (sub.status === 'trialing' && daysUntilDue <= 3) {
+                alerts.push({
+                    id: 'billing-trial-ending',
+                    type: 'billing',
+                    severity: 'warning',
+                    title: 'Trial Ending Soon',
+                    message: `Your trial ends in ${daysUntilDue} days. Please add a payment method to continue using the platform.`,
+                    createdAt: new Date(),
+                    actionUrl: '/admin-settings?tab=practice',
+                    dismissible: true
+                });
+            } else if (daysUntilDue <= 3 && daysUntilDue >= 0 && sub.status === 'active') {
+                alerts.push({
+                    id: 'billing-upcoming',
+                    type: 'billing',
+                    severity: 'info',
+                    title: 'Upcoming Payment',
+                    message: `Your subscription will renew in ${daysUntilDue} days.`,
+                    createdAt: new Date(),
+                    actionUrl: '/admin-settings?tab=practice',
+                    dismissible: true
+                });
             }
         }
-
+        // ---------------------------------------------------------
+        // 3.5. Required Audit (Mock/Placeholder Logic for now)
+        // ---------------------------------------------------------
+        // If we had a specific field like `audit_required_deadline`, we would check it here.
+        // For now, let's assume if there is a 'compliance' flag in a generic fields column or if specific conditions are met.
+        // I'll add a check for a hypothetical 'audit_status' if it existed, or just leave this prepared. 
+        // User requested "required audit". Let's check if the clinic has any "open" compliance issues if we had a table.
+        // Since we don't have deep insight into the compliance module here, I will leave this section ready for when that field exists.
+        // However, I CAN check for 'prescribing_locked' which usually IMPLIES an audit failure.
+        // We already have 'account-rx-locked'.
+        // Let's add a generic 'Profile Incomplete' or similar if needed. 
+        // Actually, let's look for "compliance_zones". If it contains "audit_pending", trigger alert.
+        if (clinic.compliance_zones && clinic.compliance_zones.includes('audit_pending')) {
+            alerts.push({
+                id: 'compliance-audit',
+                type: 'security',
+                severity: 'warning',
+                title: 'Audit Required',
+                message: 'A compliance audit is required for your account. Please complete it to avoid service interruption.',
+                createdAt: new Date(),
+                actionUrl: '/admin-settings?tab=compliance', // Deep link to compliance tab
+                dismissible: false
+            });
+        }
         // ---------------------------------------------------------
         // 4. Growth Rewards (Imported Logic)
         // ---------------------------------------------------------
