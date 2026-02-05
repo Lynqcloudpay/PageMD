@@ -308,6 +308,8 @@ router.post('/inquiry', async (req, res) => {
         res.status(existingInquiry ? 200 : 201).json({
             success: true,
             isDuplicate,
+            requiresVerification: isSandboxRequest,
+            email: email, // Returned for frontend context display
             message: isSandboxRequest
                 ? (isDuplicate ? 'Welcome back! We\'ve sent a fresh access code to your inbox.' : 'Check your email for the verification code!')
                 : 'Thank you for your interest!',
