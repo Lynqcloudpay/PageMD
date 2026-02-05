@@ -106,7 +106,7 @@ router.patch('/encounters/:id/finalize', requireRole('clinician', 'admin'), asyn
     try {
         const { id } = req.params;
 
-        const visit = await pool.query('SELECT status FROM visits WHERE id = $1', [id]);
+        const visit = await pool.query('SELECT status, appointment_id FROM visits WHERE id = $1', [id]);
         if (visit.rows.length === 0) return res.status(404).json({ error: 'Encounter not found' });
 
         // Idempotency: If already signed, just return success
@@ -122,6 +122,30 @@ router.patch('/encounters/:id/finalize', requireRole('clinician', 'admin'), asyn
         );
 
         await logAudit(req.user.id, 'encounter.finalized', 'visit', id, {}, req.ip);
+
+        // ============================================================
+        // AUTOMATION: Sync Appointment Status
+        // ============================================================
+        if (visit.rows[0]?.appointment_id) {
+            const appointmentId = visit.rows[0].appointment_id;
+            try {
+                await pool.query(
+                    `UPDATE appointments 
+                     SET status = 'completed', 
+                         patient_status = 'checked_out', 
+                         checkout_time = NOW(),
+                         room_sub_status = NULL,
+                         current_room = NULL,
+                         updated_at = NOW()
+                     WHERE id = $1`,
+                    [appointmentId]
+                );
+                console.log(`[clinicalWorkspace] Auto-checked out appointment ${appointmentId} for encounter ${id}`);
+            } catch (apptErr) {
+                console.error('[clinicalWorkspace] Failed to auto-update appointment status:', apptErr);
+            }
+        }
+
         res.json({ status: 'finalized', encounter: result.rows[0] });
     } catch (error) {
         console.error('Error finalizing encounter:', error);
@@ -177,7 +201,7 @@ router.patch('/clinical_notes/:id/sign', requireRole('clinician', 'admin'), asyn
         const { id } = req.params;
         const { note_draft } = req.body; // Optional: update note content at same time
 
-        const visit = await pool.query('SELECT status, patient_id FROM visits WHERE id = $1', [id]);
+        const visit = await pool.query('SELECT status, patient_id, appointment_id FROM visits WHERE id = $1', [id]);
         if (visit.rows.length === 0) return res.status(404).json({ error: 'Encounter not found' });
 
         // Idempotency
@@ -260,6 +284,31 @@ router.patch('/clinical_notes/:id/sign', requireRole('clinician', 'admin'), asyn
         });
 
         await logAudit(req.user.id, 'note.signed', 'visit', id, { snapshot: true }, req.ip);
+
+        // ============================================================
+        // AUTOMATION: Sync Appointment Status (e.g. for Telehealth)
+        // If this visit is linked to an appointment, mark it as completed/checked_out
+        // ============================================================
+        if (visit.rows[0]?.appointment_id) {
+            const appointmentId = visit.rows[0].appointment_id;
+            try {
+                await pool.query(
+                    `UPDATE appointments 
+                     SET status = 'completed', 
+                         patient_status = 'checked_out', 
+                         checkout_time = NOW(),
+                         room_sub_status = NULL,
+                         current_room = NULL,
+                         updated_at = NOW()
+                     WHERE id = $1`,
+                    [appointmentId]
+                );
+                console.log(`[clinicalWorkspace] Auto-checked out appointment ${appointmentId} for visit ${id}`);
+            } catch (apptErr) {
+                console.error('[clinicalWorkspace] Failed to auto-update appointment status:', apptErr);
+            }
+        }
+
         res.json({
             success: true,
             signed_at: result.rows[0]?.note_signed_at,

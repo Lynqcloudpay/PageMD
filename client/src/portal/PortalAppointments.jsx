@@ -186,13 +186,13 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
     const scheduled = appointments.filter(a => {
         const apptDateMillis = getLocalDateMillis(a.appointment_date, a.appointment_time);
-        const isCompleted = a.status === 'completed' || a.status === 'checked_out';
+        const isCompleted = a.status === 'completed' || a.status === 'checked_out' || a.patient_status === 'checked_out';
         return apptDateMillis >= todayMillis && !isCancelled(a) && !isCompleted;
     }).sort((a, b) => getLocalDateMillis(a.appointment_date, a.appointment_time) - getLocalDateMillis(b.appointment_date, b.appointment_time));
 
     const past = appointments.filter(a => {
         const apptDateMillis = getLocalDateMillis(a.appointment_date, a.appointment_time);
-        const isCompleted = a.status === 'completed' || a.status === 'checked_out';
+        const isCompleted = a.status === 'completed' || a.status === 'checked_out' || a.patient_status === 'checked_out';
         return (apptDateMillis < todayMillis || isCompleted) && !isCancelled(a);
     }).sort((a, b) => getLocalDateMillis(b.appointment_date, b.appointment_time) - getLocalDateMillis(a.appointment_date, a.appointment_time));
 

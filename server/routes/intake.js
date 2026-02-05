@@ -39,12 +39,38 @@ function normalizeName(name) {
  * Helper: Log Audit Event
  */
 async function logIntakeAudit(client, tenantId, actorType, actorId, action, objectType, objectId, req) {
-    const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-    await client.query(`
-        INSERT INTO audit_events (tenant_id, actor_type, actor_id, action, object_type, object_id, ip, user_agent)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [tenantId, actorType, actorId, action, objectType, objectId, ip, userAgent]);
+    let ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || null;
+
+    // Sanitize IP: Handle multiple IPs in x-forwarded-for
+    if (ip && typeof ip === 'string' && ip.includes(',')) {
+        ip = ip.split(',')[0].trim();
+    }
+    // If empty string or invalid, fallback to null to avoid 'invalid input syntax for type inet'
+    if (!ip || typeof ip !== 'string' || ip.trim() === '') {
+        ip = null;
+    }
+
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+
+    try {
+        await client.query(`
+            INSERT INTO audit_events (
+                tenant_id, 
+                actor_role, 
+                actor_user_id, 
+                action, 
+                entity_type, 
+                entity_id, 
+                ip_address, 
+                user_agent,
+                occurred_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7::inet, $8, NOW())
+        `, [tenantId, actorType, actorId, action, objectType, objectId, ip, userAgent]);
+    } catch (e) {
+        // Non-fatal audit error - log but don't fail the request
+        console.error('[Intake] Audit Log Failed:', e.message);
+    }
 }
 
 // --- STAFF ENDPOINTS ---

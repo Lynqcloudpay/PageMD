@@ -210,6 +210,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
             if (newStatus === 'checked_out') {
                 updateData.checkout_time = now.toISOString();
+                updateData.status = 'completed';
                 updateData.current_room = null;
                 updateData.room_sub_status = null;
                 setRoom('');

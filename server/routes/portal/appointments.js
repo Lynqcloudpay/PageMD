@@ -319,20 +319,47 @@ router.post('/:id/cancel', async (req, res) => {
         const patientReason = reason ? reason : 'No reason provided';
         const fullCancellationReason = `[CANCELLED BY PATIENT VIA PORTAL] ${patientReason}`;
 
-        // Update status and history
-        const statusHistory = checkAppt.rows[0].status_history || [];
-        const newHistory = [...statusHistory, {
-            status: 'cancelled',
-            timestamp: now,
-            changed_by: `${patientName} (Patient Portal)`,
-            source: 'patient_portal',
-            cancellation_reason: patientReason
-        }];
+        // Update status and history within a transaction
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        await pool.query(
-            "UPDATE appointments SET status = 'cancelled', patient_status = 'cancelled', cancellation_reason = $1, status_history = $2, checkout_time = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4",
-            [fullCancellationReason, JSON.stringify(newHistory), now, id]
-        );
+            const statusHistory = checkAppt.rows[0].status_history || [];
+            const newHistory = [...statusHistory, {
+                status: 'cancelled',
+                timestamp: now,
+                changed_by: `${patientName} (Patient Portal)`,
+                source: 'patient_portal',
+                cancellation_reason: patientReason
+            }];
+
+            await client.query(
+                "UPDATE appointments SET status = 'cancelled', patient_status = 'cancelled', cancellation_reason = $1, status_history = $2, checkout_time = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4",
+                [fullCancellationReason, JSON.stringify(newHistory), now, id]
+            );
+
+            // AUTO-CREATE FOLLOW-UP RECORD
+            // This ensures it appears in the EMR's "Cancellations" / Follow-up tracker tab
+            const existingFollowup = await client.query(
+                'SELECT id FROM cancellation_followups WHERE appointment_id = $1',
+                [id]
+            );
+
+            if (existingFollowup.rows.length === 0) {
+                await client.query(
+                    `INSERT INTO cancellation_followups (appointment_id, patient_id, status)
+                     VALUES ($1, $2, 'pending')`,
+                    [id, patientId]
+                );
+            }
+
+            await client.query('COMMIT');
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
 
         res.json({ success: true, message: 'Appointment cancelled successfully' });
     } catch (error) {

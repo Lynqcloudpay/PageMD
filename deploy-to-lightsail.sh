@@ -37,6 +37,9 @@ if [ -d "client" ] && [ -f "client/package.json" ]; then
   cd ..
 fi
 
+echo "🗜️  Packaging local server changes..."
+tar -czf server.tar.gz server
+
 echo "🌐 Connecting to server for deployment..."
 
 ssh -i "$KEY_PATH" "$USER@$HOST" << EOF
@@ -53,15 +56,25 @@ EOF
 
 # 2. UPLOAD ARTIFACTS (AFTER git reset to ensure they aren't deleted)
 if [ "$LOCAL_BUILD_SUCCESS" = true ]; then
-  echo "📤 Uploading pre-built artifacts..."
+  echo "📤 Uploading pre-built frontend artifacts..."
   scp -i "$KEY_PATH" client/dist.tar.gz "$USER@$HOST:$DIR/client/dist.tar.gz"
 fi
+
+echo "📤 Uploading local server changes..."
+scp -i "$KEY_PATH" server.tar.gz "$USER@$HOST:$DIR/server.tar.gz"
+rm server.tar.gz
 
 echo "🌐 Resuming deployment on server..."
 
 ssh -i "$KEY_PATH" "$USER@$HOST" << EOF
   set -e
-  cd "$DIR/deploy"
+  cd "$DIR"
+  
+  echo "📦 Extracting server changes..."
+  tar -xzf server.tar.gz
+  rm server.tar.gz
+  
+  cd deploy
   
   echo "⚙️  Checking environment variables..."
   cp -f .env.prod .env || true

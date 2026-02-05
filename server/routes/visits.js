@@ -564,7 +564,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
     }
 
     // First, get the visit to find the patient_id
-    const visitCheck = await pool.query('SELECT patient_id FROM visits WHERE id = $1', [id]);
+    const visitCheck = await pool.query('SELECT patient_id, appointment_id FROM visits WHERE id = $1', [id]);
     if (visitCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Visit not found' });
     }
@@ -843,6 +843,30 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
           signed_at: visit.note_signed_at
         }
       });
+    }
+
+    // ============================================================
+    // AUTOMATION: Sync Appointment Status (e.g. for Telehealth)
+    // If this visit is linked to an appointment, mark it as completed/checked_out
+    // ============================================================
+    const appointmentId = visitCheck.rows[0]?.appointment_id;
+    if (appointmentId) {
+      try {
+        await pool.query(
+          `UPDATE appointments 
+           SET status = 'completed', 
+               patient_status = 'checked_out', 
+               checkout_time = NOW(),
+               room_sub_status = NULL,
+               current_room = NULL,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [appointmentId]
+        );
+        console.log(`[Visits] Auto-checked out appointment ${appointmentId} for visit ${id}`);
+      } catch (apptErr) {
+        console.error('[Visits] Failed to auto-update appointment status:', apptErr.message);
+      }
     }
 
     res.json(visit);

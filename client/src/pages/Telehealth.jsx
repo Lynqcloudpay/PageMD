@@ -5,7 +5,7 @@ import {
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
   Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
-  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, ArrowRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
@@ -115,6 +115,7 @@ const Telehealth = () => {
   const [activeCall, setActiveCall] = useState(null);
   const [roomUrl, setRoomUrl] = useState(null);
   const [creatingRoom, setCreatingRoom] = useState(null);
+  const [showEndCallChoices, setShowEndCallChoices] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
@@ -503,8 +504,55 @@ const Telehealth = () => {
   const handleEndCall = useCallback(() => {
     setRoomUrl(null);
     setCreatingRoom(false);
+    setShowEndCallChoices(true);
     // Don't clear activeCall/Encounter/Note
   }, []);
+
+  const handleCheckoutOnly = async () => {
+    if (!activeCall?.id) return;
+    try {
+      const now = new Date();
+      await appointmentsAPI.update(activeCall.id, {
+        status: 'completed',
+        patient_status: 'checked_out',
+        checkout_time: now.toISOString(),
+        status_history: [
+          ...(activeCall.status_history || []),
+          { status: 'checked_out', timestamp: now.toISOString(), changed_by: 'Telehealth Provider' }
+        ],
+        room_sub_status: null,
+        current_room: null
+      });
+      console.log('Patient checked out (Call Ended).');
+      setShowEndCallChoices(false);
+      // We don't close workspace yet so they can finish the note
+    } catch (e) {
+      console.error('Checkout failed:', e);
+      alert('Failed to check out patient. You can try again from the Finalize button.');
+    }
+  };
+
+  const handleRejoinCall = async () => {
+    if (!activeCall) return;
+    setCreatingRoom(activeCall.id);
+    try {
+      const response = await api.post('/telehealth/rooms', {
+        appointmentId: activeCall.id,
+        encounterId: activeEncounter?.id,
+        patientName: activeCall.patientName || activeCall.name || 'Patient',
+        providerName: providerName
+      });
+
+      if (response.data.success) {
+        setRoomUrl(response.data.roomUrl);
+      }
+    } catch (e) {
+      console.error('Rejoin failed:', e);
+      alert('Failed to rejoin call.');
+    } finally {
+      setCreatingRoom(null);
+    }
+  };
 
   const handleSaveDraft = async () => {
     if (!activeEncounter || isLocked) return;
@@ -596,6 +644,10 @@ const Telehealth = () => {
             status: 'completed',
             patient_status: 'checked_out',
             checkout_time: now.toISOString(),
+            status_history: [
+              ...(activeCall.status_history || []),
+              { status: 'checked_out', timestamp: now.toISOString(), changed_by: 'Telehealth Provider' }
+            ],
             room_sub_status: null,
             current_room: null
           });
@@ -675,12 +727,28 @@ const Telehealth = () => {
                   <h3 className="text-xl font-bold text-slate-700">Call Ended</h3>
                   <p className="text-slate-500 max-w-sm mx-auto">The video connection has been terminated. You can simply continue documenting and finalize the visit when ready.</p>
                 </div>
-                <button
-                  onClick={handleCloseWorkspace}
-                  className="px-6 py-2 bg-white border border-slate-300 rounded-lg text-slate-600 font-semibold hover:bg-slate-50 transition-colors shadow-sm"
-                >
-                  Close Workspace
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleRejoinCall}
+                    disabled={creatingRoom !== null}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2"
+                  >
+                    {creatingRoom === activeCall?.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Video className="w-4 h-4" />}
+                    Rejoin Call
+                  </button>
+                  <button
+                    onClick={handleCheckoutOnly}
+                    className="px-6 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-semibold hover:bg-emerald-100 transition-colors"
+                  >
+                    Mark as Finished
+                  </button>
+                  <button
+                    onClick={handleCloseWorkspace}
+                    className="px-6 py-2 bg-white border border-slate-300 rounded-lg text-slate-600 font-semibold hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                    Close Workspace
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1201,7 +1269,7 @@ const Telehealth = () => {
               };
             });
 
-            // Re-sync pended orders for the sidebar view
+            // Flatten into pended orders for the sidebar
             const newPendedItems = [];
             updatedPlanStructured.forEach(group => {
               (group.orders || []).forEach(orderText => {
@@ -1223,6 +1291,51 @@ const Telehealth = () => {
             setShowOrderModal(false);
           }}
         />
+
+        {/* --- POST-CALL DECISION MODAL --- */}
+        <Modal
+          isOpen={showEndCallChoices}
+          onClose={() => setShowEndCallChoices(false)}
+          title="Call Session Ended"
+        >
+          <div className="space-y-6 py-2">
+            <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white shrink-0">
+                <PhoneOff className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <h4 className="font-bold text-blue-900">What's next?</h4>
+                <p className="text-sm text-blue-700 leading-snug">The video call has finished. Would you like to check the patient out now or keep the session active to rejoin later?</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              <button
+                onClick={handleCheckoutOnly}
+                className="w-full flex items-center justify-between p-4 bg-white border-2 border-slate-100 hover:border-blue-600 hover:bg-blue-50 rounded-2xl transition-all group"
+              >
+                <div className="text-left">
+                  <span className="block font-bold text-slate-800 group-hover:text-blue-700">Finish Visit & Checkout</span>
+                  <span className="text-[11px] text-slate-500 group-hover:text-blue-600">Marks patient as 'Out' and clears portal notifications.</span>
+                </div>
+                <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500" />
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowEndCallChoices(false);
+                }}
+                className="w-full flex items-center justify-between p-4 bg-white border-2 border-slate-100 hover:border-slate-300 rounded-2xl transition-all group"
+              >
+                <div className="text-left">
+                  <span className="block font-bold text-slate-800">Visit Not Finished</span>
+                  <span className="text-[11px] text-slate-500">Keep appointment active. You can still document or rejoin later.</span>
+                </div>
+                <ArrowRight className="w-5 h-5 text-slate-300" />
+              </button>
+            </div>
+          </div>
+        </Modal>
       </div>
     );
   }

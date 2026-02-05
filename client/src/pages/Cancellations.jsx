@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO, subDays, addDays } from 'date-fns';
 import {
     Phone, Calendar, Clock, User, AlertCircle, XCircle, RefreshCw,
     Search, Filter, MessageSquare, X, CheckCircle, Save, Ban,
@@ -57,8 +57,9 @@ const Cancellations = () => {
             setLoading(true);
         }
         try {
-            const endDate = format(new Date(), 'yyyy-MM-dd');
             const startDate = format(subDays(new Date(), parseInt(dateRange)), 'yyyy-MM-dd');
+            // Extend endDate into the future so we catch cancellations of future appointments
+            const endDate = format(addDays(new Date(), 90), 'yyyy-MM-dd');
 
             // First, fetch all cancelled/no-show appointments to ensure follow-ups exist
             const apptResponse = await appointmentsAPI.get({ startDate, endDate });

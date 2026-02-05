@@ -246,7 +246,7 @@ const PortalDashboard = () => {
 
             const isTelehealth = type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
             const isCancelled = appt.status === 'cancelled' || appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
-            const isActive = appt.status !== 'completed' && appt.status !== 'checked_out' && !isCancelled;
+            const isActive = appt.status !== 'completed' && appt.status !== 'checked_out' && appt.patient_status !== 'checked_out' && !isCancelled;
 
             return isTelehealth && isToday && isActive;
         });
@@ -257,7 +257,7 @@ const PortalDashboard = () => {
         const upcomingAppts = appointments.filter(appt => {
             const apptDateObj = parseLocalSafe(appt.appointment_date, appt.appointment_time);
             const isCancelled = appt.status === 'cancelled' || appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
-            return apptDateObj >= startOfToday && appt.status !== 'completed' && appt.status !== 'checked_out' && !isCancelled;
+            return apptDateObj >= startOfToday && appt.status !== 'completed' && appt.status !== 'checked_out' && appt.patient_status !== 'checked_out' && !isCancelled;
         }).sort((a, b) => parseLocalSafe(a.appointment_date, a.appointment_time) - parseLocalSafe(b.appointment_date, b.appointment_time));
 
         const nextAppt = upcomingAppts.length > 0 ? upcomingAppts[0] : null;
