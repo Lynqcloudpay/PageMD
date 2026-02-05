@@ -56,6 +56,11 @@ const poolProxy = {
   query: async (text, params) => {
     const client = dbStorage.getStore();
     if (client) {
+      // If the client has a specific schema (e.g. sandbox), ensure it's set for this execution
+      if (client.tenantSchema && client._lastSchema !== client.tenantSchema) {
+        await client.query(`SET search_path TO ${client.tenantSchema}, public`);
+        client._lastSchema = client.tenantSchema;
+      }
       return client.query(text, params);
     }
 

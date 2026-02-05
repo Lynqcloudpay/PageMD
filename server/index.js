@@ -153,6 +153,7 @@ console.log(`[System] Patient Portal: ${PATIENT_PORTAL_ENABLED ? 'ENABLED' : 'DI
 
 // Sales inquiries (public - no auth required)
 app.use('/api/sales', require('./routes/sales'));
+app.use('/api/auth/sandbox', require('./routes/sandboxAuth'));
 
 // Multi-tenancy resolver - resolves clinic specific database
 app.use('/api', resolveTenant);
@@ -407,6 +408,11 @@ if (require.main === module) {
 
     // Start background services
     flagService.startMaintenance(3600000); // 1 hour
+
+    // Sandbox Cleanup: Run every 10 minutes
+    const { cleanupExpiredSandboxes } = require('./services/sandboxCleanup');
+    setInterval(cleanupExpiredSandboxes, 10 * 60 * 1000);
+    cleanupExpiredSandboxes(); // Run once on startup
   });
 }
 

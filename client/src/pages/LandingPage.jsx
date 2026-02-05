@@ -20,6 +20,29 @@ import LandingNav from '../components/LandingNav';
 
 const LandingPage = () => {
     const currentYear = new Date().getFullYear();
+    const [loading, setLoading] = React.useState(false);
+
+    const handleInstantDemo = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/sandbox/provision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (data.token) {
+                localStorage.setItem('token', data.token);
+                window.location.href = data.redirect;
+            } else {
+                alert('Demo provisioning failed. Please try again.');
+            }
+        } catch (error) {
+            console.error('Sandbox error:', error);
+            alert('Could not start demo. Please check your connection.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-white font-sans overflow-x-hidden">
@@ -45,12 +68,21 @@ const LandingPage = () => {
                     </p>
 
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
+                        <button
+                            onClick={handleInstantDemo}
+                            disabled={loading}
+                            className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5 active:scale-95 text-sm flex items-center justify-center gap-2 group"
+                        >
+                            {loading ? (
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <Zap className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
+                            )}
+                            {loading ? 'Provisioning...' : 'Try it Now (Instant Access)'}
+                        </button>
                         <Link to="/contact" className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5 active:scale-95 text-sm flex items-center justify-center gap-2">
-                            Start Your Free Demo
+                            Request Private Demo
                             <ArrowRight className="w-4 h-4" />
-                        </Link>
-                        <Link to="/features" className="px-8 py-4 bg-slate-50 hover:bg-slate-100 text-slate-900 font-bold rounded-2xl border border-slate-200 transition-all text-sm text-center">
-                            Explore Features
                         </Link>
                     </div>
 
@@ -159,12 +191,17 @@ const LandingPage = () => {
             <section className="py-40 bg-slate-50 px-6 border-t border-slate-200/50">
                 <div className="max-w-4xl mx-auto text-center">
                     <h2 className="text-5xl md:text-[6rem] font-black text-slate-900 mb-12 leading-[1] tracking-tighter">Ready to reclaim your day?</h2>
-                    <div className="flex flex-col sm:flex-row justify-center gap-8">
-                        <Link to="/contact" className="px-16 py-8 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[3rem] shadow-2xl shadow-blue-500/20 transition-all hover:-translate-y-1 text-2xl">
-                            Schedule Private Demo
-                        </Link>
-                        <Link to="/pricing" className="px-16 py-8 bg-white hover:bg-slate-50 text-slate-900 font-bold rounded-[3rem] border-2 border-slate-200 transition-all text-2xl text-center">
-                            View Pricing
+                    <div className="flex flex-col sm:flex-row justify-center gap-6">
+                        <button
+                            onClick={handleInstantDemo}
+                            disabled={loading}
+                            className="px-12 py-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-[3rem] shadow-2xl shadow-emerald-500/20 transition-all hover:-translate-y-1 text-xl flex items-center justify-center gap-3"
+                        >
+                            {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Zap className="w-6 h-6 fill-current" />}
+                            {loading ? 'Preparing demo...' : 'Try Instant Demo Now'}
+                        </button>
+                        <Link to="/contact" className="px-12 py-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-[3rem] shadow-2xl shadow-blue-500/20 transition-all hover:-translate-y-1 text-xl flex items-center justify-center">
+                            Book Private Tour
                         </Link>
                     </div>
 

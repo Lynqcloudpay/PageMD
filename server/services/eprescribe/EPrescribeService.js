@@ -5,6 +5,7 @@
  * - 'dosespot' -> DoseSpotService
  * - 'internal' or unset -> Internal prescription engine (existing routes)
  */
+const { simulate } = require('../simulationInterceptor');
 
 // Lazy load DoseSpotService to prevent startup failures if not configured
 let getDoseSpotService = null;
@@ -120,6 +121,12 @@ class EPrescribeService {
    * @returns {Promise<{prescriptionId: string, vendorMessageId?: string}>}
    */
   async createPrescriptionDraft(prescriptionData) {
+    const simulated = simulate('EPrescribe', 'createPrescriptionDraft', {
+      prescriptionId: 'sim-' + Math.random().toString(36).substr(2, 9),
+      vendorMessageId: 'sim-msg-' + Date.now()
+    });
+    if (simulated) return simulated;
+
     if (this.isDoseSpotEnabled()) {
       return await this.dosespotService.createPrescriptionDraft(prescriptionData);
     }
@@ -134,6 +141,9 @@ class EPrescribeService {
    * @returns {Promise<{status: string}>}
    */
   async sendPrescription(prescriptionId) {
+    const simulated = simulate('EPrescribe', 'sendPrescription', { status: 'SENT' });
+    if (simulated) return simulated;
+
     if (this.isDoseSpotEnabled()) {
       return await this.dosespotService.sendPrescription(prescriptionId);
     }

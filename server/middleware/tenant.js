@@ -31,8 +31,15 @@ const resolveTenant = async (req, res, next) => {
     if (!slug && token) {
         try {
             const decoded = jwt.decode(token); // Just peek, verification happens later in auth middleware
-            if (decoded && decoded.clinicSlug) {
-                slug = decoded.clinicSlug;
+            if (decoded) {
+                if (decoded.isSandbox) {
+                    req.isSandbox = true;
+                    req.sandboxId = decoded.sandboxId;
+                    lookupSchema = `sandbox_${decoded.sandboxId}`;
+                    console.log(`[Tenant] Sandbox mode detected for ID: ${decoded.sandboxId}`);
+                } else if (decoded.clinicSlug) {
+                    slug = decoded.clinicSlug;
+                }
             }
         } catch (e) {
             // Ignore decoding errors here
@@ -143,6 +150,8 @@ const resolveTenant = async (req, res, next) => {
         }
         slug = 'test';
         console.log(`[Tenant] No slug or schema found, falling back to 'test' for path: ${req.path}`);
+    } else if (req.isSandbox) {
+        console.log(`[Tenant] Bypassing clinic lookup for Sandbox ID: ${req.sandboxId}`);
     } else {
         console.log(`[Tenant] Resolving for slug: ${slug}, schema: ${lookupSchema}, path: ${req.path}`);
     }
@@ -174,7 +183,7 @@ const resolveTenant = async (req, res, next) => {
             return res.status(404).json({ error: `Clinic access denied.` });
         }
 
-        if (tenantInfo.status !== 'active') {
+        if (tenantInfo && tenantInfo.status !== 'active') {
             return res.status(403).json({ error: `Clinic is currently ${tenantInfo.status}. Access restricted.` });
         }
 
@@ -199,20 +208,33 @@ const resolveTenant = async (req, res, next) => {
         // Critical Security Step: Set Search Path
         await client.query(`SET search_path TO ${schema_name}, public`);
 
-        // Attach clinic info
-        req.clinic = {
-            id: tenantInfo.id,
-            slug: tenantInfo.slug,
-            schema_name: tenantInfo.schema_name,
-            name: tenantInfo.display_name,
-            logo_url: tenantInfo.logo_url,
-            address: [tenantInfo.address_line1, tenantInfo.address_line2, `${tenantInfo.city || ''} ${tenantInfo.state || ''} ${tenantInfo.zip || ''}`.trim()].filter(Boolean).join('\n'),
-            phone: tenantInfo.phone,
-            is_read_only: tenantInfo.is_read_only,
-            billing_locked: tenantInfo.billing_locked,
-            prescribing_locked: tenantInfo.prescribing_locked,
-            enabled_features: tenantInfo.enabled_features || {}
-        };
+        if (req.isSandbox) {
+            req.clinic = {
+                id: 'demo',
+                slug: 'demo',
+                schema_name: lookupSchema,
+                name: 'PageMD Sandbox Demo',
+                is_read_only: false,
+                billing_locked: false,
+                prescribing_locked: false,
+                enabled_features: { efax: true, labs: true, telehealth: true, eprescribe: true }
+            };
+        } else {
+            // Attach clinic info
+            req.clinic = {
+                id: tenantInfo.id,
+                slug: tenantInfo.slug,
+                schema_name: tenantInfo.schema_name,
+                name: tenantInfo.display_name,
+                logo_url: tenantInfo.logo_url,
+                address: [tenantInfo.address_line1, tenantInfo.address_line2, `${tenantInfo.city || ''} ${tenantInfo.state || ''} ${tenantInfo.zip || ''}`.trim()].filter(Boolean).join('\n'),
+                phone: tenantInfo.phone,
+                is_read_only: tenantInfo.is_read_only,
+                billing_locked: tenantInfo.billing_locked,
+                prescribing_locked: tenantInfo.prescribing_locked,
+                enabled_features: tenantInfo.enabled_features || {}
+            };
+        }
 
         // 5. Run Request within Context using the safer .run() method
         // This ensures the context is preserved across 모든 (all) async continuations 
