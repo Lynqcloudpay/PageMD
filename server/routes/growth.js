@@ -17,15 +17,27 @@ const TIERS = [
 ];
 
 /**
- * Helper: Calculate Total Monthly Billing based on seats
+ * Helper: Calculate Total Monthly Billing based on physical and ghost seats
+ * Ghost seats "cover" the most expensive early slots in the staircase model.
  */
-const calculateTotalBilling = (numSeats) => {
-    let total = 0;
-    for (let i = 1; i <= numSeats; i++) {
+const calculateTotalBilling = (physicalSeats, ghostSeats = 0) => {
+    const totalSlots = physicalSeats + ghostSeats;
+    const prices = [];
+
+    // 1. Calculate the price for every slot in the combined clinic
+    for (let i = 1; i <= totalSlots; i++) {
         const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
-        total += tier.rate;
+        prices.push(tier.rate);
     }
-    return total;
+
+    // 2. Sort prices descending so we can remove the most expensive ones (the Reward)
+    prices.sort((a, b) => b - a);
+
+    // 3. Remove the top-priced slots equal to the number of ghost seats
+    const paidPrices = prices.slice(ghostSeats);
+
+    // 4. Sum the remaining (cheaper) slots that the user actually pays for
+    return paidPrices.reduce((a, b) => a + b, 0);
 };
 
 /**
@@ -59,8 +71,8 @@ router.get('/stats', async (req, res) => {
 
         // 3. Billing Logic
         const totalBillingSeats = physicalSeats + ghostSeats;
-        const totalMonthly = calculateTotalBilling(totalBillingSeats);
-        const currentAvgPerSeat = Math.round(totalMonthly / totalBillingSeats);
+        const totalMonthly = calculateTotalBilling(physicalSeats, ghostSeats);
+        const currentAvgPerSeat = totalBillingSeats > 0 ? Math.round(totalMonthly / physicalSeats) : 0;
         const currentTier = TIERS.find(t => totalBillingSeats >= t.min && totalBillingSeats <= t.max) || TIERS[TIERS.length - 1];
 
         // 4. Check for Churn Notifications (Soft Landing)
@@ -82,8 +94,8 @@ router.get('/stats', async (req, res) => {
         let nextMilestone = null;
         const maxCheck = 100; // Check up to Enterprise level
         for (let s = totalBillingSeats + 1; s <= maxCheck; s++) {
-            const nextTotal = calculateTotalBilling(s);
-            const nextAvg = Math.round(nextTotal / s);
+            const nextTotal = calculateTotalBilling(physicalSeats, s - physicalSeats);
+            const nextAvg = Math.round(nextTotal / physicalSeats);
             if (nextAvg < currentAvgPerSeat) {
                 nextMilestone = {
                     referralsNeeded: s - totalBillingSeats,
