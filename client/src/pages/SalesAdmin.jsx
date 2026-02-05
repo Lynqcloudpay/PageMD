@@ -684,38 +684,49 @@ const SalesAdmin = () => {
                             <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Inquiry Lifecycle</h2>
 
                             {/* Category Tabs - Cancellation Style */}
-                            <div className="grid grid-cols-3 gap-2 mb-4">
+                            <div className="grid grid-cols-4 gap-1.5 mb-4">
                                 <button
                                     onClick={() => setActiveCategory('pending')}
-                                    className={`p-3 rounded-xl border-2 transition-all text-left flex flex-col gap-1 ${activeCategory === 'pending'
+                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'pending'
                                         ? 'bg-blue-50 border-blue-500 shadow-sm'
                                         : 'bg-white border-slate-100 hover:border-slate-200'}`}
                                 >
-                                    <span className={`text-[9px] font-black uppercase tracking-wider ${activeCategory === 'pending' ? 'text-blue-600' : 'text-slate-400'}`}>Pending</span>
-                                    <span className={`text-xl font-black ${activeCategory === 'pending' ? 'text-blue-700' : 'text-slate-900'}`}>
+                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'pending' ? 'text-blue-600' : 'text-slate-400'}`}>Pending</span>
+                                    <span className={`text-lg font-black ${activeCategory === 'pending' ? 'text-blue-700' : 'text-slate-900'}`}>
                                         {inquiries.filter(i => ['new', 'contacted'].includes(i.status || 'new')).length}
                                     </span>
                                 </button>
                                 <button
                                     onClick={() => setActiveCategory('pipeline')}
-                                    className={`p-3 rounded-xl border-2 transition-all text-left flex flex-col gap-1 ${activeCategory === 'pipeline'
+                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'pipeline'
                                         ? 'bg-indigo-50 border-indigo-500 shadow-sm'
                                         : 'bg-white border-slate-100 hover:border-slate-200'}`}
                                 >
-                                    <span className={`text-[9px] font-black uppercase tracking-wider ${activeCategory === 'pipeline' ? 'text-indigo-600' : 'text-slate-400'}`}>Pipeline</span>
-                                    <span className={`text-xl font-black ${activeCategory === 'pipeline' ? 'text-indigo-700' : 'text-slate-900'}`}>
+                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'pipeline' ? 'text-indigo-600' : 'text-slate-400'}`}>Pipeline</span>
+                                    <span className={`text-lg font-black ${activeCategory === 'pipeline' ? 'text-indigo-700' : 'text-slate-900'}`}>
                                         {inquiries.filter(i => ['demo_scheduled', 'follow_up'].includes(i.status)).length}
                                     </span>
                                 </button>
                                 <button
-                                    onClick={() => setActiveCategory('completed')}
-                                    className={`p-3 rounded-xl border-2 transition-all text-left flex flex-col gap-1 ${activeCategory === 'completed'
+                                    onClick={() => setActiveCategory('converted')}
+                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'converted'
+                                        ? 'bg-emerald-50 border-emerald-500 shadow-sm'
+                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                >
+                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'converted' ? 'text-emerald-600' : 'text-slate-400'}`}>Converted</span>
+                                    <span className={`text-lg font-black ${activeCategory === 'converted' ? 'text-emerald-700' : 'text-slate-900'}`}>
+                                        {inquiries.filter(i => i.status === 'converted').length}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveCategory('closed')}
+                                    className={`p-2.5 rounded-xl border-2 transition-all text-left flex flex-col gap-0.5 ${activeCategory === 'closed'
                                         ? 'bg-slate-50 border-slate-400 shadow-sm'
                                         : 'bg-white border-slate-100 hover:border-slate-200'}`}
                                 >
-                                    <span className={`text-[9px] font-black uppercase tracking-wider ${activeCategory === 'completed' ? 'text-slate-500' : 'text-slate-400'}`}>Done</span>
-                                    <span className={`text-xl font-black ${activeCategory === 'completed' ? 'text-slate-700' : 'text-slate-900'}`}>
-                                        {inquiries.filter(i => ['converted', 'closed'].includes(i.status)).length}
+                                    <span className={`text-[8px] font-black uppercase tracking-wider ${activeCategory === 'closed' ? 'text-slate-500' : 'text-slate-400'}`}>Closed</span>
+                                    <span className={`text-lg font-black ${activeCategory === 'closed' ? 'text-slate-700' : 'text-slate-900'}`}>
+                                        {inquiries.filter(i => i.status === 'closed').length}
                                     </span>
                                 </button>
                             </div>
@@ -761,7 +772,8 @@ const SalesAdmin = () => {
                                     const categoryMap = {
                                         pending: ['new', 'contacted'],
                                         pipeline: ['demo_scheduled', 'follow_up'],
-                                        completed: ['converted', 'closed']
+                                        converted: ['converted'],
+                                        closed: ['closed']
                                     };
 
                                     const displayItems = filteredInquiries.filter(i =>
