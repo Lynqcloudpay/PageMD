@@ -10,7 +10,8 @@ const tenantManager = require('../services/tenantManager');
 const resolveTenant = async (req, res, next) => {
     // 1. Skip Tenant Context for Platform Admin / Public Routes
     if (req.path.startsWith('/super/') || req.path.startsWith('/platform-auth/') ||
-        req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/')) {
+        req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/') ||
+        req.path.startsWith('/sales/') || req.path.startsWith('/api/sales/')) {
         return next();
     }
 
