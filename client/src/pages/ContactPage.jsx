@@ -17,17 +17,21 @@ const ContactPage = () => {
         practice: '',
         providers: '',
         message: '',
-        interest: 'demo'
+        interest: 'demo',
+        referral_code: ''
     });
 
     // Pre-fill from URL params (e.g., from pricing page)
     useEffect(() => {
         const plan = searchParams.get('plan');
         const interest = searchParams.get('interest');
-        if (plan || interest) {
+        const ref = searchParams.get('ref') || localStorage.getItem('pagemd_referral');
+
+        if (plan || interest || ref) {
             setFormData(prev => ({
                 ...prev,
-                interest: interest || 'sandbox',
+                interest: interest || prev.interest,
+                referral_code: ref || prev.referral_code,
                 message: plan ? `I'm interested in the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.` : prev.message
             }));
         }

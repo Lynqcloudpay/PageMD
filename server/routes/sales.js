@@ -173,7 +173,8 @@ router.post('/inquiry', async (req, res) => {
             providers,
             message,
             interest,
-            source
+            source,
+            referral_code
         } = req.body;
 
         if (!name || !email) {
@@ -183,11 +184,11 @@ router.post('/inquiry', async (req, res) => {
         const result = await pool.query(`
             INSERT INTO sales_inquiries (
                 name, email, phone, practice_name, provider_count,
-                message, interest_type, source, status, created_at
+                message, interest_type, source, status, referral_code, created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'new', NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'new', $9, NOW())
             RETURNING id, created_at
-        `, [name, email, phone, practice, providers, message, interest, source]);
+        `, [name, email, phone, practice, providers, message, interest, source, referral_code]);
 
         const inquiry = result.rows[0];
 
