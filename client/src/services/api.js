@@ -652,6 +652,7 @@ export const partnersAPI = {
 export const growthAPI = {
   getStats: () => api.get('/growth/stats'),
   invite: (data) => api.post('/growth/invite', data),
+  getAlerts: () => api.get('/growth/alerts'),
 };
 
 export default api;

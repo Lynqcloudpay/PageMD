@@ -1,0 +1,161 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Bell, X, TrendingDown, AlertTriangle, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { growthAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+
+const AlertBell = () => {
+    const navigate = useNavigate();
+    const { user } = useAuth();
+    const [alerts, setAlerts] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const dropdownRef = useRef(null);
+
+    // Only show for admins
+    const isAdmin = user?.isAdmin || user?.role === 'admin';
+
+    const fetchAlerts = async () => {
+        if (!isAdmin) return;
+        try {
+            setLoading(true);
+            const response = await growthAPI.getAlerts();
+            setAlerts(response.data?.alerts || []);
+        } catch (error) {
+            console.error('Failed to fetch alerts:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAlerts();
+        // Refresh every 60 seconds
+        const interval = setInterval(fetchAlerts, 60000);
+        return () => clearInterval(interval);
+    }, [isAdmin]);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    if (!isAdmin) return null;
+
+    const alertCount = alerts.length;
+    const hasWarnings = alerts.some(a => a.severity === 'warning');
+
+    const handleAlertClick = (alert) => {
+        if (alert.actionUrl) {
+            navigate(alert.actionUrl);
+        }
+        setShowDropdown(false);
+    };
+
+    const getAlertIcon = (type) => {
+        switch (type) {
+            case 'churn':
+            case 'expiring':
+                return <TrendingDown className="w-4 h-4" />;
+            default:
+                return <AlertTriangle className="w-4 h-4" />;
+        }
+    };
+
+    const getAlertColor = (severity) => {
+        switch (severity) {
+            case 'warning':
+                return 'text-amber-600 bg-amber-50 border-amber-200';
+            case 'error':
+                return 'text-red-600 bg-red-50 border-red-200';
+            default:
+                return 'text-blue-600 bg-blue-50 border-blue-200';
+        }
+    };
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={() => setShowDropdown(!showDropdown)}
+                className={`relative p-2 rounded-lg transition-all ${alertCount > 0
+                        ? 'text-amber-600 hover:bg-amber-50'
+                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                    }`}
+            >
+                <Bell className="w-5 h-5" />
+                {alertCount > 0 && (
+                    <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full border-2 border-white ${hasWarnings ? 'bg-amber-500 text-white' : 'bg-blue-500 text-white'
+                        }`}>
+                        {alertCount > 9 ? '9+' : alertCount}
+                    </span>
+                )}
+            </button>
+
+            {showDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                        <h3 className="font-bold text-slate-800 text-sm">Notifications</h3>
+                        <button
+                            onClick={() => setShowDropdown(false)}
+                            className="text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto">
+                        {loading && alerts.length === 0 ? (
+                            <div className="p-6 text-center text-slate-400 text-sm">
+                                Loading...
+                            </div>
+                        ) : alerts.length === 0 ? (
+                            <div className="p-6 text-center">
+                                <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                <p className="text-slate-500 text-sm">No notifications</p>
+                                <p className="text-slate-400 text-xs mt-1">You're all caught up!</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {alerts.map((alert) => (
+                                    <button
+                                        key={alert.id}
+                                        onClick={() => handleAlertClick(alert)}
+                                        className="w-full p-4 text-left hover:bg-slate-50 transition-colors group"
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className={`p-2 rounded-lg ${getAlertColor(alert.severity)}`}>
+                                                {getAlertIcon(alert.type)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-slate-800 text-sm mb-0.5">
+                                                    {alert.title}
+                                                </p>
+                                                <p className="text-slate-500 text-xs leading-relaxed">
+                                                    {alert.message}
+                                                </p>
+                                                {alert.actionLabel && (
+                                                    <span className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-primary-600 group-hover:text-primary-700">
+                                                        {alert.actionLabel}
+                                                        <ChevronRight className="w-3 h-3" />
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default AlertBell;

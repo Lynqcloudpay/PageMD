@@ -178,4 +178,72 @@ router.post('/invite', async (req, res) => {
     }
 });
 
+/**
+ * GET /alerts
+ * Returns active alerts for the clinic admin (churn notifications, grace period warnings)
+ */
+router.get('/alerts', async (req, res) => {
+    try {
+        const clinicId = req.clinic.id;
+        const alerts = [];
+
+        // 1. Check for churned referrals (with grace period active)
+        const churnedRes = await pool.controlPool.query(`
+            SELECT referred_clinic_name, grace_period_expires_at, status, updated_at
+            FROM public.clinic_referrals 
+            WHERE referrer_clinic_id = $1 
+            AND status = 'churned' 
+            AND grace_period_expires_at > NOW()
+            ORDER BY grace_period_expires_at ASC
+        `, [clinicId]);
+
+        for (const row of churnedRes.rows) {
+            const daysRemaining = Math.ceil((new Date(row.grace_period_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+            alerts.push({
+                id: `churn-${row.referred_clinic_name}`,
+                type: 'churn',
+                severity: daysRemaining <= 14 ? 'warning' : 'info',
+                title: 'Referral Churn Notice',
+                message: `${row.referred_clinic_name} has deactivated. Your discount is protected for ${daysRemaining} more days (until ${new Date(row.grace_period_expires_at).toLocaleDateString()}).`,
+                createdAt: row.updated_at,
+                expiresAt: row.grace_period_expires_at,
+                actionUrl: '/admin-settings',
+                actionLabel: 'View Growth Rewards'
+            });
+        }
+
+        // 2. Check for grace periods expiring soon (within 14 days)
+        const expiringRes = await pool.controlPool.query(`
+            SELECT referred_clinic_name, grace_period_expires_at
+            FROM public.clinic_referrals 
+            WHERE referrer_clinic_id = $1 
+            AND status = 'churned' 
+            AND grace_period_expires_at > NOW()
+            AND grace_period_expires_at < NOW() + INTERVAL '14 days'
+        `, [clinicId]);
+
+        for (const row of expiringRes.rows) {
+            const daysRemaining = Math.ceil((new Date(row.grace_period_expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+            if (!alerts.find(a => a.id === `churn-${row.referred_clinic_name}`)) {
+                alerts.push({
+                    id: `expire-${row.referred_clinic_name}`,
+                    type: 'expiring',
+                    severity: 'warning',
+                    title: 'Grace Period Expiring',
+                    message: `Your discount from ${row.referred_clinic_name} expires in ${daysRemaining} days. Consider inviting more clinics to maintain your rate.`,
+                    createdAt: new Date(),
+                    expiresAt: row.grace_period_expires_at,
+                    actionUrl: '/admin-settings',
+                    actionLabel: 'Invite Clinics'
+                });
+            }
+        }
+
+        res.json({ alerts, count: alerts.length });
+    } catch (error) {
+        console.error('[Growth] Alerts failed:', error);
+        res.status(500).json({ error: 'Failed to fetch alerts' });
+    }
+});
+
 module.exports = router;

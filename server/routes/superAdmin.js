@@ -287,7 +287,7 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
             await pool.controlPool.query(`
                 UPDATE clinic_referrals 
                 SET status = 'churned', 
-                    grace_period_expires_at = NOW() + INTERVAL '90 days',
+                    grace_period_expires_at = NOW() + INTERVAL '30 days',
                     updated_at = NOW()
                 WHERE referred_clinic_id = $1
             `, [id]);

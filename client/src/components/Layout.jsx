@@ -17,6 +17,7 @@ import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 import SupportModal from './SupportModal';
 import BreakTheGlassModal from './BreakTheGlassModal';
+import AlertBell from './AlertBell';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -284,9 +285,14 @@ const Layout = ({ children }) => {
     return (
         <div className="flex min-h-screen bg-white transition-colors">
 
-            {/* Patient Tabs */}
-            <div className="fixed top-0 left-72 right-0 z-20 bg-white border-b border-deep-gray/10 shadow-sm" style={{ height: '48px' }}>
-                <PatientTabs />
+            {/* Patient Tabs + Alert Bell */}
+            <div className="fixed top-0 left-72 right-0 z-20 bg-white border-b border-deep-gray/10 shadow-sm flex items-center justify-between" style={{ height: '48px' }}>
+                <div className="flex-1 overflow-hidden">
+                    <PatientTabs />
+                </div>
+                <div className="flex items-center gap-2 px-4 flex-shrink-0">
+                    <AlertBell />
+                </div>
             </div>
 
             {/* Sidebar */}
