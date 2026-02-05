@@ -17,6 +17,7 @@ import {
     Zap
 } from 'lucide-react';
 import LandingNav from '../components/LandingNav';
+import tokenManager from '../services/tokenManager';
 
 const LandingPage = () => {
     const currentYear = new Date().getFullYear();
@@ -31,7 +32,9 @@ const LandingPage = () => {
             });
             const data = await res.json();
             if (data.token) {
-                localStorage.setItem('token', data.token);
+                tokenManager.setToken(data.token);
+                // Also clear any stale clinic slug since it's a sandbox
+                localStorage.removeItem('clinic_slug');
                 window.location.href = data.redirect;
             } else {
                 alert('Demo provisioning failed. Please try again.');

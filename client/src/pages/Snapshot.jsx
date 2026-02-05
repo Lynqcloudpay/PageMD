@@ -9,6 +9,7 @@ import {
 import {
     visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api
 } from '../services/api';
+import tokenManager from '../services/tokenManager';
 import { format, differenceInDays } from 'date-fns';
 import { DEFAULT_SPECIALTY_TEMPLATES, ALL_TRACKERS } from '../components/SpecialtyTracker';
 import { showError, showSuccess } from '../utils/toast';
@@ -343,7 +344,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         if (!doc.file_path) return '#';
         if (doc.file_path.startsWith('http')) return doc.file_path;
 
-        const token = localStorage.getItem('token');
+        const token = tokenManager.getToken();
         const baseUrl = `/api/documents/${doc.id}/file`;
         return token ? `${baseUrl}?token=${token}` : baseUrl;
     };
