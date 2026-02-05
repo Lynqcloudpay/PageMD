@@ -21,23 +21,23 @@ const TIERS = [
  * Ghost seats "cover" the most expensive early slots in the staircase model.
  */
 const calculateTotalBilling = (physicalSeats, ghostSeats = 0) => {
-    const totalSlots = physicalSeats + ghostSeats;
-    const prices = [];
+    const totalBillingSeats = physicalSeats + ghostSeats;
+    if (totalBillingSeats <= 0) return 0;
+    if (physicalSeats <= 0) return 0;
 
-    // 1. Calculate the price for every slot in the combined clinic
-    for (let i = 1; i <= totalSlots; i++) {
+    let virtualTotal = 0;
+
+    // 1. Calculate the total cost for the virtual practice (Physical + Ghost)
+    for (let i = 1; i <= totalBillingSeats; i++) {
         const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
-        prices.push(tier.rate);
+        virtualTotal += tier.rate;
     }
 
-    // 2. Sort prices descending so we can remove the most expensive ones (the Reward)
-    prices.sort((a, b) => b - a);
+    // 2. Find the Effective Average Rate
+    const effectiveAverageRate = virtualTotal / totalBillingSeats;
 
-    // 3. Remove the top-priced slots equal to the number of ghost seats
-    const paidPrices = prices.slice(ghostSeats);
-
-    // 4. Sum the remaining (cheaper) slots that the user actually pays for
-    return paidPrices.reduce((a, b) => a + b, 0);
+    // 3. Final bill is Physical Doctors * Effective Average Rate
+    return Math.round(physicalSeats * effectiveAverageRate);
 };
 
 /**

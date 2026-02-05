@@ -181,23 +181,20 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
 
         const totalBillingSeats = physicalSeats + ghostSeats;
 
-        // Calculate total monthly using staircase logic
-        // Ghost seats occupy the most expensive slots but are not charged
-        const prices = [];
+        // Calculate total monthly using Average Cost methodology
+        let virtualTotal = 0;
         for (let i = 1; i <= totalBillingSeats; i++) {
             const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
-            prices.push(tier.rate);
+            virtualTotal += tier.rate;
         }
 
-        // Sort descending and remove the top N prices where N is ghost seats (The Reward)
-        prices.sort((a, b) => b - a);
-        const paidPrices = prices.slice(ghostSeats);
-        const totalMonthly = paidPrices.reduce((sum, rate) => sum + rate, 0);
+        const avgRatePerSeat = totalBillingSeats > 0 ? virtualTotal / totalBillingSeats : 399;
+        const totalMonthly = Math.round(physicalSeats * avgRatePerSeat);
 
-        console.log(`[SuperAdmin-Billing] Clinic: ${id}, Physical: ${physicalSeats}, Ghost: ${ghostSeats}, Total Month: ${totalMonthly}`);
+        console.log(`[SuperAdmin-Billing] Clinic: ${id}, Physical: ${physicalSeats}, Ghost: ${ghostSeats}, Virtual Total: ${virtualTotal}, Avg Rate: ${avgRatePerSeat}, Final: ${totalMonthly}`);
 
         const currentTier = TIERS.find(t => totalBillingSeats >= t.min && totalBillingSeats <= t.max) || TIERS[TIERS.length - 1];
-        const avgRatePerSeat = physicalSeats > 0 ? Math.round(totalMonthly / physicalSeats) : 0;
+        const displayAvgRate = Math.round(avgRatePerSeat);
 
         res.json({
             clinic: clinicData,
@@ -213,7 +210,7 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
                 totalBillingSeats,
                 currentTier: currentTier.name,
                 marginalRate: currentTier.rate,
-                avgRatePerSeat,
+                avgRatePerSeat: parseFloat(avgRatePerSeat.toFixed(2)),
                 totalMonthly,
                 tiers: TIERS
             }

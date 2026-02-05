@@ -61,17 +61,19 @@ const PricingPage = () => {
     }, [seats]);
 
     const calculateTotal = (numSeats) => {
-        let total = 0;
+        let virtualTotal = 0;
+        // 1. Calculate the cost for any N seats using the staircase buckets
         for (let i = 1; i <= numSeats; i++) {
             const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
-            total += tier.rate;
+            virtualTotal += tier.rate;
         }
-        return total;
+        return virtualTotal;
     };
 
-    const totalMonthly = useMemo(() => calculateTotal(seats), [seats]);
-    const avgCostPerSeat = useMemo(() => Math.round(totalMonthly / seats), [totalMonthly, seats]);
-    const totalSavings = useMemo(() => (seats * 399) - totalMonthly, [seats, totalMonthly]);
+    const virtualTotal = useMemo(() => calculateTotal(seats), [seats]);
+    const avgCostPerSeat = useMemo(() => Math.round(virtualTotal / seats), [virtualTotal, seats]);
+    const totalMonthly = useMemo(() => seats * (virtualTotal / seats), [seats, virtualTotal]); // This is just virtualTotal for the slider
+    const totalSavings = useMemo(() => (seats * 399) - virtualTotal, [seats, virtualTotal]);
 
     const incrementSeats = () => setSeats(prev => Math.min(prev + 1, 11));
     const decrementSeats = () => setSeats(prev => Math.max(prev - 1, 1));
