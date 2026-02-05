@@ -185,6 +185,8 @@ router.post('/invite', async (req, res) => {
 router.get('/alerts', async (req, res) => {
     try {
         const clinicId = req.clinic.id;
+        console.log(`[Growth] Fetching alerts for clinic: ${clinicId} (${req.clinic.slug})`);
+
         const alerts = [];
 
         // 1. Check for churned referrals (with grace period active)
@@ -196,6 +198,8 @@ router.get('/alerts', async (req, res) => {
             AND grace_period_expires_at > NOW()
             ORDER BY grace_period_expires_at ASC
         `, [clinicId]);
+
+        console.log(`[Growth] Found ${churnedRes.rows.length} churned referrals`);
 
         for (const row of churnedRes.rows) {
             const daysRemaining = Math.ceil((new Date(row.grace_period_expires_at) - new Date()) / (1000 * 60 * 60 * 24));

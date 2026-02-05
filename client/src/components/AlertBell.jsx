@@ -10,19 +10,19 @@ const AlertBell = () => {
     const [alerts, setAlerts] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const dropdownRef = useRef(null);
 
-    // Only show for admins
-    const isAdmin = user?.isAdmin || user?.role === 'admin';
-
     const fetchAlerts = async () => {
-        if (!isAdmin) return;
         try {
             setLoading(true);
+            setError(null);
             const response = await growthAPI.getAlerts();
+            console.log('[AlertBell] API response:', response.data);
             setAlerts(response.data?.alerts || []);
-        } catch (error) {
-            console.error('Failed to fetch alerts:', error);
+        } catch (err) {
+            console.error('[AlertBell] Failed to fetch alerts:', err);
+            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -33,7 +33,7 @@ const AlertBell = () => {
         // Refresh every 60 seconds
         const interval = setInterval(fetchAlerts, 60000);
         return () => clearInterval(interval);
-    }, [isAdmin]);
+    }, []);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -45,8 +45,6 @@ const AlertBell = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-
-    if (!isAdmin) return null;
 
     const alertCount = alerts.length;
     const hasWarnings = alerts.some(a => a.severity === 'warning');
@@ -84,8 +82,8 @@ const AlertBell = () => {
             <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className={`relative p-2 rounded-lg transition-all ${alertCount > 0
-                        ? 'text-amber-600 hover:bg-amber-50'
-                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                    ? 'text-amber-600 hover:bg-amber-50'
+                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
                     }`}
             >
                 <Bell className="w-5 h-5" />
