@@ -252,6 +252,12 @@ router.patch('/inquiries/:id', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { status, notes } = req.body;
+        const adminId = req.user.id; // From verifyToken
+
+        // Get current status for comparison
+        const currentRes = await pool.query('SELECT status FROM sales_inquiries WHERE id = $1', [id]);
+        if (currentRes.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found' });
+        const oldStatus = currentRes.rows[0].status;
 
         const result = await pool.query(`
             UPDATE sales_inquiries
@@ -262,15 +268,109 @@ router.patch('/inquiries/:id', verifyToken, async (req, res) => {
             RETURNING *
         `, [status, notes, id]);
 
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Inquiry not found' });
+        const updatedInquiry = result.rows[0];
+
+        // Log status change if it changed
+        if (status && status !== oldStatus) {
+            await pool.query(`
+                INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content, metadata)
+                VALUES ($1, $2, 'status_change', $3, $4)
+            `, [id, adminId, `Status changed from ${oldStatus} to ${status}`, JSON.stringify({ old: oldStatus, new: status })]);
         }
 
-        res.json(result.rows[0]);
+        // Log manual note update (legacy support)
+        if (notes) {
+            await pool.query(`
+                INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content)
+                VALUES ($1, $2, 'note', $3)
+            `, [id, adminId, 'Updated legacy notes']);
+        }
+
+        res.json(updatedInquiry);
 
     } catch (error) {
         console.error('Error updating inquiry:', error);
         res.status(500).json({ error: 'Failed to update inquiry' });
+    }
+});
+
+/**
+ * GET /api/sales/inquiries/:id/logs
+ * Get activity logs for an inquiry
+ */
+router.get('/inquiries/:id/logs', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(`
+            SELECT l.*, u.username as admin_name 
+            FROM sales_inquiry_logs l
+            LEFT JOIN sales_team_users u ON l.admin_id = u.id
+            WHERE l.inquiry_id = $1
+            ORDER BY l.created_at ASC
+        `, [id]);
+        res.json({ logs: result.rows });
+    } catch (error) {
+        console.error('Error fetching logs:', error);
+        res.status(500).json({ error: 'Failed to fetch logs' });
+    }
+});
+
+/**
+ * POST /api/sales/inquiries/:id/logs
+ * Add a manual log entry (note, call, email)
+ */
+router.post('/inquiries/:id/logs', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { content, type = 'note' } = req.body;
+        const adminId = req.user.id;
+
+        const result = await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `, [id, adminId, type, content]);
+
+        res.json({ log: result.rows[0] });
+    } catch (error) {
+        console.error('Error creating log:', error);
+        res.status(500).json({ error: 'Failed to create log' });
+    }
+});
+
+/**
+ * POST /api/sales/inquiries/:id/schedule-demo
+ * Schedule a demo and send invites
+ */
+router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { date, notes } = req.body; // ISO date string
+        const adminId = req.user.id;
+
+        if (!date) return res.status(400).json({ error: 'Date is required' });
+
+        // 1. Update inquiry
+        await pool.query(`
+            UPDATE sales_inquiries 
+            SET demo_scheduled_at = $1, status = 'demo_scheduled', updated_at = NOW()
+            WHERE id = $2
+        `, [date, id]);
+
+        // 2. Log it
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content, metadata)
+            VALUES ($1, $2, 'demo_scheduled', $3, $4)
+        `, [id, adminId, `Demo scheduled for ${new Date(date).toLocaleString()}`, JSON.stringify({ date, notes })]);
+
+        // 3. Send Email (Mock for now, or use emailService if valid)
+        // TODO: Integrate actual email sending here
+        console.log(`[SALES] Demo scheduled for ${id} at ${date}`);
+
+        res.json({ success: true, message: 'Demo scheduled successfully' });
+    } catch (error) {
+        console.error('Error scheduling demo:', error);
+        res.status(500).json({ error: 'Failed to schedule demo' });
     }
 });
 
