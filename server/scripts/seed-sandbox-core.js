@@ -140,13 +140,14 @@ PLAN: Continue current medications. Laboratory work ordered for next visit. Foll
                 height: "68", weight: `${baseWeight}`, bmi: "24.3",
                 bp: `${baseSys}/${baseDia}`, temp: "98.4", pulse: "72", rr: "16", spo2: "99"
             };
+            const noteTemplate = `SUBJECTIVE: Patient presents for today's evaluation of acute onset cough and congestion. \nOBJECTIVE: ...`;
             await client.query(`
                 INSERT INTO visits (
                     clinic_id, patient_id, provider_id, visit_date, encounter_date, 
                     visit_type, note_type, status, vitals, note_draft
                 )
-                VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_DATE, 'Office Visit', 'office_visit', 'draft', $4, 'SUBJECTIVE: Patient presents for today\'s evaluation of acute onset cough and congestion. \nOBJECTIVE: ...')
-            `, [clinicId, patientId, providerId, JSON.stringify(draftVitals)]);
+                VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_DATE, 'Office Visit', 'office_visit', 'draft', $4, $5)
+            `, [clinicId, patientId, providerId, JSON.stringify(draftVitals), noteTemplate]);
         }
 
         // 6. Seed Appointments
