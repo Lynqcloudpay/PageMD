@@ -3,7 +3,7 @@
  * Populates a target schema with 10 "Gold-Standard" patient charts.
  */
 
-async function seedSandbox(client, schemaName) {
+async function seedSandbox(client, schemaName, providerId) {
     console.log(`[Seed] Seeding clinical data for ${schemaName}...`);
 
     // Set search_path specifically for this seeding run
@@ -31,17 +31,27 @@ async function seedSandbox(client, schemaName) {
 
         const patientId = res.rows[0].id;
 
-        // Seed some vitals
-        await client.query(`
-            INSERT INTO vitals (patient_id, height_in, weight_lbs, bmi, blood_pressure_systolic, blood_pressure_diastolic, temperature_f, pulse, respiratory_rate, oxygen_saturation)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        `, [patientId, 70, 180, 25.8, 120, 80, 98.6, 72, 16, 98]);
+        const vitals = {
+            height: "70 in",
+            weight: "180 lbs",
+            bmi: "25.8",
+            bp: "120/80",
+            temp: "98.6 F",
+            pulse: "72",
+            rr: "16",
+            spo2: "98%"
+        };
 
-        // Seed a SOAP note
+        const noteDraft = `SUBJECTIVE: Patient feels well. No acute complaints.
+OBJECTIVE: Physical exam normal.
+ASSESSMENT: Healthy adult.
+PLAN: Continue healthy diet and exercise.`;
+
+        // Seed a visit with vitals and note
         await client.query(`
-            INSERT INTO visits (patient_id, visit_date, reason_for_visit, status, soap_subjective, soap_objective, soap_assessment, soap_plan)
-            VALUES ($1, CURRENT_DATE, $2, $3, $4, $5, $6, $7)
-        `, [patientId, 'Annual Physical', 'completed', 'Patient feels well.', 'Physical exam normal.', 'Healthy adult.', 'Continue healthy diet and exercise.']);
+            INSERT INTO visits (patient_id, provider_id, visit_date, encounter_date, visit_type, note_type, status, vitals, note_draft)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_DATE, $3, $4, $5, $6, $7)
+        `, [patientId, providerId, 'Office Visit', 'office_visit', 'draft', JSON.stringify(vitals), noteDraft]);
     }
 
     console.log(`[Seed] Successfully seeded 10 patients in ${schemaName}`);

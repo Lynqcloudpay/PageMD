@@ -24,21 +24,21 @@ router.post('/provision', async (req, res) => {
 
         await client.query('BEGIN');
 
-        // 1. Create Schema
+        // 1. Create Schema and Tables
         await client.query(`CREATE SCHEMA ${schemaName}`);
-
-        // 2. Set search_path and run initial migrations
         await client.query(`SET search_path TO ${schemaName}, public`);
         await client.query(tenantSchemaSQL);
 
-        // 3. Seed "Master Demo" data
-        await seedSandbox(client, schemaName);
-
-        // Ensure admin user exists in the schema
-        await client.query(`
+        // 2. Create Default Sandbox Provider
+        const providerRes = await client.query(`
             INSERT INTO users (email, first_name, last_name, role, is_admin, status)
             VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id
         `, ['demo@pagemd.com', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
+        const providerId = providerRes.rows[0].id;
+
+        // 3. Seed Clinical Data
+        await seedSandbox(client, schemaName, providerId);
 
         await client.query('COMMIT');
 

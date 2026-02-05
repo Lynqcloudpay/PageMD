@@ -8,6 +8,10 @@ const tenantManager = require('../services/tenantManager');
  * Sets up the AsyncLocalStorage context for database queries.
  */
 const resolveTenant = async (req, res, next) => {
+    // 0. Exempt public / tenant-agnostic routes from resolution
+    if (req.path.includes('/auth/sandbox') || req.path.includes('/sales')) {
+        return next();
+    }
     // 1. Skip Tenant Context for Platform Admin / Public Routes
     if (req.path.startsWith('/super/') || req.path.startsWith('/platform-auth/') ||
         req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/') ||
