@@ -25,6 +25,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
         setIsSubmitting(true);
 
         try {
@@ -32,7 +33,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
             const referralCode = localStorage.getItem('pagemd_referral');
 
             // 1. Submit Lead to Sales Admin
-            await fetch(`${baseUrl}/sales/inquiry`, {
+            const leadRes = await fetch(`${baseUrl}/sales/inquiry`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -40,7 +41,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                     email: formData.email,
                     phone: formData.phone,
                     practice: formData.practice,
-                    providers: '', // Default for now
+                    providers: '',
                     interest: 'sandbox',
                     source: 'Sandbox_Demo',
                     message: `Automated lead from Sandbox Demo Gate${formData.specialty ? ` | Specialty: ${formData.specialty}` : ''}`,
@@ -48,17 +49,17 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                 })
             });
 
-            // 2. Set Cookie (recognized for 30 days)
-            const expiry = new Date();
-            expiry.setDate(expiry.getDate() + 30);
-            document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+            // 2. Set Cookie (recognized for 30 days) if lead submission was okay
+            if (leadRes.ok) {
+                const expiry = new Date();
+                expiry.setDate(expiry.getDate() + 30);
+                document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+            }
 
             // 3. Launch the Demo
             onLaunch();
         } catch (error) {
             console.error('Lead capture error:', error);
-            // Even if lead capture fails locally, we want the user to see the demo 
-            // but we'll try to launch it anyway to avoid friction.
             onLaunch();
         } finally {
             setIsSubmitting(false);

@@ -38,25 +38,31 @@ const LandingPage = () => {
     };
 
     const handleInstantDemo = async () => {
+        if (loading) return; // Prevent multiple clicks
         setLoading(true);
-        setIsModalOpen(false); // Close modal if it was open
+        setIsModalOpen(false);
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/sandbox/provision`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`Server responded with ${res.status}: ${errorText.substring(0, 100)}`);
+            }
+
             const data = await res.json();
             if (data.token) {
                 tokenManager.setToken(data.token);
-                // Also clear any stale clinic slug since it's a sandbox
                 localStorage.removeItem('clinic_slug');
                 window.location.href = data.redirect;
             } else {
-                alert('Demo provisioning failed. Please try again.');
+                throw new Error('Demo provisioning failed - no token received.');
             }
         } catch (error) {
             console.error('Sandbox error:', error);
-            alert('Could not start demo. Please check your connection.');
+            alert(`Demo Launch Failed: ${error.message || 'Please check your connection.'}`);
         } finally {
             setLoading(false);
         }
