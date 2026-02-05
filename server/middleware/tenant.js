@@ -166,7 +166,19 @@ const resolveTenant = async (req, res, next) => {
         // We use controlPool directly to find the tenant wrapper info
         let tenantInfo = null;
 
-        if (lookupSchema) {
+        if (req.isSandbox) {
+            tenantInfo = {
+                id: 'demo',
+                slug: 'demo',
+                schema_name: lookupSchema,
+                display_name: 'PageMD Sandbox Demo',
+                status: 'active',
+                is_read_only: false,
+                billing_locked: false,
+                prescribing_locked: false,
+                enabled_features: { efax: true, labs: true, telehealth: true, eprescribe: true }
+            };
+        } else if (lookupSchema) {
             // We already found the schema by email
             const result = await pool.controlPool.query(
                 'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked, enabled_features FROM clinics WHERE schema_name = $1 AND status = \'active\'',
@@ -212,33 +224,20 @@ const resolveTenant = async (req, res, next) => {
         // Critical Security Step: Set Search Path
         await client.query(`SET search_path TO ${schema_name}, public`);
 
-        if (req.isSandbox) {
-            req.clinic = {
-                id: 'demo',
-                slug: 'demo',
-                schema_name: lookupSchema,
-                name: 'PageMD Sandbox Demo',
-                is_read_only: false,
-                billing_locked: false,
-                prescribing_locked: false,
-                enabled_features: { efax: true, labs: true, telehealth: true, eprescribe: true }
-            };
-        } else {
-            // Attach clinic info
-            req.clinic = {
-                id: tenantInfo.id,
-                slug: tenantInfo.slug,
-                schema_name: tenantInfo.schema_name,
-                name: tenantInfo.display_name,
-                logo_url: tenantInfo.logo_url,
-                address: [tenantInfo.address_line1, tenantInfo.address_line2, `${tenantInfo.city || ''} ${tenantInfo.state || ''} ${tenantInfo.zip || ''}`.trim()].filter(Boolean).join('\n'),
-                phone: tenantInfo.phone,
-                is_read_only: tenantInfo.is_read_only,
-                billing_locked: tenantInfo.billing_locked,
-                prescribing_locked: tenantInfo.prescribing_locked,
-                enabled_features: tenantInfo.enabled_features || {}
-            };
-        }
+        // 5. Attach Unified Clinic Context
+        req.clinic = {
+            id: tenantInfo.id,
+            slug: tenantInfo.slug,
+            schema_name: tenantInfo.schema_name,
+            name: tenantInfo.display_name,
+            logo_url: tenantInfo.logo_url,
+            address: [tenantInfo.address_line1, tenantInfo.address_line2, `${tenantInfo.city || ''} ${tenantInfo.state || ''} ${tenantInfo.zip || ''}`.trim()].filter(Boolean).join('\n'),
+            phone: tenantInfo.phone,
+            is_read_only: tenantInfo.is_read_only,
+            billing_locked: tenantInfo.billing_locked,
+            prescribing_locked: tenantInfo.prescribing_locked,
+            enabled_features: tenantInfo.enabled_features || {}
+        };
 
         // 5. Run Request within Context using the safer .run() method
         // This ensures the context is preserved across 모든 (all) async continuations 
