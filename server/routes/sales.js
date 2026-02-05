@@ -213,6 +213,7 @@ router.post('/inquiry', async (req, res) => {
  */
 router.get('/inquiries', verifyToken, async (req, res) => {
     try {
+        console.log('[SALES] Fetching inquiries. Query:', req.query);
         const { status, limit = 50, offset = 0 } = req.query;
 
         let query = `
@@ -230,6 +231,7 @@ router.get('/inquiries', verifyToken, async (req, res) => {
         params.push(limit, offset);
 
         const result = await pool.query(query, params);
+        console.log(`[SALES] Query successful. Found ${result.rows.length} rows.`);
 
         res.json({
             inquiries: result.rows,
@@ -237,7 +239,7 @@ router.get('/inquiries', verifyToken, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching sales inquiries:', error);
+        console.error('[SALES] Error fetching inquiries:', error);
         res.status(500).json({ error: 'Failed to fetch inquiries' });
     }
 });
@@ -281,21 +283,34 @@ router.post('/inquiries/:id/activate-referral', verifyToken, async (req, res) =>
         const { id } = req.params;
 
         // 1. Get Inquiry
+        console.log(`[SALES] Activating referral for inquiry ${id}`);
         const inquiryRes = await pool.query('SELECT * FROM sales_inquiries WHERE id = $1', [id]);
         const inquiry = inquiryRes.rows[0];
 
-        if (!inquiry) return res.status(404).json({ error: 'Inquiry not found' });
-        if (!inquiry.referral_code) return res.status(400).json({ error: 'No referral code on this inquiry' });
-        if (inquiry.referral_activated) return res.status(400).json({ error: 'Referral already activated' });
+        if (!inquiry) {
+            console.warn(`[SALES] Inquiry ${id} not found`);
+            return res.status(404).json({ error: 'Inquiry not found' });
+        }
+        if (!inquiry.referral_code) {
+            console.warn(`[SALES] Inquiry ${id} has no referral code`);
+            return res.status(400).json({ error: 'No referral code on this inquiry' });
+        }
+        if (inquiry.referral_activated) {
+            console.warn(`[SALES] Inquiry ${id} already activated`);
+            return res.status(400).json({ error: 'Referral already activated' });
+        }
 
         // 2. Find Referrer Clinic (Global lookup)
+        console.log(`[SALES] Finding referrer for code: ${inquiry.referral_code}`);
         const referrerRes = await pool.query('SELECT id, display_name FROM clinics WHERE referral_code = $1', [inquiry.referral_code]);
         if (referrerRes.rows.length === 0) {
+            console.error(`[SALES] Referrer not found for code: ${inquiry.referral_code}`);
             return res.status(404).json({ error: `Referrer clinic with code '${inquiry.referral_code}' not found` });
         }
         const referrer = referrerRes.rows[0];
 
         // 3. Create active referral record
+        console.log(`[SALES] Creating referral record for clinic ${referrer.id} (${referrer.display_name})`);
         await pool.query(`
             INSERT INTO clinic_referrals (
                 referrer_clinic_id, 
@@ -307,6 +322,7 @@ router.post('/inquiries/:id/activate-referral', verifyToken, async (req, res) =>
         `, [referrer.id, inquiry.practice_name || inquiry.name, inquiry.email]);
 
         // 4. Mark inquiry as activated
+        console.log(`[SALES] Marking inquiry ${id} as activated`);
         await pool.query(`
             UPDATE sales_inquiries 
             SET referral_activated = true, 
@@ -315,6 +331,7 @@ router.post('/inquiries/:id/activate-referral', verifyToken, async (req, res) =>
             WHERE id = $1
         `, [id]);
 
+        console.log(`[SALES] Referral activation successful for inquiry ${id}`);
         res.json({
             success: true,
             message: `Referral activated! ${referrer.display_name} has received credit.`
