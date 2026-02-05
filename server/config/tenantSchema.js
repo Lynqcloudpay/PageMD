@@ -122,12 +122,22 @@ CREATE TABLE IF NOT EXISTS audit_events (
     tenant_id uuid,
     actor_type character varying(20) NOT NULL,
     actor_id uuid,
+    actor_user_id uuid,
+    actor_role character varying(50), -- Added
     action character varying(100) NOT NULL,
-    object_type character varying(50) NOT NULL,
-    object_id uuid,
-    ip character varying(45),
+    entity_type character varying(50),
+    entity_id uuid,
+    encounter_id uuid,
+    patient_id uuid,
+    details jsonb DEFAULT '{}',
+    ip_address character varying(45), -- Renamed from ip
     user_agent text,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+    request_id uuid, -- Added
+    reason_for_access text, -- Added
+    previous_hash text, -- Added for chaining
+    current_hash text, -- Added for chaining
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    occurred_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -1150,6 +1160,30 @@ CREATE SEQUENCE settings_id_seq
 
 ALTER SEQUENCE settings_id_seq OWNED BY settings.id;
 
+CREATE TABLE IF NOT EXISTS health_maintenance (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    patient_id uuid NOT NULL,
+    type text NOT NULL,
+    due_date date,
+    completed_date date,
+    status text DEFAULT 'due',
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS surgical_history (
+    id uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY,
+    patient_id uuid NOT NULL,
+    procedure_name text NOT NULL,
+    date date,
+    surgeon text,
+    facility text,
+    notes text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS social_history (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     patient_id uuid NOT NULL,
@@ -1327,6 +1361,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS visits (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     patient_id uuid NOT NULL,
+    appointment_id uuid, -- Added for sync
     visit_date timestamp without time zone NOT NULL,
     visit_type character varying(50),
     provider_id uuid NOT NULL,
@@ -1341,6 +1376,17 @@ CREATE TABLE IF NOT EXISTS visits (
     note_type character varying(100),
     clinic_id uuid,
     last_level_billed integer DEFAULT 0,
+    clinical_snapshot jsonb,
+    content_hash text,
+    content_integrity_verified boolean DEFAULT false,
+    assigned_attending_id uuid,
+    cts_documentation jsonb,
+    ascvd_documentation jsonb,
+    safety_plan_documentation jsonb,
+    authorship_model character varying(50),
+    cosigned_at timestamp without time zone,
+    cosigned_by uuid,
+    attestation_text text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );

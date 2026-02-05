@@ -26,16 +26,30 @@ const Patients = () => {
     const storageKey = user?.id ? `recentPatients_${user.id}` : 'recentPatients';
 
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem(storageKey);
-            if (saved) {
-                setRecentlyViewed(JSON.parse(saved));
-            } else {
-                setRecentlyViewed([]);
+        const loadRecent = async () => {
+            try {
+                const saved = localStorage.getItem(storageKey);
+                if (saved) {
+                    setRecentlyViewed(JSON.parse(saved));
+                } else {
+                    // If no local storage, try fetching from server (for sandboxes/new logins)
+                    const response = await patientsAPI.getRecent();
+                    if (response.data && response.data.length > 0) {
+                        const formattedRecent = response.data.map(p => ({
+                            ...p,
+                            name: p.name || `${p.first_name || ''} ${p.last_name || ''}`.trim()
+                        }));
+                        setRecentlyViewed(formattedRecent);
+                        localStorage.setItem(storageKey, JSON.stringify(formattedRecent));
+                    } else {
+                        setRecentlyViewed([]);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load recent patients', e);
             }
-        } catch (e) {
-            console.error('Failed to load recent patients', e);
-        }
+        };
+        loadRecent();
     }, [storageKey]);
 
     const [showAddModal, setShowAddModal] = useState(false);

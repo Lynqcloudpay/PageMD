@@ -269,6 +269,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get recently viewed patients for the current user
+router.get('/recent', async (req, res) => {
+  try {
+    const clinicId = req.user?.clinic_id;
+    const userId = req.user?.id;
+
+    // Query audit_events for PATIENT_VIEW actions by this user
+    // Group by patient to get the 10 most recently viewed unique patients
+    const query = `
+      SELECT 
+        p.id, p.mrn, p.first_name, p.last_name, p.dob, p.sex, p.phone,
+        MAX(ae.occurred_at) as last_viewed
+      FROM audit_events ae
+      JOIN patients p ON ae.patient_id = p.id
+      WHERE ae.tenant_id = $1 AND ae.actor_user_id = $2 AND ae.action = 'PATIENT_VIEW'
+      GROUP BY p.id
+      ORDER BY last_viewed DESC
+      LIMIT 10
+    `;
+
+    const result = await pool.query(query, [clinicId, userId]);
+
+    // Decrypt PHI
+    const decrypted = await patientEncryptionService.decryptPatientsPHI(result.rows);
+
+    res.json(decrypted);
+  } catch (error) {
+    console.error('[PATIENTS-RECENT] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch recently viewed patients' });
+  }
+});
+
 // Get patient snapshot (front page data) - MUST come before /:id route
 // Requires patient:view permission
 router.get('/:id/snapshot', requirePermission('patients:view_chart'), enforcePrivacy, async (req, res) => {

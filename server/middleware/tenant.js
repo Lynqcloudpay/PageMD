@@ -169,7 +169,7 @@ const resolveTenant = async (req, res, next) => {
 
         if (req.isSandbox) {
             tenantInfo = {
-                id: 'demo',
+                id: '00000000-0000-0000-0000-000000000000',
                 slug: 'demo',
                 schema_name: lookupSchema,
                 display_name: 'PageMD Sandbox Demo',

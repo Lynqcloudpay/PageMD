@@ -37,8 +37,21 @@ router.post('/provision', async (req, res) => {
         `, ['demo@pagemd.com', 'sandbox_auto_login_placeholder', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
         const providerId = providerRes.rows[0].id;
 
-        // 3. Seed Clinical Data
-        await seedSandbox(client, schemaName, providerId);
+        const sandboxClinicId = '00000000-0000-0000-0000-000000000000';
+
+        // 3. Seed Basic Settings
+        await client.query(`
+            INSERT INTO practice_settings (clinic_id, practice_name, practice_type, timezone)
+            VALUES ($1, 'Sandbox Medical Center', 'General Practice', 'America/New_York')
+        `, [sandboxClinicId]);
+
+        await client.query(`
+            INSERT INTO clinical_settings (require_dx_on_visit, enable_clinical_alerts)
+            VALUES (true, true)
+        `);
+
+        // 4. Seed Clinical Data
+        await seedSandbox(client, schemaName, providerId, sandboxClinicId);
 
         await client.query('COMMIT');
 
@@ -48,6 +61,7 @@ router.post('/provision', async (req, res) => {
             email: 'demo@pagemd.com',
             isSandbox: true,
             sandboxId: sandboxId,
+            clinicId: sandboxClinicId,
             clinicSlug: 'demo',
             role: 'Clinician'
         }, process.env.JWT_SECRET, { expiresIn: '1h' });

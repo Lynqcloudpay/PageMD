@@ -181,7 +181,7 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
       COALESCE(order_payload->>'test_name', 'Lab Result'),
       'New lab result ready for review',
       id, 'orders',
-      ordered_by, ordered_by, clinic_id, created_at, created_at
+      ordered_by, ordered_by, $1, created_at, created_at
     FROM orders 
     WHERE order_type = 'lab' 
       AND (status = 'completed' OR result_value IS NOT NULL)
@@ -202,7 +202,7 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
       COALESCE(order_payload->>'study_name', 'Imaging Result'),
       'New imaging result ready for review',
       id, 'orders',
-      ordered_by, ordered_by, clinic_id, created_at, created_at
+      ordered_by, ordered_by, $1, created_at, created_at
     FROM orders 
     WHERE order_type = 'imaging'
     AND (status = 'completed' OR result_value IS NOT NULL)
@@ -224,7 +224,7 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
       filename,
       COALESCE(doc_type, 'Document Upload'),
       id, 'documents',
-      uploader_id, clinic_id, created_at, created_at
+      uploader_id, $1, created_at, created_at
     FROM documents
     WHERE (reviewed IS NULL OR reviewed = false)
       AND (doc_type IS NOT NULL AND doc_type NOT IN ('other', 'administrative', 'background_upload'))
@@ -244,7 +244,7 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
       'Referral: ' || COALESCE(recipient_name, recipient_specialty, 'New Referral'),
       reason,
       id, 'referrals',
-      created_by, clinic_id, created_at, created_at
+      created_by, $1, created_at, created_at
     FROM referrals
     WHERE (status IS NULL OR status = 'pending' OR status = 'new')
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' DO NOTHING
@@ -311,7 +311,7 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
         ELSE 'new'
       END,
       subject, body, id, 'messages',
-      to_user_id, from_user_id, clinic_id, created_at, created_at,
+      to_user_id, from_user_id, $1, created_at, created_at,
       CASE WHEN task_status = 'completed' THEN created_at ELSE NULL END
     FROM messages
     WHERE NOT EXISTS (
@@ -447,7 +447,7 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
       CASE WHEN ar.status = 'declined' THEN 'DECLINED SUGGESTIONS: ' || appointment_type ELSE 'Portal Appt Req: ' || appointment_type END,
       'Preferred Date: ' || preferred_date || ' (' || preferred_time_range || ')\nReason: ' || COALESCE(reason, 'N/A'),
       ar.id, 'portal_appointment_requests',
-      COALESCE(ar.provider_id, p.primary_care_provider), ar.clinic_id, ar.created_at, ar.created_at, ar.visit_method
+      COALESCE(ar.provider_id, p.primary_care_provider), $1, ar.created_at, ar.created_at, ar.visit_method
     FROM portal_appointment_requests ar
     JOIN patients p ON ar.patient_id = p.id
     WHERE ar.status IN ('pending', 'declined', 'pending_patient')

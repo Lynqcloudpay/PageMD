@@ -564,11 +564,13 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
     }
 
     // First, get the visit to find the patient_id
-    const visitCheck = await pool.query('SELECT patient_id, appointment_id FROM visits WHERE id = $1', [id]);
+    // Use * to be resilient to missing columns like appointment_id during transition
+    const visitCheck = await pool.query('SELECT * FROM visits WHERE id = $1', [id]);
     if (visitCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Visit not found' });
     }
     const patientId = visitCheck.rows[0].patient_id;
+    const appointmentId = visitCheck.rows[0].appointment_id;
     // 1. Role-based workflow validation
     let targetStatus = 'signed';
     const originalRole = (req.user.role_name || req.user.role || '').toUpperCase();
@@ -692,93 +694,78 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
     const hashPayload = `${id}|${patientId}|${noteDraftToSave}|${vitalsValue || ''}|${snapshotJson}|${req.user.id}`;
     const contentHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
 
+    // Construct dynamic update to be resilient to missing columns
+    const updateFields = [
+      'note_draft = $1',
+      'status = $targetStatus',
+      'note_signed_at = CURRENT_TIMESTAMP',
+      'note_signed_by = $userId',
+      'clinical_snapshot = $snapshot',
+      'content_hash = $hash',
+      'content_integrity_verified = TRUE',
+      'updated_at = CURRENT_TIMESTAMP'
+    ];
+
+    const queryParams = {
+      $1: noteDraftToSave,
+      $targetStatus: targetStatus,
+      $userId: req.user.id,
+      $snapshot: snapshotJson,
+      $hash: contentHash,
+      $id: id
+    };
+
+    if ('vitals' in visitCheck.rows[0]) {
+      updateFields.push('vitals = $vitals');
+      queryParams['$vitals'] = vitalsValue;
+    }
+    if ('assigned_attending_id' in visitCheck.rows[0]) {
+      updateFields.push('assigned_attending_id = $attending');
+      queryParams['$attending'] = normalizedAttendingId;
+    }
+    if ('cts_documentation' in visitCheck.rows[0]) {
+      updateFields.push('cts_documentation = $cts');
+      queryParams['$cts'] = normalizedCts;
+    }
+    if ('ascvd_documentation' in visitCheck.rows[0]) {
+      updateFields.push('ascvd_documentation = $ascvd');
+      queryParams['$ascvd'] = normalizedAscvd;
+    }
+    if ('safety_plan_documentation' in visitCheck.rows[0]) {
+      updateFields.push('safety_plan_documentation = $safety');
+      queryParams['$safety'] = normalizedSafetyPlan;
+    }
+
+    // Convert queryParams to array and mapping
+    const finalParams = [];
+    let paramIdx = 1;
+    const finalFields = updateFields.map(f => {
+      const match = f.match(/\$(\w+)/);
+      if (match) {
+        const key = match[0];
+        const val = queryParams[key];
+        finalParams.push(val);
+        const mapped = f.replace(key, `$${paramIdx}`);
+        paramIdx++;
+        return mapped;
+      }
+      return f;
+    });
+
+    // Add ID as final param
+    finalParams.push(id);
+    const idIdx = paramIdx;
+
+    const finalQuery = `UPDATE visits SET ${finalFields.join(', ')} WHERE id = $${idIdx} RETURNING *`;
+
     let result;
     try {
-      const { cts, ascvd, safetyPlan } = req.body;
-
-      // If vitals are provided, include them in the update
-      if (vitalsValue !== null) {
-        result = await pool.query(
-          `UPDATE visits 
-           SET note_draft = $1, 
-               vitals = $4,
-               status = $7,
-               note_signed_at = CURRENT_TIMESTAMP,
-               note_signed_by = $3,
-               clinical_snapshot = $5,
-               content_hash = $6,
-               content_integrity_verified = TRUE,
-               assigned_attending_id = $8,
-               cts_documentation = $9,
-               ascvd_documentation = $10,
-               safety_plan_documentation = $11,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $2 
-           RETURNING *`,
-          [noteDraftToSave, id, req.user.id, vitalsValue, snapshotJson, contentHash, targetStatus, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
-        );
-      } else {
-        result = await pool.query(
-          `UPDATE visits 
-           SET note_draft = $1, 
-               status = $4,
-               note_signed_at = CURRENT_TIMESTAMP,
-               note_signed_by = $3,
-               clinical_snapshot = $5,
-               content_hash = $6,
-               content_integrity_verified = TRUE,
-               assigned_attending_id = $7,
-               cts_documentation = $8,
-               ascvd_documentation = $9,
-               safety_plan_documentation = $10,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $2 
-           RETURNING *`,
-          [noteDraftToSave, id, req.user.id, targetStatus, snapshotJson, contentHash, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
-        );
-      }
+      result = await pool.query(finalQuery, finalParams);
     } catch (dbError) {
-      if (dbError.code === '22P01' || dbError.code === '22P02') { // Handle invalid UUID format
-        if (vitalsValue !== null) {
-          result = await pool.query(
-            `UPDATE visits 
-             SET note_draft = $1, 
-                 vitals = $4,
-                 status = $7,
-                 note_signed_at = CURRENT_TIMESTAMP,
-                 note_signed_by = $3,
-                 clinical_snapshot = $5,
-                 content_hash = $6,
-                 content_integrity_verified = TRUE,
-                 assigned_attending_id = $8,
-                 cts_documentation = $9,
-                 ascvd_documentation = $10,
-                 safety_plan_documentation = $11,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id::text = $2 OR CAST(id AS TEXT) = $2
-             RETURNING *`,
-            [noteDraftToSave, id, req.user.id, vitalsValue, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
-          );
-        } else {
-          result = await pool.query(
-            `UPDATE visits 
-             SET note_draft = $1,
-        status = $6,
-        note_signed_at = CURRENT_TIMESTAMP,
-        note_signed_by = $3,
-        clinical_snapshot = $4,
-        content_hash = $5,
-        content_integrity_verified = TRUE,
-        assigned_attending_id = $7,
-        cts_documentation = $8,
-        ascvd_documentation = $9,
-        safety_plan_documentation = $10,
-        updated_at = CURRENT_TIMESTAMP
-             WHERE id::text = $2 OR CAST(id AS TEXT) = $2
-             RETURNING *`,
-            [noteDraftToSave, id, req.user.id, JSON.stringify(clinicalSnapshot), contentHash, targetStatus, normalizedAttendingId, normalizedCts, normalizedAscvd, normalizedSafetyPlan]
-          );
-        }
+      // Fallback for ID type issues (though less likely with dynamic query)
+      if (dbError.code === '22P01' || dbError.code === '22P02') {
+        const altQuery = `UPDATE visits SET ${finalFields.join(', ')} WHERE id::text = $${idIdx} RETURNING *`;
+        result = await pool.query(altQuery, finalParams);
       } else {
         throw dbError;
       }
@@ -808,7 +795,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
           await pool.query(
             `INSERT INTO inbox_items(
               patient_id, type, priority, status, subject, body,
-              reference_id, reference_table, created_by, clinic_id, assigned_user_id
+              reference_id, reference_table, created_by, tenant_id, assigned_user_id
             ) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [
               patientId,
@@ -848,8 +835,7 @@ router.post('/:id/sign', requirePermission('notes:sign'), async (req, res) => {
     // ============================================================
     // AUTOMATION: Sync Appointment Status (e.g. for Telehealth)
     // If this visit is linked to an appointment, mark it as completed/checked_out
-    // ============================================================
-    const appointmentId = visitCheck.rows[0]?.appointment_id;
+    // appointmentId was already pulled from visitCheck earlier
     if (appointmentId) {
       try {
         await pool.query(

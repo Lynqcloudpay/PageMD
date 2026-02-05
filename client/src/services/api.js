@@ -94,6 +94,7 @@ export const patientsAPI = {
     const params = typeof search === 'string' ? { search } : search;
     return api.get('/patients', { params });
   },
+  getRecent: () => api.get('/patients/recent'),
   get: (id) => api.get(`/patients/${id}`),
   getSnapshot: (id) => api.get(`/patients/${id}/snapshot`),
   create: (data) => api.post('/patients', data),

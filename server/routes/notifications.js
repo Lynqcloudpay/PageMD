@@ -17,6 +17,14 @@ router.get('/', async (req, res) => {
             return res.json({ alerts: [], count: 0 });
         }
 
+        // SANDBOX FIX: If clinicId is not a valid UUID (e.g. short sandbox ID), 
+        // skip control DB lookups to prevent "invalid input syntax for type uuid" 500 errors.
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(clinicId)) {
+            console.log(`[Notifications] Skipping control DB checks for non-UUID clinic: ${clinicId}`);
+            return res.json({ alerts: [], count: 0 });
+        }
+
         const alerts = [];
 
         // ---------------------------------------------------------
@@ -214,7 +222,7 @@ router.get('/', async (req, res) => {
         // We already have 'account-rx-locked'.
         // Let's add a generic 'Profile Incomplete' or similar if needed. 
         // Actually, let's look for "compliance_zones". If it contains "audit_pending", trigger alert.
-        if (clinic.compliance_zones && clinic.compliance_zones.includes('audit_pending')) {
+        if (clinic && clinic.compliance_zones && clinic.compliance_zones.includes('audit_pending')) {
             alerts.push({
                 id: 'compliance-audit',
                 type: 'security',
