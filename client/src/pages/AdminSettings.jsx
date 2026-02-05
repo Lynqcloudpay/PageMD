@@ -287,9 +287,7 @@ const AdminSettings = () => {
           )}
 
           {activeTab === 'rewards' && (
-            <div className="max-w-xl mx-auto py-8">
-              <GrowthRewardWidget />
-            </div>
+            <GrowthRewardWidget />
           )}
         </div>
       </div>
