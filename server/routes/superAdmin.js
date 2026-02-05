@@ -182,14 +182,20 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
         const totalBillingSeats = physicalSeats + ghostSeats;
 
         // Calculate total monthly using staircase logic
-        let totalMonthly = 0;
+        // Ghost seats occupy the most expensive slots but are not charged
+        const prices = [];
         for (let i = 1; i <= totalBillingSeats; i++) {
             const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
-            totalMonthly += tier.rate;
+            prices.push(tier.rate);
         }
 
+        // Sort descending and remove the top N prices where N is ghost seats (The Reward)
+        prices.sort((a, b) => b - a);
+        const paidPrices = prices.slice(ghostSeats);
+        const totalMonthly = paidPrices.reduce((sum, rate) => sum + rate, 0);
+
         const currentTier = TIERS.find(t => totalBillingSeats >= t.min && totalBillingSeats <= t.max) || TIERS[TIERS.length - 1];
-        const avgRatePerSeat = Math.round(totalMonthly / totalBillingSeats);
+        const avgRatePerSeat = physicalSeats > 0 ? Math.round(totalMonthly / physicalSeats) : 0;
 
         res.json({
             clinic: clinicData,
