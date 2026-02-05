@@ -60,6 +60,9 @@ const GrowthRewardWidget = () => {
 
     const {
         currentRate,
+        marginalRate,
+        tierName,
+        totalMonthly,
         nextMilestone,
         totalBillingSeats,
         referralLink,
@@ -76,16 +79,19 @@ const GrowthRewardWidget = () => {
                     {/* Current Rate Card */}
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Current Rate</span>
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Current Tier</span>
                             <div className="bg-primary-100 text-primary-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                                Level {totalBillingSeats}
+                                {tierName || `Level ${totalBillingSeats}`}
                             </div>
                         </div>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold text-gray-900">${currentRate}</span>
+                            <span className="text-3xl font-bold text-gray-900">${marginalRate || currentRate}</span>
                             <span className="text-sm font-medium text-gray-500">/ MD / month</span>
                         </div>
-                        <p className="mt-2 text-xs text-gray-500">Your current billing tier based on referrals.</p>
+                        <div className="mt-2 flex flex-col gap-0.5">
+                            <p className="text-xs text-gray-500">Total Monthly: <strong>${totalMonthly}</strong></p>
+                            <p className="text-[10px] text-gray-400">Average: ${currentRate}/seat</p>
+                        </div>
                     </div>
 
                     {/* Next Milestone Card */}

@@ -13,7 +13,7 @@ const TIERS = [
     { name: 'Professional', min: 4, max: 5, rate: 249 },
     { name: 'Premier', min: 6, max: 8, rate: 199 },
     { name: 'Elite', min: 9, max: 10, rate: 149 },
-    { name: 'Enterprise', min: 11, max: 100, rate: 99 },
+    { name: 'Enterprise', min: 11, max: 999, rate: 99 },
 ];
 
 /**
@@ -36,20 +36,16 @@ router.get('/stats', async (req, res) => {
     try {
         const clinicId = req.clinic.id;
 
-        // 1. Get Physical Seats (Count of Provider-level users)
+        // 1. Get Physical Seats (Count of Active Providers in this schema)
+        // Note: In our multi-tenant schema model, we are already in the correct search_path.
         const userRes = await pool.query(
             `SELECT count(*) FROM users 
-             WHERE clinic_id = $1 
-             AND status = 'active'
-             AND UPPER(role) IN ('CLINICIAN', 'PHYSICIAN', 'DOCTOR', 'NP', 'PROVIDER', 'PA', 'NURSE PRACTITIONER')`,
-            [clinicId]
+             WHERE status = 'active'
+             AND UPPER(role) IN ('CLINICIAN', 'PHYSICIAN', 'DOCTOR', 'NP', 'PROVIDER', 'PA', 'NURSE PRACTITIONER')`
         );
         const physicalSeats = parseInt(userRes.rows[0].count) || 1;
 
         // 2. Get Ghost Seats (Count of successful, active referrals)
-        // We consider a referral active if:
-        // a) Its status is 'active' (referred clinic is paying)
-        // b) OR it recently churned but is still within its 30-day Grace Period
         const referralRes = await pool.controlPool.query(
             `SELECT count(*) FROM public.clinic_referrals 
              WHERE referrer_clinic_id = $1 
@@ -63,8 +59,9 @@ router.get('/stats', async (req, res) => {
 
         // 3. Billing Logic
         const totalBillingSeats = physicalSeats + ghostSeats;
-        const currentTotal = calculateTotalBilling(totalBillingSeats);
-        const currentAvgPerSeat = Math.round(currentTotal / totalBillingSeats);
+        const totalMonthly = calculateTotalBilling(totalBillingSeats);
+        const currentAvgPerSeat = Math.round(totalMonthly / totalBillingSeats);
+        const currentTier = TIERS.find(t => totalBillingSeats >= t.min && totalBillingSeats <= t.max) || TIERS[TIERS.length - 1];
 
         // 4. Check for Churn Notifications (Soft Landing)
         const churnedRes = await pool.controlPool.query(
@@ -83,7 +80,7 @@ router.get('/stats', async (req, res) => {
 
         // Calculate Next Milestone
         let nextMilestone = null;
-        const maxCheck = totalBillingSeats + 10;
+        const maxCheck = 100; // Check up to Enterprise level
         for (let s = totalBillingSeats + 1; s <= maxCheck; s++) {
             const nextTotal = calculateTotalBilling(s);
             const nextAvg = Math.round(nextTotal / s);
@@ -115,8 +112,11 @@ router.get('/stats', async (req, res) => {
             ghostSeats,
             totalBillingSeats,
             currentRate: currentAvgPerSeat,
+            marginalRate: currentTier.rate,
+            tierName: currentTier.name,
+            totalMonthly,
             referralCode,
-            referralLink: `https://pagemdemr.com/register?ref=${referralCode}`,
+            referralLink: referralCode ? `https://pagemdemr.com/register?ref=${referralCode}` : null,
             nextMilestone,
             activeGracePeriods,
             referrals: referralsList.rows.map(r => ({
