@@ -4,7 +4,7 @@ import {
     CheckCircle2, XCircle, MessageSquare, RefreshCw,
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
-    Settings, Key, Plus, User
+    Settings, Key, Plus, User, Gift
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -494,6 +494,12 @@ const SalesAdmin = () => {
                                             <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-600">
                                                 {getInterestLabel(inquiry.interest_type)}
                                             </span>
+                                            {inquiry.referral_code && (
+                                                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded font-bold uppercase border border-blue-100">
+                                                    <Gift className="w-3 h-3" />
+                                                    {inquiry.referral_code}
+                                                </span>
+                                            )}
                                             {inquiry.practice_name && (
                                                 <span className="flex items-center gap-1">
                                                     <Building2 className="w-3 h-3" />
@@ -561,11 +567,22 @@ const SalesAdmin = () => {
                                     </div>
 
                                     {/* Interest */}
-                                    <div>
-                                        <h3 className="text-sm font-medium text-slate-900 mb-2">Interest</h3>
-                                        <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
-                                            {getInterestLabel(selectedInquiry.interest_type)}
-                                        </span>
+                                    <div className="flex items-center gap-3">
+                                        <div>
+                                            <h3 className="text-sm font-medium text-slate-900 mb-2">Interest</h3>
+                                            <span className="inline-block px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+                                                {getInterestLabel(selectedInquiry.interest_type)}
+                                            </span>
+                                        </div>
+                                        {selectedInquiry.referral_code && (
+                                            <div>
+                                                <h3 className="text-sm font-medium text-slate-900 mb-2">Referral Code</h3>
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-bold border border-emerald-100 uppercase">
+                                                    <Gift className="w-3.5 h-3.5" />
+                                                    {selectedInquiry.referral_code}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Message */}
