@@ -126,31 +126,37 @@ class EmailService {
      */
     async sendDemoVerificationCode(email, userName, code) {
         const subject = `${code} is your PageMD Demo access code`;
+        const logoUrl = 'https://pagemdemr.com/logo.png';
+
         const html = `
-            <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #f8fafc; padding: 40px 20px;">
-                <div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <div style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 12px 24px; border-radius: 14px; margin-bottom: 24px;">
-                            <span style="color: white; font-weight: 700; font-size: 24px; letter-spacing: -0.5px;">PageMD</span>
-                        </div>
-                        <h1 style="color: #0f172a; font-size: 26px; font-weight: 800; margin: 0;">Verification Code</h1>
+            <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #0f172a; background-color: #f8fafc; padding: 48px 20px;">
+                <div style="background-color: #ffffff; border-radius: 24px; padding: 48px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02); border: 1px solid #e2e8f0;">
+                    
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <img src="${logoUrl}" alt="PageMD Logo" style="height: 44px; width: auto; margin-bottom: 24px; display: inline-block;">
+                        <h1 style="color: #1e293b; font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.025em;">Launch Your Demo</h1>
                     </div>
                     
-                    <p style="font-size: 16px; line-height: 1.7; color: #475569; margin-bottom: 30px; text-align: center;">
-                        Hello ${userName || 'Doctor'}, use the following code to verify your email and launch your sandbox demo.
+                    <p style="font-size: 17px; line-height: 1.6; color: #475569; margin-bottom: 32px; text-align: center;">
+                        Hi ${userName || 'there'}, we're excited to show you the future of healthcare! <br/> 
+                        Enter the code below in your demo window to verify your email and get started.
                     </p>
                     
-                    <div style="background: #f1f5f9; border-radius: 16px; padding: 32px; text-align: center; margin: 30px 0; border: 1px solid #e2e8f0;">
-                        <span style="font-family: 'Courier New', monospace; font-size: 48px; font-weight: 800; color: #1e293b; letter-spacing: 12px; display: block; margin-bottom: 8px;">${code}</span>
-                        <p style="font-size: 13px; color: #64748b; margin: 0; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Expires in 45 minutes</p>
+                    <div style="background-color: #f1f5f9; border-radius: 20px; padding: 32px 10px; text-align: center; margin: 32px 0; border: 1px solid #e2e8f0;">
+                        <div style="font-family: 'SF Mono', Consolas, monospace; font-size: 38px; font-weight: 800; color: #2563eb; letter-spacing: 0.15em; display: inline-block; white-space: nowrap; margin-bottom: 8px;">
+                            ${code}
+                        </div>
+                        <p style="font-size: 12px; color: #64748b; margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">
+                            Valid for 45 minutes
+                        </p>
                     </div>
                     
-                    <p style="font-size: 14px; line-height: 1.6; color: #64748b; margin-top: 30px; text-align: center;">
-                        Enter this code in the demo window to continue.
+                    <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin-top: 32px; text-align: center; font-style: italic;">
+                        If you didn't request a demo, you can safely ignore this email.
                     </p>
 
-                    <div style="border-top: 1px solid #f1f5f9; margin-top: 40px; padding-top: 30px; text-align: center;">
-                        <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                    <div style="border-top: 1px solid #f1f5f9; margin-top: 48px; padding-top: 32px; text-align: center;">
+                        <p style="font-size: 13px; color: #94a3b8; margin: 0; font-weight: 500;">
                             © ${new Date().getFullYear()} PageMD EMR • HIPAA Compliant Sandbox
                         </p>
                     </div>
