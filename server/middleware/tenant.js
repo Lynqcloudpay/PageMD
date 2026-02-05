@@ -32,7 +32,7 @@ const resolveTenant = async (req, res, next) => {
         token = req.query.token;
     }
 
-    if (!slug && token) {
+    if (token) {
         try {
             const decoded = jwt.decode(token); // Just peek, verification happens later in auth middleware
             if (decoded) {
@@ -40,8 +40,9 @@ const resolveTenant = async (req, res, next) => {
                     req.isSandbox = true;
                     req.sandboxId = decoded.sandboxId;
                     lookupSchema = `sandbox_${decoded.sandboxId}`;
+                    slug = null; // Explicitly override any header/host slug for sandbox sessions
                     console.log(`[Tenant] Sandbox mode detected for ID: ${decoded.sandboxId}`);
-                } else if (decoded.clinicSlug) {
+                } else if (!slug && decoded.clinicSlug) {
                     slug = decoded.clinicSlug;
                 }
             }
