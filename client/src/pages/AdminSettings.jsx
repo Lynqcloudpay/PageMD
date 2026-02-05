@@ -22,7 +22,7 @@ import {
 import { settingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropper from '../components/ImageCropper';
 import FlagTypesSettings from '../components/FlagTypesSettings';
 import GrowthRewardWidget from '../components/GrowthRewardWidget';
@@ -31,7 +31,21 @@ const AdminSettings = () => {
   const { user } = useAuth();
   const { can } = usePermissions();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('practice');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('tab') || 'practice';
+  });
+
+  // Sync tab with URL parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
@@ -213,6 +227,7 @@ const AdminSettings = () => {
                   navigate('/compliance');
                   return;
                 }
+                navigate(`/admin-settings?tab=${tab.id}`, { replace: true });
                 setActiveTab(tab.id);
               }}
               className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${activeTab === tab.id

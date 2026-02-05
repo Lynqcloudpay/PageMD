@@ -219,7 +219,7 @@ router.get('/alerts', async (req, res) => {
                 message: `${row.referred_clinic_name} has deactivated. Your discount is protected for ${daysRemaining} more days (until ${new Date(row.grace_period_expires_at).toLocaleDateString()}).`,
                 createdAt: row.updated_at,
                 expiresAt: row.grace_period_expires_at,
-                actionUrl: '/admin-settings',
+                actionUrl: '/admin-settings?tab=rewards',
                 actionLabel: 'View Growth Rewards'
             });
         }
@@ -242,7 +242,7 @@ router.get('/alerts', async (req, res) => {
                 title: 'New Referral Signup!',
                 message: `${row.referred_clinic_name} has signed up! You are now receiving a referral discount.`,
                 createdAt: row.updated_at,
-                actionUrl: '/admin-settings',
+                actionUrl: '/admin-settings?tab=rewards',
                 actionLabel: 'View Discount'
             });
         }
@@ -275,7 +275,7 @@ router.get('/alerts', async (req, res) => {
                     message: `Your discount from ${row.referred_clinic_name} expires in ${daysRemaining} days. Consider inviting more clinics to maintain your rate.`,
                     createdAt: new Date(),
                     expiresAt: row.grace_period_expires_at,
-                    actionUrl: '/admin-settings',
+                    actionUrl: '/admin-settings?tab=rewards',
                     actionLabel: 'Invite Clinics'
                 });
             }
@@ -292,9 +292,48 @@ router.get('/alerts', async (req, res) => {
 });
 
 /**
- * POST /alerts/:id/dismiss
- * Dismiss a specific alert for the current clinic
+ * POST /alerts/dismiss-all
+ * Dismiss all active alerts for the current clinic
  */
+router.post('/alerts/dismiss-all', async (req, res) => {
+    try {
+        const clinicId = req.user?.clinic_id || req.clinic?.id;
+        if (!clinicId) return res.status(400).json({ error: 'Clinic context required' });
+
+        // Get all currently active alert IDs for this clinic to record them as dismissed
+        // This is necessary because alerts are generated dynamically
+
+        // 1. Get current lists (simplified logic to match GET /alerts)
+        const churnedIds = await pool.controlPool.query(
+            "SELECT referred_clinic_name FROM public.clinic_referrals WHERE referrer_clinic_id = $1 AND status = 'churned' AND grace_period_expires_at > NOW()",
+            [clinicId]
+        );
+        const newIds = await pool.controlPool.query(
+            "SELECT referred_clinic_name FROM public.clinic_referrals WHERE referrer_clinic_id = $1 AND status = 'active' AND updated_at > NOW() - INTERVAL '30 days'",
+            [clinicId]
+        );
+
+        const allIds = [
+            ...churnedIds.rows.map(r => `churn-${r.referred_clinic_name}`),
+            ...newIds.rows.map(r => `new-${r.referred_clinic_name}`)
+        ];
+
+        if (allIds.length > 0) {
+            const values = allIds.map((id, i) => `($1, $${i + 2}, NOW())`).join(',');
+            await pool.controlPool.query(`
+                INSERT INTO public.growth_alert_dismissals (clinic_id, alert_id, dismissed_at)
+                VALUES ${values}
+                ON CONFLICT (clinic_id, alert_id) DO UPDATE SET dismissed_at = NOW()
+            `, [clinicId, ...allIds]);
+        }
+
+        res.json({ success: true, dismissedCount: allIds.length });
+    } catch (error) {
+        console.error('[Growth] Dismiss all alerts failed:', error);
+        res.status(500).json({ error: 'Failed to dismiss all alerts' });
+    }
+});
+
 router.post('/alerts/:id/dismiss', async (req, res) => {
     try {
         const clinicId = req.user?.clinic_id || req.clinic?.id;
