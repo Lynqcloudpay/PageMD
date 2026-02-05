@@ -186,13 +186,13 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                     const expiry = new Date();
                     expiry.setFullYear(expiry.getFullYear() + 1); // 1 year persistence
 
-                    document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/`;
+                    document.cookie = `pagemd_demo_captured=true; expires=${expiry.toUTCString()}; path=/; SameSite=Lax`;
 
                     if (data.leadUuid) {
-                        document.cookie = `pagemd_lead_id=${data.leadUuid}; expires=${expiry.toUTCString()}; path=/`;
+                        document.cookie = `pagemd_lead_id=${data.leadUuid}; expires=${expiry.toUTCString()}; path=/; SameSite=Lax`;
                     }
                     if (data.leadName) {
-                        document.cookie = `pagemd_lead_name=${data.leadName}; expires=${expiry.toUTCString()}; path=/`;
+                        document.cookie = `pagemd_lead_name=${encodeURIComponent(data.leadName)}; expires=${expiry.toUTCString()}; path=/; SameSite=Lax`;
                     }
                 }
             }

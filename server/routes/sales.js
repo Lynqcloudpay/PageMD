@@ -11,6 +11,7 @@ const JWT_SECRET = process.env.SALES_JWT_SECRET || 'pagemd-sales-secret-key-2026
 const verifyToken = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1]; // Bearer <token>
 
+
     if (!token) {
         return res.status(403).json({ error: 'No token provided' });
     }
@@ -434,7 +435,9 @@ router.post('/verify-code', async (req, res) => {
                 token: sandboxToken,
                 sandboxId,
                 redirect: '/dashboard',
-                message: 'Demo environment ready!'
+                message: 'Demo environment ready!',
+                leadUuid: inquiry.uuid,
+                leadName: inquiry.name
             });
 
         } catch (provisionError) {
@@ -564,7 +567,9 @@ router.get('/verify/:token', async (req, res) => {
                 token: sandboxToken,
                 sandboxId,
                 redirect: '/dashboard',
-                message: 'Demo environment ready!'
+                message: 'Demo environment ready!',
+                leadUuid: inquiry.uuid,
+                leadName: inquiry.name
             });
 
         } catch (provisionError) {
