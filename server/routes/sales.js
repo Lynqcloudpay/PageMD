@@ -234,10 +234,7 @@ router.post('/inquiry', async (req, res) => {
         const initialStatus = isSandboxRequest ? 'pending_verification' : 'new';
 
         if (isSandboxRequest) {
-            // Generate random 6-digit code
             verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-            // Still generate a token for tracking the session if needed, but the user will use the code
             verificationToken = jwt.sign(
                 { email, type: 'demo_verification_code' },
                 process.env.JWT_SECRET || 'pagemd-secret',
@@ -246,41 +243,75 @@ router.post('/inquiry', async (req, res) => {
             verificationExpires = new Date(Date.now() + 45 * 60 * 1000);
         }
 
-        // 4. Insert lead
-        const result = await pool.query(`
-            INSERT INTO sales_inquiries (
-                name, email, phone, practice_name, provider_count,
-                message, interest_type, source, status, referral_code,
-                verification_token, verification_code, verification_expires_at, 
-                recaptcha_score, is_disposable_email,
-                created_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
-            RETURNING id, created_at
-        `, [
-            name, email, phone, practice, providers, message, interest, source,
-            initialStatus, referral_code, verificationToken, verificationCode, verificationExpires,
-            recaptchaScore, isDisposable
-        ]);
+        // 4. Check for existing lead (Duplicate Detection)
+        const existingRes = await pool.query(
+            'SELECT id, status FROM sales_inquiries WHERE email = $1 OR (phone = $2 AND phone IS NOT NULL AND phone != \'\') LIMIT 1',
+            [email, phone]
+        );
+        const existingInquiry = existingRes.rows[0];
+        let isDuplicate = false;
+        let inquiryId;
 
-        const inquiry = result.rows[0];
-        console.log(`[SALES] Inquiry #${inquiry.id} created with status: ${initialStatus}`);
+        if (existingInquiry) {
+            isDuplicate = true;
+            inquiryId = existingInquiry.id;
+            console.log(`[SALES] Duplicate lead found for ${email}. Merging attempt into Inquiry #${inquiryId}`);
 
-        // 5. Send verification code email for sandbox requests
+            // Update existing lead (Reset status to allow re-verification if it's a sandbox request)
+            await pool.query(`
+                UPDATE sales_inquiries 
+                SET verification_token = $1, 
+                    verification_code = $2, 
+                    verification_expires_at = $3,
+                    status = CASE WHEN $4 = true THEN 'pending_verification' ELSE status END,
+                    updated_at = NOW()
+                WHERE id = $5
+            `, [verificationToken, verificationCode, verificationExpires, isSandboxRequest, inquiryId]);
+
+            // Log the duplicate demo attempt
+            await pool.query(`
+                INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata)
+                VALUES ($1, 'demo_attempt', $2, $3)
+            `, [
+                inquiryId,
+                isSandboxRequest ? 'New sandbox demo attempt detected' : 'Duplicate contact submission',
+                JSON.stringify({ source, interest, providers })
+            ]);
+
+        } else {
+            // 5. Insert new lead
+            const insertResult = await pool.query(`
+                INSERT INTO sales_inquiries (
+                    name, email, phone, practice_name, provider_count,
+                    message, interest_type, source, status, referral_code,
+                    verification_token, verification_code, verification_expires_at, 
+                    recaptcha_score, is_disposable_email,
+                    created_at
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+                RETURNING id, created_at
+            `, [
+                name, email, phone, practice, providers, message, interest, source,
+                initialStatus, referral_code, verificationToken, verificationCode, verificationExpires,
+                recaptchaScore, isDisposable
+            ]);
+            inquiryId = insertResult.rows[0].id;
+        }
+
+        // 6. Send verification code email for sandbox requests
         if (isSandboxRequest && verificationCode) {
             const emailService = require('../services/emailService');
             await emailService.sendDemoVerificationCode(email, name, verificationCode);
             console.log(`[SALES] Verification code sent to: ${email}`);
         }
 
-        res.status(201).json({
+        res.status(existingInquiry ? 200 : 201).json({
             success: true,
+            isDuplicate,
             message: isSandboxRequest
-                ? 'Check your email for the verification code!'
+                ? (isDuplicate ? 'Welcome back! We\'ve sent a fresh access code to your inbox.' : 'Check your email for the verification code!')
                 : 'Thank you for your interest!',
-            inquiryId: inquiry.id,
-            requiresVerification: isSandboxRequest,
-            email: email // Return email to frontend for displayed context
+            inquiryId
         });
 
     } catch (error) {

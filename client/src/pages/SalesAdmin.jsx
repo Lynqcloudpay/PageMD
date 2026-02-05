@@ -1027,13 +1027,16 @@ const SalesAdmin = () => {
                                                                     <div className="flex items-center gap-2">
                                                                         <span className="text-[11px] font-black text-slate-900 uppercase tracking-wide">{log.admin_name || 'Admin'}</span>
                                                                         {log.type === 'demo_scheduled' && <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">Demo</span>}
+                                                                        {log.type === 'demo_attempt' && <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase">Re-Signup</span>}
                                                                         {log.type === 'note' && <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase">Note</span>}
                                                                     </div>
                                                                     <span className="text-[9px] font-black text-slate-300 uppercase tracking-tight">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
                                                                 </div>
                                                                 <div className={`text-sm p-4 rounded-2xl rounded-tl-none border leading-relaxed shadow-sm transition-all hover:shadow-md ${log.type === 'demo_scheduled'
                                                                     ? 'bg-indigo-50/50 border-indigo-100 text-indigo-900'
-                                                                    : 'bg-white border-slate-200 text-slate-700'
+                                                                    : log.type === 'demo_attempt'
+                                                                        ? 'bg-blue-50/30 border-blue-100 text-slate-700 italic border-dashed'
+                                                                        : 'bg-white border-slate-200 text-slate-700'
                                                                     }`}>
                                                                     {log.content}
                                                                 </div>

@@ -22,6 +22,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitState, setSubmitState] = useState('form'); // 'form' | 'verify' | 'success' | 'error'
     const [errorMessage, setErrorMessage] = useState('');
+    const [duplicateNotice, setDuplicateNotice] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         practice: '',
@@ -103,6 +104,9 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
             }
 
             if (data.requiresVerification) {
+                if (data.isDuplicate) {
+                    setDuplicateNotice(true);
+                }
                 setSubmitState('verify');
             } else {
                 onLaunch();
@@ -219,10 +223,19 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                             <KeyRound className="w-8 h-8" />
                         </div>
                         <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Verify Email</h2>
-                        <p className="text-slate-500 text-sm font-medium">
-                            We've sent a 6-digit code to <br />
-                            <span className="text-blue-600 font-bold">{formData.email}</span>
-                        </p>
+                        {duplicateNotice ? (
+                            <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 mb-4 animate-in fade-in slide-in-from-top-2 duration-700">
+                                <p className="text-blue-700 text-xs font-bold leading-relaxed">
+                                    <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded mr-2 uppercase tracking-tight">Welcome Back</span>
+                                    An account with this info already exists. We've sent a fresh access code to your inbox.
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="text-slate-500 text-sm font-medium">
+                                We've sent a 6-digit code to <br />
+                                <span className="text-blue-600 font-bold">{formData.email}</span>
+                            </p>
+                        )}
                         <p className="text-[10px] text-slate-400 mt-4 font-bold uppercase tracking-widest bg-slate-50 py-2 px-4 rounded-lg border border-slate-100 italic">
                             Tip: Check your <span className="text-blue-600">Spam or Junk</span> email folder
                         </p>
