@@ -243,9 +243,9 @@ router.post('/inquiry', async (req, res) => {
             verificationExpires = new Date(Date.now() + 45 * 60 * 1000);
         }
 
-        // 4. Check for existing lead (Duplicate Detection)
+        // 4. Check for existing lead (Duplicate Detection - Case Insensitive)
         const existingRes = await pool.query(
-            'SELECT id, status FROM sales_inquiries WHERE email = $1 OR (phone = $2 AND phone IS NOT NULL AND phone != \'\') LIMIT 1',
+            'SELECT id, status FROM sales_inquiries WHERE LOWER(email) = LOWER($1) OR (phone = $2 AND phone IS NOT NULL AND phone != \'\') ORDER BY created_at ASC LIMIT 1',
             [email, phone]
         );
         const existingInquiry = existingRes.rows[0];
