@@ -41,6 +41,8 @@ tests
 # Documentation
 README.md
 docs
+uploads
+server/uploads
 
 # Scripts (keep migration scripts, exclude dev scripts)
 scripts/dev-*.js

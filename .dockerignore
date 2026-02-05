@@ -23,9 +23,10 @@ deploy/*.log
 .idea
 *.swp
 
-# Local environment and secrets
-.env
-.env.*
+# Backups and data
+backups
+uploads
+server/uploads
 
 # Cursor / IDE state
 terminals
