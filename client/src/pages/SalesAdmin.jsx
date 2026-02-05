@@ -26,6 +26,7 @@ const SalesAdmin = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [statusFilter, setStatusFilter] = useState('');
+    const [activeCategory, setActiveCategory] = useState('pending'); // 'pending', 'pipeline', 'completed', 'all'
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedInquiry, setSelectedInquiry] = useState(null);
     const [updating, setUpdating] = useState(false);
@@ -672,42 +673,63 @@ const SalesAdmin = () => {
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="flex-1 relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Search by name, email, or practice..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-xs font-medium shadow-sm outline-none"
-                        />
-                    </div>
-                    <div className="relative group">
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="appearance-none pl-4 pr-10 py-2 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-xs font-bold text-slate-700 uppercase tracking-widest shadow-sm outline-none cursor-pointer"
-                        >
-                            <option value="">All Leads</option>
-                            <option value="new">New Inquiry</option>
-                            <option value="contacted">Contacted</option>
-                            <option value="demo_scheduled">Demo Scheduled</option>
-                            <option value="follow_up">Follow Up</option>
-                            <option value="converted">Converted</option>
-                            <option value="closed">Closed / Lost</option>
-                        </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none group-hover:text-slate-500 transition-colors" />
-                    </div>
-                </div>
+                {/* Header Stats & Global Filter are now redundant or moved to sidebar categories */}
+                {/* We keep the stats cards for overall count but can hide the high-level filter if sidebar is preferred */}
 
-                {/* Content */}
-                <div className="grid grid-cols-3 gap-6">
-                    {/* Inquiries List */}
-                    <div className="col-span-2 bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="px-5 py-4 border-b border-slate-100">
-                            <h2 className="font-semibold text-slate-900">Inquiries ({filteredInquiries.length})</h2>
+                {/* Sidebar & Detail Panel */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Sidebar: Inquiries List */}
+                    <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm flex flex-col h-[800px]">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/30">
+                            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Inquiry Lifecycle</h2>
+
+                            {/* Category Tabs - Cancellation Style */}
+                            <div className="grid grid-cols-3 gap-2 mb-4">
+                                <button
+                                    onClick={() => setActiveCategory('pending')}
+                                    className={`p-3 rounded-xl border-2 transition-all text-left flex flex-col gap-1 ${activeCategory === 'pending'
+                                        ? 'bg-blue-50 border-blue-500 shadow-sm'
+                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                >
+                                    <span className={`text-[9px] font-black uppercase tracking-wider ${activeCategory === 'pending' ? 'text-blue-600' : 'text-slate-400'}`}>Pending</span>
+                                    <span className={`text-xl font-black ${activeCategory === 'pending' ? 'text-blue-700' : 'text-slate-900'}`}>
+                                        {inquiries.filter(i => ['new', 'contacted'].includes(i.status || 'new')).length}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveCategory('pipeline')}
+                                    className={`p-3 rounded-xl border-2 transition-all text-left flex flex-col gap-1 ${activeCategory === 'pipeline'
+                                        ? 'bg-indigo-50 border-indigo-500 shadow-sm'
+                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                >
+                                    <span className={`text-[9px] font-black uppercase tracking-wider ${activeCategory === 'pipeline' ? 'text-indigo-600' : 'text-slate-400'}`}>Pipeline</span>
+                                    <span className={`text-xl font-black ${activeCategory === 'pipeline' ? 'text-indigo-700' : 'text-slate-900'}`}>
+                                        {inquiries.filter(i => ['demo_scheduled', 'follow_up'].includes(i.status)).length}
+                                    </span>
+                                </button>
+                                <button
+                                    onClick={() => setActiveCategory('completed')}
+                                    className={`p-3 rounded-xl border-2 transition-all text-left flex flex-col gap-1 ${activeCategory === 'completed'
+                                        ? 'bg-slate-50 border-slate-400 shadow-sm'
+                                        : 'bg-white border-slate-100 hover:border-slate-200'}`}
+                                >
+                                    <span className={`text-[9px] font-black uppercase tracking-wider ${activeCategory === 'completed' ? 'text-slate-500' : 'text-slate-400'}`}>Done</span>
+                                    <span className={`text-xl font-black ${activeCategory === 'completed' ? 'text-slate-700' : 'text-slate-900'}`}>
+                                        {inquiries.filter(i => ['converted', 'closed'].includes(i.status)).length}
+                                    </span>
+                                </button>
+                            </div>
+
+                            <div className="relative group">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Search leads..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-xs font-medium outline-none"
+                                />
+                            </div>
                         </div>
 
                         {loading ? (
@@ -734,107 +756,80 @@ const SalesAdmin = () => {
                                 <p className="text-sm mt-1">New leads will appear here when someone submits a form</p>
                             </div>
                         ) : (
-                            <div className="max-h-[800px] overflow-y-auto bg-slate-50/10">
+                            <div className="flex-1 overflow-y-auto bg-white">
                                 {(() => {
-                                    const groups = [
-                                        {
-                                            title: 'Action Required',
-                                            icon: <Shield className="w-3.5 h-3.5" />,
-                                            color: 'text-blue-600',
-                                            bg: 'bg-blue-50/50',
-                                            statuses: ['new', 'contacted']
-                                        },
-                                        {
-                                            title: 'In Pipeline',
-                                            icon: <TrendingUp className="w-3.5 h-3.5" />,
-                                            color: 'text-indigo-600',
-                                            bg: 'bg-indigo-50/50',
-                                            statuses: ['demo_scheduled', 'follow_up']
-                                        },
-                                        {
-                                            title: 'Completed',
-                                            icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-                                            color: 'text-slate-400',
-                                            bg: 'bg-slate-100/50',
-                                            statuses: ['converted', 'closed']
-                                        }
-                                    ];
+                                    const categoryMap = {
+                                        pending: ['new', 'contacted'],
+                                        pipeline: ['demo_scheduled', 'follow_up'],
+                                        completed: ['converted', 'closed']
+                                    };
 
-                                    return groups.map(group => {
-                                        const items = filteredInquiries.filter(i => group.statuses.includes(i.status || 'new'));
-                                        if (items.length === 0) return null;
+                                    const displayItems = filteredInquiries.filter(i =>
+                                        categoryMap[activeCategory].includes(i.status || 'new')
+                                    );
 
+                                    if (displayItems.length === 0) {
                                         return (
-                                            <div key={group.title} className="mb-1">
-                                                <div className={`sticky top-0 z-10 px-4 py-2 ${group.bg} border-y border-slate-200/50 flex items-center gap-2 backdrop-blur-md`}>
-                                                    <span className={group.color}>{group.icon}</span>
-                                                    <h3 className={`text-[10px] font-black uppercase tracking-[0.1em] ${group.color}`}>
-                                                        {group.title} ({items.length})
-                                                    </h3>
+                                            <div className="p-12 text-center text-slate-400">
+                                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                    <Inbox className="w-6 h-6 text-slate-200" />
                                                 </div>
-                                                <div className="divide-y divide-slate-100 bg-white">
-                                                    {items.map((inquiry) => (
-                                                        <div
-                                                            key={inquiry.id}
-                                                            onClick={() => setSelectedInquiry(inquiry)}
-                                                            className={`p-4 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
-                                                                ? 'bg-blue-50/40 border-l-blue-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
-                                                                : 'border-l-transparent hover:bg-slate-50/80'
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-start justify-between mb-3">
-                                                                <div className="min-w-0">
-                                                                    <h3 className="text-[14px] font-bold text-slate-900 truncate leading-tight">{inquiry.name}</h3>
-                                                                    <div className="flex items-center gap-2 mt-1.5 font-bold">
-                                                                        <span className={`text-[9px] px-2 py-0.5 rounded font-black uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
-                                                                            {inquiry.status?.replace('_', ' ') || 'new'}
-                                                                        </span>
-                                                                        {inquiry.interest_type && (
-                                                                            <span className="text-[9px] px-2 py-0.5 bg-slate-50 border border-slate-100 text-slate-400 rounded uppercase tracking-wider">
-                                                                                {getInterestLabel(inquiry.interest_type)}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="text-right shrink-0">
-                                                                    <p className="text-[9px] text-slate-300 font-bold uppercase tracking-tight">
-                                                                        {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center justify-between text-[11px]">
-                                                                <div className="flex items-center gap-3 text-slate-500 truncate font-medium">
-                                                                    {inquiry.practice_name && (
-                                                                        <span className="flex items-center gap-1 opacity-80">
-                                                                            <Building2 className="w-3 h-3 text-slate-300" />
-                                                                            <span className="truncate">{inquiry.practice_name}</span>
-                                                                        </span>
-                                                                    )}
-                                                                    <span className="flex items-center gap-1 opacity-60">
-                                                                        <Mail className="w-3 h-3 text-slate-300" />
-                                                                        <span className="truncate">{inquiry.email}</span>
-                                                                    </span>
-                                                                </div>
-                                                                {inquiry.referral_code && (
-                                                                    <span className="flex items-center gap-1 text-emerald-600 font-black bg-emerald-50 px-1.5 py-0.5 rounded text-[9px] uppercase">
-                                                                        <Gift className="w-3 h-3" />
-                                                                        {inquiry.referral_code}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <p className="text-xs font-bold uppercase tracking-wider">No leads in this category</p>
                                             </div>
                                         );
-                                    });
+                                    }
+
+                                    return (
+                                        <div className="divide-y divide-slate-100">
+                                            {displayItems.map((inquiry) => (
+                                                <div
+                                                    key={inquiry.id}
+                                                    onClick={() => setSelectedInquiry(inquiry)}
+                                                    className={`p-4 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
+                                                        ? 'bg-blue-50/40 border-l-blue-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
+                                                        : 'border-l-transparent hover:bg-slate-50/80'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <div className="min-w-0">
+                                                            <h3 className="text-[14px] font-bold text-slate-900 truncate tracking-tight">{inquiry.name}</h3>
+                                                            <div className="flex items-center gap-2 mt-1 font-bold">
+                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
+                                                                    {inquiry.status?.replace('_', ' ') || 'new'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[9px] text-slate-300 font-bold uppercase whitespace-nowrap">
+                                                            {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-[11px]">
+                                                        <div className="flex flex-col text-slate-500 truncate">
+                                                            {inquiry.practice_name && (
+                                                                <span className="truncate flex items-center gap-1">
+                                                                    <Building2 className="w-3 h-3 text-slate-300" />
+                                                                    {inquiry.practice_name}
+                                                                </span>
+                                                            )}
+                                                            <span className="truncate text-[10px] opacity-60">{inquiry.email}</span>
+                                                        </div>
+                                                        {inquiry.referral_code && (
+                                                            <span className="text-emerald-600 font-black bg-emerald-50 px-1.5 py-0.5 rounded text-[8px] uppercase">
+                                                                REF: {inquiry.referral_code}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
                                 })()}
                             </div>
                         )}
                     </div>
 
                     {/* Detail Panel */}
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[800px] shadow-sm">
+                    <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[800px] shadow-sm">
                         {selectedInquiry ? (
                             <>
                                 {/* Compact Header */}
