@@ -184,8 +184,15 @@ router.post('/invite', async (req, res) => {
  */
 router.get('/alerts', async (req, res) => {
     try {
-        const clinicId = req.clinic.id;
-        console.log(`[Growth] Fetching alerts for clinic: ${clinicId} (${req.clinic.slug})`);
+        // Use user's clinic_id as primary source (set by authenticate), fallback to resolved tenant
+        const clinicId = req.user?.clinic_id || req.clinic?.id;
+
+        if (!clinicId) {
+            console.warn('[Growth] Alerts requested but no clinic ID found in user or tenant context');
+            return res.json({ alerts: [], count: 0 });
+        }
+
+        console.log(`[Growth] Fetching alerts for clinic: ${clinicId} (User: ${req.user?.email})`);
 
         const alerts = [];
 
