@@ -45,6 +45,7 @@ const AppointmentRequests = React.lazy(() => import('./pages/AppointmentRequests
 const Profile = React.lazy(() => import('./pages/Profile'));
 const FeeSheet = React.lazy(() => import('./pages/FeeSheet'));
 const Compliance = React.lazy(() => import('./pages/Compliance'));
+const SupportPage = React.lazy(() => import('./pages/SupportPage'));
 
 const PlatformAdminLogin = React.lazy(() => import('./pages/PlatformAdminLogin'));
 const PlatformAdminDashboard = React.lazy(() => import('./pages/PlatformAdminDashboard'));
@@ -345,6 +346,13 @@ function App() {
                                                             <ProtectedRoute>
                                                                 <ErrorBoundary>
                                                                     <Layout><AdminSettings /></Layout>
+                                                                </ErrorBoundary>
+                                                            </ProtectedRoute>
+                                                        } />
+                                                        <Route path="/support" element={
+                                                            <ProtectedRoute>
+                                                                <ErrorBoundary>
+                                                                    <Layout><SupportPage /></Layout>
                                                                 </ErrorBoundary>
                                                             </ProtectedRoute>
                                                         } />
