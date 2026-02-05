@@ -678,6 +678,19 @@ const SalesAdmin = () => {
                         </div>
                         <div className="flex items-center gap-3">
                             <button
+                                onClick={() => {
+                                    setViewMode('master');
+                                    fetchMasterSchedule();
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-sm ${viewMode === 'master'
+                                    ? 'bg-slate-800 text-white shadow-inner scale-[0.98]'
+                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <Calendar className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-400'}`} />
+                                <span className="font-bold">Schedule</span>
+                            </button>
+                            <button
                                 onClick={() => setShowSettings(true)}
                                 className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
                             >
@@ -798,7 +811,7 @@ const SalesAdmin = () => {
                                         {inquiries.filter(i => i.is_claimed && i.owner_id === currentUser?.id).length}
                                     </span>
                                 </button>
-                                {currentUser?.role === 'sales_manager' && (
+                                {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && (
                                     <button
                                         onClick={() => {
                                             setViewMode('master');
