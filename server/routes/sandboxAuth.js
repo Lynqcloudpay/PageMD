@@ -36,14 +36,13 @@ router.post('/provision', async (req, res) => {
             RETURNING id
         `, ['demo@pagemd.com', 'sandbox_auto_login_placeholder', 'Doctor', 'Sandbox', 'Clinician', true, 'active']);
         const providerId = providerRes.rows[0].id;
-
         const sandboxClinicId = '00000000-0000-0000-0000-000000000000';
 
         // 3. Seed Basic Settings
         await client.query(`
-            INSERT INTO practice_settings (clinic_id, practice_name, practice_type, timezone)
-            VALUES ($1, 'Sandbox Medical Center', 'General Practice', 'America/New_York')
-        `, [sandboxClinicId]);
+            INSERT INTO practice_settings (practice_name, practice_type, timezone)
+            VALUES ('Sandbox Medical Center', 'General Practice', 'America/New_York')
+        `);
 
         await client.query(`
             INSERT INTO clinical_settings (require_dx_on_visit, enable_clinical_alerts)
