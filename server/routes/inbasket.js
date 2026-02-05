@@ -431,9 +431,9 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
     // until someone marks it 'completed'.
 
 
-    // 8. [DISABLED] Sync Portal Appointment Requests
-    // Handled in a separate dedicated module now, not in the general inbox.
-    /*
+    // 8. Sync Portal Appointment Requests
+    // Handled in a separate dedicated module now, but we still sync to inbox_items 
+    // so the dedicated view can use the unified data structure.
     await client.query(`
     INSERT INTO inbox_items(
       id, tenant_id, patient_id, type, priority, status,
@@ -450,24 +450,18 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
       COALESCE(ar.provider_id, p.primary_care_provider), ar.clinic_id, ar.created_at, ar.created_at, ar.visit_method
     FROM portal_appointment_requests ar
     JOIN patients p ON ar.patient_id = p.id
-    WHERE ar.status IN ('pending', 'declined')
+    WHERE ar.status IN ('pending', 'declined', 'pending_patient')
     ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' 
     DO UPDATE SET 
         priority = EXCLUDED.priority,
         subject = EXCLUDED.subject,
         visit_method = EXCLUDED.visit_method, 
         updated_at = CURRENT_TIMESTAMP,
-        status = 'new' -- Re-open if it was archived/read but now declined
+        status = CASE 
+            WHEN EXCLUDED.priority = 'high' THEN 'new' 
+            ELSE inbox_items.status 
+        END
     `, [tenantId]);
-    */
-
-    // CLEANUP: Remove any existing Portal Appointments from the inbox table 
-    // to avoid confusing the "Total" count
-    await client.query(`
-      DELETE FROM inbox_items 
-      WHERE type = 'portal_appointment' 
-        AND status != 'completed'
-    `);
 
   } finally {
     if (shouldRelease) {
@@ -513,7 +507,12 @@ router.get('/', async (req, res) => {
         params.push('archived');
       } else if (status === 'new' || status === 'read') {
         paramCount++;
-        query += ` AND i.status = $${paramCount} `;
+        // For portal appointments, 'new' view should also include 'pending_patient' items
+        if (type === 'portal_appointment' && status === 'new') {
+          query += ` AND i.status IN ($${paramCount}, 'pending_patient') `;
+        } else {
+          query += ` AND i.status = $${paramCount} `;
+        }
         params.push(status);
       } else {
         // Default active view: everything not completed/archived
@@ -522,6 +521,12 @@ router.get('/', async (req, res) => {
     } else {
       // Default: everything not completed/archived
       query += ` AND i.status NOT IN('completed', 'archived')`;
+    }
+
+    // HIPPA/Design: If NO TYPE is specified, exclude portal appointments 
+    // from the general list as they are handled in their own module.
+    if (!type || type === 'all') {
+      query += ` AND i.type != 'portal_appointment' `;
     }
 
     if (type && type !== 'all') {
@@ -561,15 +566,16 @@ router.get('/stats', async (req, res) => {
 
     const counts = await client.query(`
       SELECT
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived')) as all_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND assigned_user_id = $1) as my_count,
+        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type != 'portal_appointment') as all_count,
+        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND assigned_user_id = $1 AND type != 'portal_appointment') as my_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'lab') as labs_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'imaging') as imaging_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'document') as docs_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'message') as msgs_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'task') as tasks_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'refill') as refills_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'portal_message') as portal_count
+        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'portal_message') as portal_count,
+        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'portal_appointment') as portal_appt_count
       FROM inbox_items
     `, [req.user.id]);
 

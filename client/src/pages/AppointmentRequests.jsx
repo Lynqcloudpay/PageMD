@@ -127,7 +127,7 @@ const AppointmentRequests = () => {
     const [users, setUsers] = useState([]);
 
     // Filter State
-    const [filterStatus, setFilterStatus] = useState('new'); // 'new', 'completed', 'all'
+    const [filterStatus, setFilterStatus] = useState('new'); // 'new', 'declined', 'completed'
     const [searchQuery, setSearchQuery] = useState('');
 
     // Selected Request State
@@ -223,7 +223,7 @@ const AppointmentRequests = () => {
             if (isCompleted) return false; // Hide closed/completed declined requests
             if (!isDeclined) return false;
         }
-        if (filterStatus === 'all') {
+        if (filterStatus === 'completed') {
             // History view - show only completed/archived items
             if (!isCompleted) return false;
         }
@@ -355,8 +355,8 @@ const AppointmentRequests = () => {
                                 Refusals ({requests.filter(r => r.subject?.includes('DECLINED')).length})
                             </button>
                             <button
-                                onClick={() => setFilterStatus('all')}
-                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'all' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                onClick={() => setFilterStatus('completed')}
+                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'completed' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                             >
                                 History
                             </button>
