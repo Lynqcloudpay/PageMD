@@ -1183,86 +1183,95 @@ const SalesAdmin = () => {
                                         return 3; // Default to middle priority for unknown statuses
                                     };
 
-                                    const sortedItems = !statusFilter
-                                        ? [...displayItems].sort((a, b) => {
+                                    // Check if lead has recent activity (within 15 minutes) - "HOT" lead
+                                    const isHotLead = (inquiry) => {
+                                        if (!inquiry.last_activity_at) return false;
+                                        const lastActivity = new Date(inquiry.last_activity_at);
+                                        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+                                        return lastActivity > fifteenMinutesAgo;
+                                    };
+
+                                    const sortedItems = [...displayItems].sort((a, b) => {
+                                        // Hot leads ALWAYS float to the top
+                                        const aHot = isHotLead(a);
+                                        const bHot = isHotLead(b);
+                                        if (aHot && !bHot) return -1;
+                                        if (!aHot && bHot) return 1;
+
+                                        // If neither or both are hot, apply status priority (only in ALL view)
+                                        if (!statusFilter) {
                                             const priorityDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
                                             if (priorityDiff !== 0) return priorityDiff;
-                                            // Within same priority, sort by most recent activity
-                                            return new Date(b.last_activity_at || b.created_at) - new Date(a.last_activity_at || a.created_at);
-                                        })
-                                        : displayItems;
+                                        }
+
+                                        // Within same priority, sort by most recent activity
+                                        return new Date(b.last_activity_at || b.created_at) - new Date(a.last_activity_at || a.created_at);
+                                    });
 
                                     return (
-                                        <div className="divide-y divide-slate-100">
-                                            {sortedItems.map((inquiry) => (
-                                                <div
-                                                    key={inquiry.id}
-                                                    onClick={() => handleSelectInquiry(inquiry)}
-                                                    className={`p-4 cursor-pointer transition-all border-l-4 ${selectedInquiry?.id === inquiry.id
-                                                        ? 'bg-blue-50/40 border-l-blue-500 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]'
-                                                        : 'border-l-transparent hover:bg-slate-50/80'
-                                                        }`}
-                                                >
-                                                    <div className="flex items-start justify-between mb-2">
-                                                        <div className="min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <h3 className="text-[14px] font-bold text-slate-800 truncate tracking-tight">{inquiry.name}</h3>
-                                                                {inquiry.is_claimed && (
-                                                                    <>
-                                                                        <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200" title={`Claimed by ${inquiry.owner_id === currentUser?.id ? 'You' : (inquiry.owner_username || 'Seller')}`}>
-                                                                            <Lock className="w-2.5 h-2.5 text-slate-400" />
-                                                                        </div>
-                                                                        {inquiry.owner_username && inquiry.owner_id !== currentUser?.id && (
-                                                                            <div className="flex items-center gap-1 pl-1.5 pr-2 py-0.5 bg-indigo-600 text-white rounded-md shadow-sm shadow-indigo-200 border border-indigo-700 ml-1">
-                                                                                <User className="w-2.5 h-2.5" />
-                                                                                <span className="text-[9px] font-bold uppercase tracking-widest leading-none">
-                                                                                    {inquiry.owner_username}
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )}
+                                        <div className="divide-y divide-slate-50">
+                                            {sortedItems.map((inquiry) => {
+                                                const isHot = isHotLead(inquiry);
+                                                return (
+                                                    <div
+                                                        key={inquiry.id}
+                                                        onClick={() => handleSelectInquiry(inquiry)}
+                                                        className={`px-3 py-2 cursor-pointer transition-all border-l-4 flex items-center gap-3 ${selectedInquiry?.id === inquiry.id
+                                                                ? 'bg-blue-50/60 border-l-blue-500'
+                                                                : isHot
+                                                                    ? 'border-l-orange-400 bg-orange-50/30 hover:bg-orange-50/50'
+                                                                    : 'border-l-transparent hover:bg-slate-50/80'
+                                                            }`}
+                                                    >
+                                                        {/* Hot Lead Indicator */}
+                                                        {isHot && (
+                                                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center animate-pulse shadow-sm shadow-orange-200" title="Active now - call them!">
+                                                                <span className="text-[10px]">🔥</span>
                                                             </div>
-                                                            <div className="flex items-center gap-2 mt-1 font-bold">
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
-                                                                    {inquiry.status?.replace('_', ' ') || 'new'}
+                                                        )}
+
+                                                        {/* Name + Status */}
+                                                        <div className="flex-1 min-w-0 flex items-center gap-2">
+                                                            <h3 className="text-[13px] font-bold text-slate-800 truncate">{inquiry.name}</h3>
+                                                            <span className={`text-[7px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex-shrink-0 ${getStatusColor(inquiry.status)}`}>
+                                                                {inquiry.status?.replace('_', ' ') || 'new'}
+                                                            </span>
+                                                            {inquiry.is_claimed && (
+                                                                <Lock className="w-3 h-3 text-slate-300 flex-shrink-0" />
+                                                            )}
+                                                            {inquiry.last_activity_at && (new Date(inquiry.last_activity_at) - new Date(inquiry.created_at) > 1000 * 60 * 5) && !isHot && (
+                                                                <span className="text-[7px] px-1 py-0.5 rounded font-bold uppercase bg-rose-100 text-rose-500 flex-shrink-0">
+                                                                    Return
                                                                 </span>
-                                                                {inquiry.last_activity_at && (new Date(inquiry.last_activity_at) - new Date(inquiry.created_at) > 1000 * 60 * 5) && (
-                                                                    <span className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-rose-100 text-rose-600 animate-pulse">
-                                                                        Returning Lead
-                                                                    </span>
-                                                                )}
-                                                            </div>
+                                                            )}
                                                         </div>
-                                                        <div className="flex flex-col items-end gap-1">
-                                                            <span className="text-[9px] text-slate-300 font-bold uppercase whitespace-nowrap">
-                                                                {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
+
+                                                        {/* Practice/Email */}
+                                                        <div className="hidden lg:block text-[10px] text-slate-400 truncate max-w-[120px]">
+                                                            {inquiry.practice_name || inquiry.email}
+                                                        </div>
+
+                                                        {/* Referral */}
+                                                        {inquiry.referral_code && (
+                                                            <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[7px] uppercase flex-shrink-0">
+                                                                REF
+                                                            </span>
+                                                        )}
+
+                                                        {/* Date + Unread */}
+                                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                                            <span className="text-[9px] text-slate-300 font-medium">
+                                                                {inquiry.created_at ? format(new Date(inquiry.created_at), 'M/d') : '-'}
                                                             </span>
                                                             {parseInt(inquiry.unread_count || 0) > 0 && (
-                                                                <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce border-2 border-white">
+                                                                <span className="w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-bounce">
                                                                     {inquiry.unread_count}
                                                                 </span>
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between text-[11px]">
-                                                        <div className="flex flex-col text-slate-500 truncate">
-                                                            {inquiry.practice_name && (
-                                                                <span className="truncate flex items-center gap-1">
-                                                                    <Building2 className="w-3 h-3 text-slate-300" />
-                                                                    {inquiry.practice_name}
-                                                                </span>
-                                                            )}
-                                                            <span className="truncate text-[10px] opacity-60">{inquiry.email}</span>
-                                                        </div>
-                                                        {inquiry.referral_code && (
-                                                            <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[8px] uppercase">
-                                                                REF: {inquiry.referral_code}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     );
                                 })()}
