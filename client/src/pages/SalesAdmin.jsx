@@ -1052,9 +1052,12 @@ const SalesAdmin = () => {
                                                                             <Lock className="w-2.5 h-2.5 text-slate-400" />
                                                                         </div>
                                                                         {inquiry.owner_username && inquiry.owner_id !== currentUser?.id && (
-                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase bg-slate-50 px-1.5 rounded border border-slate-100">
-                                                                                {inquiry.owner_username}
-                                                                            </span>
+                                                                            <div className="flex items-center gap-1 pl-1.5 pr-2 py-0.5 bg-indigo-600 text-white rounded-md shadow-sm shadow-indigo-200 border border-indigo-700 ml-1">
+                                                                                <User className="w-2.5 h-2.5" />
+                                                                                <span className="text-[9px] font-bold uppercase tracking-widest leading-none">
+                                                                                    {inquiry.owner_username}
+                                                                                </span>
+                                                                            </div>
                                                                         )}
                                                                     </>
                                                                 )}
