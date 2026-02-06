@@ -928,7 +928,7 @@ const SalesAdmin = () => {
                                 <button
                                     onClick={() => {
                                         setViewMode('pool');
-                                        setStatusFilter('new');
+                                        setStatusFilter('verified'); // Default to verified leads
                                     }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'pool'
                                         ? 'bg-white text-blue-600 shadow-md transform scale-[1.02]'
@@ -941,7 +941,8 @@ const SalesAdmin = () => {
                                         {inquiries.filter(i => {
                                             if (i.is_claimed) return false;
                                             const s = (i.status || 'new').toLowerCase().trim();
-                                            return !['demo_scheduled', 'follow_up', 'converted', 'closed', 'contacted'].includes(s);
+                                            // Only count VERIFIED leads in the top badge
+                                            return s === 'verified';
                                         }).length}
                                     </span>
                                 </button>
@@ -1006,12 +1007,85 @@ const SalesAdmin = () => {
                                 </div>
                             )}
 
+                            {/* Lead Pool Sub-filters: Verified / Unverified */}
+                            {viewMode === 'pool' && (
+                                <div className="flex gap-2 mb-4">
+                                    {(() => {
+                                        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+                                        // Calculate verified and unverified counts
+                                        const verifiedLeads = inquiries.filter(i => {
+                                            if (i.is_claimed) return false;
+                                            const s = (i.status || 'new').toLowerCase().trim();
+                                            return s === 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
+                                        });
+                                        const unverifiedLeads = inquiries.filter(i => {
+                                            if (i.is_claimed) return false;
+                                            const s = (i.status || 'new').toLowerCase().trim();
+                                            return s !== 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
+                                        });
+
+                                        // Check for recent activity (hot leads)
+                                        const hasHotVerified = verifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > fifteenMinutesAgo);
+                                        const hasHotUnverified = unverifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > fifteenMinutesAgo);
+
+                                        return (
+                                            <>
+                                                <button
+                                                    onClick={() => setStatusFilter('verified')}
+                                                    className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-2 border ${statusFilter === 'verified'
+                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                                                        : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+                                                        }`}
+                                                >
+                                                    <span className="flex items-center gap-1.5">
+                                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                                        Verified
+                                                    </span>
+                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${statusFilter === 'verified'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : hasHotVerified
+                                                            ? 'bg-orange-500 text-white animate-pulse'
+                                                            : 'bg-slate-100 text-slate-400'
+                                                        }`}>
+                                                        {verifiedLeads.length}
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    onClick={() => setStatusFilter('unverified')}
+                                                    className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-2 border ${statusFilter === 'unverified'
+                                                        ? 'bg-amber-600 text-white border-amber-600 shadow-md'
+                                                        : 'bg-white text-slate-400 border-slate-200 hover:border-amber-300 hover:bg-amber-50'
+                                                        }`}
+                                                >
+                                                    <span className="flex items-center gap-1.5">
+                                                        <Clock className="w-3.5 h-3.5" />
+                                                        Unverified
+                                                    </span>
+                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${statusFilter === 'unverified'
+                                                        ? 'bg-amber-500 text-white'
+                                                        : hasHotUnverified
+                                                            ? 'bg-orange-500 text-white animate-pulse'
+                                                            : 'bg-slate-100 text-slate-300'
+                                                        }`}>
+                                                        {unverifiedLeads.length}
+                                                    </span>
+                                                </button>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
                             {/* Sub-filters for Pipeline */}
                             {viewMode === 'personal' && (
                                 <div className="grid grid-cols-3 gap-2 mb-4">
                                     {(() => {
                                         // Calculate counts for badges
                                         const counts = { all: 0, new: 0, contacted: 0, demo_scheduled: 0, converted: 0, closed: 0, cancelled: 0 };
+                                        const hotCounts = { all: false, new: false, contacted: false, demo_scheduled: false, converted: false, closed: false, cancelled: false };
+                                        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
                                         inquiries.forEach(i => {
                                             // Check ViewMode visibility
                                             let visible = false;
@@ -1021,17 +1095,39 @@ const SalesAdmin = () => {
 
                                             if (!visible) return;
 
+                                            const isHot = i.last_activity_at && new Date(i.last_activity_at) > fifteenMinutesAgo;
+
                                             counts.all++;
+                                            if (isHot) hotCounts.all = true;
+
                                             const s = (i.status || 'new').toLowerCase().trim();
 
                                             const isSalvage = s === 'closed' && (i.notes || '').includes('SALVAGE');
 
-                                            if (['demo_scheduled'].includes(s)) counts.demo_scheduled++;
-                                            else if (['converted'].includes(s)) counts.converted++;
-                                            else if (isSalvage) counts.cancelled++;
-                                            else if (['closed'].includes(s)) counts.closed++; // Actual closed, not salvage
-                                            else if (['contacted', 'follow_up'].includes(s)) counts.contacted++;
-                                            else counts.new++; // new, pending, verified, etc.
+                                            if (['demo_scheduled'].includes(s)) {
+                                                counts.demo_scheduled++;
+                                                if (isHot) hotCounts.demo_scheduled = true;
+                                            }
+                                            else if (['converted'].includes(s)) {
+                                                counts.converted++;
+                                                if (isHot) hotCounts.converted = true;
+                                            }
+                                            else if (isSalvage) {
+                                                counts.cancelled++;
+                                                if (isHot) hotCounts.cancelled = true;
+                                            }
+                                            else if (['closed'].includes(s)) {
+                                                counts.closed++;
+                                                if (isHot) hotCounts.closed = true;
+                                            }
+                                            else if (['contacted', 'follow_up'].includes(s)) {
+                                                counts.contacted++;
+                                                if (isHot) hotCounts.contacted = true;
+                                            }
+                                            else {
+                                                counts.new++;
+                                                if (isHot) hotCounts.new = true;
+                                            }
                                         });
 
                                         const filters = [
@@ -1048,27 +1144,34 @@ const SalesAdmin = () => {
                                             filters.splice(5, 0, { id: 'cancelled', label: 'Salvage', icon: Archive });
                                         }
 
-                                        return filters.map(cat => (
-                                            <button
-                                                key={cat.id}
-                                                onClick={() => setStatusFilter(cat.id === 'all' ? '' : cat.id)}
-                                                className={`px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-1.5 border w-full ${statusFilter === (cat.id === 'all' ? '' : cat.id)
-                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-[1.02]'
-                                                    : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-1.5 truncate">
-                                                    {statusFilter === (cat.id === 'all' ? '' : cat.id) && <cat.icon className="w-3 h-3 flex-shrink-0" />}
-                                                    <span className="truncate">{cat.label}</span>
-                                                </div>
-                                                <span className={`px-1.5 py-0.5 rounded text-[9px] min-w-[16px] text-center font-bold flex-shrink-0 ${statusFilter === (cat.id === 'all' ? '' : cat.id)
-                                                    ? 'bg-blue-500 text-white'
-                                                    : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500'
-                                                    }`}>
-                                                    {counts[cat.id]}
-                                                </span>
-                                            </button>
-                                        ));
+                                        return filters.map(cat => {
+                                            const isActive = statusFilter === (cat.id === 'all' ? '' : cat.id);
+                                            const hasHotLead = hotCounts[cat.id];
+
+                                            return (
+                                                <button
+                                                    key={cat.id}
+                                                    onClick={() => setStatusFilter(cat.id === 'all' ? '' : cat.id)}
+                                                    className={`px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-1.5 border w-full ${isActive
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-[1.02]'
+                                                        : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-1.5 truncate">
+                                                        {isActive && <cat.icon className="w-3 h-3 flex-shrink-0" />}
+                                                        <span className="truncate">{cat.label}</span>
+                                                    </div>
+                                                    <span className={`px-1.5 py-0.5 rounded text-[9px] min-w-[16px] text-center font-bold flex-shrink-0 ${isActive
+                                                        ? 'bg-blue-500 text-white'
+                                                        : hasHotLead
+                                                            ? 'bg-orange-500 text-white animate-pulse'
+                                                            : 'bg-slate-100 text-slate-400'
+                                                        }`}>
+                                                        {counts[cat.id]}
+                                                    </span>
+                                                </button>
+                                            );
+                                        });
                                     })()}
                                 </div>
                             )}
@@ -1145,6 +1248,14 @@ const SalesAdmin = () => {
 
                                         const s = (i.status || 'new').toLowerCase().trim();
 
+                                        // Lead Pool filters
+                                        if (statusFilter === 'verified') {
+                                            return s === 'verified';
+                                        }
+                                        if (statusFilter === 'unverified') {
+                                            return s !== 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed', 'contacted'].includes(s);
+                                        }
+
                                         if (statusFilter === 'new') {
                                             return !['demo_scheduled', 'follow_up', 'converted', 'closed', 'contacted'].includes(s);
                                         }
@@ -1219,20 +1330,17 @@ const SalesAdmin = () => {
                                                         className={`px-3 py-2 cursor-pointer transition-all border-l-4 flex items-center gap-3 ${selectedInquiry?.id === inquiry.id
                                                                 ? 'bg-blue-50/60 border-l-blue-500'
                                                                 : isHot
-                                                                    ? 'border-l-orange-400 bg-orange-50/30 hover:bg-orange-50/50'
+                                                                    ? 'border-l-orange-500 bg-gradient-to-r from-orange-50 to-amber-50/50 hover:from-orange-100 hover:to-amber-100/50 animate-pulse'
                                                                     : 'border-l-transparent hover:bg-slate-50/80'
                                                             }`}
                                                     >
-                                                        {/* Hot Lead Indicator */}
-                                                        {isHot && (
-                                                            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center animate-pulse shadow-sm shadow-orange-200" title="Active now - call them!">
-                                                                <span className="text-[10px]">🔥</span>
-                                                            </div>
-                                                        )}
-
                                                         {/* Name + Status */}
                                                         <div className="flex-1 min-w-0 flex items-center gap-2">
-                                                            <h3 className="text-[13px] font-bold text-slate-800 truncate">{inquiry.name}</h3>
+                                                            {/* Hot indicator dot */}
+                                                            {isHot && (
+                                                                <div className="w-2 h-2 rounded-full bg-orange-500 animate-ping flex-shrink-0" title="Active now!" />
+                                                            )}
+                                                            <h3 className={`text-[13px] font-bold truncate ${isHot ? 'text-orange-700' : 'text-slate-800'}`}>{inquiry.name}</h3>
                                                             <span className={`text-[7px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex-shrink-0 ${getStatusColor(inquiry.status)}`}>
                                                                 {inquiry.status?.replace('_', ' ') || 'new'}
                                                             </span>
