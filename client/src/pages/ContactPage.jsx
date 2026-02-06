@@ -29,15 +29,36 @@ const ContactPage = () => {
         const ref = searchParams.get('ref') || localStorage.getItem('pagemd_referral');
         const token = searchParams.get('token') || localStorage.getItem('pagemd_referral_token');
 
-        if (plan || interest || ref || token) {
+        const populateForm = async () => {
+            let fetchedData = {};
+            if (token) {
+                try {
+                    const baseUrl = import.meta.env.VITE_API_URL || '/api';
+                    const res = await fetch(`${baseUrl}/growth/verify-token/${token}`);
+                    const data = await res.json();
+                    if (data.valid) {
+                        fetchedData = {
+                            name: data.name || '',
+                            email: data.email || '',
+                            referral_token: token
+                        };
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch referral info', e);
+                }
+            }
+
             setFormData(prev => ({
                 ...prev,
                 interest: interest || prev.interest,
                 referral_code: ref || prev.referral_code,
                 referral_token: token || prev.referral_token,
-                message: plan ? `I'm interested in the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.` : prev.message
+                message: plan ? `I'm interested in the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.` : prev.message,
+                ...fetchedData
             }));
-        }
+        };
+
+        populateForm();
     }, [searchParams]);
 
     const handleSubmit = async (e) => {

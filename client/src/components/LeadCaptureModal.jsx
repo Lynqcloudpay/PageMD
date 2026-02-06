@@ -19,7 +19,7 @@ import tokenManager from '../services/tokenManager';
 // reCAPTCHA site key from environment
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
-const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
+const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitState, setSubmitState] = useState('form'); // 'form' | 'verify' | 'success' | 'error'
     const [errorMessage, setErrorMessage] = useState('');
@@ -29,7 +29,8 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
         practice: '',
         specialty: '',
         email: '',
-        phone: ''
+        phone: '',
+        referral_token: ''
     });
 
     // Verification Code State
@@ -37,15 +38,8 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
     const [isVerifying, setIsVerifying] = useState(false);
     const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
-    // Load reCAPTCHA v3 script and saved form data
+    // Load reCAPTCHA v3 script (run once)
     useEffect(() => {
-        const saved = localStorage.getItem('pagemd_lead_info');
-        if (saved) {
-            try {
-                setFormData(JSON.parse(saved));
-            } catch (e) { }
-        }
-
         if (!RECAPTCHA_SITE_KEY) return;
         if (document.querySelector(`script[src*="recaptcha"]`)) return;
 
@@ -54,6 +48,25 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
         script.async = true;
         document.head.appendChild(script);
     }, []);
+
+    // Load initial data or saved form data
+    useEffect(() => {
+        if (initialData) {
+            setFormData(prev => ({
+                ...prev,
+                name: initialData.name || prev.name,
+                email: initialData.email || prev.email,
+                referral_token: initialData.token || prev.referral_token
+            }));
+        } else {
+            const saved = localStorage.getItem('pagemd_lead_info');
+            if (saved) {
+                try {
+                    setFormData(JSON.parse(saved));
+                } catch (e) { }
+            }
+        }
+    }, [initialData]);
 
     // Focus first code input when entering verification state
     useEffect(() => {

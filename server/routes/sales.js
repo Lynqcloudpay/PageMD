@@ -267,11 +267,23 @@ router.post('/inquiry', async (req, res) => {
             verificationExpires = new Date(Date.now() + 45 * 60 * 1000);
         }
 
-        // 4. Check for existing lead (Duplicate Detection - Case Insensitive)
-        const existingRes = await pool.query(
-            'SELECT id, status FROM sales_inquiries WHERE LOWER(email) = LOWER($1) OR (phone = $2 AND phone IS NOT NULL AND phone != \'\') ORDER BY created_at ASC LIMIT 1',
-            [email, phone]
-        );
+        // 4. Check for existing lead (Priority: Token -> Email -> Phone)
+        let existingRes;
+
+        if (referral_token) {
+            // First try finding by unique referral token
+            existingRes = await pool.query(
+                'SELECT id, status FROM sales_inquiries WHERE referral_token = $1',
+                [referral_token]
+            );
+        }
+
+        if (!existingRes || existingRes.rows.length === 0) {
+            existingRes = await pool.query(
+                'SELECT id, status FROM sales_inquiries WHERE LOWER(email) = LOWER($1) OR (phone = $2 AND phone IS NOT NULL AND phone != \'\') ORDER BY created_at ASC LIMIT 1',
+                [email, phone]
+            );
+        }
         const existingInquiry = existingRes.rows[0];
         let isDuplicate = false;
         let inquiryId;
@@ -282,15 +294,27 @@ router.post('/inquiry', async (req, res) => {
             console.log(`[SALES] Duplicate lead found for ${email}. Merging attempt into Inquiry #${inquiryId}`);
 
             // Update existing lead (Reset status to allow re-verification if it's a sandbox request)
+            // Update existing lead with new demographics (Upsert logic)
+            // We overwrite basic fields to ensure latest contact info is saved
             await pool.query(`
                 UPDATE sales_inquiries 
-                SET verification_token = $1, 
-                    verification_code = $2, 
-                    verification_expires_at = $3,
-                    status = CASE WHEN $4 = true THEN 'pending_verification' ELSE status END,
+                SET 
+                    name = $1,
+                    phone = COALESCE($2, phone),
+                    practice_name = COALESCE($3, practice_name),
+                    provider_count = COALESCE($4, provider_count),
+                    message = COALESCE($5, message),
+                    interest_type = COALESCE($6, interest_type),
+                    verification_token = $7, 
+                    verification_code = $8, 
+                    verification_expires_at = $9,
+                    status = CASE WHEN $10 = true THEN 'pending_verification' ELSE status END,
                     updated_at = NOW()
-                WHERE id = $5
-            `, [verificationToken, verificationCode, verificationExpires, isSandboxRequest, inquiryId]);
+                WHERE id = $11
+            `, [
+                name, phone, practice, providers, message, interest,
+                verificationToken, verificationCode, verificationExpires, isSandboxRequest, inquiryId
+            ]);
 
             // Log the duplicate demo attempt
             await pool.query(`

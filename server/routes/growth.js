@@ -235,6 +235,48 @@ router.post('/invite', async (req, res) => {
 });
 
 /**
+ * GET /verify-token/:token
+ * Public endpoint to validate a referral token and return basic info for form pre-filling.
+ */
+router.get('/verify-token/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+
+        // Check clinic_referrals table
+        const result = await pool.controlPool.query(`
+            SELECT referral_email, referred_clinic_name, referrer_clinic_id
+            FROM public.clinic_referrals
+            WHERE token = $1 
+            AND (token_expires_at IS NULL OR token_expires_at > NOW())
+            AND status = 'pending'
+        `, [token]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ valid: false, error: 'Invalid or expired token' });
+        }
+
+        const referral = result.rows[0];
+
+        // Also fetch referrer name for UI personalization
+        const clinicRes = await pool.controlPool.query(
+            "SELECT display_name, name FROM public.clinics WHERE id = $1",
+            [referral.referrer_clinic_id]
+        );
+        const referrerName = clinicRes.rows[0]?.display_name || clinicRes.rows[0]?.name || 'a colleague';
+
+        res.json({
+            valid: true,
+            email: referral.referral_email,
+            name: referral.referred_clinic_name,
+            referrerName: referrerName
+        });
+    } catch (error) {
+        console.error('[Growth] Verify token failed:', error);
+        res.status(500).json({ error: 'Verification failed' });
+    }
+});
+
+/**
  * GET /alerts
  * Returns active alerts for the clinic admin (churn notifications, grace period warnings)
  */

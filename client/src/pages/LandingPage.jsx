@@ -27,6 +27,30 @@ const LandingPage = () => {
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [isConciergeOpen, setIsConciergeOpen] = React.useState(false);
     const [leadName, setLeadName] = React.useState('');
+    const [referralData, setReferralData] = React.useState(null);
+
+    // Check for referral token on mount
+    React.useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (token) {
+            const baseUrl = import.meta.env.VITE_API_URL || '/api';
+            fetch(`${baseUrl}/growth/verify-token/${token}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.valid) {
+                        console.log('Referral verified:', data);
+                        setReferralData({
+                            name: data.name || '',
+                            email: data.email || '',
+                            token: token, // Keep token for submission
+                            referrerName: data.referrerName
+                        });
+                    }
+                })
+                .catch(err => console.error('Token check failed', err));
+        }
+    }, []);
 
     const getLeadCookie = (name) => {
         const decodedCookie = decodeURIComponent(document.cookie);
@@ -315,6 +339,7 @@ const LandingPage = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onLaunch={handleInstantDemo}
+                initialData={referralData}
             />
             <ConciergeOverlay
                 isOpen={isConciergeOpen}
