@@ -848,21 +848,19 @@ const SalesAdmin = () => {
                                         }).length}
                                     </span>
                                 </button>
-                                {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && (
-                                    <button
-                                        onClick={() => {
-                                            setViewMode('master');
-                                            fetchMasterSchedule();
-                                        }}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'master'
-                                            ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]'
-                                            : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
-                                            }`}
-                                    >
-                                        <Activity className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-300'}`} />
-                                        Team
-                                    </button>
-                                )}
+                                <button
+                                    onClick={() => {
+                                        setViewMode('master');
+                                        fetchMasterSchedule();
+                                    }}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'master'
+                                        ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]'
+                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                        }`}
+                                >
+                                    <Activity className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-300'}`} />
+                                    {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') ? 'Team' : 'Schedule'}
+                                </button>
                             </div>
 
                             {/* Pipeline Filter for Admins */}
@@ -1116,35 +1114,39 @@ const SalesAdmin = () => {
                                 <div className="p-6 border-b border-slate-100 bg-white flex items-center justify-between">
                                     <div>
                                         <h2 className="text-lg font-bold text-slate-800 tracking-tight">
-                                            {scheduleFilter === 'all' ? 'Team Schedule' : 'My Schedule'}
+                                            {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin')
+                                                ? (scheduleFilter === 'all' ? 'Team Schedule' : 'My Schedule')
+                                                : 'My Schedule'}
                                         </h2>
                                         <p className="text-xs text-slate-400 font-medium">
-                                            {scheduleFilter === 'all'
+                                            {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && scheduleFilter === 'all'
                                                 ? 'Control tower view of all upcoming team demos'
                                                 : 'Your personal demo schedule and availability'
                                             }
                                         </p>
                                     </div>
-                                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm">
-                                        <button
-                                            onClick={() => setScheduleFilter('all')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'all'
-                                                ? 'bg-white text-blue-600 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-600'
-                                                }`}
-                                        >
-                                            Team
-                                        </button>
-                                        <button
-                                            onClick={() => setScheduleFilter('mine')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'mine'
-                                                ? 'bg-white text-blue-600 shadow-sm'
-                                                : 'text-slate-400 hover:text-slate-600'
-                                                }`}
-                                        >
-                                            My Demos
-                                        </button>
-                                    </div>
+                                    {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && (
+                                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm">
+                                            <button
+                                                onClick={() => setScheduleFilter('all')}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'all'
+                                                    ? 'bg-white text-blue-600 shadow-sm'
+                                                    : 'text-slate-400 hover:text-slate-600'
+                                                    }`}
+                                            >
+                                                Team
+                                            </button>
+                                            <button
+                                                onClick={() => setScheduleFilter('mine')}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'mine'
+                                                    ? 'bg-white text-blue-600 shadow-sm'
+                                                    : 'text-slate-400 hover:text-slate-600'
+                                                    }`}
+                                            >
+                                                My Demos
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex-1 flex overflow-hidden">
@@ -1238,7 +1240,7 @@ const SalesAdmin = () => {
                                             const dayDemos = masterDemos
                                                 .filter(d =>
                                                     isSameDay(parseISO(d.scheduled_at), selectedDate) &&
-                                                    (scheduleFilter === 'all' || d.owner_id === currentUser?.id)
+                                                    (scheduleFilter === 'all' || d.owner_id === currentUser?.id || d.seller_id === currentUser?.id)
                                                 )
                                                 .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 

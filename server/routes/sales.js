@@ -1259,15 +1259,12 @@ router.post('/inquiries/:id/claim', verifyToken, async (req, res) => {
  */
 router.get('/master-schedule', verifyToken, async (req, res) => {
     try {
-        // Only managers or admins should see this
+        // Determine access level
         const userRes = await pool.query('SELECT role FROM sales_team_users WHERE id = $1', [req.user.id]);
         const userRole = userRes.rows[0]?.role;
+        const isAdminOrManager = userRole === 'sales_manager' || req.user.username === 'admin';
 
-        if (userRole !== 'sales_manager' && req.user.username !== 'admin') {
-            return res.status(403).json({ error: 'Access denied. Managers only.' });
-        }
-
-        const result = await pool.query(`
+        let query = `
             SELECT d.*, 
                    i.name as lead_name, 
                    i.email as lead_email,
@@ -1282,8 +1279,20 @@ router.get('/master-schedule', verifyToken, async (req, res) => {
             FROM sales_demos d
             JOIN sales_inquiries i ON d.inquiry_id = i.id
             JOIN sales_team_users u ON d.seller_id = u.id
-            ORDER BY d.scheduled_at ASC
-        `);
+            WHERE 1=1
+        `;
+
+        const params = [];
+
+        // If not admin/manager, restrict to own demos
+        if (!isAdminOrManager) {
+            params.push(req.user.id);
+            query += ` AND d.seller_id = $${params.length}`;
+        }
+
+        query += ` ORDER BY d.scheduled_at ASC`;
+
+        const result = await pool.query(query, params);
         res.json({ demos: result.rows });
     } catch (error) {
         console.error('Error fetching master schedule:', error);
