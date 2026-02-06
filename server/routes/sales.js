@@ -855,6 +855,14 @@ router.post('/inquiries/:id/dismiss', verifyToken, async (req, res) => {
             RETURNING *
         `, [reason, notes.trim(), adminId, id]);
 
+        // AUTO-ACTION: Cancel all associated demos
+        await pool.query(`
+            UPDATE sales_demos 
+            SET status = 'cancelled', 
+                updated_at = NOW()
+            WHERE inquiry_id = $1 AND status NOT IN ('completed', 'cancelled', 'declined')
+        `, [id]);
+
         // Log the dismissal
         const reasonLabels = {
             spam: 'Spam/Fake',
@@ -1283,6 +1291,17 @@ router.post('/onboard', verifyToken, async (req, res) => {
                 SET status = 'converted', updated_at = NOW()
                 WHERE id = $1
             `, [inquiryId]);
+
+            // AUTO-ACTION: Complete all associated demos
+            await pool.query(`
+                UPDATE sales_demos 
+                SET status = 'completed', 
+                    outcome_category = 'converted',
+                    outcome_notes = 'Auto-completed via clinic onboarding',
+                    completed_at = NOW(),
+                    updated_at = NOW()
+                WHERE inquiry_id = $1 AND status != 'completed'
+            `, [inquiryId]);
         }
 
         // 7. Log conversion for commission tracking
@@ -1701,6 +1720,19 @@ router.post('/demos/:id/complete', verifyToken, async (req, res) => {
                 updated_at = NOW()
             WHERE id = $3
         `, [category, notes.trim(), id]);
+
+        // AUTO-ACTION: If converted, complete ALL other demos for this inquiry
+        if (category === 'converted') {
+            await pool.query(`
+                UPDATE sales_demos 
+                SET status = 'completed', 
+                    outcome_category = 'converted',
+                    outcome_notes = 'Auto-completed via related demo conversion',
+                    completed_at = NOW(),
+                    updated_at = NOW()
+                WHERE inquiry_id = $1 AND id != $2 AND status != 'completed'
+            `, [demo.inquiry_id, id]);
+        }
 
         // 3. Update Inquiry status based on category
         let newInquiryStatus = 'follow_up'; // Default for undecided/budget/asking_time

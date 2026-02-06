@@ -134,6 +134,12 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "🗑️  Running Sales Lead Dismissal Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-sales-dismissal.js || echo "⚠️ Warning: Sales dismissal migration failed."
 
+  echo "🔄 Syncing Sales Schema..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/sync-sales-schema.js || echo "⚠️ Warning: Sales schema sync failed."
+
+  echo "🧹 Cleaning up Sales Data..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/cleanup-sales-data.js || echo "⚠️ Warning: Sales data cleanup failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF
