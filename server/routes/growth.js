@@ -198,34 +198,37 @@ router.post('/invite', async (req, res) => {
 
         console.log(`[Growth] Dynamic invitation sent to ${email} (token: ${token}) from clinic ${clinicId}`);
 
-        // 4. Auto-Create Lead in Sales Pool
+        // 4. Create or Update Lead in Sales Pool
         try {
-            // Check for existing lead
-            const existingLead = await pool.controlPool.query(
-                'SELECT id FROM sales_inquiries WHERE LOWER(email) = LOWER($1)',
+            // Check if existing lead exists
+            const existing = await pool.controlPool.query(
+                'SELECT id, referral_token FROM sales_inquiries WHERE LOWER(email) = LOWER($1) LIMIT 1',
                 [email]
             );
 
-            if (existingLead.rows.length === 0) {
-                // Fetch referrer's referral code to link it properly
-                // (Assumes the clinic sending the invite IS the referrer)
-                // We'll try to get it from practice_settings or clinics table if widely available, 
-                // but for now, we'll just populate the token which is the critical link.
-
+            if (existing.rows.length > 0) {
+                // If it exists but has no token, link it
+                if (!existing.rows[0].referral_token) {
+                    await pool.controlPool.query(
+                        'UPDATE sales_inquiries SET referral_token = $1, referrer_name = COALESCE(referrer_name, $2), last_activity_at = NOW() WHERE id = $3',
+                        [token, clinicName, existing.rows[0].id]
+                    );
+                    console.log(`[Growth] Linked invitation token to existing lead: ${email}`);
+                } else {
+                    console.log(`[Growth] Lead already exists with token for ${email}, preserving attribution.`);
+                }
+            } else {
+                // Create new lead
                 await pool.controlPool.query(`
                     INSERT INTO sales_inquiries (
                         name, email, source, interest_type, status, 
                         referral_token, referrer_name, created_at, last_activity_at
                     ) VALUES ($1, $2, 'Clinic_Referral', 'referral_invite', 'new', $3, $4, NOW(), NOW())
                 `, [name, email, token, clinicName]);
-
-                console.log(`[Growth] Auto-created lead in sales pool for ${email}`);
-            } else {
-                console.log(`[Growth] Lead already exists for ${email}, skipping auto-creation.`);
+                console.log(`[Growth] Created new lead in sales pool for ${email}`);
             }
         } catch (leadError) {
-            console.error('[Growth] Failed to auto-create lead:', leadError);
-            // Don't fail the request, just log it
+            console.error('[Growth] Failed to manage lead in sales pool:', leadError);
         }
 
 
@@ -272,17 +275,33 @@ router.get('/verify-token/:token', async (req, res) => {
 
         // AUTO-VERIFY: Mark as verified in sales pool when they click the magic link
         try {
-            await pool.controlPool.query(`
-                UPDATE sales_inquiries 
-                SET status = CASE 
-                        WHEN status IN ('new', 'pending_verification', 'pending') THEN 'verified' 
-                        ELSE status 
-                    END,
-                    referrer_name = COALESCE(referrer_name, $1),
-                    last_activity_at = NOW()
-                WHERE referral_token = $2
-            `, [referrerName, token]);
-            console.log(`[Growth] Auto-verified lead for token ${token}`);
+            const checkSales = await pool.controlPool.query(
+                'SELECT id FROM sales_inquiries WHERE referral_token = $1',
+                [token]
+            );
+
+            if (checkSales.rows.length === 0) {
+                // FAIL-SAFE: Create lead if it went missing
+                await pool.controlPool.query(`
+                    INSERT INTO sales_inquiries (
+                        name, email, source, interest_type, status, 
+                        referral_token, referrer_name, created_at, last_activity_at
+                    ) VALUES ($1, $2, 'Clinic_Referral', 'referral_invite', 'verified', $3, $4, NOW(), NOW())
+                `, [referral.referred_clinic_name, referral.referral_email, token, referrerName]);
+                console.log(`[Growth] Fail-safe created verified lead for token ${token}`);
+            } else {
+                await pool.controlPool.query(`
+                    UPDATE sales_inquiries 
+                    SET status = CASE 
+                            WHEN status IN ('new', 'pending_verification', 'pending') THEN 'verified' 
+                            ELSE status 
+                        END,
+                        referrer_name = COALESCE(referrer_name, $1),
+                        last_activity_at = NOW()
+                    WHERE referral_token = $2
+                `, [referrerName, token]);
+                console.log(`[Growth] Auto-verified existing lead for token ${token}`);
+            }
         } catch (updateError) {
             console.error('[Growth] Failed to auto-verify lead on token click:', updateError);
         }
