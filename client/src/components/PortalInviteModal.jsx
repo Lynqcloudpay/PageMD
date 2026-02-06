@@ -58,7 +58,7 @@ const PortalInviteModal = ({ isOpen, onClose, patient, inviteData }) => {
                         </div>
                     </div>
                     <p className="text-[11px] text-slate-400 italic">
-                        In a production system, this email is sent instantly via our secure HIPAA-compliant SMTP relay.
+                        In a production system, this email is sent instantly via our secure HIPAA-compliant email service (Resend).
                     </p>
                 </div>
 

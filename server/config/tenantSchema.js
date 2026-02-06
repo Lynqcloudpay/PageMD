@@ -372,11 +372,7 @@ CREATE TABLE IF NOT EXISTS drug_sales (
 
 CREATE TABLE IF NOT EXISTS email_settings (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    smtp_host character varying(255),
-    smtp_port integer,
-    smtp_secure boolean DEFAULT true,
-    smtp_username character varying(255),
-    smtp_password character varying(255),
+    resend_api_key text,
     from_name character varying(255),
     from_email character varying(255),
     reply_to_email character varying(255),

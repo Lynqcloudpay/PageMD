@@ -1,33 +1,24 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 /**
  * Email Service
  * 
  * Commercial-grade email service for sending portal invitations, 
- * password resets, and notifications.
+ * password resets, and notifications. 
+ * Now powered exclusively by Resend.
  */
 
 class EmailService {
     constructor() {
         this.enabled = process.env.EMAIL_ENABLED === 'true';
+        this.apiKey = process.env.RESEND_API_KEY;
         this.from = process.env.EMAIL_FROM || 'noreply@pagemdemr.com';
 
-        // SMTP Config
-        this.config = {
-            host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT || '587'),
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            },
-            secure: process.env.SMTP_SECURE === 'true' // true for 465, false for other ports
-        };
-
-        if (this.enabled && this.config.host) {
-            this.transporter = nodemailer.createTransport(this.config);
-            console.log(`[EmailService] Initialized with SMTP host: ${this.config.host}`);
+        if (this.enabled && this.apiKey) {
+            this.resend = new Resend(this.apiKey);
+            console.log(`[EmailService] Initialized with Resend API Key`);
         } else {
-            console.log('[EmailService] SMTP not fully configured or disabled. Falling back to console logging.');
+            console.warn('[EmailService] Resend API Key missing or service disabled. Falling back to console logging.');
         }
     }
 
@@ -323,41 +314,37 @@ class EmailService {
      * Internal send method
      */
     async _send(to, subject, html) {
-        console.log(`[EmailService] 📧 Preparing email for: ${to}`);
+        console.log(`[EmailService] 📧 Preparing email via Resend for: ${to}`);
 
-        if (!this.transporter) {
-            console.error('[EmailService] ❌ Transporter not initialized. Re-initializing...');
-            this._initialize();
-            if (!this.transporter) return false;
-        }
-
-        const mailOptions = {
-            from: `"PageMD Support" <support@pagemdemr.com>`, // Fixed as requested
-            to,
-            subject,
-            html,
-            headers: {
-                'X-Entity-Ref-ID': Date.now().toString(),
-                'List-Unsubscribe': '<mailto:support@pagemdemr.com?subject=unsubscribe>'
-            }
-        };
-
-        if (this.enabled && this.transporter) {
+        if (this.enabled && this.resend) {
             try {
-                const info = await this.transporter.sendMail(mailOptions);
-                console.log(`[EmailService] ✅ Email sent: ${info.messageId}`);
+                const { data, error } = await this.resend.emails.send({
+                    from: `"PageMD" <${this.from}>`,
+                    to: [to],
+                    subject: subject,
+                    html: html,
+                    headers: {
+                        'X-Entity-Ref-ID': Date.now().toString(),
+                    }
+                });
+
+                if (error) {
+                    console.error(`[EmailService] ❌ Resend Error:`, error);
+                    return false;
+                }
+
+                console.log(`[EmailService] ✅ Email sent via Resend: ${data.id}`);
                 return true;
             } catch (error) {
-                console.error(`[EmailService] ❌ Failed to send email via SMTP:`, error.message);
+                console.error(`[EmailService] ❌ Failed to send email via Resend:`, error.message);
                 return false;
             }
         }
 
-        // Fallback for dev/test or when SMTP is not configured
-        console.log(`[EmailService] 📝 LOG ONLY (SMTP not configured)`);
+        // Fallback for dev/test or when Resend is not configured
+        console.log(`[EmailService] 📝 LOG ONLY (Resend not configured)`);
         console.log(`[EmailService] Target: ${to}`);
         console.log(`[EmailService] Subject: ${subject}`);
-        // console.log(`[EmailService] HTML Content:`, html.slice(0, 500) + '...');
 
         return true;
     }

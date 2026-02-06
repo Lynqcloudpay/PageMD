@@ -540,10 +540,10 @@ adminRouter.get('/email', async (req, res) => {
     if (result.rows.length === 0) {
       return res.json({ enabled: false });
     }
-    // Don't return password
+    // Don't return API key in full
     const settings = { ...result.rows[0] };
-    if (settings.smtp_password) {
-      settings.smtp_password = '***hidden***';
+    if (settings.resend_api_key) {
+      settings.resend_api_key = '***hidden***';
     }
     res.json(settings);
   } catch (error) {
@@ -559,58 +559,50 @@ adminRouter.get('/email', async (req, res) => {
 adminRouter.put('/email', async (req, res) => {
   try {
     const {
-      smtp_host, smtp_port, smtp_secure, smtp_username, smtp_password,
-      from_name, from_email, reply_to_email, enabled, test_email
+      resend_api_key, from_name, from_email, reply_to_email, enabled, test_email
     } = req.body;
 
-    const existing = await pool.query('SELECT id, smtp_password FROM email_settings LIMIT 1');
+    const existing = await pool.query('SELECT id, resend_api_key FROM email_settings LIMIT 1');
 
     let result;
     if (existing.rows.length > 0) {
-      // Only update password if provided (don't overwrite with empty)
-      const passwordValue = smtp_password === '***hidden***' || !smtp_password
-        ? existing.rows[0].smtp_password
-        : smtp_password;
+      // Only update key if provided (don't overwrite with empty)
+      const keyValue = resend_api_key === '***hidden***' || !resend_api_key
+        ? existing.rows[0].resend_api_key
+        : resend_api_key;
 
       result = await pool.query(`
         UPDATE email_settings SET
-          smtp_host = COALESCE($1, smtp_host),
-          smtp_port = COALESCE($2, smtp_port),
-          smtp_secure = COALESCE($3, smtp_secure),
-          smtp_username = COALESCE($4, smtp_username),
-          smtp_password = $5,
-          from_name = COALESCE($6, from_name),
-          from_email = COALESCE($7, from_email),
-          reply_to_email = COALESCE($8, reply_to_email),
-          enabled = COALESCE($9, enabled),
-          test_email = COALESCE($10, test_email),
+          resend_api_key = COALESCE($1, resend_api_key),
+          from_name = COALESCE($2, from_name),
+          from_email = COALESCE($3, from_email),
+          reply_to_email = COALESCE($4, reply_to_email),
+          enabled = COALESCE($5, enabled),
+          test_email = COALESCE($6, test_email),
           updated_at = CURRENT_TIMESTAMP,
-          updated_by = $11
-        WHERE id = $12
+          updated_by = $7
+        WHERE id = $8
         RETURNING *
       `, [
-        smtp_host, smtp_port, smtp_secure, smtp_username, passwordValue,
-        from_name, from_email, reply_to_email, enabled, test_email,
+        keyValue, from_name, from_email, reply_to_email, enabled, test_email,
         req.user.id, existing.rows[0].id
       ]);
     } else {
       result = await pool.query(`
         INSERT INTO email_settings (
-          smtp_host, smtp_port, smtp_secure, smtp_username, smtp_password,
-          from_name, from_email, reply_to_email, enabled, test_email, updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          resend_api_key, from_name, from_email, reply_to_email, enabled, test_email, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
       `, [
-        smtp_host, smtp_port ?? 587, smtp_secure ?? true, smtp_username, smtp_password,
-        from_name, from_email, reply_to_email, enabled ?? false, test_email,
+        resend_api_key, from_name, from_email, reply_to_email, enabled ?? false, test_email,
         req.user.id
       ]);
     }
 
-    // Don't return password
+    // Don't return key
     const response = { ...result.rows[0] };
-    if (response.smtp_password) {
-      response.smtp_password = '***hidden***';
+    if (response.resend_api_key) {
+      response.resend_api_key = '***hidden***';
     }
 
     await logAudit(req.user.id, 'email_settings_updated', 'settings', result.rows[0].id, {}, req.ip);
@@ -720,10 +712,10 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
       pool.query('SELECT * FROM feature_flags ORDER BY category, feature_key')
     ]);
 
-    // Hide passwords
+    // Hide Resend Key
     const emailSettings = email.rows[0] ? { ...email.rows[0] } : null;
-    if (emailSettings && emailSettings.smtp_password) {
-      emailSettings.smtp_password = '***hidden***';
+    if (emailSettings && emailSettings.resend_api_key) {
+      emailSettings.resend_api_key = '***hidden***';
     }
 
     res.json({

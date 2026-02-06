@@ -105,15 +105,11 @@ async function migrate() {
     `);
     console.log('✅ Created system_config table');
 
-    // Email/SMTP Settings Table
+    // Email Configuration (Resend) Table
     await client.query(`
       CREATE TABLE IF NOT EXISTS email_settings (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        smtp_host VARCHAR(255),
-        smtp_port INTEGER DEFAULT 587,
-        smtp_secure BOOLEAN DEFAULT true,
-        smtp_username VARCHAR(255),
-        smtp_password TEXT,
+        resend_api_key TEXT,
         from_name VARCHAR(255),
         from_email VARCHAR(255),
         reply_to_email VARCHAR(255),
@@ -124,7 +120,7 @@ async function migrate() {
         updated_by UUID REFERENCES users(id)
       )
     `);
-    console.log('✅ Created email_settings table');
+    console.log('✅ Created email_settings table (Resend optimized)');
 
     // Security Settings Table
     await client.query(`

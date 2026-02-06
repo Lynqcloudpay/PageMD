@@ -1017,49 +1017,22 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">SMTP Configuration</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Resend Configuration</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Configure your practice to send HIPAA-compliant emails via Resend.
+          Enter your API key below to enable this feature.
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Host</label>
-            <input
-              type="text"
-              value={settings.smtp_host || ''}
-              onChange={(e) => updateField('smtp_host', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="smtp.gmail.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Port</label>
-            <input
-              type="number"
-              value={settings.smtp_port || 587}
-              onChange={(e) => updateField('smtp_port', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Username</label>
-            <input
-              type="text"
-              value={settings.smtp_username || ''}
-              onChange={(e) => updateField('smtp_username', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SMTP Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Resend API Key</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
-                value={settings.smtp_password === '***hidden***' ? '' : (settings.smtp_password || '')}
-                onChange={(e) => updateField('smtp_password', e.target.value)}
+                value={settings.resend_api_key === '***hidden***' ? '' : (settings.resend_api_key || '')}
+                onChange={(e) => updateField('resend_api_key', e.target.value)}
                 className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                placeholder={settings.smtp_password === '***hidden***' ? 'Password is set (enter new to change)' : ''}
+                placeholder={settings.resend_api_key === '***hidden***' ? 'API Key is set (enter new to change)' : 're_...'}
               />
               <button
                 type="button"
@@ -1069,18 +1042,6 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-          </div>
-
-          <div>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.smtp_secure ?? true}
-                onChange={() => toggleField('smtp_secure')}
-                className="w-4 h-4 text-primary-600 rounded"
-              />
-              <span className="text-sm text-gray-700">Use secure connection (TLS/SSL)</span>
-            </label>
           </div>
         </div>
       </div>
