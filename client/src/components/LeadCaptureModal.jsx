@@ -146,6 +146,27 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
         }
     };
 
+    const handlePaste = (index, e) => {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text');
+        const pastedNumbers = pastedData.replace(/\D/g, '').split('').slice(0, 6);
+
+        if (pastedNumbers.length === 0) return;
+
+        const newCode = [...verificationCode];
+        pastedNumbers.forEach((num, i) => {
+            if (index + i < 6) {
+                newCode[index + i] = num;
+            }
+        });
+
+        setVerificationCode(newCode);
+
+        // Focus the input after the last filled digit
+        const nextIndex = Math.min(index + pastedNumbers.length, 5);
+        inputRefs[nextIndex].current?.focus();
+    };
+
     const handleVerifyCode = async (e) => {
         e.preventDefault();
         const code = verificationCode.join('');
@@ -282,6 +303,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                                     value={digit}
                                     onChange={(e) => handleCodeChange(idx, e.target.value)}
                                     onKeyDown={(e) => handleKeyDown(idx, e)}
+                                    onPaste={(e) => handlePaste(idx, e)}
                                     className="w-12 h-16 md:w-14 md:h-20 text-center text-2xl font-black text-slate-900 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
                                 />
                             ))}
@@ -295,6 +317,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch }) => {
                             {isVerifying ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Verify & Launch Demo <ArrowRight className="w-5 h-5" /></>}
                         </button>
                     </form>
+
 
                     <div className="mt-8 text-center">
                         <button

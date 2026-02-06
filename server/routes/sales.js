@@ -627,19 +627,20 @@ router.get('/inquiries', verifyToken, async (req, res) => {
         // We wrap it in a subquery to allow sorting the unique leads by latest activity
         let query = `
             SELECT * FROM (
-                SELECT DISTINCT ON (LOWER(email)) * 
-                FROM sales_inquiries
+                SELECT DISTINCT ON (LOWER(i.email)) i.*, u.username as owner_username
+                FROM sales_inquiries i
+                LEFT JOIN sales_team_users u ON i.owner_id = u.id
                 WHERE 1=1
         `;
         const params = [];
 
         if (status) {
             params.push(status);
-            query += ` AND status = $${params.length}`;
+            query += ` AND i.status = $${params.length}`;
         }
 
         query += `
-                ORDER BY LOWER(email), created_at DESC
+                ORDER BY LOWER(i.email), i.created_at DESC
             ) AS unique_leads
             LEFT JOIN LATERAL (
                 SELECT COUNT(*) as unread_count

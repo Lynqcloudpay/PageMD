@@ -84,6 +84,7 @@ const SalesAdmin = () => {
     const [newLogContent, setNewLogContent] = useState('');
     const [sendingLog, setSendingLog] = useState(false);
     const [logFilter, setLogFilter] = useState('all'); // 'all', 'user', 'team'
+    const [pipelineUserFilter, setPipelineUserFilter] = useState('all'); // 'all', 'mine', or userId
     const logEndRef = React.useRef(null);
 
     // Demo Scheduling State
@@ -184,6 +185,9 @@ const SalesAdmin = () => {
         if (token) {
             fetchInquiries();
             fetchMasterSchedule(); // Ensure demos are loaded
+            if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
+                fetchTeamUsers();
+            }
             const interval = setInterval(fetchInquiries, 30000); // Poll every 30s
             return () => clearInterval(interval);
         }
@@ -831,9 +835,17 @@ const SalesAdmin = () => {
                                         }`}
                                 >
                                     <Shield className={`w-4 h-4 ${viewMode === 'personal' ? 'text-white' : 'text-slate-300'}`} />
-                                    My Pipeline
+                                    {(currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') ? 'Pipeline' : 'My Pipeline'}
                                     <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'personal' ? 'bg-blue-500 text-blue-100' : 'bg-slate-200 text-slate-500'}`}>
-                                        {inquiries.filter(i => i.is_claimed && i.owner_id === currentUser?.id).length}
+                                        {inquiries.filter(i => {
+                                            if (!i.is_claimed) return false;
+                                            if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
+                                                if (pipelineUserFilter === 'mine') return i.owner_id === currentUser?.id;
+                                                if (pipelineUserFilter !== 'all') return i.owner_id == pipelineUserFilter;
+                                                return true; // All claimed
+                                            }
+                                            return i.owner_id === currentUser?.id;
+                                        }).length}
                                     </span>
                                 </button>
                                 {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && (
@@ -852,6 +864,28 @@ const SalesAdmin = () => {
                                     </button>
                                 )}
                             </div>
+
+                            {/* Pipeline Filter for Admins */}
+                            {viewMode === 'personal' && (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') && (
+                                <div className="mb-4">
+                                    <div className="relative">
+                                        <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                        <select
+                                            value={pipelineUserFilter}
+                                            onChange={(e) => setPipelineUserFilter(e.target.value)}
+                                            className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 uppercase tracking-wide focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 appearance-none shadow-sm cursor-pointer hover:border-blue-300 transition-colors"
+                                        >
+                                            <option value="all">Global View (All)</option>
+                                            <option value="mine">My Pipeline Only</option>
+                                            <option disabled className="bg-slate-50">──────────</option>
+                                            {teamUsers.map(u => (
+                                                <option key={u.id} value={u.id}>{u.username}'s Pipeline</option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Sub-filters for Lead Pool */}
                             {viewMode !== 'master' && (
@@ -959,7 +993,17 @@ const SalesAdmin = () => {
                                     const displayItems = filteredInquiries.filter(i => {
                                         // 1. View Mode Filter
                                         if (viewMode === 'pool' && i.is_claimed) return false;
-                                        if (viewMode === 'personal' && (!i.is_claimed || i.owner_id !== currentUser?.id)) return false;
+                                        if (viewMode === 'personal') {
+                                            if (!i.is_claimed) return false;
+                                            // Admin Logic
+                                            if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
+                                                if (pipelineUserFilter === 'mine' && i.owner_id !== currentUser?.id) return false;
+                                                if (pipelineUserFilter !== 'all' && pipelineUserFilter !== 'mine' && i.owner_id != pipelineUserFilter) return false;
+                                            } else {
+                                                // Standard Logic
+                                                if (i.owner_id !== currentUser?.id) return false;
+                                            }
+                                        }
 
                                         // 2. Status Category Filter
                                         if (!statusFilter) return true; // All
@@ -1003,9 +1047,16 @@ const SalesAdmin = () => {
                                                             <div className="flex items-center gap-2">
                                                                 <h3 className="text-[14px] font-bold text-slate-800 truncate tracking-tight">{inquiry.name}</h3>
                                                                 {inquiry.is_claimed && (
-                                                                    <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200" title={`Claimed by ${inquiry.owner_id === currentUser?.id ? 'You' : 'Seller'}`}>
-                                                                        <Lock className="w-2.5 h-2.5 text-slate-400" />
-                                                                    </div>
+                                                                    <>
+                                                                        <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200" title={`Claimed by ${inquiry.owner_id === currentUser?.id ? 'You' : (inquiry.owner_username || 'Seller')}`}>
+                                                                            <Lock className="w-2.5 h-2.5 text-slate-400" />
+                                                                        </div>
+                                                                        {inquiry.owner_username && inquiry.owner_id !== currentUser?.id && (
+                                                                            <span className="text-[9px] font-bold text-slate-400 uppercase bg-slate-50 px-1.5 rounded border border-slate-100">
+                                                                                {inquiry.owner_username}
+                                                                            </span>
+                                                                        )}
+                                                                    </>
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-2 mt-1 font-bold">
