@@ -407,6 +407,7 @@ if (require.main === module) {
     console.log(`📡 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
 
     // Start background services
+    require('./scripts/migrate-referral-tokens')(); // Run migration for new columns
     flagService.startMaintenance(3600000); // 1 hour
 
     // Sandbox Cleanup: Run every 10 minutes

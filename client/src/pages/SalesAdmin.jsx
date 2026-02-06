@@ -1707,7 +1707,7 @@ const SalesAdmin = () => {
                                                         </div>
 
                                                         {/* Referral */}
-                                                        {inquiry.referral_code && (
+                                                        {(inquiry.referral_code || inquiry.referral_token) && (
                                                             <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[7px] uppercase flex-shrink-0">
                                                                 REF
                                                             </span>

@@ -31,13 +31,32 @@ async function migrate() {
             await client.query('ALTER TABLE public.clinic_referrals ADD COLUMN invite_sent_at timestamp with time zone');
         }
 
+        // Check sales_inquiries table for referral_token
+        const salesRes = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'sales_inquiries' 
+            AND column_name = 'referral_token'
+        `);
+
+        if (salesRes.rows.length === 0) {
+            console.log('Adding referral_token column to sales_inquiries...');
+            await client.query('ALTER TABLE sales_inquiries ADD COLUMN referral_token text');
+        }
+
         console.log('Migration complete!');
     } catch (err) {
         console.error('Migration failed:', err);
     } finally {
         client.release();
-        process.exit();
+        if (require.main === module) {
+            process.exit();
+        }
     }
 }
 
-migrate();
+if (require.main === module) {
+    migrate();
+}
+
+module.exports = migrate;
