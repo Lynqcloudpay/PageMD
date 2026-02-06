@@ -367,6 +367,55 @@ router.post('/inquiry', async (req, res) => {
         const uuidRes = await pool.query('SELECT uuid FROM sales_inquiries WHERE id = $1', [inquiryId]);
         const leadUuid = uuidRes.rows[0]?.uuid;
 
+        // 6. Referral Notification Logic
+        try {
+            // Priority: Token -> Code
+            if (referral_token) {
+                const tokenRes = await pool.query(
+                    'SELECT referrer_clinic_id FROM clinic_referrals WHERE token = $1',
+                    [referral_token]
+                );
+
+                if (tokenRes.rows.length > 0) {
+                    const referrerId = tokenRes.rows[0].referrer_clinic_id;
+                    const clinicRes = await pool.query(
+                        'SELECT c.name, u.email FROM clinics c JOIN users u ON u.clinic_id = c.id WHERE c.id = $1 AND u.role = \'Owner\' LIMIT 1',
+                        [referrerId]
+                    );
+
+                    if (clinicRes.rows.length > 0) {
+                        const { name: referrerClinicName, email: referrerEmail } = clinicRes.rows[0];
+                        const emailService = require('../services/emailService');
+                        // Use setTimeout to not block the response
+                        setTimeout(() => {
+                            emailService.sendReferralNotification(referrerEmail, referrerClinicName, name, 'invite')
+                                .catch(e => console.error('[SALES] Failed to send referral notification', e));
+                        }, 1000);
+                        console.log(`[SALES] Queued referral notification for ${referrerClinicName} (Invite)`);
+                    }
+                }
+            } else if (referral_code) {
+                const clinicRes = await pool.query(
+                    'SELECT c.name, u.email FROM clinics c JOIN users u ON u.clinic_id = c.id WHERE c.referral_code = $1 AND u.role = \'Owner\' LIMIT 1',
+                    [referral_code]
+                );
+
+                if (clinicRes.rows.length > 0) {
+                    const { name: referrerClinicName, email: referrerEmail } = clinicRes.rows[0];
+                    const emailService = require('../services/emailService');
+                    // Use setTimeout to not block the response
+                    setTimeout(() => {
+                        emailService.sendReferralNotification(referrerEmail, referrerClinicName, name, 'link')
+                            .catch(e => console.error('[SALES] Failed to send referral notification', e));
+                    }, 1000);
+                    console.log(`[SALES] Queued referral notification for ${referrerClinicName} (Link)`);
+                }
+            }
+        } catch (refError) {
+            console.error('[SALES] Error processing referral notification:', refError);
+            // Don't block submission
+        }
+
         // 6. Send verification code email for sandbox requests
         if (isSandboxRequest && verificationCode) {
             const emailService = require('../services/emailService');

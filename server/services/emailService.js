@@ -234,6 +234,55 @@ class EmailService {
 
         return this._send(email, subject, html);
     }
+
+    /**
+     * Send Referral Activity Notification to Referrer
+     * @param {string} email - Referrer's email
+     * @param {string} referrerName - Referrer's name
+     * @param {string} leadName - Name of the lead who used the link
+     * @param {string} type - 'invite' (email invite) or 'link' (static link)
+     */
+    async sendReferralNotification(email, referrerName, leadName, type = 'link') {
+        const subject = `Good news! Your referral link was used`;
+        const logoUrl = 'https://pagemdemr.com/logo.png';
+
+        const message = type === 'invite'
+            ? `Your invitation to <strong>${leadName}</strong> has been accepted! They have started the signup process.`
+            : `Someone used your referral link! <strong>${leadName}</strong> has started the signup process thanks to you.`;
+
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="${logoUrl}" alt="PageMD" width="164" height="48" style="height: 48px; width: auto; border: 0;">
+                </div>
+                <h2 style="color: #2563eb; text-align: center;">New Referral Activity!</h2>
+                
+                <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 24px; margin: 32px 0; text-align: center;">
+                    <p style="font-size: 18px; line-height: 1.6; color: #0369a1; margin: 0;">
+                        ${message}
+                    </p>
+                </div>
+
+                <p style="font-size: 16px; line-height: 1.6; text-align: center; color: #475569;">
+                    This brings you one step closer to your next reward tier. You can track your referrals and earnings in your settings dashboard.
+                </p>
+
+                <div style="margin: 40px 0; text-align: center;">
+                    <a href="https://admin.pagemdemr.com/admin-settings?tab=rewards" style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
+                        View Verified Referrals
+                    </a>
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;" />
+                <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+                    © ${new Date().getFullYear()} PageMD EMR. All rights reserved.
+                </p>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
+
     /**
     * Send Demo Invitation
     */
