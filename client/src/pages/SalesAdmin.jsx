@@ -5,7 +5,8 @@ import {
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
-    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive
+    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
+    Minimize2, Maximize2, Minus, ExternalLink
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -97,6 +98,10 @@ const SalesAdmin = () => {
     const [demoForm, setDemoForm] = useState({ date: '', time: '', notes: '' });
     const [demoLoading, setDemoLoading] = useState(false);
 
+    // Jitsi Call State
+    const [activeMeeting, setActiveMeeting] = useState(null); // stores { demo, url }
+    const [isMeetingMinimized, setIsMeetingMinimized] = useState(false);
+
     // Lead Pool & Ownership State
     const [viewMode, setViewMode] = useState('pool'); // 'pool', 'personal', 'master'
     const [claimLoading, setClaimLoading] = useState(false);
@@ -106,6 +111,20 @@ const SalesAdmin = () => {
     const [scheduleFilter, setScheduleFilter] = useState('all'); // 'all', 'mine'
     const [demoModalMonth, setDemoModalMonth] = useState(new Date());
     const [selectedDemo, setSelectedDemo] = useState(null);
+
+    const getEnhancedMeetingLink = (demo) => {
+        if (!demo || !demo.meeting_link) return '';
+        if (!demo.meeting_link.includes('meet.jit.si')) return demo.meeting_link;
+
+        const inq = inquiries.find(i => i.id == demo.inquiry_id);
+        if (!inq) return demo.meeting_link;
+
+        const cleanMsg = (inq.message || '').replace(/\r?\n|\r/g, " ").trim();
+        const subject = `Lead: ${inq.name} ${inq.practice_name ? `(${inq.practice_name})` : ''} | Msg: ${cleanMsg}`.trim();
+        const truncated = subject.length > 180 ? subject.substring(0, 177) + '...' : subject;
+        const config = `#config.subject=${encodeURIComponent(truncated)}&config.defaultLocalDisplayName=${encodeURIComponent(currentUser?.username || 'Seller')}`;
+        return demo.meeting_link.split('#')[0] + config;
+    };
 
     const baseUrl = import.meta.env.VITE_API_URL || '/api';
 
@@ -2576,26 +2595,19 @@ const SalesAdmin = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <a
-                                            href={(selectedDemo.meeting_link?.includes('meet.jit.si'))
-                                                ? (() => {
-                                                    const inq = inquiries.find(i => i.id == selectedDemo.inquiry_id);
-                                                    if (!inq) return selectedDemo.meeting_link;
-                                                    const cleanMsg = (inq.message || '').replace(/\r?\n|\r/g, " ").trim();
-                                                    const subject = `Lead: ${inq.name} ${inq.practice_name ? `(${inq.practice_name})` : ''} | Msg: ${cleanMsg}`.trim();
-                                                    const truncated = subject.length > 180 ? subject.substring(0, 177) + '...' : subject;
-                                                    const config = `#config.subject=${encodeURIComponent(truncated)}&config.defaultLocalDisplayName=${encodeURIComponent(currentUser?.username || 'Seller')}`;
-                                                    return selectedDemo.meeting_link.split('#')[0] + config;
-                                                })()
-                                                : selectedDemo.meeting_link
-                                            }
-                                            target="_blank"
-                                            rel="noreferrer"
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const url = getEnhancedMeetingLink(selectedDemo);
+                                                setActiveMeeting({ demo: selectedDemo, url });
+                                                setIsMeetingMinimized(false);
+                                                setSelectedDemo(null); // Close the details modal to show dashboard
+                                            }}
                                             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
                                         >
                                             <Video className="w-4 h-4" />
                                             Launch Meeting
-                                        </a>
+                                        </button>
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -2748,6 +2760,64 @@ const SalesAdmin = () => {
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* Floating Meeting Window */}
+            {activeMeeting && (
+                <div className={`fixed transition-all duration-500 ease-in-out z-[100] ${isMeetingMinimized
+                        ? 'right-6 bottom-6 w-80 h-48 rounded-2xl shadow-2xl border-2 border-blue-500 overflow-hidden bg-slate-900 group cursor-pointer'
+                        : 'inset-0 md:inset-10 lg:inset-20 rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] bg-slate-950 overflow-hidden flex flex-col border border-white/10'
+                    }`}
+                    onClick={() => isMeetingMinimized && setIsMeetingMinimized(false)}
+                >
+                    {/* Header/Grab Bar */}
+                    <div className={`flex items-center justify-between px-4 py-3 bg-slate-900 text-white shrink-0 ${isMeetingMinimized ? 'p-2' : ''}`}>
+                        <div className="flex items-center gap-3">
+                            <div className="p-1.5 bg-blue-500 rounded-lg">
+                                <Video className="w-4 h-4 text-white" />
+                            </div>
+                            {!isMeetingMinimized && (
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-bold tracking-tight">Meeting in Progress</span>
+                                    <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                                        with {activeMeeting.demo?.lead_name}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <button
+                                onClick={() => setIsMeetingMinimized(!isMeetingMinimized)}
+                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
+                                title={isMeetingMinimized ? "Full Screen" : "Minimize to Sidebar"}
+                            >
+                                {isMeetingMinimized ? <Maximize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" /> : <Minimize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (window.confirm("End session and close meeting?")) {
+                                        setActiveMeeting(null);
+                                    }
+                                }}
+                                className="p-1.5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Jitsi Iframe */}
+                    <div className="flex-1 bg-black relative">
+                        <iframe
+                            src={activeMeeting.url}
+                            className={`w-full h-full border-none ${isMeetingMinimized ? 'pointer-events-none scale-[1.02]' : ''}`}
+                            allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
+                        />
+                        {isMeetingMinimized && (
+                            <div className="absolute inset-0 bg-transparent group-hover:bg-blue-600/10 transition-colors pointer-events-none" />
+                        )}
                     </div>
                 </div>
             )}
