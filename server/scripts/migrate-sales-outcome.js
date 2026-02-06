@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('../db');
 
 async function migrate() {
     try {
@@ -13,7 +13,7 @@ async function migrate() {
     } catch (err) {
         console.error('Migration failed:', err);
     } finally {
-        process.exit();
+        await pool.end();
     }
 }
 

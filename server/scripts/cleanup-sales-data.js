@@ -1,4 +1,4 @@
-const pool = require('./db');
+const pool = require('../db');
 
 async function cleanup() {
     console.log('🚀 Starting Sales Data Cleanup...');
