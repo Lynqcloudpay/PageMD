@@ -5,8 +5,7 @@ import {
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
-    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
-    Minimize2, Maximize2, Minus, ExternalLink, Layout
+    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -98,70 +97,8 @@ const SalesAdmin = () => {
     const [demoForm, setDemoForm] = useState({ date: '', time: '', notes: '' });
     const [demoLoading, setDemoLoading] = useState(false);
 
-    // Jitsi Call State
-    const [activeMeeting, setActiveMeeting] = useState(null); // stores { demo, url }
-    const [meetingLayout, setMeetingLayout] = useState('large'); // 'large', 'pip', 'side'
-    const [meetingPos, setMeetingPos] = useState({ x: 100, y: 100 });
-    const [meetingSize, setMeetingSize] = useState({ width: 480, height: 320 });
-    const isDragging = React.useRef(false);
-    const isResizing = React.useRef(false);
-    const dragStart = React.useRef({ x: 0, y: 0 });
-    const initialPos = React.useRef({ x: 0, y: 0 });
-    const initialSize = React.useRef({ width: 0, height: 0 });
-
     // Lead Pool & Ownership State
     const [viewMode, setViewMode] = useState('pool'); // 'pool', 'personal', 'master'
-
-    // Window Events for Drag/Resize
-    useEffect(() => {
-        const handleMouseMove = (e) => {
-            if (isDragging.current) {
-                const dx = e.clientX - dragStart.current.x;
-                const dy = e.clientY - dragStart.current.y;
-                setMeetingPos({
-                    x: Math.max(0, Math.min(window.innerWidth - 100, initialPos.current.x + dx)),
-                    y: Math.max(0, Math.min(window.innerHeight - 50, initialPos.current.y + dy))
-                });
-            }
-            if (isResizing.current) {
-                const dx = e.clientX - dragStart.current.x;
-                const dy = e.clientY - dragStart.current.y;
-                setMeetingSize({
-                    width: Math.max(300, initialSize.current.width + dx),
-                    height: Math.max(200, initialSize.current.height + dy)
-                });
-            }
-        };
-
-        const handleMouseUp = () => {
-            isDragging.current = false;
-            isResizing.current = false;
-            document.body.style.cursor = 'default';
-        };
-
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, []);
-
-    const startDrag = (e) => {
-        if (meetingLayout !== 'pip') return;
-        isDragging.current = true;
-        dragStart.current = { x: e.clientX, y: e.clientY };
-        initialPos.current = { ...meetingPos };
-        document.body.style.cursor = 'grabbing';
-    };
-
-    const startResize = (e) => {
-        e.stopPropagation();
-        isResizing.current = true;
-        dragStart.current = { x: e.clientX, y: e.clientY };
-        initialSize.current = { ...meetingSize };
-        document.body.style.cursor = 'nwse-resize';
-    };
     const [claimLoading, setClaimLoading] = useState(false);
     const [masterDemos, setMasterDemos] = useState([]);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -2653,19 +2590,15 @@ const SalesAdmin = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const url = getEnhancedMeetingLink(selectedDemo);
-                                                setActiveMeeting({ demo: selectedDemo, url });
-                                                setMeetingLayout('large');
-                                                setSelectedDemo(null); // Close the details modal to show dashboard
-                                            }}
+                                        <a
+                                            href={getEnhancedMeetingLink(selectedDemo)}
+                                            target="_blank"
+                                            rel="noreferrer"
                                             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
                                         >
                                             <Video className="w-4 h-4" />
                                             Launch Meeting
-                                        </button>
+                                        </a>
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -2818,116 +2751,6 @@ const SalesAdmin = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
-                </div>
-            )}
-            {/* Floating Meeting Window */}
-            {activeMeeting && (
-                <div
-                    className={`fixed transition-all duration-300 ease-in-out z-[100] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${meetingLayout === 'pip'
-                            ? 'rounded-2xl border-2 border-blue-500 bg-slate-900 group shadow-2xl'
-                            : meetingLayout === 'side'
-                                ? 'top-0 right-0 bottom-0 w-[450px] bg-slate-950 border-l border-white/10'
-                                : 'inset-0 md:inset-6 lg:inset-12 rounded-[2.5rem] bg-slate-950'
-                        }`}
-                    style={meetingLayout === 'pip' ? {
-                        left: meetingPos.x,
-                        top: meetingPos.y,
-                        width: meetingSize.width,
-                        height: meetingSize.height,
-                        transition: isDragging.current || isResizing.current ? 'none' : 'all 0.3s ease'
-                    } : {}}
-                >
-                    {/* Header/Grab Bar - Draggable in PIP */}
-                    <div
-                        onMouseDown={startDrag}
-                        className={`flex items-center justify-between px-4 py-3 bg-slate-900 text-white shrink-0 ${meetingLayout === 'pip' ? 'p-2 cursor-grab active:cursor-grabbing' : ''}`}
-                    >
-                        <div className="flex items-center gap-3 pointer-events-none select-none">
-                            <div className="p-1.5 bg-blue-500 rounded-lg">
-                                <Video className="w-4 h-4 text-white" />
-                            </div>
-                            {meetingLayout !== 'pip' && (
-                                <div className="flex flex-col">
-                                    <span className="text-xs font-bold tracking-tight">Active Meeting</span>
-                                    <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                                        with {activeMeeting.demo?.lead_name}
-                                    </span>
-                                </div>
-                            )}
-                            {meetingLayout === 'pip' && (
-                                <span className="text-[10px] font-bold tracking-tight text-blue-400">DRAG ME</span>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-2" onMouseDown={(e) => e.stopPropagation()}>
-                            {meetingLayout !== 'large' && (
-                                <button
-                                    onClick={() => setMeetingLayout('large')}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
-                                    title="Maximize"
-                                >
-                                    <Maximize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />
-                                </button>
-                            )}
-                            {meetingLayout !== 'side' && (
-                                <button
-                                    onClick={() => setMeetingLayout('side')}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
-                                    title="Dock to Side"
-                                >
-                                    <Layout className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />
-                                </button>
-                            )}
-                            {meetingLayout !== 'pip' && (
-                                <button
-                                    onClick={() => {
-                                        setMeetingLayout('pip');
-                                        // Reset to default corner if needed
-                                        setMeetingPos({ x: window.innerWidth - 500, y: window.innerHeight - 350 });
-                                    }}
-                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
-                                    title="Minimize to Bubble"
-                                >
-                                    <Minimize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />
-                                </button>
-                            )}
-                            <button
-                                onClick={() => {
-                                    if (window.confirm("End session and close meeting?")) {
-                                        setActiveMeeting(null);
-                                    }
-                                }}
-                                className="p-1.5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors ml-1"
-                                title="Exit Meeting"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Jitsi Iframe */}
-                    <div className="flex-1 bg-black relative">
-                        <iframe
-                            src={activeMeeting.url}
-                            className={`w-full h-full border-none ${meetingLayout === 'pip' && (isDragging.current || isResizing.current) ? 'pointer-events-none' : ''}`}
-                            allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
-                            title="Jitsi Meeting"
-                        />
-
-                        {/* Resizer handle for PIP */}
-                        {meetingLayout === 'pip' && (
-                            <div
-                                onMouseDown={startResize}
-                                className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center group/resizer z-20"
-                            >
-                                <div className="w-2 h-2 border-r-2 border-b-2 border-white/30 group-hover/resizer:border-white transition-colors" />
-                            </div>
-                        )}
-
-                        {(isDragging.current || isResizing.current) && (
-                            <div className="absolute inset-0 bg-transparent z-10" />
-                        )}
                     </div>
                 </div>
             )}

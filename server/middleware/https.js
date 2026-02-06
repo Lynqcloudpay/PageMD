@@ -57,8 +57,14 @@ const setHSTS = (req, res, next) => {
  * Security headers for HIPAA compliance
  */
 const securityHeaders = (req, res, next) => {
-  // X-Frame-Options (prevent clickjacking for the EMR itself)
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Content Security Policy
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://pagemdemr.com https://rxnav.nlm.nih.gov http://localhost:3000 http://localhost:5173 blob:;"
+  );
+
+  // X-Frame-Options (prevent clickjacking)
+  res.setHeader('X-Frame-Options', 'DENY');
 
   // X-Content-Type-Options (prevent MIME sniffing)
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -69,10 +75,10 @@ const securityHeaders = (req, res, next) => {
   // Referrer Policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // Permissions Policy - Allow Jitsi for camera/mic
+  // Permissions Policy
   res.setHeader(
     'Permissions-Policy',
-    'geolocation=(), microphone=(self "https://meet.jit.si"), camera=(self "https://meet.jit.si"), display-capture=(self "https://meet.jit.si")'
+    'geolocation=(), microphone=(), camera=(self)'
   );
 
   next();
