@@ -115,7 +115,7 @@ const DemoConfirmation = () => {
                                 <div className="mt-0.5 p-1 bg-blue-100 rounded-full">
                                     <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                                 </div>
-                                <span className="text-sm text-slate-600">Check your inbox for the Zoom link</span>
+                                <span className="text-sm text-slate-600">Check your inbox for the meeting link</span>
                             </div>
                             <div className="flex items-start gap-3">
                                 <div className="mt-0.5 p-1 bg-blue-100 rounded-full">
