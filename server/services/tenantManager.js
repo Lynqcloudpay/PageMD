@@ -21,8 +21,8 @@ class TenantManager {
         const sanitized = slug.toLowerCase().replace(/[^a-z0-9]/g, '_');
         const schemaName = `tenant_${sanitized}`;
 
-        // Strict Validation: ^tenant_[a-z0-9_]{2,50}$
-        if (!/^tenant_[a-z0-9_]{2,50}$/.test(schemaName)) {
+        // Strict Validation: ^tenant_[a-z0-9_]{1,50}$
+        if (!/^tenant_[a-z0-9_]{1,50}$/.test(schemaName)) {
             throw new Error(`Invalid schema name generated: ${schemaName}`);
         }
         return schemaName;
