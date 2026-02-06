@@ -28,10 +28,10 @@ router.get('/verify-token/:token', async (req, res) => {
 
         // Also fetch referrer name for UI personalization
         const clinicRes = await pool.controlPool.query(
-            "SELECT display_name, name FROM public.clinics WHERE id = $1",
+            "SELECT display_name FROM public.clinics WHERE id = $1",
             [referral.referrer_clinic_id]
         );
-        const referrerName = clinicRes.rows[0]?.display_name || clinicRes.rows[0]?.name || 'a colleague';
+        const referrerName = clinicRes.rows[0]?.display_name || 'a colleague';
 
         // AUTO-VERIFY: Mark as verified in sales pool when they click the magic link
         try {
