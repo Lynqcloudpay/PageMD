@@ -900,6 +900,10 @@ router.post('/inquiries/:id/reclaim', verifyToken, async (req, res) => {
         const { notes } = req.body;
         const adminId = req.user.id;
 
+        if (!notes || notes.trim().length < 1) {
+            return res.status(400).json({ error: 'Reclaim notes are required' });
+        }
+
         // Get current inquiry
         const currentRes = await pool.query(
             'SELECT name, email, status, dismissal_reason, email_verified FROM sales_inquiries WHERE id = $1',
@@ -1715,6 +1719,40 @@ router.post('/demos/:id/cancel', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('Error cancelling demo:', error);
         res.status(500).json({ error: 'Failed to cancel appointment' });
+    }
+});
+
+/**
+ * DELETE /api/sales/inquiries/:id
+ * Permanent deletion of a lead (Admin only)
+ */
+router.delete('/inquiries/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const adminId = req.user.id;
+
+        // Ensure user is admin/manager for deletion
+        if (req.user.role !== 'sales_manager' && req.user.username !== 'admin') {
+            return res.status(403).json({ error: 'Unauthorized to delete leads' });
+        }
+
+        // Get name for logging
+        const inquiryRes = await pool.query('SELECT name FROM sales_inquiries WHERE id = $1', [id]);
+        if (inquiryRes.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found' });
+        const leadName = inquiryRes.rows[0].name;
+
+        // Delete logs first (cascade or manual)
+        await pool.query('DELETE FROM sales_inquiry_logs WHERE inquiry_id = $1', [id]);
+        // Delete demos
+        await pool.query('DELETE FROM sales_demos WHERE inquiry_id = $1', [id]);
+        // Delete inquiry
+        await pool.query('DELETE FROM sales_inquiries WHERE id = $1', [id]);
+
+        console.log(`[SALES] Lead #${id} (${leadName}) PERMANENTLY DELETED by user ${adminId}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting lead:', error);
+        res.status(500).json({ error: 'Failed to delete lead' });
     }
 });
 

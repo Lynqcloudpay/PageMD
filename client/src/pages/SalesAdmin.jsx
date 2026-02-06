@@ -118,6 +118,11 @@ const SalesAdmin = () => {
     const [dismissNotes, setDismissNotes] = useState('');
     const [dismissLoading, setDismissLoading] = useState(false);
 
+    // Reclaim Modal State
+    const [showReclaimModal, setShowReclaimModal] = useState(false);
+    const [reclaimNotes, setReclaimNotes] = useState('');
+    const [reclaimLoading, setReclaimLoading] = useState(false);
+
     // Salvage Sub-Category Filter
     const [salvageFilter, setSalvageFilter] = useState('all'); // 'all', 'cancelled', 'closed', 'dismissed', 'cold'
 
@@ -500,17 +505,24 @@ const SalesAdmin = () => {
         }
     };
 
-    const handleReclaimLead = async (inquiryId, notes = '') => {
+    const handleReclaimLead = async () => {
+        if (!selectedInquiry || !reclaimNotes.trim()) return;
+
         try {
-            const response = await authenticatedFetch(`/sales/inquiries/${inquiryId}/reclaim`, {
+            setReclaimLoading(true);
+            const response = await authenticatedFetch(`/sales/inquiries/${selectedInquiry.id}/reclaim`, {
                 method: 'POST',
-                body: JSON.stringify({ notes })
+                body: JSON.stringify({ notes: reclaimNotes })
             });
 
             if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.error || 'Failed to reclaim lead');
             }
+
+            // Reset modal
+            setShowReclaimModal(false);
+            setReclaimNotes('');
 
             // Refresh inquiries
             await fetchInquiries();
@@ -521,9 +533,36 @@ const SalesAdmin = () => {
         } catch (err) {
             console.error('Reclaim error:', err);
             alert(err.message);
+        } finally {
+            setReclaimLoading(false);
         }
     };
 
+    const handleDeleteLead = async () => {
+        if (!selectedInquiry) return;
+        if (!window.confirm(`⚠️ PERMANENT DELETE: Are you sure you want to completely erase ${selectedInquiry.name} from the system? This cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await authenticatedFetch(`/sales/inquiries/${selectedInquiry.id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to delete lead');
+            }
+
+            // Refresh & Close panel
+            setSelectedInquiry(null);
+            await fetchInquiries();
+            alert('Lead permanently erased.');
+        } catch (err) {
+            console.error('Delete error:', err);
+            alert(err.message);
+        }
+    };
     const fetchMasterSchedule = async () => {
         try {
             const response = await authenticatedFetch('/sales/master-schedule');
@@ -920,6 +959,17 @@ const SalesAdmin = () => {
                             >
                                 <Archive className={`w-4 h-4 ${viewMode === 'salvage' ? 'text-white' : 'text-slate-400'}`} />
                                 <span className="font-bold">Salvage</span>
+                                <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold ${viewMode === 'salvage' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-600'}`}>
+                                    {inquiries.filter(i => {
+                                        const s = (i.status || '').toLowerCase().trim();
+                                        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                                        const isCancelledAppt = i.demo_scheduled_at && ['closed', 'cancelled'].includes(s);
+                                        const isClosedWonButNoDemo = s === 'closed' && !i.demo_scheduled_at && !i.dismissal_reason;
+                                        const isManuallyDismissed = i.dismissal_reason || s === 'dismissed';
+                                        const isColdLead = !['closed', 'converted', 'dismissed'].includes(s) && !i.dismissal_reason && (i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at)) < thirtyDaysAgo;
+                                        return isCancelledAppt || isClosedWonButNoDemo || isManuallyDismissed || isColdLead;
+                                    }).length}
+                                </span>
                             </button>
                             <button
                                 onClick={() => setShowSettings(true)}
@@ -1114,7 +1164,7 @@ const SalesAdmin = () => {
                                             if (i.is_claimed) return false;
                                             const s = (i.status || 'new').toLowerCase().trim();
                                             if (i.dismissal_reason || s === 'dismissed') return false;
-                                            return s !== 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
+                                            return s !== 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed', 'contacted'].includes(s);
                                         });
 
                                         // Check for recent activity (hot leads)
@@ -1307,7 +1357,7 @@ const SalesAdmin = () => {
                                                 key={cat.id}
                                                 onClick={() => setSalvageFilter(cat.id)}
                                                 className={`px-2 py-1.5 rounded text-[9px] font-bold uppercase tracking-wide transition-all flex items-center gap-1 border ${salvageFilter === cat.id
-                                                    ? `bg-${cat.color}-600 text-white border-${cat.color}-600`
+                                                    ? (cat.id === 'all' ? 'bg-slate-800 text-white border-slate-800' : `bg-${cat.color}-600 text-white border-${cat.color}-600`)
                                                     : `bg-white text-slate-500 border-slate-200 hover:border-${cat.color}-300`
                                                     }`}
                                             >
@@ -1857,13 +1907,25 @@ const SalesAdmin = () => {
 
                                             {/* Reclaim button for dismissed/salvage leads */}
                                             {(selectedInquiry.status === 'dismissed' || selectedInquiry.dismissal_reason) && (
-                                                <button
-                                                    onClick={() => handleReclaimLead(selectedInquiry.id, 'Manually reclaimed from salvage')}
-                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-md"
-                                                >
-                                                    <RefreshCw className="w-4 h-4" />
-                                                    Reclaim Lead
-                                                </button>
+                                                <div className="flex gap-2 flex-1">
+                                                    <button
+                                                        onClick={() => setShowReclaimModal(true)}
+                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-md group"
+                                                    >
+                                                        <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+                                                        Send to Lead Pool
+                                                    </button>
+                                                    {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && (
+                                                        <button
+                                                            onClick={handleDeleteLead}
+                                                            className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-all shadow-md flex items-center gap-2"
+                                                            title="Permanent Delete (Dead Lead)"
+                                                        >
+                                                            <XOctagon className="w-4 h-4" />
+                                                            Dead Lead
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
 
                                             <div className="flex items-center gap-2 ml-auto">
@@ -2785,6 +2847,74 @@ const SalesAdmin = () => {
                                     <>
                                         <Ban className="w-4 h-4" />
                                         Dismiss Lead
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reclaim Reason Modal */}
+            {showReclaimModal && (
+                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-emerald-50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-emerald-100 rounded-xl">
+                                    <RefreshCw className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800">Send to Lead Pool</h3>
+                                    <p className="text-xs text-emerald-600 font-medium tracking-tight">Re-inserting into active pipeline</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowReclaimModal(false)} className="p-2 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-400">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex gap-3">
+                                <AlertTriangle className="w-5 h-5 text-emerald-600 shrink-0" />
+                                <p className="text-xs text-emerald-700 leading-relaxed font-medium">
+                                    The salvage team is moving this lead back to the main pool. Please document the reason so the next owner has the full context.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                                    Reclaim Reason / Internal Note *
+                                </label>
+                                <textarea
+                                    value={reclaimNotes}
+                                    onChange={(e) => setReclaimNotes(e.target.value)}
+                                    placeholder="Explain why this lead should be remanaged..."
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all resize-none font-medium"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button
+                                onClick={() => setShowReclaimModal(false)}
+                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 border border-slate-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleReclaimLead}
+                                disabled={reclaimLoading || !reclaimNotes.trim()}
+                                className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {reclaimLoading ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        <Database className="w-4 h-4" />
+                                        Confirm Re-insertion
                                     </>
                                 )}
                             </button>
