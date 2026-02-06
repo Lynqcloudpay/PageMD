@@ -2165,6 +2165,8 @@ const SalesAdmin = () => {
                                                         d.status !== 'completed'
                                                     ).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
+                                                    const currentLeadDemo = upcomingDemosForLead[0]; // Priority demo to show at top
+
                                                     const otherDemos = masterDemos
                                                         .filter(d =>
                                                             new Date(d.scheduled_at) > new Date() &&
