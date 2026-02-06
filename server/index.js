@@ -109,11 +109,14 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://meet.jit.si"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://meet.jit.si"],
       fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "https://pagemdemr.com", "http://localhost:3000", "http://localhost:5173", "blob:", "https://meet.jit.si"],
+      connectSrc: ["'self'", "https://pagemdemr.com", "http://localhost:3000", "http://localhost:5173", "blob:", "https://meet.jit.si", "wss://meet.jit.si"],
       frameSrc: ["'self'", "https://meet.jit.si"],
+      mediaSrc: ["'self'", "blob:", "https://meet.jit.si"],
+      workerSrc: ["'self'", "blob:"],
+      childSrc: ["'self'", "blob:"],
     },
   },
 }));

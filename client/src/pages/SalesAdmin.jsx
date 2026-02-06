@@ -101,9 +101,67 @@ const SalesAdmin = () => {
     // Jitsi Call State
     const [activeMeeting, setActiveMeeting] = useState(null); // stores { demo, url }
     const [meetingLayout, setMeetingLayout] = useState('large'); // 'large', 'pip', 'side'
+    const [meetingPos, setMeetingPos] = useState({ x: 100, y: 100 });
+    const [meetingSize, setMeetingSize] = useState({ width: 480, height: 320 });
+    const isDragging = React.useRef(false);
+    const isResizing = React.useRef(false);
+    const dragStart = React.useRef({ x: 0, y: 0 });
+    const initialPos = React.useRef({ x: 0, y: 0 });
+    const initialSize = React.useRef({ width: 0, height: 0 });
 
     // Lead Pool & Ownership State
     const [viewMode, setViewMode] = useState('pool'); // 'pool', 'personal', 'master'
+
+    // Window Events for Drag/Resize
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (isDragging.current) {
+                const dx = e.clientX - dragStart.current.x;
+                const dy = e.clientY - dragStart.current.y;
+                setMeetingPos({
+                    x: Math.max(0, Math.min(window.innerWidth - 100, initialPos.current.x + dx)),
+                    y: Math.max(0, Math.min(window.innerHeight - 50, initialPos.current.y + dy))
+                });
+            }
+            if (isResizing.current) {
+                const dx = e.clientX - dragStart.current.x;
+                const dy = e.clientY - dragStart.current.y;
+                setMeetingSize({
+                    width: Math.max(300, initialSize.current.width + dx),
+                    height: Math.max(200, initialSize.current.height + dy)
+                });
+            }
+        };
+
+        const handleMouseUp = () => {
+            isDragging.current = false;
+            isResizing.current = false;
+            document.body.style.cursor = 'default';
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, []);
+
+    const startDrag = (e) => {
+        if (meetingLayout !== 'pip') return;
+        isDragging.current = true;
+        dragStart.current = { x: e.clientX, y: e.clientY };
+        initialPos.current = { ...meetingPos };
+        document.body.style.cursor = 'grabbing';
+    };
+
+    const startResize = (e) => {
+        e.stopPropagation();
+        isResizing.current = true;
+        dragStart.current = { x: e.clientX, y: e.clientY };
+        initialSize.current = { ...meetingSize };
+        document.body.style.cursor = 'nwse-resize';
+    };
     const [claimLoading, setClaimLoading] = useState(false);
     const [masterDemos, setMasterDemos] = useState([]);
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -2765,17 +2823,27 @@ const SalesAdmin = () => {
             )}
             {/* Floating Meeting Window */}
             {activeMeeting && (
-                <div className={`fixed transition-all duration-500 ease-in-out z-[100] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${meetingLayout === 'pip'
-                    ? 'right-6 bottom-6 w-80 h-48 rounded-2xl border-2 border-blue-500 bg-slate-900 cursor-pointer group'
-                    : meetingLayout === 'side'
-                        ? 'top-0 right-0 bottom-0 w-[450px] bg-slate-950 border-l border-white/10'
-                        : 'inset-0 md:inset-6 lg:inset-12 rounded-[2.5rem] bg-slate-950'
-                    }`}
-                    onClick={() => meetingLayout === 'pip' && setMeetingLayout('large')}
+                <div
+                    className={`fixed transition-all duration-300 ease-in-out z-[100] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${meetingLayout === 'pip'
+                            ? 'rounded-2xl border-2 border-blue-500 bg-slate-900 group shadow-2xl'
+                            : meetingLayout === 'side'
+                                ? 'top-0 right-0 bottom-0 w-[450px] bg-slate-950 border-l border-white/10'
+                                : 'inset-0 md:inset-6 lg:inset-12 rounded-[2.5rem] bg-slate-950'
+                        }`}
+                    style={meetingLayout === 'pip' ? {
+                        left: meetingPos.x,
+                        top: meetingPos.y,
+                        width: meetingSize.width,
+                        height: meetingSize.height,
+                        transition: isDragging.current || isResizing.current ? 'none' : 'all 0.3s ease'
+                    } : {}}
                 >
-                    {/* Header/Grab Bar */}
-                    <div className={`flex items-center justify-between px-4 py-3 bg-slate-900 text-white shrink-0 ${meetingLayout === 'pip' ? 'p-2' : ''}`}>
-                        <div className="flex items-center gap-3">
+                    {/* Header/Grab Bar - Draggable in PIP */}
+                    <div
+                        onMouseDown={startDrag}
+                        className={`flex items-center justify-between px-4 py-3 bg-slate-900 text-white shrink-0 ${meetingLayout === 'pip' ? 'p-2 cursor-grab active:cursor-grabbing' : ''}`}
+                    >
+                        <div className="flex items-center gap-3 pointer-events-none select-none">
                             <div className="p-1.5 bg-blue-500 rounded-lg">
                                 <Video className="w-4 h-4 text-white" />
                             </div>
@@ -2787,9 +2855,12 @@ const SalesAdmin = () => {
                                     </span>
                                 </div>
                             )}
+                            {meetingLayout === 'pip' && (
+                                <span className="text-[10px] font-bold tracking-tight text-blue-400">DRAG ME</span>
+                            )}
                         </div>
 
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2" onMouseDown={(e) => e.stopPropagation()}>
                             {meetingLayout !== 'large' && (
                                 <button
                                     onClick={() => setMeetingLayout('large')}
@@ -2810,7 +2881,11 @@ const SalesAdmin = () => {
                             )}
                             {meetingLayout !== 'pip' && (
                                 <button
-                                    onClick={() => setMeetingLayout('pip')}
+                                    onClick={() => {
+                                        setMeetingLayout('pip');
+                                        // Reset to default corner if needed
+                                        setMeetingPos({ x: window.innerWidth - 500, y: window.innerHeight - 350 });
+                                    }}
                                     className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
                                     title="Minimize to Bubble"
                                 >
@@ -2835,14 +2910,23 @@ const SalesAdmin = () => {
                     <div className="flex-1 bg-black relative">
                         <iframe
                             src={activeMeeting.url}
-                            className={`w-full h-full border-none ${meetingLayout === 'pip' ? 'pointer-events-none' : ''}`}
+                            className={`w-full h-full border-none ${meetingLayout === 'pip' && (isDragging.current || isResizing.current) ? 'pointer-events-none' : ''}`}
                             allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
                             title="Jitsi Meeting"
                         />
+
+                        {/* Resizer handle for PIP */}
                         {meetingLayout === 'pip' && (
-                            <div className="absolute inset-0 bg-transparent group-hover:bg-blue-600/10 transition-colors pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                <Maximize2 className="w-6 h-6 text-white drop-shadow-md" />
+                            <div
+                                onMouseDown={startResize}
+                                className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center group/resizer z-20"
+                            >
+                                <div className="w-2 h-2 border-r-2 border-b-2 border-white/30 group-hover/resizer:border-white transition-colors" />
                             </div>
+                        )}
+
+                        {(isDragging.current || isResizing.current) && (
+                            <div className="absolute inset-0 bg-transparent z-10" />
                         )}
                     </div>
                 </div>
