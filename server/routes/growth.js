@@ -215,9 +215,9 @@ router.post('/invite', async (req, res) => {
                 await pool.controlPool.query(`
                     INSERT INTO sales_inquiries (
                         name, email, source, interest_type, status, 
-                        referral_token, created_at, last_activity_at
-                    ) VALUES ($1, $2, 'Clinic_Referral', 'referral_invite', 'new', $3, NOW(), NOW())
-                `, [name, email, token]);
+                        referral_token, referrer_name, created_at, last_activity_at
+                    ) VALUES ($1, $2, 'Clinic_Referral', 'referral_invite', 'new', $3, $4, NOW(), NOW())
+                `, [name, email, token, clinicName]);
 
                 console.log(`[Growth] Auto-created lead in sales pool for ${email}`);
             } else {
@@ -269,6 +269,23 @@ router.get('/verify-token/:token', async (req, res) => {
             [referral.referrer_clinic_id]
         );
         const referrerName = clinicRes.rows[0]?.display_name || clinicRes.rows[0]?.name || 'a colleague';
+
+        // AUTO-VERIFY: Mark as verified in sales pool when they click the magic link
+        try {
+            await pool.controlPool.query(`
+                UPDATE sales_inquiries 
+                SET status = CASE 
+                        WHEN status IN ('new', 'pending_verification', 'pending') THEN 'verified' 
+                        ELSE status 
+                    END,
+                    referrer_name = COALESCE(referrer_name, $1),
+                    last_activity_at = NOW()
+                WHERE referral_token = $2
+            `, [referrerName, token]);
+            console.log(`[Growth] Auto-verified lead for token ${token}`);
+        } catch (updateError) {
+            console.error('[Growth] Failed to auto-verify lead on token click:', updateError);
+        }
 
         res.json({
             valid: true,
