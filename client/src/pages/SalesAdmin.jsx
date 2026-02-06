@@ -1285,8 +1285,8 @@ const SalesAdmin = () => {
                                         });
 
                                         // Check for recent activity (hot leads)
-                                        const hasHotVerified = verifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > oneWeekAgo);
-                                        const hasHotUnverified = unverifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > oneWeekAgo);
+                                        const hasHotVerified = verifiedLeads.some(i => isHotLead(i));
+                                        const hasHotUnverified = unverifiedLeads.some(i => isHotLead(i));
 
                                         return (
                                             <>
@@ -1305,7 +1305,7 @@ const SalesAdmin = () => {
                                                         ? 'bg-emerald-500 text-white'
                                                         : hasHotVerified
                                                             ? 'bg-orange-500 text-white animate-pulse'
-                                                            : 'bg-slate-100 text-slate-400'
+                                                            : 'bg-blue-100 text-blue-600'
                                                         }`}>
                                                         {verifiedLeads.length}
                                                     </span>
@@ -1325,7 +1325,7 @@ const SalesAdmin = () => {
                                                         ? 'bg-amber-500 text-white'
                                                         : hasHotUnverified
                                                             ? 'bg-orange-500 text-white animate-pulse'
-                                                            : 'bg-slate-100 text-slate-300'
+                                                            : 'bg-blue-100 text-blue-600'
                                                         }`}>
                                                         {unverifiedLeads.length}
                                                     </span>
@@ -1365,7 +1365,7 @@ const SalesAdmin = () => {
 
                                             if (!visible) return;
 
-                                            const isHot = i.last_activity_at && new Date(i.last_activity_at) > oneWeekAgo;
+                                            const isHot = isHotLead(i);
 
                                             counts.all++;
                                             if (isHot) hotCounts.all = true;
@@ -1430,7 +1430,7 @@ const SalesAdmin = () => {
                                                         ? 'bg-blue-500 text-white'
                                                         : hasHotLead
                                                             ? 'bg-orange-500 text-white animate-pulse'
-                                                            : 'bg-slate-100 text-slate-400'
+                                                            : 'bg-blue-100 text-blue-600'
                                                         }`}>
                                                         {counts[cat.id]}
                                                     </span>
@@ -1510,7 +1510,7 @@ const SalesAdmin = () => {
                                                     {cat.label}
                                                     <span className={`ml-1 px-1 py-0.5 rounded text-[8px] flex items-center gap-1 ${hotCount > 0
                                                         ? 'bg-orange-500 text-white animate-pulse'
-                                                        : (salvageFilter === cat.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400')
+                                                        : (salvageFilter === cat.id ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600')
                                                         }`}>
                                                         {cat.count}
                                                     </span>
