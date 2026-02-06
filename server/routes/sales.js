@@ -200,6 +200,7 @@ router.post('/inquiry', async (req, res) => {
             interest,
             source,
             referral_code,
+            referral_token,
             recaptchaToken
         } = req.body;
 
@@ -323,16 +324,16 @@ router.post('/inquiry', async (req, res) => {
             const insertResult = await pool.query(`
                 INSERT INTO sales_inquiries (
                     name, email, phone, practice_name, provider_count,
-                    message, interest_type, source, status, referral_code,
+                    message, interest_type, source, status, referral_code, referral_token,
                     verification_token, verification_code, verification_expires_at, 
                     recaptcha_score, is_disposable_email, suggested_seller_id,
                     created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
                 RETURNING id, created_at
             `, [
                 name, email, phone, practice, providers, message, interest, source,
-                initialStatus, referral_code, verificationToken, verificationCode, verificationExpires,
+                initialStatus, referral_code, referral_token, verificationToken, verificationCode, verificationExpires,
                 recaptchaScore, isDisposable, suggestedSellerId
             ]);
             inquiryId = insertResult.rows[0].id;
@@ -1268,7 +1269,7 @@ router.get('/demo-details/:id', async (req, res) => {
  * This combines clinic creation + referral activation in one atomic flow.
  */
 router.post('/onboard', verifyToken, async (req, res) => {
-    const { inquiryId, clinic, adminUser } = req.body;
+    const { inquiryId, clinic, adminUser, referralToken } = req.body;
 
     if (!clinic || !clinic.slug) {
         return res.status(400).json({ error: 'Missing required onboarding data (slug).' });
@@ -1310,9 +1311,37 @@ router.post('/onboard', verifyToken, async (req, res) => {
             `, [clinicId, trialPlan.rows[0].id]);
         }
 
-        // 5. Handle referral activation if inquiry has referral code
+        // 5. Handle referral activation if inquiry has referral code OR token
         let referralActivated = false;
-        if (inquiry && inquiry.referral_code && !inquiry.referral_activated) {
+
+        // Use token first (dynamic), then fallback to code (static)
+        const refToken = referralToken || inquiry?.referral_token;
+        const refCode = inquiry?.referral_code;
+
+        if (refToken && (!inquiry || !inquiry.referral_activated)) {
+            const tokenRes = await pool.query(
+                "SELECT * FROM public.clinic_referrals WHERE token = $1 AND status = 'pending' AND (token_expires_at IS NULL OR token_expires_at > NOW())",
+                [refToken]
+            );
+
+            if (tokenRes.rows.length > 0) {
+                const referral = tokenRes.rows[0];
+                console.log(`[SALES] Activating referral via TOKEN for referrer ${referral.referrer_clinic_id}`);
+
+                await pool.query(`
+                    UPDATE public.clinic_referrals 
+                    SET status = 'active', referred_clinic_id = $1, updated_at = NOW()
+                    WHERE id = $2
+                `, [clinicId, referral.id]);
+
+                if (inquiryId) {
+                    await pool.query(`
+                        UPDATE sales_inquiries SET referral_activated = true, referral_activated_at = NOW() WHERE id = $1
+                    `, [inquiryId]);
+                }
+                referralActivated = true;
+            }
+        } else if (inquiry && refCode && !inquiry.referral_activated) {
             const referrerRes = await pool.query(
                 'SELECT id, display_name FROM clinics WHERE referral_code = $1',
                 [inquiry.referral_code]

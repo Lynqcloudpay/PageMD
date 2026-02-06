@@ -32,6 +32,35 @@ class EmailService {
     }
 
     /**
+     * Send Referral Invitation
+     */
+    async sendReferralInvite(email, recipientName, referrerClinicName, inviteLink) {
+        const subject = `You've been invited to PageMD by ${referrerClinicName}`;
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="https://pagemdemr.com/logo.png" alt="PageMD" width="164" height="48" style="height: 48px; width: auto; border: 0;">
+                </div>
+                <h2 style="color: #2563eb; text-align: center;">Hello ${recipientName || 'Doctor'},</h2>
+                <p style="font-size: 16px; line-height: 1.6; text-align: center;"><strong>${referrerClinicName}</strong> has invited you to join the PageMD Partner Program.</p>
+                <p style="font-size: 16px; line-height: 1.6;">PageMD is the first EMR that rewards your growth. By joining through this invitation, you'll receive a special introductory rate and help your colleague earn rewards too.</p>
+                <div style="margin: 40px 0; text-align: center;">
+                    <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
+                        Accept Invitation & Learn More
+                    </a>
+                </div>
+                <p style="font-size: 14px; color: #64748b; margin-top: 40px;">Or copy and paste this link into your browser:</p>
+                <p style="font-size: 12px; color: #3b82f6; word-break: break-all;">${inviteLink}</p>
+                <p style="font-size: 14px; color: #64748b;">This special introductory link will expire in 30 days.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;" />
+                <p style="font-size: 12px; color: #94a3b8; text-align: center;">© ${new Date().getFullYear()} PageMD EMR. All rights reserved.</p>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
+
+    /**
      * Send Portal Invitation
      */
     async sendPortalInvite(email, patientName, inviteLink) {

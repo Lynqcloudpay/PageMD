@@ -153,7 +153,7 @@ router.get('/stats', async (req, res) => {
 
 /**
  * POST /invite
- * Placeholder for sending referral invites
+ * Sends a referral invitation with a unique, single-use token.
  */
 router.post('/invite', async (req, res) => {
     try {
@@ -161,17 +161,42 @@ router.post('/invite', async (req, res) => {
         if (!email) return res.status(400).json({ error: 'Email required' });
 
         const clinicId = req.clinic.id;
+        const clinicName = req.clinic.display_name || req.clinic.name;
 
-        // Log the invitation
+        // 1. Generate unique token
+        const crypto = require('crypto');
+        const token = crypto.randomUUID();
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30); // 30 day expiry
+
+        // 2. Log the invitation with the token
         await pool.controlPool.query(
-            "INSERT INTO public.clinic_referrals (referrer_clinic_id, referred_clinic_name, referral_email, status) VALUES ($1, $2, $3, 'pending')",
-            [clinicId, name, email]
+            `INSERT INTO public.clinic_referrals 
+             (referrer_clinic_id, referred_clinic_name, referral_email, status, token, token_expires_at, invite_sent_at) 
+             VALUES ($1, $2, $3, 'pending', $4, $5, NOW())`,
+            [clinicId, name, email, token, expiresAt]
         );
 
-        // TODO: Integrate with SendGrid/AWS SES
-        console.log(`[Growth] Invitation sent to ${email} from clinic ${clinicId}`);
+        // 3. Send Invitation Email
+        const emailService = require('../services/emailService');
+        const frontendUrl = process.env.FRONTEND_URL || 'https://pagemdemr.com';
+        const inviteLink = `${frontendUrl}/register?token=${token}`;
 
-        res.json({ success: true, message: 'Invitation sent' });
+        const emailSent = await emailService.sendReferralInvite(email, name, clinicName, inviteLink);
+
+        if (!emailSent) {
+            console.warn(`[Growth] Failed to send invitation email to ${email}`);
+            // We still return success because the referral record is created, 
+            // but we could also return a partial success message.
+        }
+
+        console.log(`[Growth] Dynamic invitation sent to ${email} (token: ${token}) from clinic ${clinicId}`);
+
+        res.json({
+            success: true,
+            message: emailSent ? 'Invitation sent' : 'Invitation recorded (email failed to send)',
+            token: process.env.NODE_ENV === 'development' ? token : undefined
+        });
     } catch (error) {
         console.error('[Growth] Invite failed:', error);
         res.status(500).json({ error: 'System error' });

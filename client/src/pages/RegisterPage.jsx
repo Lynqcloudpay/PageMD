@@ -7,17 +7,26 @@ const RegisterPage = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const referralCode = searchParams.get('ref');
+    const referralToken = searchParams.get('token');
 
     useEffect(() => {
-        // Store referral code if present
+        // Store referral codes if present
         if (referralCode) {
             localStorage.setItem('pagemd_referral', referralCode);
             console.log('Referral code captured:', referralCode);
         }
+        if (referralToken) {
+            localStorage.setItem('pagemd_referral_token', referralToken);
+            console.log('Referral token captured:', referralToken);
+        }
 
         // Auto-redirect to contact after a short delay for branding
         const timer = setTimeout(() => {
-            navigate(`/contact${referralCode ? `?ref=${referralCode}` : ''}`);
+            const params = new URLSearchParams();
+            if (referralCode) params.set('ref', referralCode);
+            if (referralToken) params.set('token', referralToken);
+            const queryStr = params.toString();
+            navigate(`/contact${queryStr ? `?${queryStr}` : ''}`);
         }, 3500);
 
         return () => clearTimeout(timer);

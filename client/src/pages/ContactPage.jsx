@@ -18,7 +18,8 @@ const ContactPage = () => {
         providers: '',
         message: '',
         interest: 'demo',
-        referral_code: ''
+        referral_code: '',
+        referral_token: ''
     });
 
     // Pre-fill from URL params (e.g., from pricing page)
@@ -26,12 +27,14 @@ const ContactPage = () => {
         const plan = searchParams.get('plan');
         const interest = searchParams.get('interest');
         const ref = searchParams.get('ref') || localStorage.getItem('pagemd_referral');
+        const token = searchParams.get('token') || localStorage.getItem('pagemd_referral_token');
 
-        if (plan || interest || ref) {
+        if (plan || interest || ref || token) {
             setFormData(prev => ({
                 ...prev,
                 interest: interest || prev.interest,
                 referral_code: ref || prev.referral_code,
+                referral_token: token || prev.referral_token,
                 message: plan ? `I'm interested in the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan.` : prev.message
             }));
         }
