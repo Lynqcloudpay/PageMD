@@ -1385,8 +1385,9 @@ router.post('/onboard', verifyToken, async (req, res) => {
                         referred_clinic_name,
                         referral_email,
                         status,
-                        created_at
-                    ) VALUES ($1, $2, $3, $4, 'active', NOW())
+                        created_at,
+                        signed_up_at
+                    ) VALUES ($1, $2, $3, $4, 'active', NOW(), NOW())
                 `, [referrer.id, clinicId, clinic.displayName || clinic.name, adminUser?.email || inquiry.email]);
 
                 // Mark inquiry as activated
