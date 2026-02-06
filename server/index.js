@@ -112,7 +112,8 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "https://pagemdemr.com", "http://localhost:3000", "http://localhost:5173", "blob:"],
+      connectSrc: ["'self'", "https://pagemdemr.com", "http://localhost:3000", "http://localhost:5173", "blob:", "https://meet.jit.si"],
+      frameSrc: ["'self'", "https://meet.jit.si"],
     },
   },
 }));

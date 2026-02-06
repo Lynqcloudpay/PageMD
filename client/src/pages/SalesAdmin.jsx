@@ -100,7 +100,7 @@ const SalesAdmin = () => {
 
     // Jitsi Call State
     const [activeMeeting, setActiveMeeting] = useState(null); // stores { demo, url }
-    const [isMeetingMinimized, setIsMeetingMinimized] = useState(false);
+    const [meetingLayout, setMeetingLayout] = useState('large'); // 'large', 'pip', 'side'
 
     // Lead Pool & Ownership State
     const [viewMode, setViewMode] = useState('pool'); // 'pool', 'personal', 'master'
@@ -2600,7 +2600,7 @@ const SalesAdmin = () => {
                                             onClick={() => {
                                                 const url = getEnhancedMeetingLink(selectedDemo);
                                                 setActiveMeeting({ demo: selectedDemo, url });
-                                                setIsMeetingMinimized(false);
+                                                setMeetingLayout('large');
                                                 setSelectedDemo(null); // Close the details modal to show dashboard
                                             }}
                                             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
@@ -2765,21 +2765,23 @@ const SalesAdmin = () => {
             )}
             {/* Floating Meeting Window */}
             {activeMeeting && (
-                <div className={`fixed transition-all duration-500 ease-in-out z-[100] ${isMeetingMinimized
-                        ? 'right-6 bottom-6 w-80 h-48 rounded-2xl shadow-2xl border-2 border-blue-500 overflow-hidden bg-slate-900 group cursor-pointer'
-                        : 'inset-0 md:inset-10 lg:inset-20 rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] bg-slate-950 overflow-hidden flex flex-col border border-white/10'
+                <div className={`fixed transition-all duration-500 ease-in-out z-[100] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${meetingLayout === 'pip'
+                        ? 'right-6 bottom-6 w-80 h-48 rounded-2xl border-2 border-blue-500 bg-slate-900 cursor-pointer group'
+                        : meetingLayout === 'side'
+                            ? 'top-0 right-0 bottom-0 w-[450px] bg-slate-950 border-l border-white/10'
+                            : 'inset-0 md:inset-6 lg:inset-12 rounded-[2.5rem] bg-slate-950'
                     }`}
-                    onClick={() => isMeetingMinimized && setIsMeetingMinimized(false)}
+                    onClick={() => meetingLayout === 'pip' && setMeetingLayout('large')}
                 >
                     {/* Header/Grab Bar */}
-                    <div className={`flex items-center justify-between px-4 py-3 bg-slate-900 text-white shrink-0 ${isMeetingMinimized ? 'p-2' : ''}`}>
+                    <div className={`flex items-center justify-between px-4 py-3 bg-slate-900 text-white shrink-0 ${meetingLayout === 'pip' ? 'p-2' : ''}`}>
                         <div className="flex items-center gap-3">
                             <div className="p-1.5 bg-blue-500 rounded-lg">
                                 <Video className="w-4 h-4 text-white" />
                             </div>
-                            {!isMeetingMinimized && (
+                            {meetingLayout !== 'pip' && (
                                 <div className="flex flex-col">
-                                    <span className="text-xs font-bold tracking-tight">Meeting in Progress</span>
+                                    <span className="text-xs font-bold tracking-tight">Active Meeting</span>
                                     <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
                                         with {activeMeeting.demo?.lead_name}
                                     </span>
@@ -2788,20 +2790,41 @@ const SalesAdmin = () => {
                         </div>
 
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                                onClick={() => setIsMeetingMinimized(!isMeetingMinimized)}
-                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
-                                title={isMeetingMinimized ? "Full Screen" : "Minimize to Sidebar"}
-                            >
-                                {isMeetingMinimized ? <Maximize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" /> : <Minimize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />}
-                            </button>
+                            {meetingLayout !== 'large' && (
+                                <button
+                                    onClick={() => setMeetingLayout('large')}
+                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
+                                    title="Maximize"
+                                >
+                                    <Maximize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />
+                                </button>
+                            )}
+                            {meetingLayout !== 'side' && (
+                                <button
+                                    onClick={() => setMeetingLayout('side')}
+                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
+                                    title="Dock to Side"
+                                >
+                                    <Layout className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />
+                                </button>
+                            )}
+                            {meetingLayout !== 'pip' && (
+                                <button
+                                    onClick={() => setMeetingLayout('pip')}
+                                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/btn"
+                                    title="Minimize to Bubble"
+                                >
+                                    <Minimize2 className="w-4 h-4 text-slate-400 group-hover/btn:text-white" />
+                                </button>
+                            )}
                             <button
                                 onClick={() => {
                                     if (window.confirm("End session and close meeting?")) {
                                         setActiveMeeting(null);
                                     }
                                 }}
-                                className="p-1.5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors"
+                                className="p-1.5 hover:bg-red-500/20 text-slate-400 hover:text-red-400 rounded-lg transition-colors ml-1"
+                                title="Exit Meeting"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -2812,11 +2835,14 @@ const SalesAdmin = () => {
                     <div className="flex-1 bg-black relative">
                         <iframe
                             src={activeMeeting.url}
-                            className={`w-full h-full border-none ${isMeetingMinimized ? 'pointer-events-none scale-[1.02]' : ''}`}
+                            className={`w-full h-full border-none ${meetingLayout === 'pip' ? 'pointer-events-none' : ''}`}
                             allow="camera; microphone; display-capture; autoplay; clipboard-write; encrypted-media; fullscreen"
+                            title="Jitsi Meeting"
                         />
-                        {isMeetingMinimized && (
-                            <div className="absolute inset-0 bg-transparent group-hover:bg-blue-600/10 transition-colors pointer-events-none" />
+                        {meetingLayout === 'pip' && (
+                            <div className="absolute inset-0 bg-transparent group-hover:bg-blue-600/10 transition-colors pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <Maximize2 className="w-6 h-6 text-white drop-shadow-md" />
+                            </div>
                         )}
                     </div>
                 </div>

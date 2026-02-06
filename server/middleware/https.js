@@ -60,11 +60,11 @@ const securityHeaders = (req, res, next) => {
   // Content Security Policy
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://pagemdemr.com https://rxnav.nlm.nih.gov http://localhost:3000 http://localhost:5173 blob:;"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://pagemdemr.com https://rxnav.nlm.nih.gov http://localhost:3000 http://localhost:5173 blob:; frame-src 'self' https://meet.jit.si;"
   );
 
-  // X-Frame-Options (prevent clickjacking)
-  res.setHeader('X-Frame-Options', 'DENY');
+  // X-Frame-Options (prevent clickjacking for the EMR itself)
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
 
   // X-Content-Type-Options (prevent MIME sniffing)
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -75,10 +75,10 @@ const securityHeaders = (req, res, next) => {
   // Referrer Policy
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // Permissions Policy
+  // Permissions Policy - Allow Jitsi for camera/mic
   res.setHeader(
     'Permissions-Policy',
-    'geolocation=(), microphone=(), camera=(self)'
+    'geolocation=(), microphone=(self "https://meet.jit.si"), camera=(self "https://meet.jit.si"), display-capture=(self "https://meet.jit.si")'
   );
 
   next();
