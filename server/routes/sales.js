@@ -1196,12 +1196,23 @@ router.post('/track-visit', async (req, res) => {
         if (!uuid) return res.status(400).json({ error: 'UUID required' });
 
         const result = await pool.query(
-            'SELECT id, name, email, status FROM sales_inquiries WHERE uuid = $1',
+            'SELECT id, name, email, status, is_finalized FROM sales_inquiries WHERE uuid = $1',
             [uuid]
         );
         const inquiry = result.rows[0];
 
         if (!inquiry) return res.status(404).json({ error: 'Lead not found' });
+
+        // SKIP logging for finalized/converted leads - they are done!
+        if (inquiry.is_finalized || inquiry.status === 'converted') {
+            console.log(`[SALES] Skipping return visit log for finalized lead #${inquiry.id} (${inquiry.email})`);
+            return res.json({
+                success: true,
+                message: 'Lead is finalized, no activity logged',
+                leadId: inquiry.id,
+                skipped: true
+            });
+        }
 
         // Update last activity
         await pool.query(
