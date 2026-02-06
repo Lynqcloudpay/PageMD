@@ -4,6 +4,92 @@ const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+/**
+ * Helper to send referral notification
+ */
+async function sendReferralNotificationHelper(pool, inquiry) {
+    const { referral_token, referral_code, name } = inquiry;
+    try {
+        // Priority: Token -> Code
+        if (referral_token) {
+            const tokenRes = await pool.query(
+                'SELECT referrer_clinic_id FROM clinic_referrals WHERE token = $1',
+                [referral_token]
+            );
+
+            if (tokenRes.rows.length > 0) {
+                const referrerId = tokenRes.rows[0].referrer_clinic_id;
+                const clinicRes = await pool.query(
+                    'SELECT c.display_name, u.email FROM clinics c JOIN users u ON u.clinic_id = c.id WHERE c.id = $1 AND u.role = \'Owner\' LIMIT 1',
+                    [referrerId]
+                );
+
+                if (clinicRes.rows.length > 0) {
+                    const row = clinicRes.rows[0];
+                    const referrerClinicName = row.display_name || row.name || 'a colleague';
+                    const referrerEmail = row.email;
+
+                    const emailService = require('../services/emailService');
+                    // Use setTimeout to not block the response
+                    setTimeout(() => {
+                        emailService.sendReferralNotification(referrerEmail, referrerClinicName, name, 'invite')
+                            .catch(e => console.error('[SALES] Failed to send referral notification', e));
+                    }, 1000);
+                    console.log(`[SALES] Queued referral notification for ${referrerClinicName} (Invite)`);
+                    return; // Stop here if token matched
+                }
+            }
+        }
+
+        if (referral_code && referral_code.startsWith('SANDBOXCLINIC-')) {
+            const shortId = referral_code.replace('SANDBOXCLINIC-', '').toLowerCase();
+            const sandboxRes = await pool.query(`
+                SELECT i.email, i.name 
+                FROM sales_inquiries i
+                JOIN sales_inquiry_logs l ON l.inquiry_id = i.id
+                WHERE l.metadata->>'sandbox_id' LIKE $1 || '%'
+                ORDER BY l.created_at DESC
+                LIMIT 1
+            `, [shortId]);
+
+            if (sandboxRes.rows.length > 0) {
+                const { email: referrerEmail, name: referrerName } = sandboxRes.rows[0];
+                const emailService = require('../services/emailService');
+                setTimeout(() => {
+                    emailService.sendReferralNotification(referrerEmail, referrerName, name, 'link')
+                        .catch(e => console.error('[SALES] Failed to send sandbox referral notification', e));
+                }, 1000);
+                console.log(`[SALES] Queued referral notification for Sandbox User: ${referrerEmail}`);
+                return;
+            }
+        }
+
+        if (referral_code) {
+            const clinicRes = await pool.query(
+                'SELECT c.display_name, c.name, u.email FROM clinics c JOIN users u ON u.clinic_id = c.id WHERE c.referral_code = $1 AND u.role = \'Owner\' LIMIT 1',
+                [referral_code]
+            );
+
+            if (clinicRes.rows.length > 0) {
+                const row = clinicRes.rows[0];
+                const referrerClinicName = row.display_name || row.name || 'a colleague';
+                const referrerEmail = row.email;
+
+                const emailService = require('../services/emailService');
+                // Use setTimeout to not block the response
+                setTimeout(() => {
+                    emailService.sendReferralNotification(referrerEmail, referrerClinicName, name, 'link')
+                        .catch(e => console.error('[SALES] Failed to send referral notification', e));
+                }, 1000);
+                console.log(`[SALES] Queued referral notification for ${referrerClinicName} (Link)`);
+            }
+        }
+    } catch (refError) {
+        console.error('[SALES] Error processing referral notification:', refError);
+        // Don't block submission
+    }
+}
+
 // Secret for Sales JWT (should be in env, falling back for simplicity if not set)
 const JWT_SECRET = process.env.SALES_JWT_SECRET || 'pagemd-sales-secret-key-2026';
 
@@ -252,12 +338,54 @@ router.post('/inquiry', async (req, res) => {
 
         // 3. Generate verification code (6 digits)
         const isSandboxRequest = source === 'Sandbox_Demo';
+        const isEmailReferral = !!referral_token; // Leads from specific email invites
+
+        // Resolve Referrer Name for demographics
+        let referrerName = null;
+        try {
+            if (referral_token) {
+                const res = await pool.query(`
+                    SELECT c.display_name, c.name FROM clinics c 
+                    JOIN clinic_referrals cr ON cr.referrer_clinic_id = c.id 
+                    WHERE cr.token = $1 LIMIT 1
+                `, [referral_token]);
+                if (res.rows.length > 0) {
+                    referrerName = res.rows[0].display_name || res.rows[0].name;
+                }
+            } else if (referral_code) {
+                if (referral_code.startsWith('SANDBOXCLINIC-')) {
+                    const shortId = referral_code.replace('SANDBOXCLINIC-', '').toLowerCase();
+                    const res = await pool.query(`
+                        SELECT i.name FROM sales_inquiries i
+                        JOIN sales_inquiry_logs l ON l.inquiry_id = i.id
+                        WHERE l.metadata->>'sandbox_id' LIKE $1 || '%'
+                        ORDER BY l.created_at DESC LIMIT 1
+                    `, [shortId]);
+                    if (res.rows.length > 0) {
+                        referrerName = res.rows[0].name + ' (Sandbox)';
+                    }
+                } else {
+                    const res = await pool.query(`
+                        SELECT display_name, name FROM clinics WHERE referral_code = $1 LIMIT 1
+                    `, [referral_code]);
+                    if (res.rows.length > 0) {
+                        referrerName = res.rows[0].display_name || res.rows[0].name;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('[SALES] Failed to resolve referrer name', err);
+        }
+
         let verificationToken = null;
         let verificationCode = null;
         let verificationExpires = null;
-        const initialStatus = isSandboxRequest ? 'pending_verification' : 'new';
 
-        if (isSandboxRequest) {
+        // Auto-verify if lead came from a specific email invite token
+        const initialStatus = (isSandboxRequest && !isEmailReferral) ? 'pending_verification' : (isEmailReferral ? 'verified' : 'new');
+        const requiresVerification = isSandboxRequest && !isEmailReferral;
+
+        if (requiresVerification) {
             verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
             verificationToken = jwt.sign(
                 { email, type: 'demo_verification_code' },
@@ -308,12 +436,18 @@ router.post('/inquiry', async (req, res) => {
                     verification_token = $7, 
                     verification_code = $8, 
                     verification_expires_at = $9,
-                    status = CASE WHEN $10 = true THEN 'pending_verification' ELSE status END,
+                    status = CASE 
+                        WHEN $10 = true AND $11 = false THEN 'pending_verification' 
+                        WHEN $11 = true THEN 'verified'
+                        ELSE status 
+                    END,
+                    referrer_name = COALESCE($12, referrer_name),
                     updated_at = NOW()
-                WHERE id = $11
+                WHERE id = $13
             `, [
                 name, phone, practice, providers, message, interest,
-                verificationToken, verificationCode, verificationExpires, isSandboxRequest, inquiryId
+                verificationToken, verificationCode, verificationExpires,
+                isSandboxRequest, isEmailReferral, referrerName, inquiryId
             ]);
 
             // Log the duplicate demo attempt
@@ -351,14 +485,15 @@ router.post('/inquiry', async (req, res) => {
                     message, interest_type, source, status, referral_code, referral_token,
                     verification_token, verification_code, verification_expires_at, 
                     recaptcha_score, is_disposable_email, suggested_seller_id,
+                    referrer_name,
                     created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
                 RETURNING id, created_at
             `, [
                 name, email, phone, practice, providers, message, interest, source,
                 initialStatus, referral_code, referral_token, verificationToken, verificationCode, verificationExpires,
-                recaptchaScore, isDisposable, suggestedSellerId
+                recaptchaScore, isDisposable, suggestedSellerId, referrerName
             ]);
             inquiryId = insertResult.rows[0].id;
         }
@@ -367,53 +502,9 @@ router.post('/inquiry', async (req, res) => {
         const uuidRes = await pool.query('SELECT uuid FROM sales_inquiries WHERE id = $1', [inquiryId]);
         const leadUuid = uuidRes.rows[0]?.uuid;
 
-        // 6. Referral Notification Logic
-        try {
-            // Priority: Token -> Code
-            if (referral_token) {
-                const tokenRes = await pool.query(
-                    'SELECT referrer_clinic_id FROM clinic_referrals WHERE token = $1',
-                    [referral_token]
-                );
-
-                if (tokenRes.rows.length > 0) {
-                    const referrerId = tokenRes.rows[0].referrer_clinic_id;
-                    const clinicRes = await pool.query(
-                        'SELECT c.name, u.email FROM clinics c JOIN users u ON u.clinic_id = c.id WHERE c.id = $1 AND u.role = \'Owner\' LIMIT 1',
-                        [referrerId]
-                    );
-
-                    if (clinicRes.rows.length > 0) {
-                        const { name: referrerClinicName, email: referrerEmail } = clinicRes.rows[0];
-                        const emailService = require('../services/emailService');
-                        // Use setTimeout to not block the response
-                        setTimeout(() => {
-                            emailService.sendReferralNotification(referrerEmail, referrerClinicName, name, 'invite')
-                                .catch(e => console.error('[SALES] Failed to send referral notification', e));
-                        }, 1000);
-                        console.log(`[SALES] Queued referral notification for ${referrerClinicName} (Invite)`);
-                    }
-                }
-            } else if (referral_code) {
-                const clinicRes = await pool.query(
-                    'SELECT c.name, u.email FROM clinics c JOIN users u ON u.clinic_id = c.id WHERE c.referral_code = $1 AND u.role = \'Owner\' LIMIT 1',
-                    [referral_code]
-                );
-
-                if (clinicRes.rows.length > 0) {
-                    const { name: referrerClinicName, email: referrerEmail } = clinicRes.rows[0];
-                    const emailService = require('../services/emailService');
-                    // Use setTimeout to not block the response
-                    setTimeout(() => {
-                        emailService.sendReferralNotification(referrerEmail, referrerClinicName, name, 'link')
-                            .catch(e => console.error('[SALES] Failed to send referral notification', e));
-                    }, 1000);
-                    console.log(`[SALES] Queued referral notification for ${referrerClinicName} (Link)`);
-                }
-            }
-        } catch (refError) {
-            console.error('[SALES] Error processing referral notification:', refError);
-            // Don't block submission
+        // 6. Referral Notification Logic (Notify immediately if verified)
+        if (!requiresVerification) {
+            await sendReferralNotificationHelper(pool, { name, referral_token, referral_code });
         }
 
         // 6. Send verification code email for sandbox requests
@@ -426,7 +517,7 @@ router.post('/inquiry', async (req, res) => {
         res.status(existingInquiry ? 200 : 201).json({
             success: true,
             isDuplicate,
-            requiresVerification: isSandboxRequest,
+            requiresVerification,
             email: email, // Returned for frontend context display
             message: isSandboxRequest
                 ? (isDuplicate ? 'Welcome back! We\'ve sent a fresh access code to your inbox.' : 'Check your email for the verification code!')
@@ -516,6 +607,12 @@ router.post('/verify-code', async (req, res) => {
                 WHERE token = $1 AND status = 'pending'
             `, [inquiry.referral_token]);
             console.log(`[SALES] Activated referral for ${inquiry.email} (Token: ${inquiry.referral_token})`);
+        } else if (inquiry.referral_code) {
+            // Also notify for static link referrals upon verification
+            await sendReferralNotificationHelper(pool, {
+                name: inquiry.name,
+                referral_code: inquiry.referral_code
+            });
         }
 
 
@@ -562,12 +659,20 @@ router.post('/verify-code', async (req, res) => {
 
             await client.query('COMMIT');
 
-            // Issue JWT
+            // 5. Log the sandbox launch with metadata for referral resolution
+            await pool.query(
+                `INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata) 
+                 VALUES ($1, 'system', 'User launched Sandbox Demo environment', $2)`,
+                [inquiry.id, JSON.stringify({ sandbox_id: sandboxId })]
+            );
+
+            // 6. Issue JWT
             const sandboxToken = jwt.sign({
                 userId: providerId,
                 email: 'demo@pagemd.com',
                 isSandbox: true,
                 sandboxId: sandboxId,
+                leadUuid: inquiry.uuid,
                 clinicId: sandboxClinicId,
                 clinicSlug: 'demo',
                 role: 'Clinician'
@@ -707,12 +812,20 @@ router.get('/verify/:token', async (req, res) => {
 
             await client.query('COMMIT');
 
-            // Issue JWT
+            // 5. Log the sandbox launch with metadata for referral resolution
+            await pool.query(
+                `INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata) 
+                 VALUES ($1, 'system', 'User launched Sandbox Demo environment', $2)`,
+                [inquiry.id, JSON.stringify({ sandbox_id: sandboxId })]
+            );
+
+            // 6. Issue JWT
             const sandboxToken = jwt.sign({
                 userId: providerId,
                 email: 'demo@pagemd.com',
                 isSandbox: true,
                 sandboxId: sandboxId,
+                leadUuid: inquiry.uuid,
                 clinicId: sandboxClinicId,
                 clinicSlug: 'demo',
                 role: 'Clinician'

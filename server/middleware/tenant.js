@@ -22,6 +22,7 @@ const resolveTenant = async (req, res, next) => {
     // 2. Determine Clinic Slug / Schema
     let slug = req.headers['x-clinic-slug'];
     let lookupSchema = null;
+    let decoded = null;
 
     // A. Recognition by JWT Token (for already authenticated users)
     const authHeader = req.headers.authorization;
@@ -34,7 +35,7 @@ const resolveTenant = async (req, res, next) => {
 
     if (token) {
         try {
-            const decoded = jwt.decode(token); // Just peek, verification happens later in auth middleware
+            decoded = jwt.decode(token); // Just peek, verification happens later in auth middleware
             if (decoded) {
                 if (decoded.isSandbox) {
                     req.isSandbox = true;
@@ -169,7 +170,7 @@ const resolveTenant = async (req, res, next) => {
 
         if (req.isSandbox) {
             tenantInfo = {
-                id: '00000000-0000-0000-0000-000000000000',
+                id: decoded.leadUuid || '00000000-0000-0000-0000-000000000000',
                 slug: 'demo',
                 schema_name: lookupSchema,
                 display_name: 'PageMD Sandbox Demo',

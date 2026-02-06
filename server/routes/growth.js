@@ -112,8 +112,14 @@ router.get('/stats', async (req, res) => {
         }
 
         // Get Referral Code
-        const clinicRes = await pool.controlPool.query("SELECT referral_code FROM public.clinics WHERE id = $1", [clinicId]);
-        const referralCode = clinicRes.rows[0]?.referral_code;
+        let referralCode;
+        if (req.isSandbox && req.sandboxId) {
+            // Predictable code for sandboxes: SANDBOXCLINIC-[short-id]
+            referralCode = `SANDBOXCLINIC-${req.sandboxId.substring(0, 4).toUpperCase()}`;
+        } else {
+            const clinicRes = await pool.controlPool.query("SELECT referral_code FROM public.clinics WHERE id = $1", [clinicId]);
+            referralCode = clinicRes.rows[0]?.referral_code;
+        }
 
         // Get Active Referral List (masked)
         const referralsList = await pool.controlPool.query(`

@@ -1711,8 +1711,9 @@ const SalesAdmin = () => {
 
                                                         {/* Referral */}
                                                         {(inquiry.referral_code || inquiry.referral_token) && (
-                                                            <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[7px] uppercase flex-shrink-0">
-                                                                REF
+                                                            <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[7px] uppercase flex-shrink-0 flex items-center gap-1">
+                                                                <Gift className="w-2 h-2" />
+                                                                {inquiry.referrer_name ? inquiry.referrer_name.split(' ')[0] : 'REF'}
                                                             </span>
                                                         )}
 
@@ -1967,6 +1968,12 @@ const SalesAdmin = () => {
                                                         <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
                                                             <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                                                             <span className="truncate">{selectedInquiry.phone}</span>
+                                                        </span>
+                                                    )}
+                                                    {selectedInquiry.referrer_name && (
+                                                        <span className="flex items-center gap-1 min-w-0 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100/50">
+                                                            <UserPlus className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                                                            <span className="truncate">Ref: {selectedInquiry.referrer_name}</span>
                                                         </span>
                                                     )}
                                                     <span className="flex items-center gap-1 shrink-0 opacity-70">

@@ -26,16 +26,17 @@ router.post('/provision', async (req, res) => {
         if (leadId) {
             try {
                 const leadRes = await pool.controlPool.query(
-                    'SELECT id FROM sales_inquiries WHERE uuid = $1 OR id::text = $1',
+                    'SELECT id, uuid FROM sales_inquiries WHERE uuid = $1 OR id::text = $1',
                     [leadId]
                 );
 
                 if (leadRes.rows.length > 0) {
                     const inquiryId = leadRes.rows[0].id;
+                    req.leadUuid = leadRes.rows[0].uuid; // Attach to request for JWT step
                     await pool.controlPool.query(
-                        `INSERT INTO sales_inquiry_logs (inquiry_id, type, content) 
-                         VALUES ($1, 'system', 'User launched Sandbox Demo environment')`,
-                        [inquiryId]
+                        `INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata) 
+                         VALUES ($1, 'system', 'User launched Sandbox Demo environment', $2)`,
+                        [inquiryId, JSON.stringify({ sandbox_id: sandboxId })]
                     );
 
                     // Update last activity
@@ -91,6 +92,7 @@ router.post('/provision', async (req, res) => {
             email: 'demo@pagemd.com',
             isSandbox: true,
             sandboxId: sandboxId,
+            leadUuid: req.leadUuid,
             clinicId: sandboxClinicId,
             clinicSlug: 'demo',
             role: 'Clinician'

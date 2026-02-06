@@ -29,10 +29,18 @@ const LandingPage = () => {
     const [leadName, setLeadName] = React.useState('');
     const [referralData, setReferralData] = React.useState(null);
 
-    // Check for referral token on mount
+    // Check for referral token/code on mount
     React.useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
+        const ref = params.get('ref');
+
+        // Store static referral code if present
+        if (ref) {
+            localStorage.setItem('pagemd_referral', ref);
+            console.log('Stored static referral code:', ref);
+        }
+
         if (token) {
             const baseUrl = import.meta.env.VITE_API_URL || '/api';
             fetch(`${baseUrl}/growth/verify-token/${token}`)
@@ -46,6 +54,7 @@ const LandingPage = () => {
                             token: token, // Keep token for submission
                             referrerName: data.referrerName
                         });
+                        localStorage.setItem('pagemd_referral_token', token);
                     }
                 })
                 .catch(err => console.error('Token check failed', err));

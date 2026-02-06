@@ -60,10 +60,20 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
             }));
         } else {
             const saved = localStorage.getItem('pagemd_lead_info');
+            const storedRefCode = localStorage.getItem('pagemd_referral');
+            const storedRefToken = localStorage.getItem('pagemd_referral_token');
+
             if (saved) {
                 try {
-                    setFormData(JSON.parse(saved));
+                    const parsed = JSON.parse(saved);
+                    setFormData(prev => ({
+                        ...prev,
+                        ...parsed,
+                        referral_token: storedRefToken || parsed.referral_token || prev.referral_token
+                    }));
                 } catch (e) { }
+            } else if (storedRefToken) {
+                setFormData(prev => ({ ...prev, referral_token: storedRefToken }));
             }
         }
     }, [initialData]);
