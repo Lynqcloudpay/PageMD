@@ -6,7 +6,7 @@ import {
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
     Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
-    Minimize2, Maximize2, Minus, ExternalLink
+    Minimize2, Maximize2, Minus, ExternalLink, Layout
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -2766,10 +2766,10 @@ const SalesAdmin = () => {
             {/* Floating Meeting Window */}
             {activeMeeting && (
                 <div className={`fixed transition-all duration-500 ease-in-out z-[100] border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col ${meetingLayout === 'pip'
-                        ? 'right-6 bottom-6 w-80 h-48 rounded-2xl border-2 border-blue-500 bg-slate-900 cursor-pointer group'
-                        : meetingLayout === 'side'
-                            ? 'top-0 right-0 bottom-0 w-[450px] bg-slate-950 border-l border-white/10'
-                            : 'inset-0 md:inset-6 lg:inset-12 rounded-[2.5rem] bg-slate-950'
+                    ? 'right-6 bottom-6 w-80 h-48 rounded-2xl border-2 border-blue-500 bg-slate-900 cursor-pointer group'
+                    : meetingLayout === 'side'
+                        ? 'top-0 right-0 bottom-0 w-[450px] bg-slate-950 border-l border-white/10'
+                        : 'inset-0 md:inset-6 lg:inset-12 rounded-[2.5rem] bg-slate-950'
                     }`}
                     onClick={() => meetingLayout === 'pip' && setMeetingLayout('large')}
                 >
