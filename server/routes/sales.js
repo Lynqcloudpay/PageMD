@@ -1124,6 +1124,29 @@ router.post('/onboard', verifyToken, async (req, res) => {
             `, [inquiryId]);
         }
 
+        // 7. Log conversion for commission tracking
+        const convertingUserId = req.user?.id;
+        if (inquiryId && convertingUserId) {
+            await pool.query(`
+                INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content, metadata)
+                VALUES ($1, $2, 'conversion', $3, $4)
+            `, [
+                inquiryId,
+                convertingUserId,
+                `🎉 Clinic "${clinic.displayName || clinic.name}" successfully onboarded!`,
+                JSON.stringify({
+                    clinic_id: clinicId,
+                    clinic_name: clinic.displayName || clinic.name,
+                    clinic_slug: clinic.slug,
+                    converted_by_user_id: convertingUserId,
+                    converted_at: new Date().toISOString(),
+                    referral_activated: referralActivated,
+                    admin_email: adminUser?.email || null,
+                    commission_eligible: true // For future commission calculations
+                })
+            ]);
+        }
+
         res.status(201).json({
             success: true,
             message: `Clinic "${clinic.displayName || clinic.name}" onboarded successfully!${referralActivated ? ' Referral credit activated.' : ''}`,

@@ -107,6 +107,10 @@ const SalesAdmin = () => {
     const [demoModalMonth, setDemoModalMonth] = useState(new Date());
     const [selectedDemo, setSelectedDemo] = useState(null);
 
+    // Celebration State (for confetti on conversion)
+    const [showCelebration, setShowCelebration] = useState(false);
+    const [celebrationData, setCelebrationData] = useState(null);
+
     const getEnhancedMeetingLink = (demo) => {
         if (!demo || !demo.meeting_link) return '';
         if (!demo.meeting_link.includes('meet.jit.si')) return demo.meeting_link;
@@ -339,9 +343,17 @@ const SalesAdmin = () => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error);
 
-            alert(data.message);
+            // Trigger celebration instead of alert!
+            setCelebrationData({
+                clinicName: onboardForm.displayName,
+                message: data.message,
+                referralActivated: data.referralActivated
+            });
+            setShowCelebration(true);
+
             setShowOnboardModal(false);
             await fetchInquiries();
+            await fetchLogs(selectedInquiry?.id); // Refresh logs to show conversion log
             if (selectedInquiry) {
                 setSelectedInquiry(prev => ({
                     ...prev,
@@ -2752,6 +2764,119 @@ const SalesAdmin = () => {
                             )}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* 🎉 Celebration Modal with Confetti */}
+            {showCelebration && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setShowCelebration(false)}
+                    />
+
+                    {/* Confetti Canvas */}
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        {[...Array(100)].map((_, i) => {
+                            const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4'];
+                            const color = colors[i % colors.length];
+                            const left = Math.random() * 100;
+                            const delay = Math.random() * 3;
+                            const duration = 3 + Math.random() * 2;
+                            const size = 6 + Math.random() * 8;
+                            const rotation = Math.random() * 360;
+
+                            return (
+                                <div
+                                    key={i}
+                                    className="absolute"
+                                    style={{
+                                        left: `${left}%`,
+                                        top: '-20px',
+                                        width: `${size}px`,
+                                        height: `${size}px`,
+                                        backgroundColor: color,
+                                        borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                                        transform: `rotate(${rotation}deg)`,
+                                        animation: `confetti-fall ${duration}s ease-out ${delay}s forwards`,
+                                        opacity: 0
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
+
+                    {/* Celebration Card */}
+                    <div className="relative z-10 bg-white rounded-3xl shadow-2xl p-8 max-w-md mx-4 text-center animate-in zoom-in-95 fade-in duration-500">
+                        {/* Trophy Emoji with Glow */}
+                        <div className="relative mb-6">
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-32 h-32 bg-yellow-400/20 rounded-full animate-ping" />
+                            </div>
+                            <div className="relative text-8xl animate-bounce">🏆</div>
+                        </div>
+
+                        {/* Header */}
+                        <h2 className="text-3xl font-black text-slate-800 mb-2">
+                            DEAL CLOSED! 🎉
+                        </h2>
+
+                        {/* Clinic Name */}
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg px-6 py-3 rounded-2xl shadow-lg mb-4 inline-block">
+                            {celebrationData?.clinicName}
+                        </div>
+
+                        {/* Message */}
+                        <p className="text-slate-600 mb-6">
+                            {celebrationData?.message}
+                        </p>
+
+                        {/* Referral Bonus */}
+                        {celebrationData?.referralActivated && (
+                            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6 animate-in slide-in-from-bottom-2 duration-700">
+                                <div className="flex items-center justify-center gap-2 text-purple-600 font-bold">
+                                    <Gift className="w-5 h-5" />
+                                    Referral Credit Activated!
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Stats */}
+                        <div className="flex items-center justify-center gap-6 mb-6">
+                            <div className="text-center">
+                                <div className="text-2xl font-black text-emerald-600">+1</div>
+                                <div className="text-xs text-slate-500 uppercase tracking-wider">Conversion</div>
+                            </div>
+                            <div className="w-px h-8 bg-slate-200" />
+                            <div className="text-center">
+                                <div className="text-2xl font-black text-blue-600">💰</div>
+                                <div className="text-xs text-slate-500 uppercase tracking-wider">Commission</div>
+                            </div>
+                        </div>
+
+                        {/* Close Button */}
+                        <button
+                            onClick={() => setShowCelebration(false)}
+                            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                        >
+                            Keep Crushing It! 💪
+                        </button>
+                    </div>
+
+                    {/* CSS for confetti animation */}
+                    <style>{`
+                        @keyframes confetti-fall {
+                            0% {
+                                opacity: 1;
+                                transform: translateY(0) rotate(0deg) scale(1);
+                            }
+                            100% {
+                                opacity: 0;
+                                transform: translateY(100vh) rotate(720deg) scale(0.5);
+                            }
+                        }
+                    `}</style>
                 </div>
             )}
         </div>
