@@ -232,9 +232,8 @@ const SalesAdmin = () => {
         if (token) {
             fetchInquiries();
             fetchMasterSchedule(); // Ensure demos are loaded
-            if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
-                fetchTeamUsers();
-            }
+            // Fetch team users for all logged-in users (needed for assignments)
+            fetchTeamUsers();
             const interval = setInterval(() => {
                 fetchInquiries(true);
                 fetchMasterSchedule();
@@ -2213,6 +2212,11 @@ const SalesAdmin = () => {
                                                                     <span className="text-[9px] font-bold text-slate-300 uppercase leading-none">
                                                                         {format(new Date(log.created_at), 'MMM d, h:mm a')}
                                                                     </span>
+                                                                    {!isUser && log.admin_name && (
+                                                                        <span className="text-[9px] font-bold text-blue-400 uppercase leading-none border-l border-slate-200 pl-1.5 ml-0.5">
+                                                                            — {log.admin_name}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         );
