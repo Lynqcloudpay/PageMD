@@ -403,13 +403,32 @@ router.post('/verify-code', async (req, res) => {
             });
         }
 
-        // 3. Update inquiry status to verified
+        // 3. Update inquiry status to verified AND re-open if it was finalized
+        const wasFinalized = inquiry.is_finalized;
         await pool.query(
             `UPDATE sales_inquiries 
-             SET status = 'verified', email_verified = true, updated_at = NOW(), last_activity_at = NOW()
+             SET status = 'verified', 
+                 email_verified = true, 
+                 updated_at = NOW(), 
+                 last_activity_at = NOW(),
+                 is_finalized = false,
+                 finalized_at = NULL
              WHERE id = $1`,
             [inquiry.id]
         );
+
+        // If this was a re-activation of a finalized lead, log it
+        if (wasFinalized) {
+            await pool.query(`
+                INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata)
+                VALUES ($1, 'reactivation', $2, $3)
+            `, [
+                inquiry.id,
+                '🔄 Lead re-activated! Customer returned and requested a new demo.',
+                JSON.stringify({ previous_status: inquiry.status, reactivated_at: new Date().toISOString() })
+            ]);
+            console.log(`[SALES] Finalized lead #${inquiry.id} re-opened for ${inquiry.email}`);
+        }
 
         console.log(`[SALES] Inquiry #${inquiry.id} verified via code for ${inquiry.email}`);
 
@@ -1145,6 +1164,13 @@ router.post('/onboard', verifyToken, async (req, res) => {
                     commission_eligible: true // For future commission calculations
                 })
             ]);
+
+            // 8. Mark lead as finalized (stops appearing in active searches)
+            await pool.query(`
+                UPDATE sales_inquiries 
+                SET is_finalized = true, finalized_at = NOW()
+                WHERE id = $1
+            `, [inquiryId]);
         }
 
         res.status(201).json({

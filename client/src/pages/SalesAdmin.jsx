@@ -1171,9 +1171,30 @@ const SalesAdmin = () => {
                                         );
                                     }
 
+                                    // Priority-based sorting for "ALL" view
+                                    // Order: New → Discussions/Follow-up → Demo → Converted → Closed
+                                    const getStatusPriority = (status) => {
+                                        const s = (status || 'new').toLowerCase().trim();
+                                        if (['new', 'pending', 'pending_verification', 'verified'].includes(s)) return 1;
+                                        if (['contacted', 'follow_up'].includes(s)) return 2;
+                                        if (s === 'demo_scheduled') return 3;
+                                        if (s === 'converted') return 4;
+                                        if (s === 'closed') return 5;
+                                        return 3; // Default to middle priority for unknown statuses
+                                    };
+
+                                    const sortedItems = !statusFilter
+                                        ? [...displayItems].sort((a, b) => {
+                                            const priorityDiff = getStatusPriority(a.status) - getStatusPriority(b.status);
+                                            if (priorityDiff !== 0) return priorityDiff;
+                                            // Within same priority, sort by most recent activity
+                                            return new Date(b.last_activity_at || b.created_at) - new Date(a.last_activity_at || a.created_at);
+                                        })
+                                        : displayItems;
+
                                     return (
                                         <div className="divide-y divide-slate-100">
-                                            {displayItems.map((inquiry) => (
+                                            {sortedItems.map((inquiry) => (
                                                 <div
                                                     key={inquiry.id}
                                                     onClick={() => handleSelectInquiry(inquiry)}
