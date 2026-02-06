@@ -248,6 +248,20 @@ const SalesAdmin = () => {
         }
     }, [logs, logFilter, selectedInquiry]);
 
+    /**
+     * SYNC LOGIC: If the currently selected inquiry is no longer in the inquiries list 
+     * (e.g. it was deleted by another user or via "Dead Lead"), auto-close the panel.
+     */
+    useEffect(() => {
+        if (selectedInquiry && inquiries.length > 0) {
+            const stillExists = inquiries.some(i => i.id === selectedInquiry.id);
+            if (!stillExists) {
+                console.log('[SALES] Selected inquiry no longer exists in current list, clearing selection...');
+                setSelectedInquiry(null);
+            }
+        }
+    }, [inquiries, selectedInquiry]);
+
     const fetchTeamUsers = async () => {
         try {
             const response = await authenticatedFetch('/sales/users');
@@ -403,6 +417,7 @@ const SalesAdmin = () => {
             if (!response.ok) throw new Error('Failed to update');
 
             await fetchInquiries();
+            await fetchMasterSchedule(); // Refresh calendar dots
             if (selectedInquiry?.id === id) {
                 setSelectedInquiry(prev => ({ ...prev, status: newStatus, notes: notes || prev.notes }));
             }
@@ -602,8 +617,9 @@ const SalesAdmin = () => {
             setRestoreTarget('pool');
             setRestoreSellerId('');
 
-            // Refresh inquiries
+            // Refresh inquiries and schedule
             await fetchInquiries();
+            await fetchMasterSchedule();
 
             // Move to appropriate view based on assignment
             if (restoreTarget === 'pool') {
@@ -642,6 +658,7 @@ const SalesAdmin = () => {
             // Refresh & Close panel
             setSelectedInquiry(null);
             await fetchInquiries();
+            await fetchMasterSchedule(); // Also refresh calendar dots
             alert('Lead permanently erased.');
         } catch (err) {
             console.error('Delete error:', err);
@@ -1794,7 +1811,8 @@ const SalesAdmin = () => {
                                                     const isCurrentMonth = isSameMonth(day, currentMonth);
                                                     const hasDemos = masterDemos.some(d =>
                                                         isSameDay(parseISO(d.scheduled_at), day) &&
-                                                        (scheduleFilter === 'all' || d.seller_id === currentUser?.id)
+                                                        (scheduleFilter === 'all' || d.seller_id === currentUser?.id) &&
+                                                        d.status === 'scheduled' // ONLY show active/scheduled demos
                                                     );
 
                                                     return (
@@ -1850,7 +1868,7 @@ const SalesAdmin = () => {
                                             const dayDemos = masterDemos
                                                 .filter(d =>
                                                     isSameDay(parseISO(d.scheduled_at), selectedDate) &&
-                                                    d.status !== 'completed' &&
+                                                    d.status === 'scheduled' && // ONLY show active/scheduled demos
                                                     (scheduleFilter === 'all' || d.seller_id === currentUser?.id)
                                                 )
                                                 .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
