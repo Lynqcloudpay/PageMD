@@ -7,7 +7,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { authenticate, logAudit } = require('../middleware/auth');
-const { requireAdmin, requirePrivilege } = require('../middleware/authorization');
+const { requireAdmin, requirePrivilege, requireSuperAdmin } = require('../middleware/authorization');
 const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
@@ -540,11 +540,9 @@ adminRouter.get('/email', async (req, res) => {
     if (result.rows.length === 0) {
       return res.json({ enabled: false });
     }
-    // Don't return API key in full
+    // Don't return API key if it somehow exists in DB (redundant now)
     const settings = { ...result.rows[0] };
-    if (settings.resend_api_key) {
-      settings.resend_api_key = '***hidden***';
-    }
+    delete settings.resend_api_key;
     res.json(settings);
   } catch (error) {
     console.error('Error fetching email settings:', error);
@@ -556,10 +554,10 @@ adminRouter.get('/email', async (req, res) => {
  * PUT /settings/email
  * Update email settings
  */
-adminRouter.put('/email', async (req, res) => {
+adminRouter.put('/email', requireSuperAdmin, async (req, res) => {
   try {
     const {
-      resend_api_key, from_name, from_email, reply_to_email, enabled, test_email
+      from_name, from_email, reply_to_email, enabled, test_email
     } = req.body;
 
     const existing = await pool.query('SELECT id, resend_api_key FROM email_settings LIMIT 1');
@@ -573,37 +571,34 @@ adminRouter.put('/email', async (req, res) => {
 
       result = await pool.query(`
         UPDATE email_settings SET
-          resend_api_key = COALESCE($1, resend_api_key),
-          from_name = COALESCE($2, from_name),
-          from_email = COALESCE($3, from_email),
-          reply_to_email = COALESCE($4, reply_to_email),
-          enabled = COALESCE($5, enabled),
-          test_email = COALESCE($6, test_email),
+          from_name = COALESCE($1, from_name),
+          from_email = COALESCE($2, from_email),
+          reply_to_email = COALESCE($3, reply_to_email),
+          enabled = COALESCE($4, enabled),
+          test_email = COALESCE($5, test_email),
           updated_at = CURRENT_TIMESTAMP,
-          updated_by = $7
-        WHERE id = $8
+          updated_by = $6
+        WHERE id = $7
         RETURNING *
       `, [
-        keyValue, from_name, from_email, reply_to_email, enabled, test_email,
+        from_name, from_email, reply_to_email, enabled, test_email,
         req.user.id, existing.rows[0].id
       ]);
     } else {
       result = await pool.query(`
         INSERT INTO email_settings (
-          resend_api_key, from_name, from_email, reply_to_email, enabled, test_email, updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          from_name, from_email, reply_to_email, enabled, test_email, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `, [
-        resend_api_key, from_name, from_email, reply_to_email, enabled ?? false, test_email,
+        from_name, from_email, reply_to_email, enabled ?? false, test_email,
         req.user.id
       ]);
     }
 
     // Don't return key
     const response = { ...result.rows[0] };
-    if (response.resend_api_key) {
-      response.resend_api_key = '***hidden***';
-    }
+    delete response.resend_api_key;
 
     await logAudit(req.user.id, 'email_settings_updated', 'settings', result.rows[0].id, {}, req.ip);
     res.json(response);
@@ -617,7 +612,7 @@ adminRouter.put('/email', async (req, res) => {
  * GET /settings/features
  * Get feature flags
  */
-router.get('/features', authenticate, requireAdmin, async (req, res) => {
+router.get('/features', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM feature_flags ORDER BY category, feature_key');
     res.json(result.rows);
@@ -631,7 +626,7 @@ router.get('/features', authenticate, requireAdmin, async (req, res) => {
  * PUT /settings/features/:key
  * Update a feature flag
  */
-adminRouter.put('/features/:key', [
+adminRouter.put('/features/:key', requireSuperAdmin, [
   body('enabled').isBoolean(),
 ], async (req, res) => {
   try {
@@ -714,8 +709,8 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
 
     // Hide Resend Key
     const emailSettings = email.rows[0] ? { ...email.rows[0] } : null;
-    if (emailSettings && emailSettings.resend_api_key) {
-      emailSettings.resend_api_key = '***hidden***';
+    if (emailSettings) {
+      delete emailSettings.resend_api_key;
     }
 
     res.json({

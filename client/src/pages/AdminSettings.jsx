@@ -166,6 +166,8 @@ const AdminSettings = () => {
     }
   };
 
+  const isSuperAdmin = user?.role_name === 'SuperAdmin' || user?.role === 'SuperAdmin';
+
   const tabs = [
     { id: 'practice', label: 'Practice', icon: Building2 },
     { id: 'rewards', label: 'Referrals/Reward', icon: Gift },
@@ -174,8 +176,10 @@ const AdminSettings = () => {
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'clinical', label: 'Clinical', icon: Stethoscope },
     { id: 'flags', label: 'Patient Flags', icon: Shield },
-    { id: 'email', label: 'Email', icon: Mail },
-    { id: 'features', label: 'Features', icon: Zap },
+    ...(isSuperAdmin ? [
+      { id: 'email', label: 'Email', icon: Mail },
+      { id: 'features', label: 'Features', icon: Zap }
+    ] : []),
     { id: 'billing', label: 'Billing', icon: DollarSign },
   ];
 
@@ -1016,35 +1020,8 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Resend Configuration</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Configure your practice to send HIPAA-compliant emails via Resend.
-          Enter your API key below to enable this feature.
-        </p>
+      {/* Resend Configuration removed - managed via server environment variables */}
 
-        <div className="grid grid-cols-1 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Resend API Key</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={settings.resend_api_key === '***hidden***' ? '' : (settings.resend_api_key || '')}
-                onChange={(e) => updateField('resend_api_key', e.target.value)}
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                placeholder={settings.resend_api_key === '***hidden***' ? 'API Key is set (enter new to change)' : 're_...'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="border-t border-gray-200 pt-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Settings</h2>
