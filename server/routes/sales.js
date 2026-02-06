@@ -814,6 +814,144 @@ router.post('/inquiries/:id/logs', verifyToken, async (req, res) => {
 });
 
 /**
+ * POST /api/sales/inquiries/:id/dismiss
+ * Dismiss a lead to salvage with required reason and notes
+ */
+router.post('/inquiries/:id/dismiss', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason, notes } = req.body;
+        const adminId = req.user.id;
+
+        // Validate required fields
+        const validReasons = ['spam', 'not_interested', 'bad_timing', 'budget', 'competitor', 'wrong_contact', 'other'];
+        if (!reason || !validReasons.includes(reason)) {
+            return res.status(400).json({ error: 'Valid dismissal reason is required' });
+        }
+        if (!notes || notes.trim().length < 10) {
+            return res.status(400).json({ error: 'Dismissal notes are required (minimum 10 characters)' });
+        }
+
+        // Get current inquiry status for logging
+        const currentRes = await pool.query('SELECT name, email, status, email_verified FROM sales_inquiries WHERE id = $1', [id]);
+        if (currentRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Inquiry not found' });
+        }
+        const inquiry = currentRes.rows[0];
+        const wasVerified = inquiry.email_verified || inquiry.status === 'verified';
+
+        // Update inquiry with dismissal info
+        const result = await pool.query(`
+            UPDATE sales_inquiries
+            SET status = 'dismissed',
+                dismissal_reason = $1,
+                dismissal_notes = $2,
+                dismissed_at = NOW(),
+                dismissed_by = $3,
+                updated_at = NOW(),
+                is_claimed = false,
+                owner_id = NULL
+            WHERE id = $4
+            RETURNING *
+        `, [reason, notes.trim(), adminId, id]);
+
+        // Log the dismissal
+        const reasonLabels = {
+            spam: 'Spam/Fake',
+            not_interested: 'Not Interested',
+            bad_timing: 'Bad Timing',
+            budget: 'Budget',
+            competitor: 'Competitor',
+            wrong_contact: 'Wrong Contact',
+            other: 'Other'
+        };
+
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content, metadata)
+            VALUES ($1, $2, 'dismissal', $3, $4)
+        `, [
+            id,
+            adminId,
+            `🚫 Lead dismissed: ${reasonLabels[reason]} - "${notes.trim()}"`,
+            JSON.stringify({
+                reason,
+                notes: notes.trim(),
+                was_verified: wasVerified,
+                previous_status: inquiry.status
+            })
+        ]);
+
+        console.log(`[SALES] Lead #${id} dismissed by user ${adminId}. Reason: ${reason}`);
+        res.json({ success: true, inquiry: result.rows[0] });
+
+    } catch (error) {
+        console.error('Error dismissing lead:', error);
+        res.status(500).json({ error: 'Failed to dismiss lead' });
+    }
+});
+
+/**
+ * POST /api/sales/inquiries/:id/reclaim
+ * Reclaim a dismissed lead back to the lead pool
+ */
+router.post('/inquiries/:id/reclaim', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { notes } = req.body;
+        const adminId = req.user.id;
+
+        // Get current inquiry
+        const currentRes = await pool.query(
+            'SELECT name, email, status, dismissal_reason, email_verified FROM sales_inquiries WHERE id = $1',
+            [id]
+        );
+        if (currentRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Inquiry not found' });
+        }
+        const inquiry = currentRes.rows[0];
+
+        // Determine new status based on verification
+        const newStatus = inquiry.email_verified ? 'verified' : 'new';
+
+        // Clear dismissal and move back to pool
+        const result = await pool.query(`
+            UPDATE sales_inquiries
+            SET status = $1,
+                dismissal_reason = NULL,
+                dismissal_notes = NULL,
+                dismissed_at = NULL,
+                dismissed_by = NULL,
+                updated_at = NOW(),
+                last_activity_at = NOW()
+            WHERE id = $2
+            RETURNING *
+        `, [newStatus, id]);
+
+        // Log the reclaim
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content, metadata)
+            VALUES ($1, $2, 'reclaim', $3, $4)
+        `, [
+            id,
+            adminId,
+            `♻️ Lead reclaimed from salvage${notes ? `: "${notes}"` : ''}`,
+            JSON.stringify({
+                previous_dismissal_reason: inquiry.dismissal_reason,
+                new_status: newStatus,
+                notes
+            })
+        ]);
+
+        console.log(`[SALES] Lead #${id} reclaimed by user ${adminId}`);
+        res.json({ success: true, inquiry: result.rows[0] });
+
+    } catch (error) {
+        console.error('Error reclaiming lead:', error);
+        res.status(500).json({ error: 'Failed to reclaim lead' });
+    }
+});
+
+/**
  * POST /api/sales/inquiries/:id/schedule-demo
  * Schedule a demo and send invites (PROTECTED)
  */

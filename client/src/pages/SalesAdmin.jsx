@@ -5,7 +5,8 @@ import {
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
-    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive
+    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
+    CalendarX2, Ban, Snowflake, AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -110,6 +111,15 @@ const SalesAdmin = () => {
     // Celebration State (for confetti on conversion)
     const [showCelebration, setShowCelebration] = useState(false);
     const [celebrationData, setCelebrationData] = useState(null);
+
+    // Dismiss Modal State
+    const [showDismissModal, setShowDismissModal] = useState(false);
+    const [dismissReason, setDismissReason] = useState('');
+    const [dismissNotes, setDismissNotes] = useState('');
+    const [dismissLoading, setDismissLoading] = useState(false);
+
+    // Salvage Sub-Category Filter
+    const [salvageFilter, setSalvageFilter] = useState('all'); // 'all', 'cancelled', 'closed', 'dismissed', 'cold'
 
     const getEnhancedMeetingLink = (demo) => {
         if (!demo || !demo.meeting_link) return '';
@@ -453,6 +463,64 @@ const SalesAdmin = () => {
             alert(err.message);
         } finally {
             setClaimLoading(false);
+        }
+    };
+
+    const handleDismissLead = async () => {
+        if (!selectedInquiry || !dismissReason || dismissNotes.length < 10) {
+            alert('Please select a reason and provide notes (minimum 10 characters)');
+            return;
+        }
+
+        try {
+            setDismissLoading(true);
+            const response = await authenticatedFetch(`/sales/inquiries/${selectedInquiry.id}/dismiss`, {
+                method: 'POST',
+                body: JSON.stringify({ reason: dismissReason, notes: dismissNotes })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to dismiss lead');
+            }
+
+            // Reset modal state
+            setShowDismissModal(false);
+            setDismissReason('');
+            setDismissNotes('');
+            setSelectedInquiry(null);
+
+            // Refresh inquiries
+            await fetchInquiries();
+        } catch (err) {
+            console.error('Dismiss error:', err);
+            alert(err.message);
+        } finally {
+            setDismissLoading(false);
+        }
+    };
+
+    const handleReclaimLead = async (inquiryId, notes = '') => {
+        try {
+            const response = await authenticatedFetch(`/sales/inquiries/${inquiryId}/reclaim`, {
+                method: 'POST',
+                body: JSON.stringify({ notes })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to reclaim lead');
+            }
+
+            // Refresh inquiries
+            await fetchInquiries();
+
+            // Move to Lead Pool view
+            setViewMode('pool');
+            setStatusFilter('verified');
+        } catch (err) {
+            console.error('Reclaim error:', err);
+            alert(err.message);
         }
     };
 
@@ -1176,6 +1244,65 @@ const SalesAdmin = () => {
                                 </div>
                             )}
 
+                            {/* Salvage Sub-Category Filter */}
+                            {viewMode === 'personal' && statusFilter === 'cancelled' && (
+                                <div className="flex flex-wrap gap-2 mb-4 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider w-full mb-1">Recovery Categories</span>
+                                    {(() => {
+                                        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+                                        // Calculate salvage category counts
+                                        const cancelledCount = inquiries.filter(i => {
+                                            const hasDemo = i.demo_scheduled_at;
+                                            const s = (i.status || '').toLowerCase();
+                                            return hasDemo && (s === 'closed' || s === 'cancelled');
+                                        }).length;
+
+                                        const closedCount = inquiries.filter(i => {
+                                            const s = (i.status || '').toLowerCase();
+                                            return s === 'closed' && !i.demo_scheduled_at && !i.dismissal_reason;
+                                        }).length;
+
+                                        const dismissedCount = inquiries.filter(i => i.dismissal_reason || i.status === 'dismissed').length;
+
+                                        const coldCount = inquiries.filter(i => {
+                                            const s = (i.status || '').toLowerCase();
+                                            if (['closed', 'converted', 'dismissed'].includes(s)) return false;
+                                            if (i.dismissal_reason) return false;
+                                            const lastActivity = i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at);
+                                            return lastActivity < thirtyDaysAgo;
+                                        }).length;
+
+                                        const categories = [
+                                            { id: 'all', label: 'All Salvage', count: cancelledCount + closedCount + dismissedCount + coldCount, icon: Archive, color: 'slate' },
+                                            { id: 'cancelled', label: 'Cancelled', count: cancelledCount, icon: CalendarX2, color: 'red' },
+                                            { id: 'closed', label: 'Closed', count: closedCount, icon: XCircle, color: 'amber' },
+                                            { id: 'dismissed', label: 'Dismissed', count: dismissedCount, icon: Ban, color: 'rose' },
+                                            { id: 'cold', label: 'Cold', count: coldCount, icon: Snowflake, color: 'blue' },
+                                        ];
+
+                                        return categories.map(cat => (
+                                            <button
+                                                key={cat.id}
+                                                onClick={() => setSalvageFilter(cat.id)}
+                                                className={`px-2 py-1.5 rounded text-[9px] font-bold uppercase tracking-wide transition-all flex items-center gap-1 border ${salvageFilter === cat.id
+                                                    ? `bg-${cat.color}-600 text-white border-${cat.color}-600`
+                                                    : `bg-white text-slate-500 border-slate-200 hover:border-${cat.color}-300`
+                                                    }`}
+                                            >
+                                                <cat.icon className="w-3 h-3" />
+                                                {cat.label}
+                                                <span className={`ml-1 px-1 py-0.5 rounded text-[8px] ${salvageFilter === cat.id
+                                                    ? 'bg-white/20 text-white'
+                                                    : 'bg-slate-100 text-slate-400'
+                                                    }`}>
+                                                    {cat.count}
+                                                </span>
+                                            </button>
+                                        ));
+                                    })()}
+                                </div>
+                            )}
 
                             <div className="relative group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
@@ -1263,7 +1390,45 @@ const SalesAdmin = () => {
                                             return ['contacted', 'follow_up'].includes(s);
                                         }
                                         if (statusFilter === 'cancelled') {
-                                            return s === 'closed' && (i.notes || '').includes('SALVAGE');
+                                            // Salvage filter now splits into sub-categories
+                                            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+                                            // Cancelled Appointments - had demo but cancelled/closed
+                                            if (salvageFilter === 'cancelled' || salvageFilter === 'all') {
+                                                if (i.demo_scheduled_at && ['closed', 'cancelled'].includes(s)) return salvageFilter === 'cancelled' || salvageFilter === 'all';
+                                            }
+
+                                            // Closed Leads - went through pipeline, didn't convert (no demo)
+                                            if (salvageFilter === 'closed') {
+                                                return s === 'closed' && !i.demo_scheduled_at && !i.dismissal_reason;
+                                            }
+
+                                            // Dismissed Leads - manually dismissed
+                                            if (salvageFilter === 'dismissed') {
+                                                return i.dismissal_reason || s === 'dismissed';
+                                            }
+
+                                            // Cold Leads - no activity 30+ days
+                                            if (salvageFilter === 'cold') {
+                                                if (['closed', 'converted', 'dismissed'].includes(s)) return false;
+                                                if (i.dismissal_reason) return false;
+                                                const lastActivity = i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at);
+                                                return lastActivity < thirtyDaysAgo;
+                                            }
+
+                                            // salvageFilter === 'all' - show all salvage categories
+                                            if (salvageFilter === 'all') {
+                                                // Dismissed
+                                                if (i.dismissal_reason || s === 'dismissed') return true;
+                                                // Closed (non-converted pipeline)
+                                                if (s === 'closed') return true;
+                                                // Cold leads
+                                                if (!['closed', 'converted', 'dismissed'].includes(s)) {
+                                                    const lastActivity = i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at);
+                                                    if (lastActivity < thirtyDaysAgo) return true;
+                                                }
+                                            }
+                                            return false;
                                         }
                                         if (statusFilter === 'closed') {
                                             return s === 'closed' && !(i.notes || '').includes('SALVAGE');
@@ -1695,7 +1860,28 @@ const SalesAdmin = () => {
                                                 </div>
                                             )}
 
+                                            {/* Reclaim button for dismissed/salvage leads */}
+                                            {(selectedInquiry.status === 'dismissed' || selectedInquiry.dismissal_reason) && (
+                                                <button
+                                                    onClick={() => handleReclaimLead(selectedInquiry.id, 'Manually reclaimed from salvage')}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-md"
+                                                >
+                                                    <RefreshCw className="w-4 h-4" />
+                                                    Reclaim Lead
+                                                </button>
+                                            )}
+
                                             <div className="flex items-center gap-2 ml-auto">
+                                                {/* Dismiss button - only for unclaimed pool leads or owned leads */}
+                                                {!selectedInquiry.is_claimed && selectedInquiry.status !== 'dismissed' && selectedInquiry.status !== 'converted' && (
+                                                    <button
+                                                        onClick={() => setShowDismissModal(true)}
+                                                        className="p-2 bg-rose-50 text-rose-600 hover:text-rose-700 hover:bg-rose-100 rounded-lg border border-rose-100 transition-all shadow-sm"
+                                                        title="Dismiss Lead"
+                                                    >
+                                                        <Ban className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 <a href={`mailto:${selectedInquiry.email}`} className="p-2 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-100 transition-all shadow-sm" title={selectedInquiry.email}>
                                                     <Mail className="w-4 h-4" />
                                                 </a>
@@ -2010,1000 +2196,1126 @@ const SalesAdmin = () => {
             </div>
 
             {/* Settings Modal */}
-            {showSettings && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                            <h2 className="text-xl font-bold text-slate-800">Settings & Team</h2>
-                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                                <XCircle className="w-6 h-6 text-slate-400" />
-                            </button>
-                        </div>
+            {
+                showSettings && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                                <h2 className="text-xl font-bold text-slate-800">Settings & Team</h2>
+                                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                    <XCircle className="w-6 h-6 text-slate-400" />
+                                </button>
+                            </div>
 
-                        <div className="flex border-b border-slate-100 shrink-0">
-                            <button
-                                onClick={() => setSettingsTab('profile')}
-                                className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'profile' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                            >
-                                <div className="flex items-center justify-center gap-1.5">
-                                    <User className="w-4 h-4" />
-                                    My Profile
-                                </div>
-                            </button>
-                            <button
-                                onClick={() => setSettingsTab('password')}
-                                className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                            >
-                                <div className="flex items-center justify-center gap-1.5">
-                                    <Key className="w-4 h-4" />
-                                    Security
-                                </div>
-                            </button>
-                            {(currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') && (
+                            <div className="flex border-b border-slate-100 shrink-0">
                                 <button
-                                    onClick={() => setSettingsTab('users')}
-                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                    onClick={() => setSettingsTab('profile')}
+                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'profile' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
                                 >
                                     <div className="flex items-center justify-center gap-1.5">
-                                        <Users className="w-4 h-4" />
-                                        Team
+                                        <User className="w-4 h-4" />
+                                        My Profile
                                     </div>
                                 </button>
-                            )}
-                        </div>
+                                <button
+                                    onClick={() => setSettingsTab('password')}
+                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                >
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <Key className="w-4 h-4" />
+                                        Security
+                                    </div>
+                                </button>
+                                {(currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') && (
+                                    <button
+                                        onClick={() => setSettingsTab('users')}
+                                        className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                    >
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <Users className="w-4 h-4" />
+                                            Team
+                                        </div>
+                                    </button>
+                                )}
+                            </div>
 
-                        <div className="p-6 overflow-y-auto">
-                            {settingsTab === 'profile' && (
-                                <form onSubmit={handleProfileUpdate} className="max-w-md mx-auto space-y-6">
-                                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
-                                        <div className="flex items-start gap-3">
-                                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                                                <Video className="w-5 h-5" />
+                            <div className="p-6 overflow-y-auto">
+                                {settingsTab === 'profile' && (
+                                    <form onSubmit={handleProfileUpdate} className="max-w-md mx-auto space-y-6">
+                                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
+                                            <div className="flex items-start gap-3">
+                                                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                                                    <Video className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-blue-900">Meeting Preferences</h4>
+                                                    <p className="text-xs text-blue-700/70 mt-0.5 leading-relaxed">
+                                                        Set your personal Jitsi or Zoom link here. If left blank, PageMD will generate a secure, one-time Jitsi room for every demo.
+                                                    </p>
+                                                </div>
                                             </div>
+                                        </div>
+
+                                        <div className="space-y-4">
                                             <div>
-                                                <h4 className="text-sm font-bold text-blue-900">Meeting Preferences</h4>
-                                                <p className="text-xs text-blue-700/70 mt-0.5 leading-relaxed">
-                                                    Set your personal Jitsi or Zoom link here. If left blank, PageMD will generate a secure, one-time Jitsi room for every demo.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email Address</label>
-                                            <input
-                                                type="email"
-                                                value={profileForm.email}
-                                                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
-                                                placeholder="your@email.com"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Personal Meeting Link (Optional)</label>
-                                            <input
-                                                type="url"
-                                                value={profileForm.meetingLink}
-                                                onChange={(e) => setProfileForm({ ...profileForm, meetingLink: e.target.value })}
-                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
-                                                placeholder="https://meet.jit.si/your-name"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {profileMsg.text && (
-                                        <div className={`text-xs font-bold p-4 rounded-xl flex items-center gap-2 ${profileMsg.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                            {profileMsg.type === 'error' ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                                            {profileMsg.text}
-                                        </div>
-                                    )}
-
-                                    <button
-                                        type="submit"
-                                        disabled={profileLoading}
-                                        className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
-                                    >
-                                        {profileLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
-                                        Save Profile Changes
-                                    </button>
-                                </form>
-                            )}
-                            {settingsTab === 'password' && (
-                                <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-                                        <input
-                                            type="password"
-                                            value={passForm.current}
-                                            onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-                                        <input
-                                            type="password"
-                                            value={passForm.new}
-                                            onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                            required
-                                            minLength={8}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
-                                        <input
-                                            type="password"
-                                            value={passForm.confirm}
-                                            onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                            required
-                                        />
-                                    </div>
-
-                                    {passMsg.text && (
-                                        <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                            {passMsg.text}
-                                        </div>
-                                    )}
-
-                                    <button
-                                        type="submit"
-                                        className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
-                                    >
-                                        Update Password
-                                    </button>
-                                </form>
-                            )}
-                            {settingsTab === 'users' && (
-                                <div className="space-y-8">
-                                    {/* Create User */}
-                                    <div className="bg-slate-50 p-5 rounded-xl">
-                                        <h3 className="font-medium text-slate-800 mb-4 flex items-center gap-2">
-                                            <UserPlus className="w-4 h-4" />
-                                            Add New Team Member
-                                        </h3>
-                                        <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
-                                            <div className="col-span-2 sm:col-span-1">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Username"
-                                                    value={userForm.username}
-                                                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="col-span-2 sm:col-span-1">
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email Address</label>
                                                 <input
                                                     type="email"
-                                                    placeholder="Email"
-                                                    value={userForm.email}
-                                                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                    value={profileForm.email}
+                                                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
+                                                    placeholder="your@email.com"
                                                     required
                                                 />
                                             </div>
-                                            <div className="col-span-2">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Personal Meeting Link (Optional)</label>
                                                 <input
-                                                    type="password"
-                                                    placeholder="Initial Password (min 8 chars)"
-                                                    value={userForm.password}
-                                                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                    required
-                                                    minLength={8}
+                                                    type="url"
+                                                    value={profileForm.meetingLink}
+                                                    onChange={(e) => setProfileForm({ ...profileForm, meetingLink: e.target.value })}
+                                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
+                                                    placeholder="https://meet.jit.si/your-name"
                                                 />
                                             </div>
-                                            <div className="col-span-2">
-                                                <button
-                                                    type="submit"
-                                                    className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
-                                                >
-                                                    Create User
-                                                </button>
-                                            </div>
-                                            {userMsg.text && (
-                                                <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                    {userMsg.text}
-                                                </div>
-                                            )}
-                                        </form>
-                                    </div>
+                                        </div>
 
-                                    {/* User List */}
-                                    <div>
-                                        <h3 className="font-medium text-slate-800 mb-4 text-sm uppercase tracking-wider text-slate-500">
-                                            Existing Users
-                                        </h3>
-                                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                                            <div className="divide-y divide-slate-100">
-                                                {teamUsers.map(user => (
-                                                    <div key={user.id} className="p-4 flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
-                                                                {user.username.substring(0, 2)}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-medium text-slate-800">{user.username}</div>
-                                                                <div className="text-xs text-slate-500">{user.email}</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-xs text-slate-400">
-                                                            Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
-                                                        </div>
+                                        {profileMsg.text && (
+                                            <div className={`text-xs font-bold p-4 rounded-xl flex items-center gap-2 ${profileMsg.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                                {profileMsg.type === 'error' ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                                {profileMsg.text}
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="submit"
+                                            disabled={profileLoading}
+                                            className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
+                                        >
+                                            {profileLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+                                            Save Profile Changes
+                                        </button>
+                                    </form>
+                                )}
+                                {settingsTab === 'password' && (
+                                    <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                                            <input
+                                                type="password"
+                                                value={passForm.current}
+                                                onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                                            <input
+                                                type="password"
+                                                value={passForm.new}
+                                                onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                required
+                                                minLength={8}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                                            <input
+                                                type="password"
+                                                value={passForm.confirm}
+                                                onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
+                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                required
+                                            />
+                                        </div>
+
+                                        {passMsg.text && (
+                                            <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                                {passMsg.text}
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="submit"
+                                            className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
+                                        >
+                                            Update Password
+                                        </button>
+                                    </form>
+                                )}
+                                {settingsTab === 'users' && (
+                                    <div className="space-y-8">
+                                        {/* Create User */}
+                                        <div className="bg-slate-50 p-5 rounded-xl">
+                                            <h3 className="font-medium text-slate-800 mb-4 flex items-center gap-2">
+                                                <UserPlus className="w-4 h-4" />
+                                                Add New Team Member
+                                            </h3>
+                                            <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
+                                                <div className="col-span-2 sm:col-span-1">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Username"
+                                                        value={userForm.username}
+                                                        onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="col-span-2 sm:col-span-1">
+                                                    <input
+                                                        type="email"
+                                                        placeholder="Email"
+                                                        value={userForm.email}
+                                                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <input
+                                                        type="password"
+                                                        placeholder="Initial Password (min 8 chars)"
+                                                        value={userForm.password}
+                                                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        required
+                                                        minLength={8}
+                                                    />
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <button
+                                                        type="submit"
+                                                        className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
+                                                    >
+                                                        Create User
+                                                    </button>
+                                                </div>
+                                                {userMsg.text && (
+                                                    <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                        {userMsg.text}
                                                     </div>
-                                                ))}
+                                                )}
+                                            </form>
+                                        </div>
+
+                                        {/* User List */}
+                                        <div>
+                                            <h3 className="font-medium text-slate-800 mb-4 text-sm uppercase tracking-wider text-slate-500">
+                                                Existing Users
+                                            </h3>
+                                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                                <div className="divide-y divide-slate-100">
+                                                    {teamUsers.map(user => (
+                                                        <div key={user.id} className="p-4 flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                                                    {user.username.substring(0, 2)}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-medium text-slate-800">{user.username}</div>
+                                                                    <div className="text-xs text-slate-500">{user.email}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-xs text-slate-400">
+                                                                Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Onboard Clinic Modal */}
-            {showOnboardModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
-                        <button
-                            onClick={() => setShowOnboardModal(false)}
-                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <XCircle className="w-6 h-6" />
-                        </button>
+            {
+                showOnboardModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+                        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
+                            <button
+                                onClick={() => setShowOnboardModal(false)}
+                                className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <XCircle className="w-6 h-6" />
+                            </button>
 
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                                <Database className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
-                                <p className="text-slate-500 text-sm">
-                                    {selectedInquiry?.referral_code
-                                        ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
-                                        : 'Create a new clinic with dedicated database'
-                                    }
-                                </p>
-                            </div>
-                        </div>
-
-                        {onboardError && (
-                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
-                                {onboardError}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleOnboard} className="space-y-6">
-                            {/* Clinic Details */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                    <Building2 className="w-4 h-4" /> Clinic Details
-                                </h3>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="e.g. Heart Center of Nevada"
-                                            value={onboardForm.displayName}
-                                            onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="e.g. heart-center-nv"
-                                            value={onboardForm.slug}
-                                            onChange={e => setOnboardForm({
-                                                ...onboardForm,
-                                                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-                                            })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                        />
-                                        <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Cardiology"
-                                            value={onboardForm.specialty}
-                                            onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                        />
-                                    </div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                                    <Database className="w-6 h-6 text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
+                                    <p className="text-slate-500 text-sm">
+                                        {selectedInquiry?.referral_code
+                                            ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
+                                            : 'Create a new clinic with dedicated database'
+                                        }
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Initial Admin User */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                    <Shield className="w-4 h-4" /> Initial Admin User
-                                </h3>
-                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                            {onboardError && (
+                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                                    {onboardError}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleOnboard} className="space-y-6">
+                                {/* Clinic Details */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                        <Building2 className="w-4 h-4" /> Clinic Details
+                                    </h3>
+
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
                                             <input
                                                 type="text"
                                                 required
-                                                value={onboardForm.adminFirstName}
-                                                onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                placeholder="e.g. Heart Center of Nevada"
+                                                value={onboardForm.displayName}
+                                                onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                             />
                                         </div>
+
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
                                             <input
                                                 type="text"
                                                 required
-                                                value={onboardForm.adminLastName}
-                                                onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                placeholder="e.g. heart-center-nv"
+                                                value={onboardForm.slug}
+                                                onChange={e => setOnboardForm({
+                                                    ...onboardForm,
+                                                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                                                })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                            />
+                                            <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Cardiology"
+                                                value={onboardForm.specialty}
+                                                onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                             />
                                         </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
-                                        <input
-                                            type="email"
-                                            required
-                                            placeholder="admin@clinic.com"
-                                            value={onboardForm.adminEmail}
-                                            onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
-                                        <input
-                                            type="password"
-                                            required
-                                            minLength={8}
-                                            placeholder="Min 8 characters"
-                                            value={onboardForm.adminPassword}
-                                            onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                        />
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="pt-2">
-                                <button
-                                    type="submit"
-                                    disabled={onboardLoading}
-                                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {onboardLoading ? (
-                                        <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
-                                    ) : (
-                                        <>
-                                            <Database className="w-5 h-5" />
-                                            {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
-                                        </>
-                                    )}
-                                </button>
-                                <p className="text-center text-[10px] text-slate-400 mt-3">
-                                    This will create a new dedicated database schema and initial admin account.
-                                </p>
-                            </div>
-                        </form>
+                                {/* Initial Admin User */}
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                        <Shield className="w-4 h-4" /> Initial Admin User
+                                    </h3>
+                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={onboardForm.adminFirstName}
+                                                    onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={onboardForm.adminLastName}
+                                                    onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
+                                            <input
+                                                type="email"
+                                                required
+                                                placeholder="admin@clinic.com"
+                                                value={onboardForm.adminEmail}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
+                                            <input
+                                                type="password"
+                                                required
+                                                minLength={8}
+                                                placeholder="Min 8 characters"
+                                                value={onboardForm.adminPassword}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-2">
+                                    <button
+                                        type="submit"
+                                        disabled={onboardLoading}
+                                        className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    >
+                                        {onboardLoading ? (
+                                            <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
+                                        ) : (
+                                            <>
+                                                <Database className="w-5 h-5" />
+                                                {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
+                                            </>
+                                        )}
+                                    </button>
+                                    <p className="text-center text-[10px] text-slate-400 mt-3">
+                                        This will create a new dedicated database schema and initial admin account.
+                                    </p>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )
+                )
             }
 
             {/* Status Change Modal */}
-            {showStatusModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                    <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
-                        <button
-                            onClick={() => {
-                                setShowStatusModal(false);
-                                setPendingStatus(null);
-                                setStatusNote('');
-                            }}
-                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <XCircle className="w-5 h-5" />
-                        </button>
-
-                        <div className="flex items-center gap-3 mb-5">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
-                                }`}>
-                                {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
-                                {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
-                                {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
-                                {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-800">
-                                    {pendingStatus === 'contacted' && 'Log Contact'}
-                                    {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
-                                    {pendingStatus === 'follow_up' && 'Set Follow Up'}
-                                    {pendingStatus === 'closed' && 'Close Inquiry'}
-                                </h2>
-                                <p className="text-sm text-slate-500">
-                                    {selectedInquiry?.name} • {selectedInquiry?.email}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                {pendingStatus === 'contacted' && 'Contact Notes *'}
-                                {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
-                                {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
-                                {pendingStatus === 'closed' && 'Reason for Closing *'}
-                            </label>
-                            <textarea
-                                value={statusNote}
-                                onChange={(e) => setStatusNote(e.target.value)}
-                                placeholder={getStatusNotePlaceholder(pendingStatus)}
-                                rows={5}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
-                                autoFocus
-                            />
-                        </div>
-
-                        <div className="flex gap-3">
+            {
+                showStatusModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
                             <button
                                 onClick={() => {
                                     setShowStatusModal(false);
                                     setPendingStatus(null);
                                     setStatusNote('');
                                 }}
-                                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
+                                    }`}>
+                                    {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
+                                    {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
+                                    {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
+                                    {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-800">
+                                        {pendingStatus === 'contacted' && 'Log Contact'}
+                                        {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
+                                        {pendingStatus === 'follow_up' && 'Set Follow Up'}
+                                        {pendingStatus === 'closed' && 'Close Inquiry'}
+                                    </h2>
+                                    <p className="text-sm text-slate-500">
+                                        {selectedInquiry?.name} • {selectedInquiry?.email}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                    {pendingStatus === 'contacted' && 'Contact Notes *'}
+                                    {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
+                                    {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
+                                    {pendingStatus === 'closed' && 'Reason for Closing *'}
+                                </label>
+                                <textarea
+                                    value={statusNote}
+                                    onChange={(e) => setStatusNote(e.target.value)}
+                                    placeholder={getStatusNotePlaceholder(pendingStatus)}
+                                    rows={5}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowStatusModal(false);
+                                        setPendingStatus(null);
+                                        setStatusNote('');
+                                    }}
+                                    className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={submitStatusChange}
+                                    disabled={statusNoteLoading || !statusNote.trim()}
+                                    className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
+                                        ? 'bg-red-500 hover:bg-red-600 text-white'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                        }`}
+                                >
+                                    {statusNoteLoading ? (
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            Save & Update Status
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+            {/* Dismiss Lead Modal */}
+            {showDismissModal && selectedInquiry && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                        {/* Header */}
+                        <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-amber-50">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
+                                        <AlertTriangle className="w-5 h-5 text-rose-600" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-800">Dismiss Lead</h3>
+                                        <p className="text-xs text-slate-500">{selectedInquiry.name}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setShowDismissModal(false);
+                                        setDismissReason('');
+                                        setDismissNotes('');
+                                    }}
+                                    className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+                                >
+                                    <X className="w-4 h-4 text-slate-400" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                                    Reason for Dismissal *
+                                </label>
+                                <select
+                                    value={dismissReason}
+                                    onChange={(e) => setDismissReason(e.target.value)}
+                                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                                >
+                                    <option value="">Select a reason...</option>
+                                    <option value="spam">🚫 Spam / Fake Submission</option>
+                                    <option value="not_interested">👎 Not Interested</option>
+                                    <option value="bad_timing">⏰ Bad Timing (Follow up later)</option>
+                                    <option value="budget">💸 Budget Constraints</option>
+                                    <option value="competitor">🏢 Chose Competitor</option>
+                                    <option value="wrong_contact">👤 Wrong Contact Person</option>
+                                    <option value="other">📝 Other</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                                    Notes * <span className="font-normal text-slate-400">(min 10 characters)</span>
+                                </label>
+                                <textarea
+                                    value={dismissNotes}
+                                    onChange={(e) => setDismissNotes(e.target.value)}
+                                    placeholder="Explain why this lead is being dismissed..."
+                                    rows={3}
+                                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-sm font-medium resize-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all ${dismissNotes.length > 0 && dismissNotes.length < 10
+                                        ? 'border-amber-300 bg-amber-50/50'
+                                        : 'border-slate-200'
+                                        }`}
+                                />
+                                <div className="text-right mt-1">
+                                    <span className={`text-[10px] font-medium ${dismissNotes.length >= 10 ? 'text-emerald-600' : 'text-slate-400'
+                                        }`}>
+                                        {dismissNotes.length}/10 characters
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Badge showing if verified or not */}
+                            <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
+                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${selectedInquiry.email_verified || selectedInquiry.status === 'verified'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-amber-100 text-amber-700'
+                                    }`}>
+                                    {selectedInquiry.email_verified || selectedInquiry.status === 'verified' ? '✓ Verified' : '⚠ Unverified'}
+                                </span>
+                                <span className="text-[10px] text-slate-500">
+                                    This lead will be moved to Salvage for potential recovery
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowDismissModal(false);
+                                    setDismissReason('');
+                                    setDismissNotes('');
+                                }}
+                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 transition-colors border border-slate-200"
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={submitStatusChange}
-                                disabled={statusNoteLoading || !statusNote.trim()}
-                                className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
-                                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                    }`}
+                                onClick={handleDismissLead}
+                                disabled={dismissLoading || !dismissReason || dismissNotes.length < 10}
+                                className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-medium hover:bg-rose-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {statusNoteLoading ? (
+                                {dismissLoading ? (
                                     <RefreshCw className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        Save & Update Status
+                                        <Ban className="w-4 h-4" />
+                                        Dismiss Lead
                                     </>
                                 )}
                             </button>
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
             {/* Demo Schedule Modal */}
-            {showDemoModal && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col md:flex-row h-[600px]">
-                        {/* Interactive Calendar Side */}
-                        <div className="w-full md:w-1/2 border-r border-slate-100 bg-slate-50/50 p-6 flex flex-col">
-                            <div className="mb-4 flex items-center justify-between">
-                                <h3 className="font-bold text-slate-700">{format(demoModalMonth, 'MMMM yyyy')}</h3>
-                                <div className="flex gap-1">
-                                    <button onClick={() => setDemoModalMonth(subMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => setDemoModalMonth(addMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
+            {
+                showDemoModal && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col md:flex-row h-[600px]">
+                            {/* Interactive Calendar Side */}
+                            <div className="w-full md:w-1/2 border-r border-slate-100 bg-slate-50/50 p-6 flex flex-col">
+                                <div className="mb-4 flex items-center justify-between">
+                                    <h3 className="font-bold text-slate-700">{format(demoModalMonth, 'MMMM yyyy')}</h3>
+                                    <div className="flex gap-1">
+                                        <button onClick={() => setDemoModalMonth(subMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
+                                            <ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => setDemoModalMonth(addMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
+                                            <ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="p-4 grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-2xl overflow-hidden shadow-inner shrink-0 mb-6 bg-white">
-                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                                    <div key={day} className="bg-slate-50 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">{day}</div>
-                                ))}
-                                {(() => {
-                                    const start = startOfWeek(startOfMonth(demoModalMonth));
-                                    const end = endOfWeek(endOfMonth(demoModalMonth));
-                                    return eachDayOfInterval({ start, end }).map(day => {
-                                        const dateStr = format(day, 'yyyy-MM-dd');
-                                        const isSelected = demoForm.date === dateStr;
-                                        const isTodayDate = isToday(day);
-                                        const isCurrentMonth = isSameMonth(day, demoModalMonth);
+                                <div className="p-4 grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-2xl overflow-hidden shadow-inner shrink-0 mb-6 bg-white">
+                                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
+                                        <div key={day} className="bg-slate-50 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">{day}</div>
+                                    ))}
+                                    {(() => {
+                                        const start = startOfWeek(startOfMonth(demoModalMonth));
+                                        const end = endOfWeek(endOfMonth(demoModalMonth));
+                                        return eachDayOfInterval({ start, end }).map(day => {
+                                            const dateStr = format(day, 'yyyy-MM-dd');
+                                            const isSelected = demoForm.date === dateStr;
+                                            const isTodayDate = isToday(day);
+                                            const isCurrentMonth = isSameMonth(day, demoModalMonth);
 
-                                        // Check for conflicts
-                                        const dayDemos = masterDemos.filter(d => isSameDay(parseISO(d.scheduled_at), day));
-                                        const hasDemos = dayDemos.length > 0;
+                                            // Check for conflicts
+                                            const dayDemos = masterDemos.filter(d => isSameDay(parseISO(d.scheduled_at), day));
+                                            const hasDemos = dayDemos.length > 0;
 
-                                        // Detailed conflict check? (maybe later)
+                                            // Detailed conflict check? (maybe later)
 
-                                        return (
-                                            <button
-                                                key={day.toString()}
-                                                type="button"
-                                                onClick={() => setDemoForm({ ...demoForm, date: dateStr })}
-                                                className={`
+                                            return (
+                                                <button
+                                                    key={day.toString()}
+                                                    type="button"
+                                                    onClick={() => setDemoForm({ ...demoForm, date: dateStr })}
+                                                    className={`
                                                     relative h-12 flex flex-col items-center justify-center bg-white text-[12px] font-bold transition-all
                                                     ${!isCurrentMonth ? 'text-slate-200' : 'text-slate-600'}
                                                     ${isSelected ? '!bg-blue-600 !text-white z-10 shadow-lg scale-[1.05] rounded-lg' : 'hover:bg-blue-50/50'}
                                                 `}
-                                            >
-                                                <span>{format(day, 'd')}</span>
-                                                {hasDemos && !isSelected && (
-                                                    <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-300' : 'bg-slate-300'}`} />
-                                                )}
-                                                {isTodayDate && !isSelected && (
-                                                    <div className="absolute top-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
-                                                )}
-                                            </button>
-                                        );
-                                    });
-                                })()}
-                            </div>
+                                                >
+                                                    <span>{format(day, 'd')}</span>
+                                                    {hasDemos && !isSelected && (
+                                                        <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-300' : 'bg-slate-300'}`} />
+                                                    )}
+                                                    {isTodayDate && !isSelected && (
+                                                        <div className="absolute top-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                                                    )}
+                                                </button>
+                                            );
+                                        });
+                                    })()}
+                                </div>
 
-                            <div className="flex-1 overflow-y-auto">
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
-                                    {demoForm.date ? `Schedule for ${format(parseISO(demoForm.date), 'MMM do')}` : 'Select a date'}
-                                </h4>
-                                {demoForm.date ? (
-                                    <div className="space-y-2">
-                                        {masterDemos.filter(d => isSameDay(parseISO(d.scheduled_at), parseISO(demoForm.date))).length > 0 ? (
-                                            masterDemos
-                                                .filter(d => isSameDay(parseISO(d.scheduled_at), parseISO(demoForm.date)))
-                                                .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
-                                                .map(demo => {
-                                                    const isCancelled = demo.status === 'declined';
-                                                    const isConfirmed = demo.status === 'confirmed';
+                                <div className="flex-1 overflow-y-auto">
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                                        {demoForm.date ? `Schedule for ${format(parseISO(demoForm.date), 'MMM do')}` : 'Select a date'}
+                                    </h4>
+                                    {demoForm.date ? (
+                                        <div className="space-y-2">
+                                            {masterDemos.filter(d => isSameDay(parseISO(d.scheduled_at), parseISO(demoForm.date))).length > 0 ? (
+                                                masterDemos
+                                                    .filter(d => isSameDay(parseISO(d.scheduled_at), parseISO(demoForm.date)))
+                                                    .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
+                                                    .map(demo => {
+                                                        const isCancelled = demo.status === 'declined';
+                                                        const isConfirmed = demo.status === 'confirmed';
 
-                                                    // Status Color Logic
-                                                    let barColor = '#f59e0b'; // Default/Pending (Amber)
-                                                    if (isConfirmed) barColor = '#10b981'; // Emerald
-                                                    if (isCancelled) barColor = '#ef4444'; // Red
+                                                        // Status Color Logic
+                                                        let barColor = '#f59e0b'; // Default/Pending (Amber)
+                                                        if (isConfirmed) barColor = '#10b981'; // Emerald
+                                                        if (isCancelled) barColor = '#ef4444'; // Red
 
-                                                    return (
-                                                        <div key={demo.id} className={`p-3 bg-white border border-slate-100 rounded-xl flex items-center gap-3 ${isCancelled ? 'opacity-60 bg-slate-50' : ''}`}>
-                                                            <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
-                                                            <div className="min-w-0">
-                                                                <div className={`text-xs font-bold ${isCancelled ? 'text-slate-400 line-through decoration-slate-400' : 'text-slate-700'} flex items-center gap-2`}>
-                                                                    {format(parseISO(demo.scheduled_at), 'h:mm a')}
-                                                                    {isCancelled && (
-                                                                        <span className="text-[9px] font-bold text-red-500 uppercase no-underline bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
-                                                                            Cancelled
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <div className="text-[10px] text-slate-500 truncate">
-                                                                    {demo.seller_name} w/ {demo.lead_name}
+                                                        return (
+                                                            <div key={demo.id} className={`p-3 bg-white border border-slate-100 rounded-xl flex items-center gap-3 ${isCancelled ? 'opacity-60 bg-slate-50' : ''}`}>
+                                                                <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
+                                                                <div className="min-w-0">
+                                                                    <div className={`text-xs font-bold ${isCancelled ? 'text-slate-400 line-through decoration-slate-400' : 'text-slate-700'} flex items-center gap-2`}>
+                                                                        {format(parseISO(demo.scheduled_at), 'h:mm a')}
+                                                                        {isCancelled && (
+                                                                            <span className="text-[9px] font-bold text-red-500 uppercase no-underline bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
+                                                                                Cancelled
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-[10px] text-slate-500 truncate">
+                                                                        {demo.seller_name} w/ {demo.lead_name}
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })
-                                        ) : (
-                                            <div className="p-4 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
-                                                No existing demos. Day is wide open.
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="p-4 text-center text-slate-400 text-xs italic">
-                                        Click a date on the calendar to check availability.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Form Side */}
-                        <div className="w-full md:w-1/2 flex flex-col h-full">
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                                <h3 className="text-lg font-bold text-slate-800">Schedule Demo</h3>
-                                <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <form onSubmit={handleScheduleDemo} className="p-6 flex-1 flex flex-col overflow-y-auto">
-                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-6 shrink-0">
-                                    <p className="text-xs text-blue-700 leading-relaxed font-medium">
-                                        <strong>Invite Notification:</strong> Scheduling this demo will automatically send a calendar invitation and email reminder to <strong>{selectedInquiry?.email}</strong>.
-                                    </p>
-                                </div>
-
-                                <div className="space-y-5 flex-1">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
-                                            <input
-                                                type="date"
-                                                required
-                                                value={demoForm.date}
-                                                min={new Date().toISOString().split('T')[0]}
-                                                onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
-                                            <input
-                                                type="time"
-                                                required
-                                                value={demoForm.time}
-                                                onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
-                                        <textarea
-                                            rows="4"
-                                            value={demoForm.notes}
-                                            onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
-                                            placeholder="e.g. Focus on billing integration..."
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="pt-6 flex gap-3 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowDemoModal(false)}
-                                        className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-800 transition-all text-sm"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={demoLoading}
-                                        className="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm flex items-center justify-center gap-2"
-                                    >
-                                        {demoLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-5 h-5" />}
-                                        Send Invitation
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Appointment Details Modal */}
-            {selectedDemo && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl">
-                                    <Video className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-800 leading-tight">Appointment Details</h3>
-                                    <p className="text-xs text-slate-500 font-medium">
-                                        {format(parseISO(selectedDemo.scheduled_at), 'MMMM do, yyyy')} • {format(parseISO(selectedDemo.scheduled_at), 'h:mm a')}
-                                    </p>
-                                </div>
-                            </div>
-                            <button onClick={() => setSelectedDemo(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="p-6 space-y-6">
-                            {/* Actions Bar */}
-                            {/* Actions Bar */}
-                            <div className="flex gap-3">
-                                {selectedDemo.status === 'declined' ? (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedDemo(null);
-                                                const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
-                                                if (inq) {
-                                                    setSelectedInquiry(inq);
-                                                    setShowDemoModal(true);
-                                                }
-                                            }}
-                                            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
-                                        >
-                                            <Calendar className="w-4 h-4" />
-                                            Reschedule
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteDemo(selectedDemo.id, false);
-                                            }}
-                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
-                                        >
-                                            <XCircle className="w-4 h-4" />
-                                            Dismiss
-                                        </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <a
-                                            href={getEnhancedMeetingLink(selectedDemo)}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
-                                        >
-                                            <Video className="w-4 h-4" />
-                                            Launch Meeting
-                                        </a>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedDemo(null);
-                                                const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
-                                                if (inq) {
-                                                    setSelectedInquiry(inq);
-                                                    setViewMode('personal');
-                                                }
-                                            }}
-                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
-                                        >
-                                            <MessageSquare className="w-4 h-4" />
-                                            View Inquiry
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Status Banner */}
-                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${selectedDemo.status === 'confirmed'
-                                ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                                : selectedDemo.status === 'declined'
-                                    ? 'bg-red-50 border-red-100 text-red-800'
-                                    : 'bg-amber-50 border-amber-100 text-amber-800'
-                                }`}>
-                                {selectedDemo.status === 'confirmed' ? <CheckCircle2 className="w-5 h-5" /> : selectedDemo.status === 'declined' ? <XCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-                                <div>
-                                    <p className="text-sm font-bold uppercase tracking-wide">Status: {selectedDemo.status === 'declined' ? 'Cancelled' : selectedDemo.status || 'Pending'}</p>
-                                    <p className="text-xs opacity-80">
-                                        {selectedDemo.status === 'confirmed'
-                                            ? 'Lead has confirmed via email.'
-                                            : selectedDemo.status === 'declined'
-                                                ? 'This appointment was cancelled.'
-                                                : 'Waiting for lead confirmation.'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Lead Profile */}
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Lead Profile</h4>
-                                <div className="grid grid-cols-2 gap-y-5 gap-x-4">
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Name</label>
-                                        <div className="font-bold text-slate-700">{selectedDemo.lead_name}</div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Practice</label>
-                                        <div className="font-bold text-slate-700 flex items-center gap-1.5">
-                                            <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                                            {selectedDemo.practice_name || 'N/A'}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Contact</label>
-                                        <div className="space-y-1">
-                                            <div className="text-sm text-slate-600 flex items-center gap-1.5">
-                                                <Mail className="w-3.5 h-3.5 text-slate-400" />
-                                                <span className="truncate max-w-[140px]" title={selectedDemo.lead_email}>{selectedDemo.lead_email}</span>
-                                            </div>
-                                            {selectedDemo.lead_phone && (
-                                                <div className="text-sm text-slate-600 flex items-center gap-1.5">
-                                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                                    {selectedDemo.lead_phone}
+                                                        );
+                                                    })
+                                            ) : (
+                                                <div className="p-4 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                                                    No existing demos. Day is wide open.
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Details</label>
-                                        <div className="space-y-1">
-                                            <div className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
-                                                {selectedDemo.provider_count || '?'} Providers
-                                            </div>
-                                            <div className="text-xs text-slate-500 mt-1">
-                                                Source: {selectedDemo.source || 'Direct'}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Internal Notes */}
-                            {selectedDemo.notes && (
-                                <div>
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Meeting Notes</h4>
-                                    <div className="p-3 bg-yellow-50/50 border border-yellow-100 rounded-xl text-sm text-slate-600 italic">
-                                        "{selectedDemo.notes}"
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Seller Info */}
-                            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
-                                        {selectedDemo.seller_name?.substring(0, 2).toUpperCase()}
-                                    </div>
-                                    <div className="text-xs">
-                                        <div className="font-bold text-slate-700">{selectedDemo.seller_name}</div>
-                                        <div className="text-slate-400">Host</div>
-                                    </div>
-                                </div>
-                                <div className="text-[10px] font-mono text-slate-300">
-                                    ID: {selectedDemo.id}
-                                </div>
-                            </div>
-
-                            {/* Cancellation Section */}
-                            {selectedDemo.status !== 'cancelled' && selectedDemo.status !== 'declined' && (
-                                <div className="pt-4 border-t border-slate-100">
-                                    {!isCancelling ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsCancelling(true)}
-                                            className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
-                                        >
-                                            <XCircle className="w-4 h-4" />
-                                            Cancel Appointment
-                                        </button>
                                     ) : (
-                                        <div className="space-y-3 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-bottom-2">
-                                            <h4 className="text-xs font-bold text-red-800 uppercase tracking-widest">Reason for Cancellation</h4>
-                                            <textarea
-                                                value={cancelReason}
-                                                onChange={(e) => setCancelReason(e.target.value)}
-                                                placeholder="Why is this appointment being cancelled? (Required)"
-                                                className="w-full p-3 text-sm border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white placeholder:text-red-300 text-red-900"
-                                                rows="3"
-                                            />
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => { setIsCancelling(false); setCancelReason(''); }}
-                                                    className="flex-1 py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg text-sm hover:bg-red-50"
-                                                >
-                                                    Keep Appointment
-                                                </button>
-                                                <button
-                                                    onClick={() => handleCancelDemo(selectedDemo.id)}
-                                                    disabled={!cancelReason.trim()}
-                                                    className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg text-sm hover:bg-red-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Confirm Cancel
-                                                </button>
-                                            </div>
+                                        <div className="p-4 text-center text-slate-400 text-xs italic">
+                                            Click a date on the calendar to check availability.
                                         </div>
                                     )}
                                 </div>
-                            )}
+                            </div>
+
+                            {/* Form Side */}
+                            <div className="w-full md:w-1/2 flex flex-col h-full">
+                                <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                                    <h3 className="text-lg font-bold text-slate-800">Schedule Demo</h3>
+                                    <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleScheduleDemo} className="p-6 flex-1 flex flex-col overflow-y-auto">
+                                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-6 shrink-0">
+                                        <p className="text-xs text-blue-700 leading-relaxed font-medium">
+                                            <strong>Invite Notification:</strong> Scheduling this demo will automatically send a calendar invitation and email reminder to <strong>{selectedInquiry?.email}</strong>.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-5 flex-1">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
+                                                <input
+                                                    type="date"
+                                                    required
+                                                    value={demoForm.date}
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                    onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
+                                                <input
+                                                    type="time"
+                                                    required
+                                                    value={demoForm.time}
+                                                    onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
+                                            <textarea
+                                                rows="4"
+                                                value={demoForm.notes}
+                                                onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
+                                                placeholder="e.g. Focus on billing integration..."
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-6 flex gap-3 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowDemoModal(false)}
+                                            className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-800 transition-all text-sm"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={demoLoading}
+                                            className="flex-1 px-4 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm flex items-center justify-center gap-2"
+                                        >
+                                            {demoLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-5 h-5" />}
+                                            Send Invitation
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {/* Appointment Details Modal */}
+            {
+                selectedDemo && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl">
+                                        <Video className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800 leading-tight">Appointment Details</h3>
+                                        <p className="text-xs text-slate-500 font-medium">
+                                            {format(parseISO(selectedDemo.scheduled_at), 'MMMM do, yyyy')} • {format(parseISO(selectedDemo.scheduled_at), 'h:mm a')}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSelectedDemo(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                {/* Actions Bar */}
+                                {/* Actions Bar */}
+                                <div className="flex gap-3">
+                                    {selectedDemo.status === 'declined' ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedDemo(null);
+                                                    const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
+                                                    if (inq) {
+                                                        setSelectedInquiry(inq);
+                                                        setShowDemoModal(true);
+                                                    }
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
+                                            >
+                                                <Calendar className="w-4 h-4" />
+                                                Reschedule
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteDemo(selectedDemo.id, false);
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
+                                            >
+                                                <XCircle className="w-4 h-4" />
+                                                Dismiss
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <a
+                                                href={getEnhancedMeetingLink(selectedDemo)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
+                                            >
+                                                <Video className="w-4 h-4" />
+                                                Launch Meeting
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedDemo(null);
+                                                    const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
+                                                    if (inq) {
+                                                        setSelectedInquiry(inq);
+                                                        setViewMode('personal');
+                                                    }
+                                                }}
+                                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
+                                            >
+                                                <MessageSquare className="w-4 h-4" />
+                                                View Inquiry
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Status Banner */}
+                                <div className={`p-4 rounded-xl border flex items-center gap-3 ${selectedDemo.status === 'confirmed'
+                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+                                    : selectedDemo.status === 'declined'
+                                        ? 'bg-red-50 border-red-100 text-red-800'
+                                        : 'bg-amber-50 border-amber-100 text-amber-800'
+                                    }`}>
+                                    {selectedDemo.status === 'confirmed' ? <CheckCircle2 className="w-5 h-5" /> : selectedDemo.status === 'declined' ? <XCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                                    <div>
+                                        <p className="text-sm font-bold uppercase tracking-wide">Status: {selectedDemo.status === 'declined' ? 'Cancelled' : selectedDemo.status || 'Pending'}</p>
+                                        <p className="text-xs opacity-80">
+                                            {selectedDemo.status === 'confirmed'
+                                                ? 'Lead has confirmed via email.'
+                                                : selectedDemo.status === 'declined'
+                                                    ? 'This appointment was cancelled.'
+                                                    : 'Waiting for lead confirmation.'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Lead Profile */}
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Lead Profile</h4>
+                                    <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Name</label>
+                                            <div className="font-bold text-slate-700">{selectedDemo.lead_name}</div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Practice</label>
+                                            <div className="font-bold text-slate-700 flex items-center gap-1.5">
+                                                <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                                {selectedDemo.practice_name || 'N/A'}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Contact</label>
+                                            <div className="space-y-1">
+                                                <div className="text-sm text-slate-600 flex items-center gap-1.5">
+                                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                                    <span className="truncate max-w-[140px]" title={selectedDemo.lead_email}>{selectedDemo.lead_email}</span>
+                                                </div>
+                                                {selectedDemo.lead_phone && (
+                                                    <div className="text-sm text-slate-600 flex items-center gap-1.5">
+                                                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                        {selectedDemo.lead_phone}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Details</label>
+                                            <div className="space-y-1">
+                                                <div className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
+                                                    {selectedDemo.provider_count || '?'} Providers
+                                                </div>
+                                                <div className="text-xs text-slate-500 mt-1">
+                                                    Source: {selectedDemo.source || 'Direct'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Internal Notes */}
+                                {selectedDemo.notes && (
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Meeting Notes</h4>
+                                        <div className="p-3 bg-yellow-50/50 border border-yellow-100 rounded-xl text-sm text-slate-600 italic">
+                                            "{selectedDemo.notes}"
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Seller Info */}
+                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                                            {selectedDemo.seller_name?.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="text-xs">
+                                            <div className="font-bold text-slate-700">{selectedDemo.seller_name}</div>
+                                            <div className="text-slate-400">Host</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-[10px] font-mono text-slate-300">
+                                        ID: {selectedDemo.id}
+                                    </div>
+                                </div>
+
+                                {/* Cancellation Section */}
+                                {selectedDemo.status !== 'cancelled' && selectedDemo.status !== 'declined' && (
+                                    <div className="pt-4 border-t border-slate-100">
+                                        {!isCancelling ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsCancelling(true)}
+                                                className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                                            >
+                                                <XCircle className="w-4 h-4" />
+                                                Cancel Appointment
+                                            </button>
+                                        ) : (
+                                            <div className="space-y-3 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-bottom-2">
+                                                <h4 className="text-xs font-bold text-red-800 uppercase tracking-widest">Reason for Cancellation</h4>
+                                                <textarea
+                                                    value={cancelReason}
+                                                    onChange={(e) => setCancelReason(e.target.value)}
+                                                    placeholder="Why is this appointment being cancelled? (Required)"
+                                                    className="w-full p-3 text-sm border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white placeholder:text-red-300 text-red-900"
+                                                    rows="3"
+                                                />
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => { setIsCancelling(false); setCancelReason(''); }}
+                                                        className="flex-1 py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg text-sm hover:bg-red-50"
+                                                    >
+                                                        Keep Appointment
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleCancelDemo(selectedDemo.id)}
+                                                        disabled={!cancelReason.trim()}
+                                                        className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg text-sm hover:bg-red-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        Confirm Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
             {/* 🎉 Celebration Modal with Confetti */}
-            {showCelebration && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setShowCelebration(false)}
-                    />
+            {
+                showCelebration && (
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+                        {/* Backdrop */}
+                        <div
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setShowCelebration(false)}
+                        />
 
-                    {/* Confetti Canvas */}
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                        {[...Array(100)].map((_, i) => {
-                            const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4'];
-                            const color = colors[i % colors.length];
-                            const left = Math.random() * 100;
-                            const delay = Math.random() * 3;
-                            const duration = 3 + Math.random() * 2;
-                            const size = 6 + Math.random() * 8;
-                            const rotation = Math.random() * 360;
+                        {/* Confetti Canvas */}
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                            {[...Array(100)].map((_, i) => {
+                                const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4'];
+                                const color = colors[i % colors.length];
+                                const left = Math.random() * 100;
+                                const delay = Math.random() * 3;
+                                const duration = 3 + Math.random() * 2;
+                                const size = 6 + Math.random() * 8;
+                                const rotation = Math.random() * 360;
 
-                            return (
-                                <div
-                                    key={i}
-                                    className="absolute"
-                                    style={{
-                                        left: `${left}%`,
-                                        top: '-20px',
-                                        width: `${size}px`,
-                                        height: `${size}px`,
-                                        backgroundColor: color,
-                                        borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                                        transform: `rotate(${rotation}deg)`,
-                                        animation: `confetti-fall ${duration}s ease-out ${delay}s forwards`,
-                                        opacity: 0
-                                    }}
-                                />
-                            );
-                        })}
-                    </div>
+                                return (
+                                    <div
+                                        key={i}
+                                        className="absolute"
+                                        style={{
+                                            left: `${left}%`,
+                                            top: '-20px',
+                                            width: `${size}px`,
+                                            height: `${size}px`,
+                                            backgroundColor: color,
+                                            borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                                            transform: `rotate(${rotation}deg)`,
+                                            animation: `confetti-fall ${duration}s ease-out ${delay}s forwards`,
+                                            opacity: 0
+                                        }}
+                                    />
+                                );
+                            })}
+                        </div>
 
-                    {/* Celebration Card */}
-                    <div className="relative z-10 bg-white rounded-3xl shadow-2xl p-8 max-w-md mx-4 text-center animate-in zoom-in-95 fade-in duration-500">
-                        {/* Trophy Emoji with Glow */}
-                        <div className="relative mb-6">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-32 h-32 bg-yellow-400/20 rounded-full animate-ping" />
+                        {/* Celebration Card */}
+                        <div className="relative z-10 bg-white rounded-3xl shadow-2xl p-8 max-w-md mx-4 text-center animate-in zoom-in-95 fade-in duration-500">
+                            {/* Trophy Emoji with Glow */}
+                            <div className="relative mb-6">
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-32 h-32 bg-yellow-400/20 rounded-full animate-ping" />
+                                </div>
+                                <div className="relative text-8xl animate-bounce">🏆</div>
                             </div>
-                            <div className="relative text-8xl animate-bounce">🏆</div>
-                        </div>
 
-                        {/* Header */}
-                        <h2 className="text-3xl font-black text-slate-800 mb-2">
-                            DEAL CLOSED! 🎉
-                        </h2>
+                            {/* Header */}
+                            <h2 className="text-3xl font-black text-slate-800 mb-2">
+                                DEAL CLOSED! 🎉
+                            </h2>
 
-                        {/* Clinic Name */}
-                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg px-6 py-3 rounded-2xl shadow-lg mb-4 inline-block">
-                            {celebrationData?.clinicName}
-                        </div>
+                            {/* Clinic Name */}
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg px-6 py-3 rounded-2xl shadow-lg mb-4 inline-block">
+                                {celebrationData?.clinicName}
+                            </div>
 
-                        {/* Message */}
-                        <p className="text-slate-600 mb-6">
-                            {celebrationData?.message}
-                        </p>
+                            {/* Message */}
+                            <p className="text-slate-600 mb-6">
+                                {celebrationData?.message}
+                            </p>
 
-                        {/* Referral Bonus */}
-                        {celebrationData?.referralActivated && (
-                            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6 animate-in slide-in-from-bottom-2 duration-700">
-                                <div className="flex items-center justify-center gap-2 text-purple-600 font-bold">
-                                    <Gift className="w-5 h-5" />
-                                    Referral Credit Activated!
+                            {/* Referral Bonus */}
+                            {celebrationData?.referralActivated && (
+                                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6 animate-in slide-in-from-bottom-2 duration-700">
+                                    <div className="flex items-center justify-center gap-2 text-purple-600 font-bold">
+                                        <Gift className="w-5 h-5" />
+                                        Referral Credit Activated!
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Stats */}
+                            <div className="flex items-center justify-center gap-6 mb-6">
+                                <div className="text-center">
+                                    <div className="text-2xl font-black text-emerald-600">+1</div>
+                                    <div className="text-xs text-slate-500 uppercase tracking-wider">Conversion</div>
+                                </div>
+                                <div className="w-px h-8 bg-slate-200" />
+                                <div className="text-center">
+                                    <div className="text-2xl font-black text-blue-600">💰</div>
+                                    <div className="text-xs text-slate-500 uppercase tracking-wider">Commission</div>
                                 </div>
                             </div>
-                        )}
 
-                        {/* Stats */}
-                        <div className="flex items-center justify-center gap-6 mb-6">
-                            <div className="text-center">
-                                <div className="text-2xl font-black text-emerald-600">+1</div>
-                                <div className="text-xs text-slate-500 uppercase tracking-wider">Conversion</div>
-                            </div>
-                            <div className="w-px h-8 bg-slate-200" />
-                            <div className="text-center">
-                                <div className="text-2xl font-black text-blue-600">💰</div>
-                                <div className="text-xs text-slate-500 uppercase tracking-wider">Commission</div>
-                            </div>
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setShowCelebration(false)}
+                                className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
+                            >
+                                Keep Crushing It! 💪
+                            </button>
                         </div>
 
-                        {/* Close Button */}
-                        <button
-                            onClick={() => setShowCelebration(false)}
-                            className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
-                        >
-                            Keep Crushing It! 💪
-                        </button>
-                    </div>
-
-                    {/* CSS for confetti animation */}
-                    <style>{`
+                        {/* CSS for confetti animation */}
+                        <style>{`
                         @keyframes confetti-fall {
                             0% {
                                 opacity: 1;
@@ -3015,9 +3327,10 @@ const SalesAdmin = () => {
                             }
                         }
                     `}</style>
-                </div>
-            )}
-        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 };
 
