@@ -9,13 +9,14 @@ const tenantManager = require('../services/tenantManager');
  */
 const resolveTenant = async (req, res, next) => {
     // 0. Exempt public / tenant-agnostic routes from resolution
-    if (req.path.includes('/auth/sandbox') || req.path.includes('/sales')) {
+    if (req.path.includes('/auth/sandbox') || req.path.includes('/sales') || req.path.includes('/growth')) {
         return next();
     }
     // 1. Skip Tenant Context for Platform Admin / Public Routes
     if (req.path.startsWith('/super/') || req.path.startsWith('/platform-auth/') ||
         req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/') ||
-        req.path.startsWith('/sales/') || req.path.startsWith('/api/sales/')) {
+        req.path.startsWith('/sales/') || req.path.startsWith('/api/sales/') ||
+        req.path.startsWith('/growth/') || req.path.startsWith('/api/growth/')) {
         return next();
     }
 
