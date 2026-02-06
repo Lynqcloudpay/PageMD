@@ -3,6 +3,81 @@ const pool = require('../db');
 const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 
+/**
+ * GET /verify-token/:token
+ * Public endpoint to validate a referral token and return basic info for form pre-filling.
+ */
+router.get('/verify-token/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+
+        // Check clinic_referrals table
+        const result = await pool.controlPool.query(`
+            SELECT referral_email, referred_clinic_name, referrer_clinic_id
+            FROM public.clinic_referrals
+            WHERE token = $1 
+            AND (token_expires_at IS NULL OR token_expires_at > NOW())
+            AND status = 'pending'
+        `, [token]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ valid: false, error: 'Invalid or expired token' });
+        }
+
+        const referral = result.rows[0];
+
+        // Also fetch referrer name for UI personalization
+        const clinicRes = await pool.controlPool.query(
+            "SELECT display_name, name FROM public.clinics WHERE id = $1",
+            [referral.referrer_clinic_id]
+        );
+        const referrerName = clinicRes.rows[0]?.display_name || clinicRes.rows[0]?.name || 'a colleague';
+
+        // AUTO-VERIFY: Mark as verified in sales pool when they click the magic link
+        try {
+            const checkSales = await pool.controlPool.query(
+                'SELECT id FROM sales_inquiries WHERE referral_token = $1',
+                [token]
+            );
+
+            if (checkSales.rows.length === 0) {
+                // FAIL-SAFE: Create lead if it went missing
+                await pool.controlPool.query(`
+                    INSERT INTO sales_inquiries (
+                        name, email, source, interest_type, status, 
+                        referral_token, referrer_name, created_at, last_activity_at
+                    ) VALUES ($1, $2, 'Clinic_Referral', 'referral_invite', 'verified', $3, $4, NOW(), NOW())
+                `, [referral.referred_clinic_name, referral.referral_email, token, referrerName]);
+                console.log(`[Growth] Fail-safe created verified lead for token ${token}`);
+            } else {
+                await pool.controlPool.query(`
+                    UPDATE sales_inquiries 
+                    SET status = CASE 
+                            WHEN status IN ('new', 'pending_verification', 'pending') THEN 'verified' 
+                            ELSE status 
+                        END,
+                        referrer_name = COALESCE(referrer_name, $1),
+                        last_activity_at = NOW()
+                    WHERE referral_token = $2
+                `, [referrerName, token]);
+                console.log(`[Growth] Auto-verified existing lead for token ${token}`);
+            }
+        } catch (updateError) {
+            console.error('[Growth] Failed to auto-verify lead on token click:', updateError);
+        }
+
+        res.json({
+            valid: true,
+            email: referral.referral_email,
+            name: referral.referred_clinic_name,
+            referrerName: referrerName
+        });
+    } catch (error) {
+        console.error('[Growth] Verify token failed:', error);
+        res.status(500).json({ error: 'Verification failed' });
+    }
+});
+
 router.use(authenticate);
 
 // Pricing Tiers (Source of Truth: PricingPage.jsx logic)
