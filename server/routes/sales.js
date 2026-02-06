@@ -670,7 +670,7 @@ router.get('/inquiries', verifyToken, async (req, res) => {
             SELECT * FROM (
                 SELECT DISTINCT ON (LOWER(i.email)) i.*, u.username as owner_username
                 FROM sales_inquiries i
-                LEFT JOIN sales_team_users u ON i.owner_id = u.id
+                LEFT JOIN sales_team_users u ON i.claimed_by = u.id
                 WHERE 1=1
         `;
         const params = [];
@@ -850,7 +850,7 @@ router.post('/inquiries/:id/dismiss', verifyToken, async (req, res) => {
                 dismissed_by = $3,
                 updated_at = NOW(),
                 is_claimed = false,
-                owner_id = NULL
+                claimed_by = NULL
             WHERE id = $4
             RETURNING *
         `, [reason, notes.trim(), adminId, id]);
@@ -1484,7 +1484,7 @@ router.post('/inquiries/:id/claim', verifyToken, async (req, res) => {
         const adminId = req.user.id;
 
         // Check if already claimed
-        const checkRes = await pool.query('SELECT is_claimed, owner_id FROM sales_inquiries WHERE id = $1', [id]);
+        const checkRes = await pool.query('SELECT is_claimed, claimed_by FROM sales_inquiries WHERE id = $1', [id]);
         if (checkRes.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found' });
 
         if (checkRes.rows[0].is_claimed) {
@@ -1493,7 +1493,7 @@ router.post('/inquiries/:id/claim', verifyToken, async (req, res) => {
 
         await pool.query(`
             UPDATE sales_inquiries
-            SET owner_id = $1, is_claimed = true, updated_at = NOW()
+            SET claimed_by = $1, is_claimed = true, updated_at = NOW()
             WHERE id = $2
         `, [adminId, id]);
 
@@ -1723,7 +1723,7 @@ router.post('/demos/:id/complete', verifyToken, async (req, res) => {
                     dismissed_by = $4,
                     updated_at = NOW(),
                     is_claimed = false,
-                    owner_id = NULL
+                    claimed_by = NULL
                 WHERE id = $5
             `, [newInquiryStatus, dismissalReason, notes.trim(), adminId, demo.inquiry_id]);
         } else {
@@ -1750,7 +1750,7 @@ router.post('/demos/:id/complete', verifyToken, async (req, res) => {
         `, [
             demo.inquiry_id,
             adminId,
-            `✅ Demo Completed - Outcome: ${labels[category] || category}`,
+            `Demo Completed - Outcome: ${labels[category] || category}`,
             JSON.stringify({ category, notes: notes.trim(), demoId: id })
         ]);
 

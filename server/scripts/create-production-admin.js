@@ -28,13 +28,13 @@ async function createProductionAdmin() {
 
     // Check if admin already exists
     const existing = await pool.query('SELECT id, email FROM users WHERE email = $1', [ADMIN_EMAIL]);
-    
+
     if (existing.rows.length > 0) {
       console.log(`ℹ️  Admin account already exists: ${ADMIN_EMAIL}`);
       console.log('   Updating password...\n');
-      
+
       const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-      
+
       // Update password (handle both old role column and new role_id)
       const hasRoleColumn = await pool.query(`
         SELECT EXISTS (
@@ -42,7 +42,7 @@ async function createProductionAdmin() {
           WHERE table_name = 'users' AND column_name = 'role'
         )
       `);
-      
+
       if (hasRoleColumn.rows[0].exists) {
         await pool.query(`
           UPDATE users 
@@ -56,13 +56,13 @@ async function createProductionAdmin() {
           WHERE email = $2
         `, [passwordHash, ADMIN_EMAIL]);
       }
-      
+
       console.log('✅ Admin account updated!\n');
     } else {
       console.log('👤 Creating new admin account...\n');
-      
+
       const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-      
+
       // Check if role_id column exists (new schema) or role column (old schema)
       const hasRoleId = await pool.query(`
         SELECT EXISTS (
@@ -70,14 +70,14 @@ async function createProductionAdmin() {
           WHERE table_name = 'users' AND column_name = 'role_id'
         )
       `);
-      
+
       const hasRoleColumn = await pool.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.columns 
           WHERE table_name = 'users' AND column_name = 'role'
         )
       `);
-      
+
       if (hasRoleId.rows[0].exists) {
         // New schema with role_id - get Admin role ID
         const roleResult = await pool.query("SELECT id FROM roles WHERE name = 'Admin' OR name = 'admin' LIMIT 1");
@@ -102,28 +102,28 @@ async function createProductionAdmin() {
       } else {
         throw new Error('Neither role_id nor role column found in users table');
       }
-      
+
       console.log('✅ Production admin account created!\n');
     }
 
     // Display credentials
     console.log('═══════════════════════════════════════════════════════════');
-    console.log('📋 PRODUCTION ADMIN CREDENTIALS');
+    console.log('PRODUCTION ADMIN CREDENTIALS');
     console.log('═══════════════════════════════════════════════════════════');
     console.log(`Email:    ${ADMIN_EMAIL}`);
     console.log(`Password: ${ADMIN_PASSWORD}`);
     console.log(`Name:     ${ADMIN_FIRST_NAME} ${ADMIN_LAST_NAME}`);
     console.log(`Role:     Admin (Full System Access)`);
     console.log('═══════════════════════════════════════════════════════════\n');
-    
-    console.log('✅ Production admin setup complete!');
-    console.log('\n📝 Next steps:');
+
+    console.log('Production admin setup complete!');
+    console.log('\nNext steps:');
     console.log('   1. Login with the credentials above');
     console.log('   2. Change password after first login');
     console.log('   3. Create additional users via User Management\n');
 
   } catch (error) {
-    console.error('❌ Error creating production admin:', error.message);
+    console.error('Error creating production admin:', error.message);
     throw error;
   } finally {
     await pool.end();

@@ -128,6 +128,12 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "🏥 Running Clinic Onboarding Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-clinic-onboarding.js || echo "⚠️ Warning: Clinic onboarding migration failed."
 
+  echo "📊 Running Sales Appointment Outcome Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-sales-outcome.js || echo "⚠️ Warning: Sales outcome migration failed."
+
+  echo "🗑️  Running Sales Lead Dismissal Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-sales-dismissal.js || echo "⚠️ Warning: Sales dismissal migration failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF
