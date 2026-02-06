@@ -823,7 +823,7 @@ router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
         const cleanMsg = (lead.message || '').replace(/\r?\n|\r/g, " ").trim();
         const subject = `Lead: ${lead.name} ${lead.practice_name ? `(${lead.practice_name})` : ''} | Msg: ${cleanMsg}`.trim();
         const truncatedSubject = subject.length > 200 ? subject.substring(0, 197) + '...' : subject;
-        const jitsiConfig = `#config.subject="${encodeURIComponent(truncatedSubject)}"&config.defaultLocalDisplayName="${encodeURIComponent(seller.username)}"`;
+        const jitsiConfig = `#config.subject=${encodeURIComponent(truncatedSubject)}&config.defaultLocalDisplayName=${encodeURIComponent(seller.username)}`;
 
         if (!finalMeetingLink) {
             // Generate frictionless dynamic Jitsi room

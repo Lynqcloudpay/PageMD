@@ -2579,12 +2579,12 @@ const SalesAdmin = () => {
                                         <a
                                             href={(selectedDemo.meeting_link?.includes('meet.jit.si'))
                                                 ? (() => {
-                                                    const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
+                                                    const inq = inquiries.find(i => i.id == selectedDemo.inquiry_id);
                                                     if (!inq) return selectedDemo.meeting_link;
                                                     const cleanMsg = (inq.message || '').replace(/\r?\n|\r/g, " ").trim();
                                                     const subject = `Lead: ${inq.name} ${inq.practice_name ? `(${inq.practice_name})` : ''} | Msg: ${cleanMsg}`.trim();
                                                     const truncated = subject.length > 180 ? subject.substring(0, 177) + '...' : subject;
-                                                    const config = `#config.subject="${encodeURIComponent(truncated)}"&config.defaultLocalDisplayName="${encodeURIComponent(currentUser?.username || 'Seller')}"`;
+                                                    const config = `#config.subject=${encodeURIComponent(truncated)}&config.defaultLocalDisplayName=${encodeURIComponent(currentUser?.username || 'Seller')}`;
                                                     return selectedDemo.meeting_link.split('#')[0] + config;
                                                 })()
                                                 : selectedDemo.meeting_link
