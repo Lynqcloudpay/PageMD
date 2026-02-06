@@ -8,7 +8,7 @@ WHERE schema_name IS NULL;
 
 -- Enforce strict format (optional but good practice as per user instructions)
 ALTER TABLE clinics ADD CONSTRAINT chk_schema_name_format 
-CHECK (schema_name ~ '^tenant_[a-z0-9_]{3,50}$');
+CHECK (schema_name ~ '^tenant_[a-z0-9_]{1,50}$');
 
 -- Ensure settings table exists as requested
 CREATE TABLE IF NOT EXISTS clinic_settings (
