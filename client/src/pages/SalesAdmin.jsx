@@ -6,7 +6,7 @@ import {
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
     Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
-    CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare
+    CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare, Trophy, HelpCircle, Timer, DollarSign, Wallet, CircleDashed, UserMinus
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -2821,24 +2821,31 @@ const SalesAdmin = () => {
 
                         {/* Content */}
                         <div className="p-4 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                                    Reason for Dismissal *
-                                </label>
-                                <select
-                                    value={dismissReason}
-                                    onChange={(e) => setDismissReason(e.target.value)}
-                                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                                >
-                                    <option value="">Select a reason...</option>
-                                    <option value="spam">🚫 Spam / Fake Submission</option>
-                                    <option value="not_interested">👎 Not Interested</option>
-                                    <option value="bad_timing">⏰ Bad Timing (Follow up later)</option>
-                                    <option value="budget">💸 Budget Constraints</option>
-                                    <option value="competitor">🏢 Chose Competitor</option>
-                                    <option value="wrong_contact">👤 Wrong Contact Person</option>
-                                    <option value="other">📝 Other</option>
-                                </select>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { id: 'not_interested', label: 'Not Interested', icon: UserMinus, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100' },
+                                    { id: 'bad_timing', label: 'Bad Timing', icon: Timer, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100' },
+                                    { id: 'budget', label: 'Budget', icon: Wallet, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100' },
+                                    { id: 'spam', label: 'Spam/Fake', icon: Ban, color: 'text-slate-400', bg: 'bg-slate-50', border: 'border-slate-100' },
+                                    { id: 'competitor', label: 'Competitor', icon: Building2, color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+                                    { id: 'other', label: 'Other', icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-50', border: 'border-slate-100' }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => setDismissReason(opt.id)}
+                                        className={`flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${dismissReason === opt.id
+                                            ? `${opt.bg} ${opt.border} ring-2 ring-rose-500/20 shadow-sm`
+                                            : 'bg-white border-slate-50 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        <div className={`p-1.5 rounded-lg ${dismissReason === opt.id ? 'bg-white' : 'bg-slate-50'}`}>
+                                            <opt.icon className={`w-3.5 h-3.5 ${opt.color}`} />
+                                        </div>
+                                        <span className={`text-[12px] font-bold ${dismissReason === opt.id ? 'text-slate-800' : 'text-slate-500'}`}>
+                                            {opt.label}
+                                        </span>
+                                    </button>
+                                ))}
                             </div>
 
                             <div>
@@ -3412,19 +3419,30 @@ const SalesAdmin = () => {
                         </div>
 
                         <div className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Outcome Category *</label>
-                                <select
-                                    value={outcomeCategory}
-                                    onChange={(e) => setOutcomeCategory(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 transition-all font-bold"
-                                >
-                                    <option value="undecided">🤔 Undecided / Thinking</option>
-                                    <option value="asking_time">⌛ Asking for more time</option>
-                                    <option value="converted">🏆 Converted / Onboarding</option>
-                                    <option value="budget">💸 Budget Constraints</option>
-                                    <option value="not_interested">🚫 Not Interested / Dead Lead</option>
-                                </select>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { id: 'undecided', label: 'Undecided', icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-50', border: 'border-slate-200' },
+                                    { id: 'asking_time', label: 'Needs Time', icon: Timer, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-200' },
+                                    { id: 'converted', label: 'Converted', icon: Trophy, color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+                                    { id: 'budget', label: 'Budget', icon: Wallet, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200' },
+                                    { id: 'not_interested', label: 'Declined', icon: UserMinus, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-200' }
+                                ].map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        onClick={() => setOutcomeCategory(opt.id)}
+                                        className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${outcomeCategory === opt.id
+                                            ? `${opt.bg} ${opt.border} ring-2 ring-emerald-500/20`
+                                            : 'bg-white border-slate-100 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        <div className={`p-2 rounded-lg ${outcomeCategory === opt.id ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                                            <opt.icon className={`w-4 h-4 ${opt.color}`} />
+                                        </div>
+                                        <span className={`text-[13px] font-bold ${outcomeCategory === opt.id ? 'text-slate-800' : 'text-slate-500'}`}>
+                                            {opt.label}
+                                        </span>
+                                    </button>
+                                ))}
                             </div>
 
                             <div>
@@ -3516,17 +3534,21 @@ const SalesAdmin = () => {
 
                         {/* Celebration Card */}
                         <div className="relative z-10 bg-white rounded-3xl shadow-2xl p-8 max-w-md mx-4 text-center animate-in zoom-in-95 fade-in duration-500">
-                            {/* Trophy Emoji with Glow */}
+                            {/* Trophy Icon with Glow */}
                             <div className="relative mb-6">
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="w-32 h-32 bg-yellow-400/20 rounded-full animate-ping" />
+                                    <div className="w-32 h-32 bg-emerald-400/20 rounded-full animate-ping" />
                                 </div>
-                                <div className="relative text-8xl animate-bounce">🏆</div>
+                                <div className="relative flex justify-center">
+                                    <div className="p-6 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl shadow-xl shadow-emerald-200 animate-bounce">
+                                        <Trophy className="w-16 h-16 text-white" />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Header */}
-                            <h2 className="text-3xl font-black text-slate-800 mb-2">
-                                DEAL CLOSED! 🎉
+                            <h2 className="text-3xl font-black text-slate-800 mb-2 tracking-tight">
+                                DEAL CLOSED!
                             </h2>
 
                             {/* Clinic Name */}
@@ -3567,7 +3589,7 @@ const SalesAdmin = () => {
                                 onClick={() => setShowCelebration(false)}
                                 className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]"
                             >
-                                Keep Crushing It! 💪
+                                Keep Crushing It!
                             </button>
                         </div>
 

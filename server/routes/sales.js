@@ -1736,12 +1736,12 @@ router.post('/demos/:id/complete', verifyToken, async (req, res) => {
 
         // 4. Log the activity
         const labels = {
-            converted: 'Converted 🏆',
-            undecided: 'Undecided 🕒',
-            asking_time: 'Asking for Time ⌛',
-            not_interested: 'Not Interested 🚫',
-            budget: 'Budget Constraints 💸',
-            other: 'Other Outcome 📝'
+            converted: 'Converted',
+            undecided: 'Undecided',
+            asking_time: 'Asking for Time',
+            not_interested: 'Not Interested',
+            budget: 'Budget Constraints',
+            other: 'Other Outcome'
         };
 
         await pool.query(`
