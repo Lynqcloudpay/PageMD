@@ -2577,7 +2577,18 @@ const SalesAdmin = () => {
                                 ) : (
                                     <>
                                         <a
-                                            href={selectedDemo.meeting_link}
+                                            href={(selectedDemo.meeting_link?.includes('meet.jit.si'))
+                                                ? (() => {
+                                                    const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
+                                                    if (!inq) return selectedDemo.meeting_link;
+                                                    const cleanMsg = (inq.message || '').replace(/\r?\n|\r/g, " ").trim();
+                                                    const subject = `Lead: ${inq.name} ${inq.practice_name ? `(${inq.practice_name})` : ''} | Msg: ${cleanMsg}`.trim();
+                                                    const truncated = subject.length > 180 ? subject.substring(0, 177) + '...' : subject;
+                                                    const config = `#config.subject="${encodeURIComponent(truncated)}"&config.defaultLocalDisplayName="${encodeURIComponent(currentUser?.username || 'Seller')}"`;
+                                                    return selectedDemo.meeting_link.split('#')[0] + config;
+                                                })()
+                                                : selectedDemo.meeting_link
+                                            }
                                             target="_blank"
                                             rel="noreferrer"
                                             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"

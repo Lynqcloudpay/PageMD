@@ -807,7 +807,7 @@ router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
         if (!date) return res.status(400).json({ error: 'Date is required' });
 
         // 1. Fetch inquiry and seller info
-        const inquiryRes = await pool.query('SELECT name, email FROM sales_inquiries WHERE id = $1', [id]);
+        const inquiryRes = await pool.query('SELECT name, email, practice_name, message FROM sales_inquiries WHERE id = $1', [id]);
         if (inquiryRes.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found' });
         const lead = inquiryRes.rows[0];
 
@@ -818,10 +818,20 @@ router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
         // If seller has a personal meeting_link (Jitsi/etc) use it, otherwise use legacy zoom_link, 
         // otherwise generate a dynamic Jitsi link.
         let finalMeetingLink = seller.meeting_link || seller.zoom_link;
+
+        // Enhance with Lead Info for Jitsi links
+        const cleanMsg = (lead.message || '').replace(/\r?\n|\r/g, " ").trim();
+        const subject = `Lead: ${lead.name} ${lead.practice_name ? `(${lead.practice_name})` : ''} | Msg: ${cleanMsg}`.trim();
+        const truncatedSubject = subject.length > 200 ? subject.substring(0, 197) + '...' : subject;
+        const jitsiConfig = `#config.subject="${encodeURIComponent(truncatedSubject)}"&config.defaultLocalDisplayName="${encodeURIComponent(seller.username)}"`;
+
         if (!finalMeetingLink) {
             // Generate frictionless dynamic Jitsi room
             const roomName = `PageMD-Demo-${id}-${Math.random().toString(36).substring(7)}`;
-            finalMeetingLink = `https://meet.jit.si/${roomName}`;
+            finalMeetingLink = `https://meet.jit.si/${roomName}${jitsiConfig}`;
+        } else if (finalMeetingLink.includes('meet.jit.si')) {
+            // Append config to existing Jitsi link
+            finalMeetingLink += (finalMeetingLink.includes('#') ? '&' : '#') + jitsiConfig.substring(1);
         }
 
         // 2. Create entry in sales_demos
