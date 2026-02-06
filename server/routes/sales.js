@@ -1267,7 +1267,17 @@ router.get('/master-schedule', verifyToken, async (req, res) => {
         }
 
         const result = await pool.query(`
-            SELECT d.*, i.name as lead_name, u.username as seller_name, u.calendar_color
+            SELECT d.*, 
+                   i.name as lead_name, 
+                   i.email as lead_email,
+                   i.phone as lead_phone,
+                   i.practice_name,
+                   i.provider_count,
+                   i.interest_type,
+                   i.source,
+                   i.status as lead_status,
+                   u.username as seller_name, 
+                   u.calendar_color
             FROM sales_demos d
             JOIN sales_inquiries i ON d.inquiry_id = i.id
             JOIN sales_team_users u ON d.seller_id = u.id
@@ -1277,6 +1287,56 @@ router.get('/master-schedule', verifyToken, async (req, res) => {
     } catch (error) {
         console.error('Error fetching master schedule:', error);
         res.status(500).json({ error: 'Failed to fetch master schedule' });
+    }
+});
+
+/**
+ * PATCH /api/sales/demos/:id/confirm
+ * Confirm or deny a demo (PUBLIC)
+ */
+router.patch('/demos/:id/confirm', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { action } = req.body; // 'accept' or 'deny'
+
+        if (!['accept', 'deny'].includes(action)) {
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        const newStatus = action === 'accept' ? 'confirmed' : 'declined';
+
+        // 1. Update demo status
+        const demoRes = await pool.query(`
+            UPDATE sales_demos 
+            SET status = $1, updated_at = NOW()
+            WHERE id = $2
+            RETURNING inquiry_id, seller_id, scheduled_at
+        `, [newStatus, id]);
+
+        if (demoRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Demo not found' });
+        }
+
+        const demo = demoRes.rows[0];
+
+        // 2. Log activity
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata)
+            VALUES ($1, 'demo_status_change', $2, $3)
+        `, [
+            demo.inquiry_id,
+            `Demo ${newStatus} by prospect`,
+            JSON.stringify({ demoId: id, action, from: 'email_link' })
+        ]);
+
+        // 3. (Optional) If declined, maybe notify seller via email or system notification?
+        // keeping it simple for now.
+
+        res.json({ success: true, status: newStatus });
+
+    } catch (error) {
+        console.error('Error confirming demo:', error);
+        res.status(500).json({ error: 'Failed to update demo status' });
     }
 });
 

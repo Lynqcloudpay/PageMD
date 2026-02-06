@@ -218,33 +218,36 @@ class EmailService {
         const html = `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #334155; background-color: #f8fafc; padding: 40px 20px;">
                 <div style="background-color: #ffffff; border-radius: 20px; padding: 40px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                    <div style="text-align: center; margin-bottom: 32px;">
-                        <img src="${logoUrl}" alt="PageMD" style="height: 42px; margin-bottom: 24px;">
-                        <h1 style="color: #0f172a; font-size: 26px; font-weight: 800; margin: 0; letter-spacing: -0.025em;">Demo Invitation</h1>
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <img src="${logoUrl}" alt="PageMD" style="height: 48px; width: auto; display: block; margin: 0 auto 32px;">
+                        <h1 style="color: #0f172a; font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -0.02em;">Demo Invitation</h1>
+                        <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your interactive walkthrough is ready</p>
                     </div>
                     
-                    <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 32px; text-align: center;">
-                        Hi ${leadName}, your PageMD EMR demo has been scheduled with <strong>${sellerName}</strong>. We're excited to show you the platform.
-                    </p>
+                    <div style="margin-bottom: 40px; text-align: center; padding: 0 20px;">
+                        <p style="font-size: 17px; line-height: 1.6; color: #475569; margin: 0;">
+                            Hi ${leadName}, your PageMD EMR demo has been scheduled with <strong>${sellerName}</strong>. We're excited to show you the platform and answer your questions.
+                        </p>
+                    </div>
                     
-                    <div style="background-color: #f8fafc; border: 1px solid #f1f5f9; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 32px; margin-bottom: 40px;">
                         <table cellpadding="0" cellspacing="0" border="0" width="100%">
                             <tr>
-                                <td style="padding-bottom: 16px;">
-                                    <span style="display: block; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">When</span>
-                                    <span style="display: block; color: #0f172a; font-size: 16px; font-weight: 600;">${date}</span>
+                                <td style="padding-bottom: 24px;">
+                                    <div style="color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px;">Date & Time</div>
+                                    <div style="color: #0f172a; font-size: 18px; font-weight: 700;">${date}</div>
                                 </td>
                             </tr>
                             <tr>
-                                <td style="padding-bottom: 16px;">
-                                    <span style="display: block; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Meeting Link</span>
-                                    <a href="${zoomLink}" style="color: #2563eb; font-size: 16px; font-weight: 600; text-decoration: none;">Join Zoom Meeting</a>
+                                <td style="padding-bottom: 24px;">
+                                    <div style="color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px;">Meeting Location</div>
+                                    <a href="${zoomLink}" style="color: #2563eb; font-size: 18px; font-weight: 700; text-decoration: none; border-bottom: 2px solid #dbeafe;">Join Video Call</a>
                                 </td>
                             </tr>
                             <tr>
                                 <td>
-                                    <span style="display: block; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Hosted By</span>
-                                    <span style="color: #0f172a; font-size: 16px; font-weight: 600;">${sellerName}</span>
+                                    <div style="color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px;">Lead Presenter</div>
+                                    <div style="color: #0f172a; font-size: 18px; font-weight: 700;">${sellerName}</div>
                                 </td>
                             </tr>
                         </table>

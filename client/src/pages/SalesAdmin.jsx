@@ -5,10 +5,24 @@ import {
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
-    Send, History, Share2, X, ChevronRight, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star
+    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format, formatDistanceToNow } from 'date-fns';
+import {
+    format,
+    formatDistanceToNow,
+    startOfMonth,
+    endOfMonth,
+    startOfWeek,
+    endOfWeek,
+    eachDayOfInterval,
+    isSameDay,
+    isSameMonth,
+    addMonths,
+    subMonths,
+    parseISO,
+    isToday
+} from 'date-fns';
 
 const SalesAdmin = () => {
     // Auth State
@@ -25,7 +39,7 @@ const SalesAdmin = () => {
     const [inquiries, setInquiries] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [statusFilter, setStatusFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('new');
     const [activeCategory, setActiveCategory] = useState('pending'); // 'pending', 'pipeline', 'completed', 'all'
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedInquiry, setSelectedInquiry] = useState(null);
@@ -81,6 +95,11 @@ const SalesAdmin = () => {
     const [viewMode, setViewMode] = useState('pool'); // 'pool', 'personal', 'master'
     const [claimLoading, setClaimLoading] = useState(false);
     const [masterDemos, setMasterDemos] = useState([]);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [scheduleFilter, setScheduleFilter] = useState('all'); // 'all', 'mine'
+    const [demoModalMonth, setDemoModalMonth] = useState(new Date());
+    const [selectedDemo, setSelectedDemo] = useState(null);
 
     const baseUrl = import.meta.env.VITE_API_URL || '/api';
 
@@ -143,10 +162,9 @@ const SalesAdmin = () => {
         try {
             setLoading(true);
             setError(null);
-            const params = new URLSearchParams();
-            if (statusFilter) params.append('status', statusFilter);
-
-            const response = await authenticatedFetch(`/sales/inquiries?${params.toString()}`);
+            // Client-side filtering strategy: Fetch all, then filter in UI
+            // This allows us to show counts for all categories simultaneously
+            const response = await authenticatedFetch(`/sales/inquiries`);
 
             if (!response.ok) {
                 throw new Error('Failed to fetch inquiries');
@@ -165,10 +183,11 @@ const SalesAdmin = () => {
     useEffect(() => {
         if (token) {
             fetchInquiries();
+            fetchMasterSchedule(); // Ensure demos are loaded
             const interval = setInterval(fetchInquiries, 30000); // Poll every 30s
             return () => clearInterval(interval);
         }
-    }, [token, statusFilter]);
+    }, [token]);
 
     useEffect(() => {
         if (logEndRef.current) {
@@ -543,6 +562,12 @@ const SalesAdmin = () => {
         }
     }, [selectedInquiry?.id]);
 
+    useEffect(() => {
+        if (showDemoModal && masterDemos.length === 0) {
+            fetchMasterSchedule();
+        }
+    }, [showDemoModal]);
+
 
     // --- Helpers ---
 
@@ -605,7 +630,7 @@ const SalesAdmin = () => {
                             <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                 <Users className="w-8 h-8 text-blue-600" />
                             </div>
-                            <h1 className="text-2xl font-bold text-slate-900">Sales Team Login</h1>
+                            <h1 className="text-2xl font-bold text-slate-800">Sales Team Login</h1>
                             <p className="text-slate-500 mt-2">Sign in to manage inquiries</p>
                         </div>
 
@@ -662,7 +687,7 @@ const SalesAdmin = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 relative">
+        <div className="min-h-screen bg-slate-50 relative font-figtree antialiased">
             {/* Header */}
             <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                 <div className="max-w-[1600px] mx-auto px-8 py-5">
@@ -672,7 +697,7 @@ const SalesAdmin = () => {
                                 <ArrowLeft className="w-5 h-5 text-slate-600" />
                             </Link>
                             <div>
-                                <h1 className="text-xl font-bold text-slate-900">Sales Dashboard</h1>
+                                <h1 className="text-xl font-bold text-slate-800">Sales Dashboard</h1>
                                 <p className="text-sm text-slate-500">Welcome back, {currentUser?.username}</p>
                             </div>
                         </div>
@@ -725,9 +750,9 @@ const SalesAdmin = () => {
                             <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-slate-100 transition-colors">
                                 <Inbox className="w-5 h-5 text-slate-400" />
                             </div>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Volume</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Volume</span>
                         </div>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight">{stats.total}</div>
+                        <div className="text-2xl font-bold text-slate-800 tracking-tight">{stats.total}</div>
                         <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Active inquiries</div>
                     </div>
 
@@ -736,9 +761,9 @@ const SalesAdmin = () => {
                             <div className="p-2 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
                                 <UserPlus className="w-5 h-5 text-blue-500" />
                             </div>
-                            <span className="text-[9px] font-black text-blue-400 uppercase tracking-widest">New Leads</span>
+                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">New Leads</span>
                         </div>
-                        <div className="text-2xl font-black text-blue-600 tracking-tight">{stats.new}</div>
+                        <div className="text-2xl font-bold text-blue-600 tracking-tight">{stats.new}</div>
                         <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Awaiting contact</div>
                     </div>
 
@@ -747,9 +772,9 @@ const SalesAdmin = () => {
                             <div className="p-2 bg-yellow-50 rounded-xl group-hover:bg-yellow-100 transition-colors">
                                 <MessageSquare className="w-5 h-5 text-yellow-500" />
                             </div>
-                            <span className="text-[9px] font-black text-yellow-500 status-glow uppercase tracking-widest">Nurturing</span>
+                            <span className="text-[9px] font-bold text-yellow-500 status-glow uppercase tracking-widest">Nurturing</span>
                         </div>
-                        <div className="text-2xl font-black text-yellow-600 tracking-tight">{stats.contacted}</div>
+                        <div className="text-2xl font-bold text-yellow-600 tracking-tight">{stats.contacted}</div>
                         <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">In discussion</div>
                     </div>
 
@@ -758,9 +783,9 @@ const SalesAdmin = () => {
                             <div className="p-2 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition-colors">
                                 <TrendingUp className="w-5 h-5 text-emerald-500" />
                             </div>
-                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Conversion</span>
+                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Conversion</span>
                         </div>
-                        <div className="text-2xl font-black text-emerald-600 tracking-tight">{stats.converted}</div>
+                        <div className="text-2xl font-bold text-emerald-600 tracking-tight">{stats.converted}</div>
                         <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Closed won</div>
                     </div>
                 </div>
@@ -769,13 +794,13 @@ const SalesAdmin = () => {
                 {/* We keep the stats cards for overall count but can hide the high-level filter if sidebar is preferred */}
 
                 {/* Sidebar & Detail Panel */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start h-[calc(100vh-260px)] min-h-[600px] pb-6">
                     {/* Sidebar */}
-                    <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-[800px] border-r border-slate-200">
-                        <div className="p-4 border-b border-slate-100 bg-white sticky top-0 z-10">
-                            <h2 className="text-xl font-black text-slate-900 tracking-tight mb-4 flex items-center gap-2">
-                                Sales Dashboard
-                            </h2>
+                    <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-full border-r border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100">
+                        <div className="p-4 border-b border-slate-100 bg-white shrink-0">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 block">
+                                Inquiry Categories
+                            </span>
 
                             {/* View Toggles */}
                             <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-sm mb-4">
@@ -784,7 +809,7 @@ const SalesAdmin = () => {
                                         setViewMode('pool');
                                         setActiveCategory('pending');
                                     }}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'pool'
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'pool'
                                         ? 'bg-white text-blue-600 shadow-md transform scale-[1.02]'
                                         : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                                         }`}
@@ -800,7 +825,7 @@ const SalesAdmin = () => {
                                         setViewMode('personal');
                                         setActiveCategory('all');
                                     }}
-                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'personal'
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'personal'
                                         ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
                                         : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                                         }`}
@@ -817,7 +842,7 @@ const SalesAdmin = () => {
                                             setViewMode('master');
                                             fetchMasterSchedule();
                                         }}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'master'
+                                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'master'
                                             ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]'
                                             : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                                             }`}
@@ -830,26 +855,58 @@ const SalesAdmin = () => {
 
                             {/* Sub-filters for Lead Pool */}
                             {viewMode !== 'master' && (
-                                <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-                                    {[
-                                        { id: 'all', label: 'All', icon: Zap },
-                                        { id: 'new', label: 'New', icon: Star },
-                                        { id: 'contacted', label: 'Discussions', icon: MessageSquare },
-                                        { id: 'converted', label: 'Converted', icon: CheckCircle2 },
-                                        { id: 'closed', label: 'Closed', icon: XCircle },
-                                    ].map(cat => (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => setStatusFilter(cat.id === 'all' ? '' : cat.id)}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider whitespace-nowrap transition-colors flex items-center gap-1.5 ${statusFilter === (cat.id === 'all' ? '' : cat.id)
-                                                ? 'bg-slate-800 text-white'
-                                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                                                }`}
-                                        >
-                                            {statusFilter === (cat.id === 'all' ? '' : cat.id) && <cat.icon className="w-3 h-3" />}
-                                            {cat.label}
-                                        </button>
-                                    ))}
+                                <div className="grid grid-cols-3 gap-2 mb-4">
+                                    {(() => {
+                                        // Calculate counts for badges
+                                        const counts = { all: 0, new: 0, contacted: 0, demo_scheduled: 0, converted: 0, closed: 0 };
+                                        inquiries.forEach(i => {
+                                            // Check ViewMode visibility
+                                            let visible = false;
+                                            if (viewMode === 'pool') visible = !i.is_claimed;
+                                            else if (viewMode === 'personal') visible = i.is_claimed && i.owner_id === currentUser?.id;
+                                            else visible = true;
+
+                                            if (!visible) return;
+
+                                            counts.all++;
+                                            const s = (i.status || 'new').toLowerCase().trim();
+
+                                            if (['demo_scheduled'].includes(s)) counts.demo_scheduled++;
+                                            else if (['converted'].includes(s)) counts.converted++;
+                                            else if (['closed'].includes(s)) counts.closed++;
+                                            else if (['contacted', 'follow_up'].includes(s)) counts.contacted++;
+                                            else counts.new++; // new, pending, verified, etc.
+                                        });
+
+                                        return [
+                                            { id: 'all', label: 'All', icon: Zap },
+                                            { id: 'new', label: 'New', icon: Star },
+                                            { id: 'contacted', label: 'Discussions', icon: MessageSquare },
+                                            { id: 'demo_scheduled', label: 'Demo', icon: Calendar },
+                                            { id: 'converted', label: 'Converted', icon: CheckCircle2 },
+                                            { id: 'closed', label: 'Closed', icon: XCircle },
+                                        ].map(cat => (
+                                            <button
+                                                key={cat.id}
+                                                onClick={() => setStatusFilter(cat.id === 'all' ? '' : cat.id)}
+                                                className={`px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-1.5 border w-full ${statusFilter === (cat.id === 'all' ? '' : cat.id)
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-[1.02]'
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-1.5 truncate">
+                                                    {statusFilter === (cat.id === 'all' ? '' : cat.id) && <cat.icon className="w-3 h-3 flex-shrink-0" />}
+                                                    <span className="truncate">{cat.label}</span>
+                                                </div>
+                                                <span className={`px-1.5 py-0.5 rounded text-[9px] min-w-[16px] text-center font-bold flex-shrink-0 ${statusFilter === (cat.id === 'all' ? '' : cat.id)
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-500'
+                                                    }`}>
+                                                    {counts[cat.id]}
+                                                </span>
+                                            </button>
+                                        ));
+                                    })()}
                                 </div>
                             )}
 
@@ -900,9 +957,23 @@ const SalesAdmin = () => {
                                     };
 
                                     const displayItems = filteredInquiries.filter(i => {
-                                        if (viewMode === 'pool') return !i.is_claimed;
-                                        if (viewMode === 'personal') return i.is_claimed && i.owner_id === currentUser?.id;
-                                        return true; // master mode shows all
+                                        // 1. View Mode Filter
+                                        if (viewMode === 'pool' && i.is_claimed) return false;
+                                        if (viewMode === 'personal' && (!i.is_claimed || i.owner_id !== currentUser?.id)) return false;
+
+                                        // 2. Status Category Filter
+                                        if (!statusFilter) return true; // All
+
+                                        const s = (i.status || 'new').toLowerCase().trim();
+
+                                        if (statusFilter === 'new') {
+                                            return !['demo_scheduled', 'follow_up', 'converted', 'closed', 'contacted'].includes(s);
+                                        }
+                                        if (statusFilter === 'contacted') {
+                                            return ['contacted', 'follow_up'].includes(s);
+                                        }
+
+                                        return s === statusFilter;
                                     });
 
                                     if (displayItems.length === 0) {
@@ -930,7 +1001,7 @@ const SalesAdmin = () => {
                                                     <div className="flex items-start justify-between mb-2">
                                                         <div className="min-w-0">
                                                             <div className="flex items-center gap-2">
-                                                                <h3 className="text-[14px] font-bold text-slate-900 truncate tracking-tight">{inquiry.name}</h3>
+                                                                <h3 className="text-[14px] font-bold text-slate-800 truncate tracking-tight">{inquiry.name}</h3>
                                                                 {inquiry.is_claimed && (
                                                                     <div className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200" title={`Claimed by ${inquiry.owner_id === currentUser?.id ? 'You' : 'Seller'}`}>
                                                                         <Lock className="w-2.5 h-2.5 text-slate-400" />
@@ -938,11 +1009,11 @@ const SalesAdmin = () => {
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-2 mt-1 font-bold">
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
+                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${getStatusColor(inquiry.status)}`}>
                                                                     {inquiry.status?.replace('_', ' ') || 'new'}
                                                                 </span>
                                                                 {inquiry.last_activity_at && (new Date(inquiry.last_activity_at) - new Date(inquiry.created_at) > 1000 * 60 * 5) && (
-                                                                    <span className="text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider bg-rose-100 text-rose-600 animate-pulse">
+                                                                    <span className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-rose-100 text-rose-600 animate-pulse">
                                                                         Returning Lead
                                                                     </span>
                                                                 )}
@@ -953,7 +1024,7 @@ const SalesAdmin = () => {
                                                                 {inquiry.created_at ? format(new Date(inquiry.created_at), 'MMM d') : '-'}
                                                             </span>
                                                             {parseInt(inquiry.unread_count || 0) > 0 && (
-                                                                <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg animate-bounce border-2 border-white">
+                                                                <span className="w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce border-2 border-white">
                                                                     {inquiry.unread_count}
                                                                 </span>
                                                             )}
@@ -970,7 +1041,7 @@ const SalesAdmin = () => {
                                                             <span className="truncate text-[10px] opacity-60">{inquiry.email}</span>
                                                         </div>
                                                         {inquiry.referral_code && (
-                                                            <span className="text-emerald-600 font-black bg-emerald-50 px-1.5 py-0.5 rounded text-[8px] uppercase">
+                                                            <span className="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded text-[8px] uppercase">
                                                                 REF: {inquiry.referral_code}
                                                             </span>
                                                         )}
@@ -985,812 +1056,1162 @@ const SalesAdmin = () => {
                     </div>
 
                     {/* Detail Panel */}
-                    <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl border border-slate-200 overflow-hidden flex flex-col h-[800px] shadow-sm">
+                    <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col h-full shadow-sm">
                         {viewMode === 'master' ? (
-                            <div className="flex flex-col h-full bg-slate-50/30">
-                                <div className="p-6 border-b border-slate-100 bg-white">
-                                    <h2 className="text-lg font-black text-slate-900 tracking-tight">Master Schedule</h2>
-                                    <p className="text-xs text-slate-400 font-medium">Control tower view of all upcoming team demos</p>
+                            <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">
+                                <div className="p-6 border-b border-slate-100 bg-white flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-slate-800 tracking-tight">
+                                            {scheduleFilter === 'all' ? 'Team Schedule' : 'My Schedule'}
+                                        </h2>
+                                        <p className="text-xs text-slate-400 font-medium">
+                                            {scheduleFilter === 'all'
+                                                ? 'Control tower view of all upcoming team demos'
+                                                : 'Your personal demo schedule and availability'
+                                            }
+                                        </p>
+                                    </div>
+                                    <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm">
+                                        <button
+                                            onClick={() => setScheduleFilter('all')}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'all'
+                                                ? 'bg-white text-blue-600 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                        >
+                                            Team
+                                        </button>
+                                        <button
+                                            onClick={() => setScheduleFilter('mine')}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'mine'
+                                                ? 'bg-white text-blue-600 shadow-sm'
+                                                : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                        >
+                                            My Demos
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                                    {masterDemos.length === 0 ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-50">
-                                            <Calendar className="w-12 h-12 mb-3" />
-                                            <p className="text-sm font-bold uppercase tracking-widest">No demos scheduled yet</p>
+
+                                <div className="flex-1 flex overflow-hidden">
+                                    {/* Left Side: Calendar Grid */}
+                                    <div className="w-[320px] bg-white border-r border-slate-100 flex flex-col shrink-0">
+                                        <div className="p-4 border-b border-slate-50 flex items-center justify-between">
+                                            <span className="text-sm font-bold text-slate-700">
+                                                {format(currentMonth, 'MMMM yyyy')}
+                                            </span>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                                                    className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400"
+                                                >
+                                                    <ChevronDown className="w-4 h-4 rotate-90" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                                                    className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400"
+                                                >
+                                                    <ChevronRight className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </div>
-                                    ) : (
-                                        masterDemos.map(demo => (
-                                            <div key={demo.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all">
-                                                <div className="flex items-center gap-4">
-                                                    <div
-                                                        className="w-12 h-12 rounded-xl flex flex-col items-center justify-center border shadow-sm"
-                                                        style={{ backgroundColor: `${demo.calendar_color}10`, borderColor: demo.calendar_color }}
-                                                    >
-                                                        <span className="text-[10px] font-black uppercase text-slate-400">{format(new Date(demo.scheduled_at), 'MMM')}</span>
-                                                        <span className="text-lg font-black" style={{ color: demo.calendar_color }}>{format(new Date(demo.scheduled_at), 'd')}</span>
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-slate-900">{demo.lead_name}</div>
-                                                        <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
-                                                            <Clock className="w-3 h-3" />
-                                                            {format(new Date(demo.scheduled_at), 'h:mm a')}
-                                                            <span className="opacity-30">•</span>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: demo.calendar_color }} />
-                                                                {demo.seller_name}
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                        <div className="p-4 grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-2xl overflow-hidden shadow-inner shrink-0">
+                                            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
+                                                <div key={day} className="bg-slate-50 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">{day}</div>
+                                            ))}
+                                            {(() => {
+                                                const start = startOfWeek(startOfMonth(currentMonth));
+                                                const end = endOfWeek(endOfMonth(currentMonth));
+                                                return eachDayOfInterval({ start, end }).map(day => {
+                                                    const isSelected = isSameDay(day, selectedDate);
+                                                    const isTodayDate = isToday(day);
+                                                    const isCurrentMonth = isSameMonth(day, currentMonth);
+                                                    const hasDemos = masterDemos.some(d =>
+                                                        isSameDay(parseISO(d.scheduled_at), day) &&
+                                                        (scheduleFilter === 'all' || d.owner_id === currentUser?.id)
+                                                    );
+
+                                                    return (
+                                                        <button
+                                                            key={day.toString()}
+                                                            onClick={() => setSelectedDate(day)}
+                                                            className={`
+                                                                relative h-12 flex flex-col items-center justify-center bg-white text-[12px] font-bold transition-all
+                                                                ${!isCurrentMonth ? 'text-slate-200' : 'text-slate-600'}
+                                                                ${isSelected ? '!bg-blue-600 !text-white z-10 shadow-lg scale-[1.05] rounded-lg' : 'hover:bg-blue-50/50'}
+                                                            `}
+                                                        >
+                                                            <span>{format(day, 'd')}</span>
+                                                            {hasDemos && !isSelected && (
+                                                                <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                                                            )}
+                                                            {isTodayDate && !isSelected && (
+                                                                <div className="absolute top-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                                                            )}
+                                                        </button>
+                                                    );
+                                                });
+                                            })()}
+                                        </div>
+                                        <div className="mt-auto p-4 bg-slate-50/50 rounded-b-2xl border-t border-slate-100">
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Today</span>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${demo.status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' :
-                                                        demo.status === 'cancelled' ? 'bg-rose-100 text-rose-700' :
-                                                            'bg-blue-100 text-blue-700'
-                                                        }`}>
-                                                        {demo.status}
-                                                    </span>
-                                                    <a href={demo.zoom_link} target="_blank" rel="noopener noreferrer" className="p-2 hover:bg-slate-50 rounded-lg text-blue-600 transition-colors">
-                                                        <Video className="w-5 h-5" />
-                                                    </a>
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Scheduled Demo</span>
                                                 </div>
                                             </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        ) : selectedInquiry ? (
-                            <>
-                                {/* Compact Header */}
-                                <div className="px-6 py-4 border-b border-slate-100 bg-white">
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex-1 min-w-0 mr-4">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <h2 className="text-lg font-black text-slate-900 truncate tracking-tight">{selectedInquiry.name}</h2>
-                                                {selectedInquiry.referral_code && (
-                                                    <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/50 text-[10px] shadow-sm">
-                                                        <Gift className="w-3 h-3" />
-                                                        {selectedInquiry.referral_code}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
-                                                {selectedInquiry.practice_name && (
-                                                    <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
-                                                        <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                                                        <span className="truncate">{selectedInquiry.practice_name}</span>
-                                                    </span>
-                                                )}
-                                                {selectedInquiry.phone && (
-                                                    <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
-                                                        <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                                                        <span className="truncate">{selectedInquiry.phone}</span>
-                                                    </span>
-                                                )}
-                                                <span className="flex items-center gap-1 shrink-0 opacity-70">
-                                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                                    {format(new Date(selectedInquiry.created_at), 'MMM d, h:mm a')}
+                                        </div>
+                                    </div>
+
+                                    {/* Right Side: Daily Schedule */}
+                                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+                                        <div className="mb-6 flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-sm font-bold text-slate-800">
+                                                    {isToday(selectedDate) ? 'Today' : format(selectedDate, 'EEEE, MMM do')}
+                                                </h3>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                    Daily Breakdown
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <div className="relative group">
-                                                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 transition-colors group-focus-within:text-blue-500">
-                                                    {selectedInquiry.status === 'converted' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Filter className="w-3.5 h-3.5" />}
+
+                                        {(() => {
+                                            const dayDemos = masterDemos
+                                                .filter(d =>
+                                                    isSameDay(parseISO(d.scheduled_at), selectedDate) &&
+                                                    (scheduleFilter === 'all' || d.owner_id === currentUser?.id)
+                                                )
+                                                .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+
+                                            if (dayDemos.length === 0) {
+                                                return (
+                                                    <div className="py-20 flex flex-col items-center justify-center text-slate-400">
+                                                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-4 border border-slate-100 shadow-sm">
+                                                            <Calendar className="w-8 h-8 text-slate-200" />
+                                                        </div>
+                                                        <p className="text-xs font-bold uppercase tracking-widest opacity-50">Availability Open</p>
+                                                        <p className="text-[10px] mt-1">No demos scheduled for this date</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className="space-y-3">
+                                                    {dayDemos.map(demo => (
+                                                        <div
+                                                            key={demo.id}
+                                                            onClick={() => setSelectedDemo(demo)}
+                                                            className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all group cursor-pointer active:scale-[0.99]"
+                                                        >
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors">
+                                                                    <Clock className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-sm font-bold text-slate-800">{format(parseISO(demo.scheduled_at), 'h:mm a')}</span>
+                                                                        <span className="text-xs text-slate-400">•</span>
+                                                                        <span className="text-xs font-bold text-slate-600">{demo.lead_name}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-md">
+                                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: demo.calendar_color }} />
+                                                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">{demo.seller_name}</span>
+                                                                        </div>
+                                                                        {demo.status === 'confirmed' && (
+                                                                            <span className="text-[8px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Confirmed</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const inq = inquiries.find(i => i.id === demo.inquiry_id);
+                                                                        if (inq) {
+                                                                            setSelectedInquiry(inq);
+                                                                            setViewMode('personal');
+                                                                        }
+                                                                    }}
+                                                                    className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"
+                                                                    title="View Details"
+                                                                >
+                                                                    <ChevronRight className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <select
-                                                    value={selectedInquiry.status || 'new'}
-                                                    onChange={(e) => updateInquiryStatus(selectedInquiry.id, e.target.value)}
-                                                    disabled={updating || selectedInquiry.status === 'converted'}
-                                                    className={`appearance-none pl-8 pr-8 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg border cursor-pointer focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm ${selectedInquiry.status === 'converted'
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                        : 'bg-white text-slate-700 border-slate-100 hover:border-slate-300'}`}
-                                                >
-                                                    <option value="new">New</option>
-                                                    <option value="contacted">Contacted</option>
-                                                    <option value="demo_scheduled">Demo Scheduled</option>
-                                                    <option value="follow_up">Follow Up</option>
-                                                    {selectedInquiry.status === 'converted' && <option value="converted">Converted</option>}
-                                                    <option value="closed">Closed / Lost</option>
-                                                </select>
-                                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Actions Bar */}
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && (
-                                            <>
-                                                {selectedInquiry.is_claimed ? (
-                                                    <>
-                                                        <button
-                                                            onClick={() => setShowDemoModal(true)}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-black hover:bg-slate-900 transition-all shadow-md shadow-indigo-100 group"
-                                                        >
-                                                            <CalendarCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                                            Schedule Demo
-                                                        </button>
-                                                        <button
-                                                            onClick={() => openOnboardModal(selectedInquiry)}
-                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-black hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 group"
-                                                        >
-                                                            <UserPlus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                                                            Onboard Lead
-                                                        </button>
-                                                    </>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handleClaimLead(selectedInquiry.id)}
-                                                        disabled={claimLoading}
-                                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl text-sm font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 group animate-in fade-in slide-in-from-bottom-2 duration-300"
-                                                    >
-                                                        {claimLoading ? (
-                                                            <RefreshCw className="w-5 h-5 animate-spin" />
-                                                        ) : (
-                                                            <>
-                                                                <Lock className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                                                Claim Lead & Start Selling
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                )}
-                                            </>
-                                        )}
-
-                                        {selectedInquiry.status === 'converted' && (
-                                            <div className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-black">
-                                                <CheckCircle2 className="w-4 h-4" />
-                                                Onboarded
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center gap-2 ml-auto">
-                                            <a href={`mailto:${selectedInquiry.email}`} className="p-2 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-100 transition-all shadow-sm" title={selectedInquiry.email}>
-                                                <Mail className="w-4 h-4" />
-                                            </a>
-                                            {selectedInquiry.phone && (
-                                                <a href={`tel:${selectedInquiry.phone}`} className="p-2 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-100 transition-all shadow-sm" title={selectedInquiry.phone}>
-                                                    <Phone className="w-4 h-4" />
-                                                </a>
-                                            )}
-                                        </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
-
-                                {/* Compact Activity Stream */}
-                                <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth bg-slate-50/20">
-                                    {/* Timeline Divider & Filters */}
-                                    <div className="flex items-center justify-between mb-8">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-1.5 h-6 bg-blue-500 rounded-full"></div>
-                                            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Activity Stream</h3>
+                            </div>
+                        ) : (
+                            selectedInquiry ? (
+                                <>
+                                    {/* Compact Header */}
+                                    <div className="px-6 py-4 border-b border-slate-100 bg-white">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex-1 min-w-0 mr-4">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <h2 className="text-lg font-bold text-slate-800 truncate tracking-tight">{selectedInquiry.name}</h2>
+                                                    {selectedInquiry.referral_code && (
+                                                        <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/50 text-[10px] shadow-sm">
+                                                            <Gift className="w-3 h-3" />
+                                                            {selectedInquiry.referral_code}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+                                                    {selectedInquiry.practice_name && (
+                                                        <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
+                                                            <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                                            <span className="truncate">{selectedInquiry.practice_name}</span>
+                                                        </span>
+                                                    )}
+                                                    {selectedInquiry.phone && (
+                                                        <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
+                                                            <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                                            <span className="truncate">{selectedInquiry.phone}</span>
+                                                        </span>
+                                                    )}
+                                                    <span className="flex items-center gap-1 shrink-0 opacity-70">
+                                                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                        {format(new Date(selectedInquiry.created_at), 'MMM d, h:mm a')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <div className="relative group">
+                                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 transition-colors group-focus-within:text-blue-500">
+                                                        {selectedInquiry.status === 'converted' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Filter className="w-3.5 h-3.5" />}
+                                                    </div>
+                                                    <select
+                                                        value={selectedInquiry.status || 'new'}
+                                                        onChange={(e) => updateInquiryStatus(selectedInquiry.id, e.target.value)}
+                                                        disabled={updating || selectedInquiry.status === 'converted'}
+                                                        className={`appearance-none pl-8 pr-8 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg border cursor-pointer focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm ${selectedInquiry.status === 'converted'
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                            : 'bg-white text-slate-700 border-slate-100 hover:border-slate-300'}`}
+                                                    >
+                                                        <option value="new">New</option>
+                                                        <option value="contacted">Contacted</option>
+                                                        <option value="demo_scheduled">Demo Scheduled</option>
+                                                        <option value="follow_up">Follow Up</option>
+                                                        {selectedInquiry.status === 'converted' && <option value="converted">Converted</option>}
+                                                        <option value="closed">Closed / Lost</option>
+                                                    </select>
+                                                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm">
-                                            {[
-                                                { id: 'all', label: 'All', icon: History },
-                                                { id: 'user', label: 'User', icon: User },
-                                                { id: 'team', label: 'Team', icon: Shield }
-                                            ].map((f) => (
-                                                <button
-                                                    key={f.id}
-                                                    onClick={() => setLogFilter(f.id)}
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight transition-all ${logFilter === f.id
-                                                        ? 'bg-white text-blue-600 shadow-sm'
-                                                        : 'text-slate-400 hover:text-slate-600'
-                                                        }`}
-                                                >
-                                                    <f.icon className={`w-3 h-3 ${logFilter === f.id ? 'text-blue-600' : 'text-slate-400'}`} />
-                                                    {f.label}
-                                                </button>
-                                            ))}
+
+                                        {/* Actions Bar */}
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && (
+                                                <>
+                                                    {selectedInquiry.is_claimed ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => setShowDemoModal(true)}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-slate-900 transition-all shadow-md shadow-indigo-100 group"
+                                                            >
+                                                                <CalendarCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                                Schedule Demo
+                                                            </button>
+                                                            <button
+                                                                onClick={() => openOnboardModal(selectedInquiry)}
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 group"
+                                                            >
+                                                                <UserPlus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                                                                Onboard Lead
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleClaimLead(selectedInquiry.id)}
+                                                            disabled={claimLoading}
+                                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 group animate-in fade-in slide-in-from-bottom-2 duration-300"
+                                                        >
+                                                            {claimLoading ? (
+                                                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                                            ) : (
+                                                                <>
+                                                                    <Lock className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                                                    Claim Lead & Start Selling
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {selectedInquiry.status === 'converted' && (
+                                                <div className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-bold">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                    Onboarded
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-2 ml-auto">
+                                                <a href={`mailto:${selectedInquiry.email}`} className="p-2 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-100 transition-all shadow-sm" title={selectedInquiry.email}>
+                                                    <Mail className="w-4 h-4" />
+                                                </a>
+                                                {selectedInquiry.phone && (
+                                                    <a href={`tel:${selectedInquiry.phone}`} className="p-2 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-100 transition-all shadow-sm" title={selectedInquiry.phone}>
+                                                        <Phone className="w-4 h-4" />
+                                                    </a>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Inquiry Message - Only show if 'all' or 'user' filter active */}
-                                    {(logFilter === 'all' || logFilter === 'user') && selectedInquiry.message && (
-                                        <div className="flex flex-col items-start gap-1">
-                                            <div className="flex items-center gap-2 px-2">
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{selectedInquiry.name} • Customer</span>
-                                            </div>
-                                            <div className="max-w-[85%] bg-slate-200 border border-slate-300 text-slate-800 p-4 rounded-2xl rounded-tl-none text-sm leading-relaxed shadow-sm">
-                                                {selectedInquiry.message}
-                                            </div>
-                                            <span className="px-2 text-[8px] font-bold text-slate-300 uppercase">Initial Contact</span>
-                                        </div>
-                                    )}
+                                    {/* Split Two-Column Layout */}
+                                    <div className="flex-1 flex overflow-hidden bg-slate-50/50">
 
-                                    {/* Dynamic Logs */}
-                                    {logsLoading ? (
-                                        <div className="flex flex-col items-center justify-center py-8 text-slate-400">
-                                            <RefreshCw className="w-8 h-8 animate-spin mb-3 opacity-20" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest opacity-40">Syncing...</span>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-6">
-                                            {logs
-                                                .filter(log => {
-                                                    if (logFilter === 'all') return true;
-                                                    const userTypes = ['user_inquiry', 'return_visit', 'demo_attempt'];
-                                                    const teamTypes = ['note', 'demo_scheduled', 'status_change'];
-                                                    return logFilter === 'user' ? userTypes.includes(log.type) : teamTypes.includes(log.type);
-                                                })
-                                                .map((log) => {
-                                                    const isUser = ['user_inquiry', 'return_visit', 'demo_attempt'].includes(log.type);
-                                                    const isStatus = log.type === 'status_change';
+                                        {/* Column 1: Phone-Style Chat (Slimmer) */}
+                                        <div className="w-[55%] flex flex-col border-r border-slate-200 bg-white h-full shadow-[4px_0_24px_-10px_rgba(0,0,0,0.05)] z-10">
 
-                                                    if (isStatus) {
-                                                        return (
-                                                            <div key={log.id} className="flex justify-center">
-                                                                <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-200 flex items-center gap-3 text-[10px] shadow-sm">
-                                                                    <div className="p-1 bg-slate-50 rounded">
-                                                                        <History className="w-3.5 h-3.5 text-slate-400" />
+                                            {/* Chat Header & Filters */}
+                                            <div className="p-3 border-b border-slate-100 bg-white/95 backdrop-blur z-20 flex items-center justify-between shrink-0">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Chat</span>
+                                                </div>
+                                                <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                                                    {[
+                                                        { id: 'all', icon: History },
+                                                        { id: 'user', icon: User },
+                                                        { id: 'team', icon: Shield }
+                                                    ].map((f) => (
+                                                        <button
+                                                            key={f.id}
+                                                            onClick={() => setLogFilter(f.id)}
+                                                            className={`p-1.5 rounded-md transition-all ${logFilter === f.id
+                                                                ? 'bg-white text-blue-600 shadow-sm'
+                                                                : 'text-slate-400 hover:text-slate-600'
+                                                                }`}
+                                                            title={f.id}
+                                                        >
+                                                            <f.icon className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Scrollable Chat Area */}
+                                            <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-slate-50 relative">
+
+                                                {/* Initial Inquiry Message Bubble */}
+                                                {(logFilter === 'all' || logFilter === 'user') && selectedInquiry.message && (
+                                                    <div className="flex flex-col items-start gap-1 max-w-[90%]">
+                                                        <div className="flex items-center gap-1.5 px-1">
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{selectedInquiry.name}</span>
+                                                        </div>
+                                                        <div className="p-3.5 rounded-2xl rounded-tl-sm bg-white border border-slate-100 text-slate-600 text-xs shadow-sm shadow-slate-200/50 leading-relaxed">
+                                                            {selectedInquiry.message}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Dynamic Logs */}
+                                                {logsLoading ? (
+                                                    <div className="flex flex-col items-center justify-center py-10 opacity-50">
+                                                        <RefreshCw className="w-5 h-5 animate-spin text-slate-400 mb-2" />
+                                                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Loading history...</span>
+                                                    </div>
+                                                ) : logs.length === 0 && !selectedInquiry.message ? (
+                                                    <div className="py-12 text-center opacity-40">
+                                                        <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">No messages yet</p>
+                                                    </div>
+                                                ) : (
+                                                    logs.filter(log => {
+                                                        if (logFilter === 'all') return true;
+                                                        const userTypes = ['user_inquiry', 'return_visit', 'demo_attempt'];
+                                                        const teamTypes = ['note', 'demo_scheduled', 'status_change'];
+                                                        return logFilter === 'user' ? userTypes.includes(log.type) : teamTypes.includes(log.type);
+                                                    }).map((log) => {
+                                                        const isUser = ['user_inquiry', 'return_visit', 'demo_attempt'].includes(log.type);
+                                                        const isStatus = log.type === 'status_change';
+                                                        const isNote = log.type === 'note';
+
+                                                        if (isStatus) {
+                                                            return (
+                                                                <div key={log.id} className="flex justify-center py-2">
+                                                                    <div className="bg-slate-100/50 px-3 py-1 rounded-full border border-slate-100 flex items-center gap-2 text-[9px] text-slate-400">
+                                                                        <span className="font-bold text-slate-500">{log.admin_name}</span>
+                                                                        <span>changed status to</span>
+                                                                        <span className="font-bold uppercase text-blue-500">{log.content?.split('to ')[1] || log.content}</span>
                                                                     </div>
-                                                                    <span className="font-medium text-slate-500">
-                                                                        <strong className="text-slate-900 font-black">{log.admin_name}</strong> status →
-                                                                        <span className="ml-1 font-black text-blue-600 uppercase bg-blue-50 px-1.5 py-0.5 rounded">{log.content?.split('to ')[1] || log.content}</span>
-                                                                    </span>
-                                                                    <span className="text-[9px] font-black text-slate-300 uppercase italic whitespace-nowrap">{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
                                                                 </div>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <div key={log.id} className={`flex flex-col ${isUser ? 'items-start' : 'items-end'} gap-1 max-w-[90%] ${!isUser && 'ml-auto'}`}>
+                                                                <div className={`p-3 rounded-2xl text-xs shadow-sm border ${isUser
+                                                                    ? 'bg-white border-slate-100 text-slate-600 rounded-tl-sm'
+                                                                    : 'bg-blue-600 border-blue-600 text-white rounded-tr-sm shadow-blue-500/20'
+                                                                    }`}>
+                                                                    {log.content}
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5 px-1 opacity-60">
+                                                                    {log.type === 'demo_scheduled' && <CalendarCheck className="w-3 h-3 text-indigo-500" />}
+                                                                    <span className="text-[9px] font-bold text-slate-300 uppercase leading-none">
+                                                                        {format(new Date(log.created_at), 'MMM d, h:mm a')}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                                <div ref={logEndRef} />
+                                            </div>
+
+                                            {/* Chat Input Area */}
+                                            <div className="p-3 bg-white border-t border-slate-100 shrink-0 relative z-20">
+                                                <form onSubmit={handleAddLog} className="relative flex items-end gap-2">
+                                                    <textarea
+                                                        value={newLogContent}
+                                                        onChange={(e) => setNewLogContent(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                                e.preventDefault();
+                                                                handleAddLog(e);
+                                                            }
+                                                        }}
+                                                        placeholder="Type a message..."
+                                                        className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white resize-none text-[13px] leading-relaxed transition-all placeholder:text-slate-400"
+                                                        rows="1"
+                                                        style={{ minHeight: '48px', maxHeight: '120px' }}
+                                                    />
+                                                    <button
+                                                        type="submit"
+                                                        disabled={!newLogContent.trim() || sendingLog}
+                                                        className="p-3 bg-slate-900 text-white rounded-xl hover:bg-blue-600 disabled:opacity-30 disabled:bg-slate-200 transition-all shadow-md shrink-0 mb-0.5"
+                                                    >
+                                                        {sendingLog ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+
+                                        {/* Column 2: Upcoming Demos List */}
+                                        <div className="flex-1 bg-slate-50/50 flex flex-col h-full border-l border-white/50 overflow-hidden">
+                                            <div className="p-3 border-b border-slate-100 bg-white/50 backdrop-blur sticky top-0 shrink-0 z-10 flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-slate-500">
+                                                    <Calendar className="w-4 h-4" />
+                                                    <h3 className="text-[10px] font-bold uppercase tracking-widest">Upcoming Demos</h3>
+                                                </div>
+                                                <button
+                                                    onClick={() => setShowDemoModal(true)}
+                                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-all"
+                                                    title="View Full Calendar"
+                                                >
+                                                    <CalendarDays className="w-4 h-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                                {(() => {
+                                                    // Separate current lead's demo from others
+                                                    const currentLeadDemo = masterDemos.find(d =>
+                                                        d.inquiry_id === selectedInquiry?.id &&
+                                                        new Date(d.scheduled_at) > new Date()
+                                                    );
+
+                                                    const otherDemos = masterDemos
+                                                        .filter(d =>
+                                                            new Date(d.scheduled_at) > new Date() &&
+                                                            d.id !== currentLeadDemo?.id
+                                                        )
+                                                        .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+
+                                                    if (!currentLeadDemo && otherDemos.length === 0) {
+                                                        return (
+                                                            <div className="py-12 text-center opacity-40">
+                                                                <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">No upcoming demos</p>
                                                             </div>
                                                         );
                                                     }
 
                                                     return (
-                                                        <div key={log.id} className={`flex flex-col ${isUser ? 'items-start' : 'items-end'} gap-1`}>
-                                                            <div className={`flex items-center gap-2 px-2 ${isUser ? 'flex-row' : 'flex-row-reverse'}`}>
-                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                                                                    {isUser ? (selectedInquiry.name || 'User') : (log.admin_name || 'Admin')}
-                                                                </span>
-                                                                {log.type === 'demo_scheduled' && <span className="text-[8px] font-black text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">Demo</span>}
-                                                                {log.type === 'return_visit' && <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded uppercase">Returning</span>}
-                                                                {log.type === 'user_inquiry' && <span className="text-[8px] font-black text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded uppercase">Inquiry</span>}
-                                                            </div>
-                                                            <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm transition-all hover:shadow-md ${isUser
-                                                                ? 'bg-slate-200 border border-slate-300 text-slate-800 rounded-tl-none italic'
-                                                                : 'bg-blue-600 border border-blue-700 text-white rounded-tr-none font-medium'
-                                                                }`}>
-                                                                {log.content}
-                                                            </div>
-                                                            <span className="px-2 text-[8px] font-bold text-slate-300 uppercase tracking-tight">
-                                                                {format(new Date(log.created_at), 'MMM d, h:mm a')}
-                                                            </span>
-                                                        </div>
-                                                    );
-                                                })
-                                            }
-                                            {logs.length === 0 && (
-                                                <div className="text-center py-10">
-                                                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-slate-100">
-                                                        <MessageSquare className="w-6 h-6 text-slate-200" />
-                                                    </div>
-                                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">No activity matches this filter.</p>
-                                                </div>
-                                            )}
-                                            <div ref={logEndRef} />
-                                        </div>
-                                    )}
-                                </div>
+                                                        <>
+                                                            {/* Current Lead's Demo (Priority) */}
+                                                            {currentLeadDemo && (
+                                                                <div
+                                                                    onClick={() => setSelectedDemo(currentLeadDemo)}
+                                                                    className="bg-blue-50/50 p-3 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] relative overflow-hidden mb-4"
+                                                                >
+                                                                    <div className="absolute top-0 right-0 px-2 py-0.5 bg-blue-600 text-[9px] font-bold text-white rounded-bl-lg uppercase tracking-wider">
+                                                                        Current Lead
+                                                                    </div>
+                                                                    <div className="flex items-start justify-between mb-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentLeadDemo.calendar_color }} />
+                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">{currentLeadDemo.seller_name}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="mb-1">
+                                                                        <h4 className="font-bold text-slate-800 text-sm leading-tight group-hover:text-blue-600 transition-colors">
+                                                                            {currentLeadDemo.lead_name}
+                                                                        </h4>
+                                                                        <p className="text-xs text-slate-500 font-medium">{currentLeadDemo.practice_name || 'Individual Practice'}</p>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100">
+                                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700">
+                                                                            <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                                                            {format(parseISO(currentLeadDemo.scheduled_at), 'MMM d')}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700">
+                                                                            <Clock className="w-3.5 h-3.5 text-blue-500" />
+                                                                            {format(parseISO(currentLeadDemo.scheduled_at), 'h:mm a')}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
 
-                                {/* Compact Input Area */}
-                                <div className="p-4 bg-white border-t border-slate-100 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] relative z-10">
-                                    <form onSubmit={handleAddLog} className="relative group">
-                                        <textarea
-                                            value={newLogContent}
-                                            onChange={(e) => setNewLogContent(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleAddLog(e);
-                                                }
-                                            }}
-                                            placeholder="Add note..."
-                                            className="w-full pl-5 pr-14 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500/50 focus:bg-white resize-none shadow-inner text-sm transition-all font-medium placeholder:text-slate-400"
-                                            rows="1"
-                                            style={{ minHeight: '56px' }}
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={!newLogContent.trim() || sendingLog}
-                                            className="absolute right-2.5 top-2.5 p-2.5 bg-blue-600 text-white rounded-full hover:bg-slate-900 disabled:opacity-30 disabled:bg-slate-200 transition-all shadow-lg group"
-                                        >
-                                            {sendingLog ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5 group-hover:scale-110 transition-transform" />}
-                                        </button>
-                                    </form>
-                                    <div className="mt-2 flex items-center justify-between px-4">
-                                        <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.2em] text-slate-300">
-                                            <span className="flex items-center gap-1.5 transition-colors hover:text-blue-400 cursor-default">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div> Enter to Save
-                                            </span>
-                                            <span className="opacity-50">•</span>
-                                            <span className="hover:text-slate-400 cursor-default">Shift+Enter for new line</span>
+                                                            {/* Divider if both exist */}
+                                                            {currentLeadDemo && otherDemos.length > 0 && (
+                                                                <div className="flex items-center gap-2 py-2">
+                                                                    <div className="h-px bg-slate-200 flex-1"></div>
+                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Others</span>
+                                                                    <div className="h-px bg-slate-200 flex-1"></div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Other Demos */}
+                                                            {otherDemos.map((demo) => (
+                                                                <div
+                                                                    key={demo.id}
+                                                                    onClick={() => setSelectedDemo(demo)}
+                                                                    className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
+                                                                >
+                                                                    <div className="flex items-start justify-between mb-2">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: demo.calendar_color }} />
+                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">{demo.seller_name}</span>
+                                                                        </div>
+                                                                        {demo.status === 'confirmed' && (
+                                                                            <span className="text-[8px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Confirmed</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="mb-1">
+                                                                        <h4 className="font-bold text-slate-700 text-sm leading-tight group-hover:text-blue-600 transition-colors">
+                                                                            {demo.lead_name}
+                                                                        </h4>
+                                                                        <p className="text-xs text-slate-400">{demo.practice_name || 'Individual Practice'}</p>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-50">
+                                                                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                                                                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                                                            {format(parseISO(demo.scheduled_at), 'MMM d')}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                                                                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                                            {format(parseISO(demo.scheduled_at), 'h:mm a')}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
                                     </div>
+                                </>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 p-20 text-center">
+                                    <div className="w-24 h-24 bg-white rounded-[2.5rem] border border-slate-200 flex items-center justify-center mb-8 shadow-xl shadow-slate-200/50 relative">
+                                        <Inbox className="w-10 h-10 text-slate-200" />
+                                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full border-4 border-white"></div>
+                                    </div>
+                                    <h3 className="font-bold text-xl text-slate-800 mb-4 uppercase tracking-tight">Select an Inquiry</h3>
+                                    <p className="text-[15px] font-medium text-slate-400 max-w-[320px] leading-relaxed">
+                                        Choose a lead from the list to manage their contact details, history, and conversion flow.
+                                    </p>
                                 </div>
-                            </>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 p-20 text-center">
-                                <div className="w-24 h-24 bg-white rounded-[2.5rem] border border-slate-200 flex items-center justify-center mb-8 shadow-xl shadow-slate-200/50 relative">
-                                    <Inbox className="w-10 h-10 text-slate-200" />
-                                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full border-4 border-white"></div>
-                                </div>
-                                <h3 className="font-black text-xl text-slate-800 mb-4 uppercase tracking-tight">Select an Inquiry</h3>
-                                <p className="text-[15px] font-medium text-slate-400 max-w-[320px] leading-relaxed">
-                                    Choose a lead from the list to manage their contact details, history, and conversion flow.
-                                </p>
-                            </div>
+                            )
                         )}
                     </div>
                 </div>
             </div>
 
             {/* Settings Modal */}
-            {
-                showSettings && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
-                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                                <h2 className="text-xl font-bold text-slate-900">Settings & Team</h2>
-                                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                                    <XCircle className="w-6 h-6 text-slate-400" />
-                                </button>
-                            </div>
-
-                            <div className="flex border-b border-slate-100 shrink-0">
-                                <button
-                                    onClick={() => setSettingsTab('password')}
-                                    className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                                >
-                                    Change Password
-                                </button>
-                                <button
-                                    onClick={() => setSettingsTab('users')}
-                                    className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
-                                >
-                                    Team Management
-                                </button>
-                            </div>
-
-                            <div className="p-6 overflow-y-auto">
-                                {settingsTab === 'password' ? (
-                                    <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
-                                            <input
-                                                type="password"
-                                                value={passForm.current}
-                                                onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
-                                            <input
-                                                type="password"
-                                                value={passForm.new}
-                                                onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                                required
-                                                minLength={8}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
-                                            <input
-                                                type="password"
-                                                value={passForm.confirm}
-                                                onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
-                                                required
-                                            />
-                                        </div>
-
-                                        {passMsg.text && (
-                                            <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                                                {passMsg.text}
-                                            </div>
-                                        )}
-
-                                        <button
-                                            type="submit"
-                                            className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
-                                        >
-                                            Update Password
-                                        </button>
-                                    </form>
-                                ) : (
-                                    <div className="space-y-8">
-                                        {/* Create User */}
-                                        <div className="bg-slate-50 p-5 rounded-xl">
-                                            <h3 className="font-medium text-slate-900 mb-4 flex items-center gap-2">
-                                                <UserPlus className="w-4 h-4" />
-                                                Add New Team Member
-                                            </h3>
-                                            <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
-                                                <div className="col-span-2 sm:col-span-1">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Username"
-                                                        value={userForm.username}
-                                                        onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div className="col-span-2 sm:col-span-1">
-                                                    <input
-                                                        type="email"
-                                                        placeholder="Email"
-                                                        value={userForm.email}
-                                                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                        required
-                                                    />
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <input
-                                                        type="password"
-                                                        placeholder="Initial Password (min 8 chars)"
-                                                        value={userForm.password}
-                                                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                        required
-                                                        minLength={8}
-                                                    />
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <button
-                                                        type="submit"
-                                                        className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
-                                                    >
-                                                        Create User
-                                                    </button>
-                                                </div>
-                                                {userMsg.text && (
-                                                    <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
-                                                        {userMsg.text}
-                                                    </div>
-                                                )}
-                                            </form>
-                                        </div>
-
-                                        {/* User List */}
-                                        <div>
-                                            <h3 className="font-medium text-slate-900 mb-4 text-sm uppercase tracking-wider text-slate-500">
-                                                Existing Users
-                                            </h3>
-                                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                                                <div className="divide-y divide-slate-100">
-                                                    {teamUsers.map(user => (
-                                                        <div key={user.id} className="p-4 flex items-center justify-between">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
-                                                                    {user.username.substring(0, 2)}
-                                                                </div>
-                                                                <div>
-                                                                    <div className="font-medium text-slate-900">{user.username}</div>
-                                                                    <div className="text-xs text-slate-500">{user.email}</div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-xs text-slate-400">
-                                                                Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* Onboard Clinic Modal */}
-            {
-                showOnboardModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
-                            <button
-                                onClick={() => setShowOnboardModal(false)}
-                                className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <XCircle className="w-6 h-6" />
+            {showSettings && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
+                            <h2 className="text-xl font-bold text-slate-800">Settings & Team</h2>
+                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                <XCircle className="w-6 h-6 text-slate-400" />
                             </button>
+                        </div>
 
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
-                                    <Database className="w-6 h-6 text-white" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
-                                    <p className="text-slate-500 text-sm">
-                                        {selectedInquiry?.referral_code
-                                            ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
-                                            : 'Create a new clinic with dedicated database'
-                                        }
-                                    </p>
-                                </div>
-                            </div>
+                        <div className="flex border-b border-slate-100 shrink-0">
+                            <button
+                                onClick={() => setSettingsTab('password')}
+                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                            >
+                                Change Password
+                            </button>
+                            <button
+                                onClick={() => setSettingsTab('users')}
+                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                            >
+                                Team Management
+                            </button>
+                        </div>
 
-                            {onboardError && (
-                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
-                                    {onboardError}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleOnboard} className="space-y-6">
-                                {/* Clinic Details */}
-                                <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                        <Building2 className="w-4 h-4" /> Clinic Details
-                                    </h3>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="col-span-2">
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                placeholder="e.g. Heart Center of Nevada"
-                                                value={onboardForm.displayName}
-                                                onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
-                                            <input
-                                                type="text"
-                                                required
-                                                placeholder="e.g. heart-center-nv"
-                                                value={onboardForm.slug}
-                                                onChange={e => setOnboardForm({
-                                                    ...onboardForm,
-                                                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
-                                                })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                            />
-                                            <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Cardiology"
-                                                value={onboardForm.specialty}
-                                                onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
-                                            />
-                                        </div>
+                        <div className="p-6 overflow-y-auto">
+                            {settingsTab === 'password' ? (
+                                <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                                        <input
+                                            type="password"
+                                            value={passForm.current}
+                                            onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            required
+                                        />
                                     </div>
-                                </div>
-
-                                {/* Initial Admin User */}
-                                <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                        <Shield className="w-4 h-4" /> Initial Admin User
-                                    </h3>
-                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={onboardForm.adminFirstName}
-                                                    onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
-                                                <input
-                                                    type="text"
-                                                    required
-                                                    value={onboardForm.adminLastName}
-                                                    onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
-                                            <input
-                                                type="email"
-                                                required
-                                                placeholder="admin@clinic.com"
-                                                value={onboardForm.adminEmail}
-                                                onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
-                                            <input
-                                                type="password"
-                                                required
-                                                minLength={8}
-                                                placeholder="Min 8 characters"
-                                                value={onboardForm.adminPassword}
-                                                onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                            />
-                                        </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                                        <input
+                                            type="password"
+                                            value={passForm.new}
+                                            onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            required
+                                            minLength={8}
+                                        />
                                     </div>
-                                </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                                        <input
+                                            type="password"
+                                            value={passForm.confirm}
+                                            onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
+                                            className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                            required
+                                        />
+                                    </div>
 
-                                <div className="pt-2">
+                                    {passMsg.text && (
+                                        <div className={`text-sm p-3 rounded-lg ${passMsg.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                            {passMsg.text}
+                                        </div>
+                                    )}
+
                                     <button
                                         type="submit"
-                                        disabled={onboardLoading}
-                                        className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className="w-full py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
                                     >
-                                        {onboardLoading ? (
-                                            <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
-                                        ) : (
-                                            <>
-                                                <Database className="w-5 h-5" />
-                                                {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
-                                            </>
-                                        )}
+                                        Update Password
                                     </button>
-                                    <p className="text-center text-[10px] text-slate-400 mt-3">
-                                        This will create a new dedicated database schema and initial admin account.
-                                    </p>
+                                </form>
+                            ) : (
+                                <div className="space-y-8">
+                                    {/* Create User */}
+                                    <div className="bg-slate-50 p-5 rounded-xl">
+                                        <h3 className="font-medium text-slate-800 mb-4 flex items-center gap-2">
+                                            <UserPlus className="w-4 h-4" />
+                                            Add New Team Member
+                                        </h3>
+                                        <form onSubmit={handleCreateUser} className="grid grid-cols-2 gap-4">
+                                            <div className="col-span-2 sm:col-span-1">
+                                                <input
+                                                    type="text"
+                                                    placeholder="Username"
+                                                    value={userForm.username}
+                                                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-span-2 sm:col-span-1">
+                                                <input
+                                                    type="email"
+                                                    placeholder="Email"
+                                                    value={userForm.email}
+                                                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <input
+                                                    type="password"
+                                                    placeholder="Initial Password (min 8 chars)"
+                                                    value={userForm.password}
+                                                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                    required
+                                                    minLength={8}
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <button
+                                                    type="submit"
+                                                    className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
+                                                >
+                                                    Create User
+                                                </button>
+                                            </div>
+                                            {userMsg.text && (
+                                                <div className={`col-span-2 text-sm p-2 rounded ${userMsg.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                    {userMsg.text}
+                                                </div>
+                                            )}
+                                        </form>
+                                    </div>
+
+                                    {/* User List */}
+                                    <div>
+                                        <h3 className="font-medium text-slate-800 mb-4 text-sm uppercase tracking-wider text-slate-500">
+                                            Existing Users
+                                        </h3>
+                                        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                                            <div className="divide-y divide-slate-100">
+                                                {teamUsers.map(user => (
+                                                    <div key={user.id} className="p-4 flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                                                {user.username.substring(0, 2)}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium text-slate-800">{user.username}</div>
+                                                                <div className="text-xs text-slate-500">{user.email}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-slate-400">
+                                                            Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </form>
+                            )}
                         </div>
                     </div>
-                )
+                </div>
+            )}
+
+            {/* Onboard Clinic Modal */}
+            {showOnboardModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
+                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
+                        <button
+                            onClick={() => setShowOnboardModal(false)}
+                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <XCircle className="w-6 h-6" />
+                        </button>
+
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                                <Database className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
+                                <p className="text-slate-500 text-sm">
+                                    {selectedInquiry?.referral_code
+                                        ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
+                                        : 'Create a new clinic with dedicated database'
+                                    }
+                                </p>
+                            </div>
+                        </div>
+
+                        {onboardError && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                                {onboardError}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleOnboard} className="space-y-6">
+                            {/* Clinic Details */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <Building2 className="w-4 h-4" /> Clinic Details
+                                </h3>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. Heart Center of Nevada"
+                                            value={onboardForm.displayName}
+                                            onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="e.g. heart-center-nv"
+                                            value={onboardForm.slug}
+                                            onChange={e => setOnboardForm({
+                                                ...onboardForm,
+                                                slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
+                                            })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Cardiology"
+                                            value={onboardForm.specialty}
+                                            onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Initial Admin User */}
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <Shield className="w-4 h-4" /> Initial Admin User
+                                </h3>
+                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={onboardForm.adminFirstName}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={onboardForm.adminLastName}
+                                                onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
+                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            placeholder="admin@clinic.com"
+                                            value={onboardForm.adminEmail}
+                                            onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            minLength={8}
+                                            placeholder="Min 8 characters"
+                                            value={onboardForm.adminPassword}
+                                            onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={onboardLoading}
+                                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold text-lg shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {onboardLoading ? (
+                                        <><RefreshCw className="w-5 h-5 animate-spin" /> Provisioning...</>
+                                    ) : (
+                                        <>
+                                            <Database className="w-5 h-5" />
+                                            {selectedInquiry?.referral_code ? 'Create Clinic & Activate Referral' : 'Create Clinic'}
+                                        </>
+                                    )}
+                                </button>
+                                <p className="text-center text-[10px] text-slate-400 mt-3">
+                                    This will create a new dedicated database schema and initial admin account.
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )
             }
 
             {/* Status Change Modal */}
-            {
-                showStatusModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
+            {showStatusModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                    <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
+                        <button
+                            onClick={() => {
+                                setShowStatusModal(false);
+                                setPendingStatus(null);
+                                setStatusNote('');
+                            }}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <XCircle className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
+                                }`}>
+                                {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
+                                {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
+                                {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
+                                {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800">
+                                    {pendingStatus === 'contacted' && 'Log Contact'}
+                                    {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
+                                    {pendingStatus === 'follow_up' && 'Set Follow Up'}
+                                    {pendingStatus === 'closed' && 'Close Inquiry'}
+                                </h2>
+                                <p className="text-sm text-slate-500">
+                                    {selectedInquiry?.name} • {selectedInquiry?.email}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                {pendingStatus === 'contacted' && 'Contact Notes *'}
+                                {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
+                                {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
+                                {pendingStatus === 'closed' && 'Reason for Closing *'}
+                            </label>
+                            <textarea
+                                value={statusNote}
+                                onChange={(e) => setStatusNote(e.target.value)}
+                                placeholder={getStatusNotePlaceholder(pendingStatus)}
+                                rows={5}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
                             <button
                                 onClick={() => {
                                     setShowStatusModal(false);
                                     setPendingStatus(null);
                                     setStatusNote('');
                                 }}
-                                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
                             >
-                                <XCircle className="w-5 h-5" />
+                                Cancel
                             </button>
-
-                            <div className="flex items-center gap-3 mb-5">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pendingStatus === 'closed' ? 'bg-red-100' : 'bg-blue-100'
-                                    }`}>
-                                    {pendingStatus === 'contacted' && <Phone className="w-5 h-5 text-blue-600" />}
-                                    {pendingStatus === 'demo_scheduled' && <Calendar className="w-5 h-5 text-blue-600" />}
-                                    {pendingStatus === 'follow_up' && <RefreshCw className="w-5 h-5 text-blue-600" />}
-                                    {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-bold text-slate-800">
-                                        {pendingStatus === 'contacted' && 'Log Contact'}
-                                        {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
-                                        {pendingStatus === 'follow_up' && 'Set Follow Up'}
-                                        {pendingStatus === 'closed' && 'Close Inquiry'}
-                                    </h2>
-                                    <p className="text-sm text-slate-500">
-                                        {selectedInquiry?.name} • {selectedInquiry?.email}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="mb-4">
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                                    {pendingStatus === 'contacted' && 'Contact Notes *'}
-                                    {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
-                                    {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
-                                    {pendingStatus === 'closed' && 'Reason for Closing *'}
-                                </label>
-                                <textarea
-                                    value={statusNote}
-                                    onChange={(e) => setStatusNote(e.target.value)}
-                                    placeholder={getStatusNotePlaceholder(pendingStatus)}
-                                    rows={5}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        setShowStatusModal(false);
-                                        setPendingStatus(null);
-                                        setStatusNote('');
-                                    }}
-                                    className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={submitStatusChange}
-                                    disabled={statusNoteLoading || !statusNote.trim()}
-                                    className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
-                                        ? 'bg-red-500 hover:bg-red-600 text-white'
-                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                        }`}
-                                >
-                                    {statusNoteLoading ? (
-                                        <RefreshCw className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <>
-                                            <CheckCircle2 className="w-4 h-4" />
-                                            Save & Update Status
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                            <button
+                                onClick={submitStatusChange}
+                                disabled={statusNoteLoading || !statusNote.trim()}
+                                className={`flex-1 py-3 rounded-xl font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${pendingStatus === 'closed'
+                                    ? 'bg-red-500 hover:bg-red-600 text-white'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                            >
+                                {statusNoteLoading ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Save & Update Status
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
-                )
+                </div>
+            )
             }
             {/* Demo Schedule Modal */}
-            {
-                showDemoModal && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                                <h3 className="text-lg font-bold text-slate-900">Schedule Demo</h3>
+            {showDemoModal && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col md:flex-row h-[600px]">
+                        {/* Interactive Calendar Side */}
+                        <div className="w-full md:w-1/2 border-r border-slate-100 bg-slate-50/50 p-6 flex flex-col">
+                            <div className="mb-4 flex items-center justify-between">
+                                <h3 className="font-bold text-slate-700">{format(demoModalMonth, 'MMMM yyyy')}</h3>
+                                <div className="flex gap-1">
+                                    <button onClick={() => setDemoModalMonth(subMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => setDemoModalMonth(addMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-4 grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-2xl overflow-hidden shadow-inner shrink-0 mb-6 bg-white">
+                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
+                                    <div key={day} className="bg-slate-50 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">{day}</div>
+                                ))}
+                                {(() => {
+                                    const start = startOfWeek(startOfMonth(demoModalMonth));
+                                    const end = endOfWeek(endOfMonth(demoModalMonth));
+                                    return eachDayOfInterval({ start, end }).map(day => {
+                                        const dateStr = format(day, 'yyyy-MM-dd');
+                                        const isSelected = demoForm.date === dateStr;
+                                        const isTodayDate = isToday(day);
+                                        const isCurrentMonth = isSameMonth(day, demoModalMonth);
+
+                                        // Check for conflicts
+                                        const dayDemos = masterDemos.filter(d => isSameDay(parseISO(d.scheduled_at), day));
+                                        const hasDemos = dayDemos.length > 0;
+
+                                        // Detailed conflict check? (maybe later)
+
+                                        return (
+                                            <button
+                                                key={day.toString()}
+                                                type="button"
+                                                onClick={() => setDemoForm({ ...demoForm, date: dateStr })}
+                                                className={`
+                                                    relative h-12 flex flex-col items-center justify-center bg-white text-[12px] font-bold transition-all
+                                                    ${!isCurrentMonth ? 'text-slate-200' : 'text-slate-600'}
+                                                    ${isSelected ? '!bg-blue-600 !text-white z-10 shadow-lg scale-[1.05] rounded-lg' : 'hover:bg-blue-50/50'}
+                                                `}
+                                            >
+                                                <span>{format(day, 'd')}</span>
+                                                {hasDemos && !isSelected && (
+                                                    <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-300' : 'bg-slate-300'}`} />
+                                                )}
+                                                {isTodayDate && !isSelected && (
+                                                    <div className="absolute top-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                                                )}
+                                            </button>
+                                        );
+                                    });
+                                })()}
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto">
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                                    {demoForm.date ? `Schedule for ${format(parseISO(demoForm.date), 'MMM do')}` : 'Select a date'}
+                                </h4>
+                                {demoForm.date ? (
+                                    <div className="space-y-2">
+                                        {masterDemos.filter(d => isSameDay(parseISO(d.scheduled_at), parseISO(demoForm.date))).length > 0 ? (
+                                            masterDemos
+                                                .filter(d => isSameDay(parseISO(d.scheduled_at), parseISO(demoForm.date)))
+                                                .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
+                                                .map(demo => (
+                                                    <div key={demo.id} className="p-3 bg-white border border-slate-100 rounded-xl flex items-center gap-3 opacity-75">
+                                                        <div className="w-1.5 h-8 rounded-full bg-slate-200" style={{ backgroundColor: demo.calendar_color }} />
+                                                        <div>
+                                                            <div className="text-xs font-bold text-slate-700">
+                                                                {format(parseISO(demo.scheduled_at), 'h:mm a')}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-500">
+                                                                {demo.seller_name} w/ {demo.lead_name}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                        ) : (
+                                            <div className="p-4 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                                                No existing demos. Day is wide open.
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 text-center text-slate-400 text-xs italic">
+                                        Click a date on the calendar to check availability.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Form Side */}
+                        <div className="w-full md:w-1/2 flex flex-col h-full">
+                            <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                                <h3 className="text-lg font-bold text-slate-800">Schedule Demo</h3>
                                 <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
-                            <form onSubmit={handleScheduleDemo} className="p-6 space-y-4">
-                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4">
+                            <form onSubmit={handleScheduleDemo} className="p-6 flex-1 flex flex-col overflow-y-auto">
+                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-6 shrink-0">
                                     <p className="text-xs text-blue-700 leading-relaxed font-medium">
                                         <strong>Invite Notification:</strong> Scheduling this demo will automatically send a calendar invitation and email reminder to <strong>{selectedInquiry?.email}</strong>.
                                     </p>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={demoForm.date}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
-                                    />
+
+                                <div className="space-y-5 flex-1">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
+                                            <input
+                                                type="date"
+                                                required
+                                                value={demoForm.date}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
+                                            <input
+                                                type="time"
+                                                required
+                                                value={demoForm.time}
+                                                onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
+                                        <textarea
+                                            rows="4"
+                                            value={demoForm.notes}
+                                            onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
+                                            placeholder="e.g. Focus on billing integration..."
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
-                                    <input
-                                        type="time"
-                                        required
-                                        value={demoForm.time}
-                                        onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
-                                    <textarea
-                                        rows="3"
-                                        value={demoForm.notes}
-                                        onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
-                                        placeholder="e.g. Focus on billing integration..."
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
-                                    />
-                                </div>
-                                <div className="pt-4 flex gap-3">
+
+                                <div className="pt-6 flex gap-3 shrink-0">
                                     <button
                                         type="button"
                                         onClick={() => setShowDemoModal(false)}
-                                        className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-900 transition-all text-sm"
+                                        className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-800 transition-all text-sm"
                                     >
                                         Cancel
                                     </button>
@@ -1806,9 +2227,146 @@ const SalesAdmin = () => {
                             </form>
                         </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+
+            {/* Appointment Details Modal */}
+            {selectedDemo && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl">
+                                    <Video className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800 leading-tight">Appointment Details</h3>
+                                    <p className="text-xs text-slate-500 font-medium">
+                                        {format(parseISO(selectedDemo.scheduled_at), 'MMMM do, yyyy')} • {format(parseISO(selectedDemo.scheduled_at), 'h:mm a')}
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedDemo(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Actions Bar */}
+                            <div className="flex gap-3">
+                                <a
+                                    href={selectedDemo.zoom_link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
+                                >
+                                    <Video className="w-4 h-4" />
+                                    Launch Zoom
+                                </a>
+                                <button
+                                    onClick={() => {
+                                        setSelectedDemo(null);
+                                        const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
+                                        if (inq) {
+                                            setSelectedInquiry(inq);
+                                            setViewMode('personal');
+                                        }
+                                    }}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                    View Inquiry
+                                </button>
+                            </div>
+
+                            {/* Status Banner */}
+                            <div className={`p-4 rounded-xl border flex items-center gap-3 ${selectedDemo.status === 'confirmed'
+                                ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+                                : 'bg-amber-50 border-amber-100 text-amber-800'
+                                }`}>
+                                {selectedDemo.status === 'confirmed' ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                                <div>
+                                    <p className="text-sm font-bold uppercase tracking-wide">Status: {selectedDemo.status || 'Pending'}</p>
+                                    <p className="text-xs opacity-80">
+                                        {selectedDemo.status === 'confirmed' ? 'Lead has confirmed via email.' : 'Waiting for lead confirmation.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Lead Profile */}
+                            <div>
+                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Lead Profile</h4>
+                                <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Name</label>
+                                        <div className="font-bold text-slate-700">{selectedDemo.lead_name}</div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Practice</label>
+                                        <div className="font-bold text-slate-700 flex items-center gap-1.5">
+                                            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                            {selectedDemo.practice_name || 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Contact</label>
+                                        <div className="space-y-1">
+                                            <div className="text-sm text-slate-600 flex items-center gap-1.5">
+                                                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                                <span className="truncate max-w-[140px]" title={selectedDemo.lead_email}>{selectedDemo.lead_email}</span>
+                                            </div>
+                                            {selectedDemo.lead_phone && (
+                                                <div className="text-sm text-slate-600 flex items-center gap-1.5">
+                                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                    {selectedDemo.lead_phone}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Details</label>
+                                        <div className="space-y-1">
+                                            <div className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
+                                                {selectedDemo.provider_count || '?'} Providers
+                                            </div>
+                                            <div className="text-xs text-slate-500 mt-1">
+                                                Source: {selectedDemo.source || 'Direct'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Internal Notes */}
+                            {selectedDemo.notes && (
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Meeting Notes</h4>
+                                    <div className="p-3 bg-yellow-50/50 border border-yellow-100 rounded-xl text-sm text-slate-600 italic">
+                                        "{selectedDemo.notes}"
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Seller Info */}
+                            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                                        {selectedDemo.seller_name?.substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="text-xs">
+                                        <div className="font-bold text-slate-700">{selectedDemo.seller_name}</div>
+                                        <div className="text-slate-400">Host</div>
+                                    </div>
+                                </div>
+                                <div className="text-[10px] font-mono text-slate-300">
+                                    ID: {selectedDemo.id}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 
