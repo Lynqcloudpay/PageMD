@@ -467,8 +467,8 @@ const SalesAdmin = () => {
     };
 
     const handleDismissLead = async () => {
-        if (!selectedInquiry || !dismissReason || dismissNotes.length < 10) {
-            alert('Please select a reason and provide notes (minimum 10 characters)');
+        if (!selectedInquiry || !dismissReason || dismissNotes.length < 1) {
+            alert('Please select a reason and provide a note');
             return;
         }
 
@@ -795,16 +795,20 @@ const SalesAdmin = () => {
         );
     });
 
-    // Stats
+    // Stats - Only count non-dismissed leads for active dashboard numbers
+    const activeInquiries = inquiries.filter(i => {
+        const s = (i.status || 'new').toLowerCase().trim();
+        return !i.dismissal_reason && s !== 'dismissed';
+    });
+
     const stats = {
-        total: inquiries.length,
-        new: inquiries.filter(i => {
+        total: activeInquiries.length,
+        new: activeInquiries.filter(i => {
             const s = (i.status || 'new').toLowerCase().trim();
-            // Catch-all: If it's NOT in pipeline, converted, or closed, it's New/Pending
             return !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
         }).length,
-        contacted: inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'contacted').length,
-        converted: inquiries.filter(i => (i.status || '').toLowerCase().trim() === 'converted').length
+        contacted: activeInquiries.filter(i => (i.status || '').toLowerCase().trim() === 'contacted').length,
+        converted: activeInquiries.filter(i => (i.status || '').toLowerCase().trim() === 'converted').length
     };
 
 
@@ -903,6 +907,19 @@ const SalesAdmin = () => {
                             >
                                 <Calendar className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-400'}`} />
                                 <span className="font-bold">Schedule</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setViewMode('salvage');
+                                    setSalvageFilter('all');
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-sm ${viewMode === 'salvage'
+                                    ? 'bg-rose-600 text-white shadow-inner scale-[0.98]'
+                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <Archive className={`w-4 h-4 ${viewMode === 'salvage' ? 'text-white' : 'text-slate-400'}`} />
+                                <span className="font-bold">Salvage</span>
                             </button>
                             <button
                                 onClick={() => setShowSettings(true)}
@@ -1009,6 +1026,8 @@ const SalesAdmin = () => {
                                         {inquiries.filter(i => {
                                             if (i.is_claimed) return false;
                                             const s = (i.status || 'new').toLowerCase().trim();
+                                            // Exclude dismissed from active pool
+                                            if (i.dismissal_reason || s === 'dismissed') return false;
                                             // Only count VERIFIED leads in the top badge
                                             return s === 'verified';
                                         }).length}
@@ -1029,6 +1048,9 @@ const SalesAdmin = () => {
                                     <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'personal' ? 'bg-blue-500 text-blue-100' : 'bg-slate-200 text-slate-500'}`}>
                                         {inquiries.filter(i => {
                                             if (!i.is_claimed) return false;
+                                            const s = (i.status || 'new').toLowerCase().trim();
+                                            if (i.dismissal_reason || s === 'dismissed') return false;
+
                                             if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
                                                 if (pipelineUserFilter === 'mine') return i.owner_id === currentUser?.id;
                                                 if (pipelineUserFilter !== 'all') return i.owner_id == pipelineUserFilter;
@@ -1085,11 +1107,13 @@ const SalesAdmin = () => {
                                         const verifiedLeads = inquiries.filter(i => {
                                             if (i.is_claimed) return false;
                                             const s = (i.status || 'new').toLowerCase().trim();
+                                            if (i.dismissal_reason || s === 'dismissed') return false;
                                             return s === 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
                                         });
                                         const unverifiedLeads = inquiries.filter(i => {
                                             if (i.is_claimed) return false;
                                             const s = (i.status || 'new').toLowerCase().trim();
+                                            if (i.dismissal_reason || s === 'dismissed') return false;
                                             return s !== 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed'].includes(s);
                                         });
 
@@ -1207,10 +1231,7 @@ const SalesAdmin = () => {
                                             { id: 'closed', label: 'Closed', icon: XCircle },
                                         ];
 
-                                        const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'sales_manager';
-                                        if (isAdmin) {
-                                            filters.splice(5, 0, { id: 'cancelled', label: 'Salvage', icon: Archive });
-                                        }
+
 
                                         return filters.map(cat => {
                                             const isActive = statusFilter === (cat.id === 'all' ? '' : cat.id);
@@ -1245,7 +1266,7 @@ const SalesAdmin = () => {
                             )}
 
                             {/* Salvage Sub-Category Filter */}
-                            {viewMode === 'personal' && statusFilter === 'cancelled' && (
+                            {viewMode === 'salvage' && (
                                 <div className="flex flex-wrap gap-2 mb-4 p-2 bg-slate-50 rounded-lg border border-slate-200">
                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider w-full mb-1">Recovery Categories</span>
                                     {(() => {
@@ -1350,35 +1371,49 @@ const SalesAdmin = () => {
                                     };
 
                                     const displayItems = filteredInquiries.filter(i => {
-                                        // 1. View Mode Filter
                                         const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'sales_manager';
+                                        const s = (i.status || 'new').toLowerCase().trim();
+                                        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+                                        // 0. Salvage logic (Dedicated View)
+                                        if (viewMode === 'salvage') {
+                                            // Determine which sub-category this lead falls into
+                                            const isCancelledAppt = i.demo_scheduled_at && ['closed', 'cancelled'].includes(s);
+                                            const isClosedWonButNoDemo = s === 'closed' && !i.demo_scheduled_at && !i.dismissal_reason;
+                                            const isManuallyDismissed = i.dismissal_reason || s === 'dismissed';
+                                            const isColdLead = !['closed', 'converted', 'dismissed'].includes(s) && !i.dismissal_reason && (i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at)) < thirtyDaysAgo;
+
+                                            if (salvageFilter === 'all') return isCancelledAppt || isClosedWonButNoDemo || isManuallyDismissed || isColdLead;
+                                            if (salvageFilter === 'cancelled') return isCancelledAppt;
+                                            if (salvageFilter === 'closed') return isClosedWonButNoDemo;
+                                            if (salvageFilter === 'dismissed') return isManuallyDismissed;
+                                            if (salvageFilter === 'cold') return isColdLead;
+                                            return false;
+                                        }
+
+                                        // 1. Exclude Salvage leads from non-salvage views
+                                        if (i.dismissal_reason || s === 'dismissed') return false;
+
+                                        // 2. View Mode Filter
                                         if (viewMode === 'pool' && i.is_claimed) return false;
-                                        // In Master/Schedule mode, enforce ownership for non-admins
                                         if (viewMode === 'master' && !isAdmin) {
                                             if (i.owner_id !== currentUser?.id && i.seller_id !== currentUser?.id) return false;
                                         }
                                         if (viewMode === 'personal') {
                                             if (!i.is_claimed) return false;
-                                            // Admin Logic
-                                            if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
+                                            if (isAdmin) {
                                                 if (pipelineUserFilter === 'mine' && i.owner_id !== currentUser?.id) return false;
                                                 if (pipelineUserFilter !== 'all' && pipelineUserFilter !== 'mine' && i.owner_id != pipelineUserFilter) return false;
                                             } else {
-                                                // Standard Logic
                                                 if (i.owner_id !== currentUser?.id) return false;
                                             }
                                         }
 
-                                        // 2. Status Category Filter
+                                        // 3. Status Category Filter
                                         if (!statusFilter) return true; // All
 
-                                        const s = (i.status || 'new').toLowerCase().trim();
-
                                         // Lead Pool filters
-                                        if (statusFilter === 'verified') {
-                                            return s === 'verified';
-                                        }
+                                        if (statusFilter === 'verified') return s === 'verified';
                                         if (statusFilter === 'unverified') {
                                             return s !== 'verified' && !['demo_scheduled', 'follow_up', 'converted', 'closed', 'contacted'].includes(s);
                                         }
@@ -1389,52 +1424,12 @@ const SalesAdmin = () => {
                                         if (statusFilter === 'contacted') {
                                             return ['contacted', 'follow_up'].includes(s);
                                         }
-                                        if (statusFilter === 'cancelled') {
-                                            // Salvage filter now splits into sub-categories
-                                            const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
-                                            // Cancelled Appointments - had demo but cancelled/closed
-                                            if (salvageFilter === 'cancelled' || salvageFilter === 'all') {
-                                                if (i.demo_scheduled_at && ['closed', 'cancelled'].includes(s)) return salvageFilter === 'cancelled' || salvageFilter === 'all';
-                                            }
-
-                                            // Closed Leads - went through pipeline, didn't convert (no demo)
-                                            if (salvageFilter === 'closed') {
-                                                return s === 'closed' && !i.demo_scheduled_at && !i.dismissal_reason;
-                                            }
-
-                                            // Dismissed Leads - manually dismissed
-                                            if (salvageFilter === 'dismissed') {
-                                                return i.dismissal_reason || s === 'dismissed';
-                                            }
-
-                                            // Cold Leads - no activity 30+ days
-                                            if (salvageFilter === 'cold') {
-                                                if (['closed', 'converted', 'dismissed'].includes(s)) return false;
-                                                if (i.dismissal_reason) return false;
-                                                const lastActivity = i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at);
-                                                return lastActivity < thirtyDaysAgo;
-                                            }
-
-                                            // salvageFilter === 'all' - show all salvage categories
-                                            if (salvageFilter === 'all') {
-                                                // Dismissed
-                                                if (i.dismissal_reason || s === 'dismissed') return true;
-                                                // Closed (non-converted pipeline)
-                                                if (s === 'closed') return true;
-                                                // Cold leads
-                                                if (!['closed', 'converted', 'dismissed'].includes(s)) {
-                                                    const lastActivity = i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at);
-                                                    if (lastActivity < thirtyDaysAgo) return true;
-                                                }
-                                            }
-                                            return false;
-                                        }
                                         if (statusFilter === 'closed') {
-                                            return s === 'closed' && !(i.notes || '').includes('SALVAGE');
+                                            return s === 'closed';
                                         }
                                         return s === statusFilter;
                                     });
+
 
                                     if (displayItems.length === 0) {
                                         return (
@@ -2738,24 +2733,19 @@ const SalesAdmin = () => {
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                                    Notes * <span className="font-normal text-slate-400">(min 10 characters)</span>
+                                    Notes *
                                 </label>
                                 <textarea
                                     value={dismissNotes}
                                     onChange={(e) => setDismissNotes(e.target.value)}
-                                    placeholder="Explain why this lead is being dismissed..."
-                                    rows={3}
-                                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-sm font-medium resize-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all ${dismissNotes.length > 0 && dismissNotes.length < 10
+                                    placeholder="Quick note on why..."
+                                    rows={2}
+                                    className={`w-full px-3 py-2.5 bg-white border rounded-xl text-sm font-medium resize-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all ${dismissNotes.length === 0
                                         ? 'border-amber-300 bg-amber-50/50'
                                         : 'border-slate-200'
                                         }`}
                                 />
-                                <div className="text-right mt-1">
-                                    <span className={`text-[10px] font-medium ${dismissNotes.length >= 10 ? 'text-emerald-600' : 'text-slate-400'
-                                        }`}>
-                                        {dismissNotes.length}/10 characters
-                                    </span>
-                                </div>
+
                             </div>
 
                             {/* Badge showing if verified or not */}
@@ -2786,7 +2776,7 @@ const SalesAdmin = () => {
                             </button>
                             <button
                                 onClick={handleDismissLead}
-                                disabled={dismissLoading || !dismissReason || dismissNotes.length < 10}
+                                disabled={dismissLoading || !dismissReason || dismissNotes.length < 1}
                                 className="flex-1 py-3 bg-rose-600 text-white rounded-xl font-medium hover:bg-rose-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {dismissLoading ? (

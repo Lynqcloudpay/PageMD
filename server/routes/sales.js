@@ -828,8 +828,8 @@ router.post('/inquiries/:id/dismiss', verifyToken, async (req, res) => {
         if (!reason || !validReasons.includes(reason)) {
             return res.status(400).json({ error: 'Valid dismissal reason is required' });
         }
-        if (!notes || notes.trim().length < 10) {
-            return res.status(400).json({ error: 'Dismissal notes are required (minimum 10 characters)' });
+        if (!notes || notes.trim().length < 1) {
+            return res.status(400).json({ error: 'Dismissal notes are required' });
         }
 
         // Get current inquiry status for logging
