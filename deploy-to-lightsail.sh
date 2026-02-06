@@ -104,6 +104,8 @@ ssh -i "$KEY_PATH" "$USER@$HOST" << EOF
   echo "🔄 Building & Restarting services..."
   DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
   docker compose -f docker-compose.prod.yml up -d --remove-orphans
+  echo "📡 Reloading Caddy configuration..."
+  docker exec emr-caddy caddy reload --config /etc/caddy/Caddyfile || true
   
   echo "🌍 Verifying static files..."
   if [ -f static/index.html ]; then
