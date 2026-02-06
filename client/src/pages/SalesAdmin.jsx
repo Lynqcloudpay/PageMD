@@ -112,11 +112,13 @@ const SalesAdmin = () => {
     const [showCelebration, setShowCelebration] = useState(false);
     const [celebrationData, setCelebrationData] = useState(null);
 
-    // Dismiss Modal State
-    const [showDismissModal, setShowDismissModal] = useState(false);
-    const [dismissReason, setDismissReason] = useState('');
-    const [dismissNotes, setDismissNotes] = useState('');
     const [dismissLoading, setDismissLoading] = useState(false);
+
+    // Demo Outcome Modal State
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [outcomeCategory, setOutcomeCategory] = useState('undecided'); // 'converted', 'undecided', 'asking_time', 'not_interested', 'budget'
+    const [outcomeNotes, setOutcomeNotes] = useState('');
+    const [completeLoading, setCompleteLoading] = useState(false);
 
     // Reclaim Modal State
     const [showReclaimModal, setShowReclaimModal] = useState(false);
@@ -502,6 +504,40 @@ const SalesAdmin = () => {
             alert(err.message);
         } finally {
             setDismissLoading(false);
+        }
+    };
+
+    const handleCompleteDemo = async () => {
+        if (!selectedDemo || !outcomeNotes.trim()) {
+            alert('Please provide outcome notes');
+            return;
+        }
+
+        try {
+            setCompleteLoading(true);
+            const response = await authenticatedFetch(`/sales/demos/${selectedDemo.id}/complete`, {
+                method: 'POST',
+                body: JSON.stringify({ category: outcomeCategory, notes: outcomeNotes })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to complete demo');
+            }
+
+            setShowCompleteModal(false);
+            setOutcomeNotes('');
+            setSelectedDemo(null);
+
+            // Refresh
+            await fetchInquiries();
+            await fetchMasterSchedule();
+
+        } catch (err) {
+            console.error('Complete error:', err);
+            alert(err.message);
+        } finally {
+            setCompleteLoading(false);
         }
     };
 
@@ -1730,6 +1766,7 @@ const SalesAdmin = () => {
                                             const dayDemos = masterDemos
                                                 .filter(d =>
                                                     isSameDay(parseISO(d.scheduled_at), selectedDate) &&
+                                                    d.status !== 'completed' &&
                                                     (scheduleFilter === 'all' || d.owner_id === currentUser?.id || d.seller_id === currentUser?.id)
                                                 )
                                                 .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
@@ -2117,15 +2154,20 @@ const SalesAdmin = () => {
                                             <div className="flex-1 overflow-y-auto p-4 space-y-3">
                                                 {(() => {
                                                     // Separate current lead's demo from others
-                                                    const currentLeadDemo = masterDemos.find(d =>
-                                                        d.inquiry_id === selectedInquiry?.id &&
-                                                        new Date(d.scheduled_at) > new Date()
-                                                    );
+                                                    const upcomingDemosForLead = masterDemos.filter(d =>
+                                                        d.inquiry_id === selectedInquiry.id &&
+                                                        d.status !== 'declined' &&
+                                                        d.status !== 'cancelled' &&
+                                                        d.status !== 'completed'
+                                                    ).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
                                                     const otherDemos = masterDemos
                                                         .filter(d =>
                                                             new Date(d.scheduled_at) > new Date() &&
-                                                            d.id !== currentLeadDemo?.id
+                                                            d.status !== 'completed' &&
+                                                            d.status !== 'declined' &&
+                                                            d.status !== 'cancelled' &&
+                                                            !upcomingDemosForLead.some(ud => ud.id === d.id) // Exclude demos already listed for the current lead
                                                         )
                                                         .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
@@ -3174,11 +3216,19 @@ const SalesAdmin = () => {
                                                 href={getEnhancedMeetingLink(selectedDemo)}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
+                                                className="flex-[2] flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
                                             >
                                                 <Video className="w-4 h-4" />
                                                 Launch Meeting
                                             </a>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowCompleteModal(true)}
+                                                className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-100"
+                                            >
+                                                <CheckSquare className="w-4 h-4" />
+                                                Mark Done
+                                            </button>
                                             <button
                                                 type="button"
                                                 onClick={(e) => {
@@ -3335,6 +3385,87 @@ const SalesAdmin = () => {
                     </div>
                 )
             }
+
+            {/* Complete Demo Outcome Modal */}
+            {showCompleteModal && (
+                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-emerald-50">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white rounded-xl shadow-sm">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-800">Complete Appointment</h3>
+                                    <p className="text-xs text-emerald-600 font-medium">Document the outcome of the demo</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowCompleteModal(false)} className="p-2 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-400">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Outcome Category *</label>
+                                <select
+                                    value={outcomeCategory}
+                                    onChange={(e) => setOutcomeCategory(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 transition-all font-bold"
+                                >
+                                    <option value="undecided">🤔 Undecided / Thinking</option>
+                                    <option value="asking_time">⌛ Asking for more time</option>
+                                    <option value="converted">🏆 Converted / Onboarding</option>
+                                    <option value="budget">💸 Budget Constraints</option>
+                                    <option value="not_interested">🚫 Not Interested / Dead Lead</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Outcome Notes / Next Steps *</label>
+                                <textarea
+                                    value={outcomeNotes}
+                                    onChange={(e) => setOutcomeNotes(e.target.value)}
+                                    placeholder="What happened during the demo? What are the next steps?"
+                                    rows={4}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all resize-none font-medium"
+                                    autoFocus
+                                />
+                            </div>
+
+                            {outcomeCategory === 'not_interested' && (
+                                <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 flex gap-3">
+                                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                                    <p className="text-[11px] text-rose-700 leading-tight font-medium">
+                                        Selecting "Not Interested" will move this lead to Salvage. Recovery team will monitor for return visits or demo usage.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                            <button
+                                onClick={() => setShowCompleteModal(false)}
+                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 border border-slate-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCompleteDemo}
+                                disabled={completeLoading || !outcomeNotes.trim()}
+                                className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {completeLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : (
+                                    <>
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Finalize Appointment
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 🎉 Celebration Modal with Confetti */}
             {

@@ -1665,6 +1665,105 @@ router.delete('/demos/:id', verifyToken, async (req, res) => {
 });
 
 /**
+ * POST /api/sales/demos/:id/complete
+ * Mark a demo as successfully completed with outcome category
+ */
+router.post('/demos/:id/complete', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { category, notes } = req.body;
+        const adminId = req.user.id;
+
+        if (!category || !notes) {
+            return res.status(400).json({ error: 'Outcome category and notes are required' });
+        }
+
+        // 1. Get demo info
+        const demoRes = await pool.query(`
+            SELECT d.inquiry_id, i.name as lead_name, i.status as current_status
+            FROM sales_demos d
+            JOIN sales_inquiries i ON d.inquiry_id = i.id
+            WHERE d.id = $1
+        `, [id]);
+
+        if (demoRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Demo not found' });
+        }
+        const demo = demoRes.rows[0];
+
+        // 2. Update demo status
+        await pool.query(`
+            UPDATE sales_demos 
+            SET status = 'completed', 
+                outcome_category = $1, 
+                outcome_notes = $2, 
+                completed_at = NOW(),
+                updated_at = NOW()
+            WHERE id = $3
+        `, [category, notes.trim(), id]);
+
+        // 3. Update Inquiry status based on category
+        let newInquiryStatus = 'follow_up'; // Default for undecided/budget/asking_time
+        let dismissalReason = null;
+
+        if (category === 'converted') {
+            newInquiryStatus = 'converted';
+        } else if (category === 'not_interested') {
+            newInquiryStatus = 'dismissed';
+            dismissalReason = 'not_interested';
+        }
+
+        if (dismissalReason) {
+            await pool.query(`
+                UPDATE sales_inquiries
+                SET status = $1,
+                    dismissal_reason = $2,
+                    dismissal_notes = $3,
+                    dismissed_at = NOW(),
+                    dismissed_by = $4,
+                    updated_at = NOW(),
+                    is_claimed = false,
+                    owner_id = NULL
+                WHERE id = $5
+            `, [newInquiryStatus, dismissalReason, notes.trim(), adminId, demo.inquiry_id]);
+        } else {
+            await pool.query(`
+                UPDATE sales_inquiries
+                SET status = $1, updated_at = NOW()
+                WHERE id = $2
+            `, [newInquiryStatus, demo.inquiry_id]);
+        }
+
+        // 4. Log the activity
+        const labels = {
+            converted: 'Converted 🏆',
+            undecided: 'Undecided 🕒',
+            asking_time: 'Asking for Time ⌛',
+            not_interested: 'Not Interested 🚫',
+            budget: 'Budget Constraints 💸',
+            other: 'Other Outcome 📝'
+        };
+
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, admin_id, type, content, metadata)
+            VALUES ($1, $2, 'demo_complete', $3, $4)
+        `, [
+            demo.inquiry_id,
+            adminId,
+            `✅ Demo Completed - Outcome: ${labels[category] || category}`,
+            JSON.stringify({ category, notes: notes.trim(), demoId: id })
+        ]);
+
+        console.log(`[SALES] Demo #${id} marked as completed (${category}) by user ${adminId}`);
+        res.json({ success: true, newInquiryStatus });
+
+    } catch (error) {
+        console.error('Error completing demo:', error);
+        res.status(500).json({ error: 'Failed to complete demo' });
+    }
+});
+
+/**
  * POST /api/sales/demos/:id/cancel
  * Seller cancels an appointment with a reason
  */
@@ -1691,26 +1790,26 @@ router.post('/demos/:id/cancel', verifyToken, async (req, res) => {
             UPDATE sales_demos 
             SET status = 'declined', updated_at = NOW()
             WHERE id = $1
-        `, [id]);
+    `, [id]);
 
         // Update inquiry status to 'closed' and append cancellation note
         await pool.query(`
             UPDATE sales_inquiries 
-            SET status = 'closed', 
-                notes = COALESCE(notes, '') || ' [SALVAGE] ' || $2, 
-                updated_at = NOW() 
+            SET status = 'closed',
+    notes = COALESCE(notes, '') || ' [SALVAGE] ' || $2,
+    updated_at = NOW() 
             WHERE id = $1
-        `, [demo.inquiry_id, reason]);
+    `, [demo.inquiry_id, reason]);
 
         // 3. Log the cancellation
 
         // 3. Log the cancellation
         await pool.query(`
-            INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata)
-            VALUES ($1, 'demo_cancelled_seller', $2, $3)
+            INSERT INTO sales_inquiry_logs(inquiry_id, type, content, metadata)
+VALUES($1, 'demo_cancelled_seller', $2, $3)
         `, [
             demo.inquiry_id,
-            `Appointment cancelled by seller: ${reason}`,
+            `Appointment cancelled by seller: ${reason} `,
             JSON.stringify({ cancelled_by: userId, reason })
         ]);
 
@@ -1748,7 +1847,7 @@ router.delete('/inquiries/:id', verifyToken, async (req, res) => {
         // Delete inquiry
         await pool.query('DELETE FROM sales_inquiries WHERE id = $1', [id]);
 
-        console.log(`[SALES] Lead #${id} (${leadName}) PERMANENTLY DELETED by user ${adminId}`);
+        console.log(`[SALES] Lead #${id} (${leadName}) PERMANENTLY DELETED by user ${adminId} `);
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting lead:', error);
