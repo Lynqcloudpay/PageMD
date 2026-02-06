@@ -37,9 +37,12 @@ class EmailService {
     async sendPortalInvite(email, patientName, inviteLink) {
         const subject = `Welcome to PageMD Patient Portal - Invitation from your Clinic`;
         const html = `
-            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
-                <h2 style="color: #2563eb;">Hello ${patientName},</h2>
-                <p style="font-size: 16px; line-height: 1.6;">Your healthcare provider has invited you to join the PageMD Patient Portal.</p>
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="https://pagemdemr.com/logo.png" alt="PageMD" width="164" height="48" style="height: 48px; width: auto; border: 0;">
+                </div>
+                <h2 style="color: #2563eb; text-align: center;">Hello ${patientName},</h2>
+                <p style="font-size: 16px; line-height: 1.6; text-align: center;">Your healthcare provider has invited you to join the PageMD Patient Portal.</p>
                 <p style="font-size: 16px; line-height: 1.6;">Through this secure portal, you can view your health records, message your doctor, and request appointments.</p>
                 <div style="margin: 40px 0; text-align: center;">
                     <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
@@ -63,9 +66,12 @@ class EmailService {
     async sendPasswordReset(email, resetLink) {
         const subject = `PageMD Portal - Password Reset Request`;
         const html = `
-            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
-                <h2 style="color: #2563eb;">Password Reset Request</h2>
-                <p style="font-size: 16px; line-height: 1.6;">We received a request to reset your password for the PageMD Patient Portal.</p>
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="https://pagemdemr.com/logo.png" alt="PageMD" width="164" height="48" style="height: 48px; width: auto; border: 0;">
+                </div>
+                <h2 style="color: #2563eb; text-align: center;">Password Reset Request</h2>
+                <p style="font-size: 16px; line-height: 1.6; text-align: center;">We received a request to reset your password for the PageMD Patient Portal.</p>
                 <div style="margin: 40px 0; text-align: center;">
                     <a href="${resetLink}" style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
                         Reset My Password
@@ -131,7 +137,7 @@ class EmailService {
         const html = `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1e293b; line-height: 1.6; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
                 <div style="background-color: #f8fafc; padding: 32px 20px; text-align: center; border-bottom: 1px solid #f1f5f9;">
-                    <img src="${logoUrl}" alt="PageMD" style="height: 40px; width: auto;">
+                    <img src="${logoUrl}" alt="PageMD" width="137" height="40" style="height: 40px; width: auto; border: 0;">
                 </div>
                 
                 <div style="padding: 40px 32px; text-align: center;">
@@ -209,18 +215,20 @@ class EmailService {
         return this._send(email, subject, html);
     }
     /**
-     * Send Demo Invitation
-     */
-    async sendDemoInvitation(email, leadName, sellerName, date, zoomLink, confirmUrl, denyUrl) {
+    * Send Demo Invitation
+    */
+    async sendDemoInvitation(email, leadName, sellerName, date, meetingLink, confirmUrl, denyUrl) {
         const subject = `Demo Invitation: PageMD EMR with ${sellerName}`;
         const logoUrl = 'https://pagemdemr.com/logo.png';
 
         const html = `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #334155; background-color: #f8fafc; padding: 40px 20px;">
                 <div style="background-color: #ffffff; border-radius: 20px; padding: 40px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                    <div style="text-align: center; margin-bottom: 40px;">
-                        <img src="${logoUrl}" alt="PageMD" style="height: 48px; width: auto; display: block; margin: 0 auto 32px;">
-                        <h1 style="color: #0f172a; font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -0.02em;">Demo Invitation</h1>
+                    <div style="text-align: center; margin-bottom: 32px;">
+                        <a href="https://pagemdemr.com" style="text-decoration: none;">
+                            <img src="${logoUrl}" alt="PageMD" width="164" height="48" style="height: 48px; width: auto; border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic;">
+                        </a>
+                        <h1 style="color: #0f172a; font-size: 28px; font-weight: 800; margin: 24px 0 0 0; letter-spacing: -0.02em;">Demo Invitation</h1>
                         <p style="color: #64748b; font-size: 16px; margin-top: 8px;">Your interactive walkthrough is ready</p>
                     </div>
                     
@@ -241,7 +249,7 @@ class EmailService {
                             <tr>
                                 <td style="padding-bottom: 24px;">
                                     <div style="color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px;">Meeting Location</div>
-                                    <a href="${zoomLink}" style="color: #2563eb; font-size: 18px; font-weight: 700; text-decoration: none; border-bottom: 2px solid #dbeafe;">Join Video Call</a>
+                                    <a href="${meetingLink}" style="color: #2563eb; font-size: 18px; font-weight: 700; text-decoration: none; border-bottom: 2px solid #dbeafe;">Join Video Call</a>
                                 </td>
                             </tr>
                             <tr>
@@ -261,7 +269,7 @@ class EmailService {
                         </tr>
                         <tr>
                             <td align="center">
-                                <a href="${denyUrl}" style="display: block; background-color: #ffffff; color: #64748b; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: 1px solid #e2e8f0;">Reschedule Demo</a>
+                                <a href="${denyUrl}" style="display: block; background-color: #ffffff; color: #dc2626; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 16px; text-align: center; border: 1px solid #ef4444;">Decline Invitation</a>
                             </td>
                         </tr>
                     </table>

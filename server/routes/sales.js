@@ -112,6 +112,28 @@ router.post('/auth/change-password', verifyToken, async (req, res) => {
 });
 
 /**
+ * PATCH /api/sales/auth/profile
+ * Update user email and meeting link
+ */
+router.patch('/auth/profile', verifyToken, async (req, res) => {
+    try {
+        const { email, meetingLink } = req.body;
+        const userId = req.user.id;
+
+        await pool.query(`
+            UPDATE sales_team_users 
+            SET email = $1, meeting_link = $2, updated_at = NOW() 
+            WHERE id = $3
+        `, [email, meetingLink, userId]);
+
+        res.json({ success: true, message: 'Profile updated successfully' });
+    } catch (error) {
+        console.error('Profile update error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+/**
  * POST /api/sales/auth/create-user
  * Create a new sales team user (Protected)
  */
@@ -789,15 +811,25 @@ router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
         if (inquiryRes.rows.length === 0) return res.status(404).json({ error: 'Inquiry not found' });
         const lead = inquiryRes.rows[0];
 
-        const sellerRes = await pool.query('SELECT username, email, zoom_link FROM sales_team_users WHERE id = $1', [adminId]);
+        const sellerRes = await pool.query('SELECT username, email, zoom_link, meeting_link FROM sales_team_users WHERE id = $1', [adminId]);
         const seller = sellerRes.rows[0];
+
+        // 2. Determine Meeting Link (Jitsi prioritised)
+        // If seller has a personal meeting_link (Jitsi/etc) use it, otherwise use legacy zoom_link, 
+        // otherwise generate a dynamic Jitsi link.
+        let finalMeetingLink = seller.meeting_link || seller.zoom_link;
+        if (!finalMeetingLink) {
+            // Generate frictionless dynamic Jitsi room
+            const roomName = `PageMD-Demo-${id}-${Math.random().toString(36).substring(7)}`;
+            finalMeetingLink = `https://meet.jit.si/${roomName}`;
+        }
 
         // 2. Create entry in sales_demos
         const demoResult = await pool.query(`
-            INSERT INTO sales_demos (inquiry_id, seller_id, scheduled_at, notes, zoom_link, status)
+            INSERT INTO sales_demos (inquiry_id, seller_id, scheduled_at, notes, meeting_link, status)
             VALUES ($1, $2, $3, $4, $5, 'pending')
             RETURNING id
-        `, [id, adminId, date, notes, seller.zoom_link || 'https://zoom.us/j/pagemd-demo']);
+        `, [id, adminId, date, notes, finalMeetingLink]);
         const demoId = demoResult.rows[0].id;
 
         // 3. Update inquiry status
@@ -824,7 +856,7 @@ router.post('/inquiries/:id/schedule-demo', verifyToken, async (req, res) => {
             lead.name,
             seller.username,
             new Date(date).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' }),
-            seller.zoom_link || 'https://zoom.us/j/pagemd-demo',
+            finalMeetingLink,
             confirmUrl,
             denyUrl
         );
@@ -919,23 +951,35 @@ router.post('/demo-confirm', async (req, res) => {
             return res.status(400).json({ error: 'Missing demo ID or action' });
         }
 
-        const status = action === 'accept' ? 'confirmed' : 'cancelled';
+        // 1. Check current status
+        const currentRes = await pool.query('SELECT status, inquiry_id, scheduled_at FROM sales_demos WHERE id = $1', [id]);
 
-        // 1. Update sales_demos table
-        const result = await pool.query(`
-            UPDATE sales_demos 
-            SET status = $1, response_notes = $2, responded_at = NOW()
-            WHERE id = $3
-            RETURNING inquiry_id, scheduled_at
-        `, [status, notes, id]);
-
-        if (result.rows.length === 0) {
+        if (currentRes.rows.length === 0) {
             return res.status(404).json({ error: 'Demo appointment not found' });
         }
 
-        const { inquiry_id, scheduled_at } = result.rows[0];
+        const { status: currentStatus, inquiry_id, scheduled_at } = currentRes.rows[0];
 
-        // 2. Log the response
+        // Prevent re-activation of cancelled/declined demos
+        if (['declined', 'cancelled'].includes(currentStatus)) {
+            return res.status(400).json({
+                error: 'This appointment was cancelled. To reschedule, please submit a new inquiry or contact support.',
+                code: 'APPOINTMENT_CANCELLED',
+                currentStatus
+            });
+        }
+
+        // Use 'declined' for consistency with internal API
+        const status = action === 'accept' ? 'confirmed' : 'declined';
+
+        // 2. Update sales_demos table
+        await pool.query(`
+            UPDATE sales_demos 
+            SET status = $1, response_notes = $2, responded_at = NOW()
+            WHERE id = $3
+        `, [status, notes, id]);
+
+        // 3. Log the response
         await pool.query(`
             INSERT INTO sales_inquiry_logs (inquiry_id, type, content)
             VALUES ($1, 'demo_response', $2)
@@ -1313,6 +1357,27 @@ router.patch('/demos/:id/confirm', async (req, res) => {
             return res.status(400).json({ error: 'Invalid action' });
         }
 
+        // Check current status
+        const currentRes = await pool.query('SELECT status FROM sales_demos WHERE id = $1', [id]);
+        if (currentRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Demo not found' });
+        }
+
+        const currentStatus = currentRes.rows[0].status;
+
+        // Block re-confirmation/modification of Cancelled/Declined demos
+        if (['declined', 'cancelled'].includes(currentStatus)) {
+            return res.status(400).json({
+                error: 'This appointment was cancelled. To reschedule, please contact support.',
+                code: 'APPOINTMENT_CANCELLED'
+            });
+        }
+
+        // If already confirmed and trying to confirm again, just return success
+        if (currentStatus === 'confirmed' && action === 'accept') {
+            return res.json({ success: true, status: 'confirmed', message: 'Already confirmed' });
+        }
+
         const newStatus = action === 'accept' ? 'confirmed' : 'declined';
 
         // 1. Update demo status
@@ -1347,6 +1412,101 @@ router.patch('/demos/:id/confirm', async (req, res) => {
     } catch (error) {
         console.error('Error confirming demo:', error);
         res.status(500).json({ error: 'Failed to update demo status' });
+    }
+});
+
+/**
+ * DELETE /api/sales/demos/:id
+ * Delete a demo appointment (Protected)
+ */
+router.delete('/demos/:id', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // 1. Get demo details for logging
+        const demoRes = await pool.query('SELECT * FROM sales_demos WHERE id = $1', [id]);
+        if (demoRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Demo not found' });
+        }
+        const demo = demoRes.rows[0];
+
+        // 2. Delete the demo
+        await pool.query('DELETE FROM sales_demos WHERE id = $1', [id]);
+
+        // 3. Log the deletion
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata)
+            VALUES ($1, 'demo_deleted', $2, $3)
+        `, [
+            demo.inquiry_id,
+            `Demo appointment deleted by user`,
+            JSON.stringify({ deleted_by: userId, scheduled_at: demo.scheduled_at })
+        ]);
+
+        res.json({ success: true, message: 'Demo deleted successfully' });
+
+    } catch (error) {
+        console.error('Error deleting demo:', error);
+        res.status(500).json({ error: 'Failed to delete demo' });
+    }
+});
+
+/**
+ * POST /api/sales/demos/:id/cancel
+ * Seller cancels an appointment with a reason
+ */
+router.post('/demos/:id/cancel', verifyToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const userId = req.user.id;
+
+        if (!reason || !reason.trim()) {
+            return res.status(400).json({ error: 'Cancellation reason is required' });
+        }
+
+        // 1. Get demo details
+        const demoRes = await pool.query('SELECT * FROM sales_demos WHERE id = $1', [id]);
+        if (demoRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Demo not found' });
+        }
+        const demo = demoRes.rows[0];
+
+        // 2. Update status
+        // Use 'declined' status for demo (standard for negative outcome)
+        await pool.query(`
+            UPDATE sales_demos 
+            SET status = 'declined', updated_at = NOW()
+            WHERE id = $1
+        `, [id]);
+
+        // Update inquiry status to 'closed' and append cancellation note
+        await pool.query(`
+            UPDATE sales_inquiries 
+            SET status = 'closed', 
+                notes = COALESCE(notes, '') || ' [SALVAGE] ' || $2, 
+                updated_at = NOW() 
+            WHERE id = $1
+        `, [demo.inquiry_id, reason]);
+
+        // 3. Log the cancellation
+
+        // 3. Log the cancellation
+        await pool.query(`
+            INSERT INTO sales_inquiry_logs (inquiry_id, type, content, metadata)
+            VALUES ($1, 'demo_cancelled_seller', $2, $3)
+        `, [
+            demo.inquiry_id,
+            `Appointment cancelled by seller: ${reason}`,
+            JSON.stringify({ cancelled_by: userId, reason })
+        ]);
+
+        res.json({ success: true, message: 'Appointment cancelled successfully' });
+
+    } catch (error) {
+        console.error('Error cancelling demo:', error);
+        res.status(500).json({ error: 'Failed to cancel appointment' });
     }
 });
 

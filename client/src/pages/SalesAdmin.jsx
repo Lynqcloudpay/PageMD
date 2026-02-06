@@ -5,7 +5,7 @@ import {
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
-    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays
+    Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -57,6 +57,11 @@ const SalesAdmin = () => {
     // Create User Form
     const [userForm, setUserForm] = useState({ username: '', password: '', email: '' });
     const [userMsg, setUserMsg] = useState({ text: '', type: '' });
+
+    // Profile Form
+    const [profileForm, setProfileForm] = useState({ email: currentUser?.email || '', meetingLink: currentUser?.meeting_link || '' });
+    const [profileMsg, setProfileMsg] = useState({ text: '', type: '' });
+    const [profileLoading, setProfileLoading] = useState(false);
 
     // Onboard Clinic Modal State
     const [showOnboardModal, setShowOnboardModal] = useState(false);
@@ -159,9 +164,9 @@ const SalesAdmin = () => {
 
     // --- Data Fetching ---
 
-    const fetchInquiries = async () => {
+    const fetchInquiries = async (isBackground = false) => {
         try {
-            setLoading(true);
+            if (!isBackground) setLoading(true);
             setError(null);
             // Client-side filtering strategy: Fetch all, then filter in UI
             // This allows us to show counts for all categories simultaneously
@@ -177,7 +182,7 @@ const SalesAdmin = () => {
             console.error('Error fetching inquiries:', err);
             setError(err.message);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
@@ -188,7 +193,10 @@ const SalesAdmin = () => {
             if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
                 fetchTeamUsers();
             }
-            const interval = setInterval(fetchInquiries, 30000); // Poll every 30s
+            const interval = setInterval(() => {
+                fetchInquiries(true);
+                fetchMasterSchedule();
+            }, 4000); // Poll frequently for live updates
             return () => clearInterval(interval);
         }
     }, [token]);
@@ -208,6 +216,34 @@ const SalesAdmin = () => {
             }
         } catch (err) {
             console.error('Error fetching users:', err);
+        }
+    };
+
+    const handleProfileUpdate = async (e) => {
+        e.preventDefault();
+        setProfileLoading(true);
+        setProfileMsg({ text: '', type: '' });
+
+        try {
+            const response = await authenticatedFetch('/sales/auth/profile', {
+                method: 'PATCH',
+                body: JSON.stringify(profileForm)
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            setProfileMsg({ text: 'Profile updated successfully!', type: 'success' });
+
+            // Update local state
+            const updatedUser = { ...currentUser, email: profileForm.email, meeting_link: profileForm.meetingLink };
+            setCurrentUser(updatedUser);
+            sessionStorage.setItem('salesUser', JSON.stringify(updatedUser));
+
+        } catch (err) {
+            setProfileMsg({ text: err.message, type: 'error' });
+        } finally {
+            setProfileLoading(false);
         }
     };
 
@@ -513,6 +549,61 @@ const SalesAdmin = () => {
         }
     };
 
+    const handleDeleteDemo = async (demoId, requireConfirm = true) => {
+        if (requireConfirm && !confirm('Are you sure you want to permanently remove this appointment?')) return;
+
+        try {
+            const response = await authenticatedFetch(`/sales/demos/${demoId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                setMasterDemos(prev => prev.filter(d => d.id !== demoId));
+                setSelectedDemo(null);
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to delete');
+            }
+        } catch (err) {
+            console.error('Error deleting demo:', err);
+            alert('Failed to delete appointment');
+        }
+    };
+
+    const [isCancelling, setIsCancelling] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+
+    const handleCancelDemo = async (demoId) => {
+        if (!cancelReason.trim()) {
+            alert('Please provide a reason for cancellation');
+            return;
+        }
+
+        try {
+            const response = await authenticatedFetch(`/sales/demos/${demoId}/cancel`, {
+                method: 'POST',
+                body: JSON.stringify({ reason: cancelReason })
+            });
+
+            if (response.ok) {
+                alert('Appointment cancelled and moved to Salvage.');
+                setShowDemoModal(false); // Close parent
+                setSelectedDemo(null);
+                setIsCancelling(false);
+                setCancelReason('');
+                setMasterDemos(prev => prev.filter(d => d.id !== demoId));
+                // Fetch inquiries to update counts
+                await fetchInquiries();
+            } else {
+                const data = await response.json();
+                alert(data.error || 'Failed to cancel');
+            }
+        } catch (err) {
+            console.error('Error cancelling demo:', err);
+            alert('Failed to cancel appointment');
+        }
+    };
+
     const handleScheduleDemo = async (e) => {
         e.preventDefault();
         if (!demoForm.date || !demoForm.time) {
@@ -811,7 +902,7 @@ const SalesAdmin = () => {
                                 <button
                                     onClick={() => {
                                         setViewMode('pool');
-                                        setActiveCategory('pending');
+                                        setStatusFilter('new');
                                     }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'pool'
                                         ? 'bg-white text-blue-600 shadow-md transform scale-[1.02]'
@@ -821,13 +912,17 @@ const SalesAdmin = () => {
                                     <Inbox className={`w-4 h-4 ${viewMode === 'pool' ? 'text-blue-600' : 'text-slate-300'}`} />
                                     Lead Pool
                                     <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'pool' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
-                                        {inquiries.filter(i => !i.is_claimed).length}
+                                        {inquiries.filter(i => {
+                                            if (i.is_claimed) return false;
+                                            const s = (i.status || 'new').toLowerCase().trim();
+                                            return !['demo_scheduled', 'follow_up', 'converted', 'closed', 'contacted'].includes(s);
+                                        }).length}
                                     </span>
                                 </button>
                                 <button
                                     onClick={() => {
                                         setViewMode('personal');
-                                        setActiveCategory('all');
+                                        setStatusFilter(''); // Default to 'All' in Pipeline
                                     }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'personal'
                                         ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
@@ -885,12 +980,12 @@ const SalesAdmin = () => {
                                 </div>
                             )}
 
-                            {/* Sub-filters for Lead Pool */}
-                            {viewMode !== 'master' && (
+                            {/* Sub-filters for Pipeline */}
+                            {viewMode === 'personal' && (
                                 <div className="grid grid-cols-3 gap-2 mb-4">
                                     {(() => {
                                         // Calculate counts for badges
-                                        const counts = { all: 0, new: 0, contacted: 0, demo_scheduled: 0, converted: 0, closed: 0 };
+                                        const counts = { all: 0, new: 0, contacted: 0, demo_scheduled: 0, converted: 0, closed: 0, cancelled: 0 };
                                         inquiries.forEach(i => {
                                             // Check ViewMode visibility
                                             let visible = false;
@@ -903,21 +998,31 @@ const SalesAdmin = () => {
                                             counts.all++;
                                             const s = (i.status || 'new').toLowerCase().trim();
 
+                                            const isSalvage = s === 'closed' && (i.notes || '').includes('SALVAGE');
+
                                             if (['demo_scheduled'].includes(s)) counts.demo_scheduled++;
                                             else if (['converted'].includes(s)) counts.converted++;
-                                            else if (['closed'].includes(s)) counts.closed++;
+                                            else if (isSalvage) counts.cancelled++;
+                                            else if (['closed'].includes(s)) counts.closed++; // Actual closed, not salvage
                                             else if (['contacted', 'follow_up'].includes(s)) counts.contacted++;
                                             else counts.new++; // new, pending, verified, etc.
                                         });
 
-                                        return [
+                                        const filters = [
                                             { id: 'all', label: 'All', icon: Zap },
                                             { id: 'new', label: 'New', icon: Star },
                                             { id: 'contacted', label: 'Discussions', icon: MessageSquare },
                                             { id: 'demo_scheduled', label: 'Demo', icon: Calendar },
                                             { id: 'converted', label: 'Converted', icon: CheckCircle2 },
                                             { id: 'closed', label: 'Closed', icon: XCircle },
-                                        ].map(cat => (
+                                        ];
+
+                                        const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'sales_manager';
+                                        if (isAdmin) {
+                                            filters.splice(5, 0, { id: 'cancelled', label: 'Salvage', icon: Archive });
+                                        }
+
+                                        return filters.map(cat => (
                                             <button
                                                 key={cat.id}
                                                 onClick={() => setStatusFilter(cat.id === 'all' ? '' : cat.id)}
@@ -990,7 +1095,13 @@ const SalesAdmin = () => {
 
                                     const displayItems = filteredInquiries.filter(i => {
                                         // 1. View Mode Filter
+                                        const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'sales_manager';
+
                                         if (viewMode === 'pool' && i.is_claimed) return false;
+                                        // In Master/Schedule mode, enforce ownership for non-admins
+                                        if (viewMode === 'master' && !isAdmin) {
+                                            if (i.owner_id !== currentUser?.id && i.seller_id !== currentUser?.id) return false;
+                                        }
                                         if (viewMode === 'personal') {
                                             if (!i.is_claimed) return false;
                                             // Admin Logic
@@ -1014,7 +1125,12 @@ const SalesAdmin = () => {
                                         if (statusFilter === 'contacted') {
                                             return ['contacted', 'follow_up'].includes(s);
                                         }
-
+                                        if (statusFilter === 'cancelled') {
+                                            return s === 'closed' && (i.notes || '').includes('SALVAGE');
+                                        }
+                                        if (statusFilter === 'closed') {
+                                            return s === 'closed' && !(i.notes || '').includes('SALVAGE');
+                                        }
                                         return s === statusFilter;
                                     });
 
@@ -1490,13 +1606,29 @@ const SalesAdmin = () => {
                                                 ) : (
                                                     logs.filter(log => {
                                                         if (logFilter === 'all') return true;
-                                                        const userTypes = ['user_inquiry', 'return_visit', 'demo_attempt'];
-                                                        const teamTypes = ['note', 'demo_scheduled', 'status_change'];
+                                                        const userTypes = ['user_inquiry', 'return_visit', 'demo_attempt', 'demo_response'];
+                                                        const teamTypes = ['note', 'demo_scheduled', 'status_change', 'demo_cancelled_seller', 'demo_deleted'];
                                                         return logFilter === 'user' ? userTypes.includes(log.type) : teamTypes.includes(log.type);
                                                     }).map((log) => {
-                                                        const isUser = ['user_inquiry', 'return_visit', 'demo_attempt'].includes(log.type);
+                                                        const isUser = ['user_inquiry', 'return_visit', 'demo_attempt', 'demo_response'].includes(log.type)
+                                                            || (log.type === 'demo_status_change' && (log.metadata?.from === 'email_link' || log.content?.toLowerCase().includes('prospect')));
                                                         const isStatus = log.type === 'status_change';
-                                                        const isNote = log.type === 'note';
+                                                        const isCancellation = log.type === 'demo_cancelled_seller' || log.type === 'demo_deleted';
+
+                                                        // Render Cancellation Logs as Status Badges
+                                                        if (isCancellation) {
+                                                            return (
+                                                                <div key={log.id} className="flex justify-center py-2">
+                                                                    <div className="bg-red-50/50 px-3 py-1 rounded-full border border-red-100 flex items-center gap-2 text-[9px] text-red-400">
+                                                                        <span className="font-bold text-red-500">{log.admin_name || 'System'}</span>
+                                                                        <span>{log.type === 'demo_deleted' ? 'deleted appointment' : 'cancelled appointment'}</span>
+                                                                        <span className="font-bold text-red-600 border-l border-red-200 pl-2 ml-1">
+                                                                            {log.content}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
 
                                                         if (isStatus) {
                                                             return (
@@ -1602,38 +1734,46 @@ const SalesAdmin = () => {
                                                     return (
                                                         <>
                                                             {/* Current Lead's Demo (Priority) */}
-                                                            {currentLeadDemo && (
-                                                                <div
-                                                                    onClick={() => setSelectedDemo(currentLeadDemo)}
-                                                                    className="bg-blue-50/50 p-3 rounded-xl border border-blue-200 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] relative overflow-hidden mb-4"
-                                                                >
-                                                                    <div className="absolute top-0 right-0 px-2 py-0.5 bg-blue-600 text-[9px] font-bold text-white rounded-bl-lg uppercase tracking-wider">
-                                                                        Current Lead
-                                                                    </div>
-                                                                    <div className="flex items-start justify-between mb-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentLeadDemo.calendar_color }} />
-                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">{currentLeadDemo.seller_name}</span>
+                                                            {currentLeadDemo && (() => {
+                                                                const statusColor = currentLeadDemo.status === 'declined' ? 'red' : currentLeadDemo.status === 'confirmed' ? 'emerald' : 'amber';
+                                                                const statusLabel = currentLeadDemo.status === 'declined' ? 'Cancelled' : currentLeadDemo.status === 'confirmed' ? 'Confirmed' : 'Pending';
+                                                                const bgClass = currentLeadDemo.status === 'declined' ? 'bg-red-50/50 border-red-200' : currentLeadDemo.status === 'confirmed' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200';
+                                                                const textClass = currentLeadDemo.status === 'declined' ? 'text-red-700' : currentLeadDemo.status === 'confirmed' ? 'text-emerald-700' : 'text-amber-700';
+                                                                const badgeClass = currentLeadDemo.status === 'declined' ? 'bg-red-600' : currentLeadDemo.status === 'confirmed' ? 'bg-emerald-600' : 'bg-amber-500';
+
+                                                                return (
+                                                                    <div
+                                                                        onClick={() => setSelectedDemo(currentLeadDemo)}
+                                                                        className={`${bgClass} p-3 rounded-xl border shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] relative overflow-hidden mb-4`}
+                                                                    >
+                                                                        <div className={`absolute top-0 right-0 px-2 py-0.5 ${badgeClass} text-[9px] font-bold text-white rounded-bl-lg uppercase tracking-wider`}>
+                                                                            {statusLabel}
+                                                                        </div>
+                                                                        <div className="flex items-start justify-between mb-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentLeadDemo.calendar_color }} />
+                                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">{currentLeadDemo.seller_name}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="mb-1">
+                                                                            <h4 className={`font-bold ${currentLeadDemo.status === 'declined' ? 'text-slate-500 line-through' : 'text-slate-800'} text-sm leading-tight group-hover:text-blue-600 transition-colors`}>
+                                                                                {currentLeadDemo.lead_name}
+                                                                            </h4>
+                                                                            <p className="text-xs text-slate-500 font-medium">{currentLeadDemo.practice_name || 'Individual Practice'}</p>
+                                                                        </div>
+                                                                        <div className={`flex items-center gap-2 mt-2 pt-2 border-t ${currentLeadDemo.status === 'declined' ? 'border-red-100' : currentLeadDemo.status === 'confirmed' ? 'border-emerald-100' : 'border-amber-100'}`}>
+                                                                            <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
+                                                                                <Calendar className="w-3.5 h-3.5" />
+                                                                                {format(parseISO(currentLeadDemo.scheduled_at), 'MMM d')}
+                                                                            </div>
+                                                                            <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
+                                                                                <Clock className="w-3.5 h-3.5" />
+                                                                                {format(parseISO(currentLeadDemo.scheduled_at), 'h:mm a')}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                    <div className="mb-1">
-                                                                        <h4 className="font-bold text-slate-800 text-sm leading-tight group-hover:text-blue-600 transition-colors">
-                                                                            {currentLeadDemo.lead_name}
-                                                                        </h4>
-                                                                        <p className="text-xs text-slate-500 font-medium">{currentLeadDemo.practice_name || 'Individual Practice'}</p>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100">
-                                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700">
-                                                                            <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                                                                            {format(parseISO(currentLeadDemo.scheduled_at), 'MMM d')}
-                                                                        </div>
-                                                                        <div className="flex items-center gap-1.5 text-xs font-bold text-blue-700">
-                                                                            <Clock className="w-3.5 h-3.5 text-blue-500" />
-                                                                            {format(parseISO(currentLeadDemo.scheduled_at), 'h:mm a')}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            )}
+                                                                );
+                                                            })()}
 
                                                             {/* Divider if both exist */}
                                                             {currentLeadDemo && otherDemos.length > 0 && (
@@ -1645,39 +1785,42 @@ const SalesAdmin = () => {
                                                             )}
 
                                                             {/* Other Demos */}
-                                                            {otherDemos.map((demo) => (
-                                                                <div
-                                                                    key={demo.id}
-                                                                    onClick={() => setSelectedDemo(demo)}
-                                                                    className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-                                                                >
-                                                                    <div className="flex items-start justify-between mb-2">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: demo.calendar_color }} />
-                                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">{demo.seller_name}</span>
+                                                            {otherDemos.map((demo) => {
+                                                                const statusLabel = demo.status === 'declined' ? 'Cancelled' : demo.status === 'confirmed' ? 'Confirmed' : 'Pending';
+                                                                const borderClass = demo.status === 'declined' ? 'border-l-4 border-l-red-400' : demo.status === 'confirmed' ? 'border-l-4 border-l-emerald-400' : 'border-l-4 border-l-amber-400';
+
+                                                                return (
+                                                                    <div
+                                                                        key={demo.id}
+                                                                        onClick={() => setSelectedDemo(demo)}
+                                                                        className={`bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] ${borderClass} ${demo.status === 'declined' ? 'opacity-70' : ''}`}
+                                                                    >
+                                                                        <div className="flex items-start justify-between mb-2">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase ${demo.status === 'declined' ? 'bg-red-50 text-red-600' : demo.status === 'confirmed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                                                    {statusLabel}
+                                                                                </span>
+                                                                            </div>
                                                                         </div>
-                                                                        {demo.status === 'confirmed' && (
-                                                                            <span className="text-[8px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Confirmed</span>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="mb-1">
-                                                                        <h4 className="font-bold text-slate-700 text-sm leading-tight group-hover:text-blue-600 transition-colors">
-                                                                            {demo.lead_name}
-                                                                        </h4>
-                                                                        <p className="text-xs text-slate-400">{demo.practice_name || 'Individual Practice'}</p>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-50">
-                                                                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                                                                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                                                            {format(parseISO(demo.scheduled_at), 'MMM d')}
+                                                                        <div className="mb-1">
+                                                                            <h4 className={`font-bold ${demo.status === 'declined' ? 'text-slate-500 line-through' : 'text-slate-700'} text-sm leading-tight group-hover:text-blue-600 transition-colors`}>
+                                                                                {demo.lead_name}
+                                                                            </h4>
+                                                                            <p className="text-xs text-slate-400">{demo.practice_name || 'Individual Practice'}</p>
                                                                         </div>
-                                                                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                                                                            <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                                                            {format(parseISO(demo.scheduled_at), 'h:mm a')}
+                                                                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-50">
+                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                                                                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                                                                {format(parseISO(demo.scheduled_at), 'MMM d')}
+                                                                            </div>
+                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                                                                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                                                {format(parseISO(demo.scheduled_at), 'h:mm a')}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </>
                                                     );
                                                 })()}
@@ -1715,21 +1858,95 @@ const SalesAdmin = () => {
 
                         <div className="flex border-b border-slate-100 shrink-0">
                             <button
-                                onClick={() => setSettingsTab('password')}
-                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                onClick={() => setSettingsTab('profile')}
+                                className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'profile' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
                             >
-                                Change Password
+                                <div className="flex items-center justify-center gap-1.5">
+                                    <User className="w-4 h-4" />
+                                    My Profile
+                                </div>
                             </button>
                             <button
-                                onClick={() => setSettingsTab('users')}
-                                className={`flex-1 py-3 text-sm font-medium ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                onClick={() => setSettingsTab('password')}
+                                className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
                             >
-                                Team Management
+                                <div className="flex items-center justify-center gap-1.5">
+                                    <Key className="w-4 h-4" />
+                                    Security
+                                </div>
                             </button>
+                            {(currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') && (
+                                <button
+                                    onClick={() => setSettingsTab('users')}
+                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                >
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <Users className="w-4 h-4" />
+                                        Team
+                                    </div>
+                                </button>
+                            )}
                         </div>
 
                         <div className="p-6 overflow-y-auto">
-                            {settingsTab === 'password' ? (
+                            {settingsTab === 'profile' && (
+                                <form onSubmit={handleProfileUpdate} className="max-w-md mx-auto space-y-6">
+                                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 mb-6">
+                                        <div className="flex items-start gap-3">
+                                            <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                                                <Video className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-blue-900">Meeting Preferences</h4>
+                                                <p className="text-xs text-blue-700/70 mt-0.5 leading-relaxed">
+                                                    Set your personal Jitsi or Zoom link here. If left blank, PageMD will generate a secure, one-time Jitsi room for every demo.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email Address</label>
+                                            <input
+                                                type="email"
+                                                value={profileForm.email}
+                                                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
+                                                placeholder="your@email.com"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Personal Meeting Link (Optional)</label>
+                                            <input
+                                                type="url"
+                                                value={profileForm.meetingLink}
+                                                onChange={(e) => setProfileForm({ ...profileForm, meetingLink: e.target.value })}
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
+                                                placeholder="https://meet.jit.si/your-name"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {profileMsg.text && (
+                                        <div className={`text-xs font-bold p-4 rounded-xl flex items-center gap-2 ${profileMsg.type === 'error' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                            {profileMsg.type === 'error' ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                                            {profileMsg.text}
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={profileLoading}
+                                        className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
+                                    >
+                                        {profileLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+                                        Save Profile Changes
+                                    </button>
+                                </form>
+                            )}
+                            {settingsTab === 'password' && (
                                 <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
@@ -1776,7 +1993,8 @@ const SalesAdmin = () => {
                                         Update Password
                                     </button>
                                 </form>
-                            ) : (
+                            )}
+                            {settingsTab === 'users' && (
                                 <div className="space-y-8">
                                     {/* Create User */}
                                     <div className="bg-slate-50 p-5 rounded-xl">
@@ -2184,19 +2402,34 @@ const SalesAdmin = () => {
                                             masterDemos
                                                 .filter(d => isSameDay(parseISO(d.scheduled_at), parseISO(demoForm.date)))
                                                 .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
-                                                .map(demo => (
-                                                    <div key={demo.id} className="p-3 bg-white border border-slate-100 rounded-xl flex items-center gap-3 opacity-75">
-                                                        <div className="w-1.5 h-8 rounded-full bg-slate-200" style={{ backgroundColor: demo.calendar_color }} />
-                                                        <div>
-                                                            <div className="text-xs font-bold text-slate-700">
-                                                                {format(parseISO(demo.scheduled_at), 'h:mm a')}
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-500">
-                                                                {demo.seller_name} w/ {demo.lead_name}
+                                                .map(demo => {
+                                                    const isCancelled = demo.status === 'declined';
+                                                    const isConfirmed = demo.status === 'confirmed';
+
+                                                    // Status Color Logic
+                                                    let barColor = '#f59e0b'; // Default/Pending (Amber)
+                                                    if (isConfirmed) barColor = '#10b981'; // Emerald
+                                                    if (isCancelled) barColor = '#ef4444'; // Red
+
+                                                    return (
+                                                        <div key={demo.id} className={`p-3 bg-white border border-slate-100 rounded-xl flex items-center gap-3 ${isCancelled ? 'opacity-60 bg-slate-50' : ''}`}>
+                                                            <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
+                                                            <div className="min-w-0">
+                                                                <div className={`text-xs font-bold ${isCancelled ? 'text-slate-400 line-through decoration-slate-400' : 'text-slate-700'} flex items-center gap-2`}>
+                                                                    {format(parseISO(demo.scheduled_at), 'h:mm a')}
+                                                                    {isCancelled && (
+                                                                        <span className="text-[9px] font-bold text-red-500 uppercase no-underline bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
+                                                                            Cancelled
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-[10px] text-slate-500 truncate">
+                                                                    {demo.seller_name} w/ {demo.lead_name}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))
+                                                    );
+                                                })
                                         ) : (
                                             <div className="p-4 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
                                                 No existing demos. Day is wide open.
@@ -2309,42 +2542,85 @@ const SalesAdmin = () => {
 
                         <div className="p-6 space-y-6">
                             {/* Actions Bar */}
+                            {/* Actions Bar */}
                             <div className="flex gap-3">
-                                <a
-                                    href={selectedDemo.zoom_link}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
-                                >
-                                    <Video className="w-4 h-4" />
-                                    Launch Zoom
-                                </a>
-                                <button
-                                    onClick={() => {
-                                        setSelectedDemo(null);
-                                        const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
-                                        if (inq) {
-                                            setSelectedInquiry(inq);
-                                            setViewMode('personal');
-                                        }
-                                    }}
-                                    className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
-                                >
-                                    <MessageSquare className="w-4 h-4" />
-                                    View Inquiry
-                                </button>
+                                {selectedDemo.status === 'declined' ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedDemo(null);
+                                                const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
+                                                if (inq) {
+                                                    setSelectedInquiry(inq);
+                                                    setShowDemoModal(true);
+                                                }
+                                            }}
+                                            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
+                                        >
+                                            <Calendar className="w-4 h-4" />
+                                            Reschedule
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteDemo(selectedDemo.id, false);
+                                            }}
+                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
+                                        >
+                                            <XCircle className="w-4 h-4" />
+                                            Dismiss
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <a
+                                            href={selectedDemo.meeting_link}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-blue-200"
+                                        >
+                                            <Video className="w-4 h-4" />
+                                            Launch Meeting
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedDemo(null);
+                                                const inq = inquiries.find(i => i.id === selectedDemo.inquiry_id);
+                                                if (inq) {
+                                                    setSelectedInquiry(inq);
+                                                    setViewMode('personal');
+                                                }
+                                            }}
+                                            className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
+                                        >
+                                            <MessageSquare className="w-4 h-4" />
+                                            View Inquiry
+                                        </button>
+                                    </>
+                                )}
                             </div>
 
                             {/* Status Banner */}
                             <div className={`p-4 rounded-xl border flex items-center gap-3 ${selectedDemo.status === 'confirmed'
                                 ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                                : 'bg-amber-50 border-amber-100 text-amber-800'
+                                : selectedDemo.status === 'declined'
+                                    ? 'bg-red-50 border-red-100 text-red-800'
+                                    : 'bg-amber-50 border-amber-100 text-amber-800'
                                 }`}>
-                                {selectedDemo.status === 'confirmed' ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                                {selectedDemo.status === 'confirmed' ? <CheckCircle2 className="w-5 h-5" /> : selectedDemo.status === 'declined' ? <XCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
                                 <div>
-                                    <p className="text-sm font-bold uppercase tracking-wide">Status: {selectedDemo.status || 'Pending'}</p>
+                                    <p className="text-sm font-bold uppercase tracking-wide">Status: {selectedDemo.status === 'declined' ? 'Cancelled' : selectedDemo.status || 'Pending'}</p>
                                     <p className="text-xs opacity-80">
-                                        {selectedDemo.status === 'confirmed' ? 'Lead has confirmed via email.' : 'Waiting for lead confirmation.'}
+                                        {selectedDemo.status === 'confirmed'
+                                            ? 'Lead has confirmed via email.'
+                                            : selectedDemo.status === 'declined'
+                                                ? 'This appointment was cancelled.'
+                                                : 'Waiting for lead confirmation.'}
                                     </p>
                                 </div>
                             </div>
@@ -2418,6 +2694,48 @@ const SalesAdmin = () => {
                                     ID: {selectedDemo.id}
                                 </div>
                             </div>
+
+                            {/* Cancellation Section */}
+                            {selectedDemo.status !== 'cancelled' && selectedDemo.status !== 'declined' && (
+                                <div className="pt-4 border-t border-slate-100">
+                                    {!isCancelling ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCancelling(true)}
+                                            className="w-full py-3 text-red-600 font-bold hover:bg-red-50 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                                        >
+                                            <XCircle className="w-4 h-4" />
+                                            Cancel Appointment
+                                        </button>
+                                    ) : (
+                                        <div className="space-y-3 bg-red-50 p-4 rounded-xl border border-red-100 animate-in fade-in slide-in-from-bottom-2">
+                                            <h4 className="text-xs font-bold text-red-800 uppercase tracking-widest">Reason for Cancellation</h4>
+                                            <textarea
+                                                value={cancelReason}
+                                                onChange={(e) => setCancelReason(e.target.value)}
+                                                placeholder="Why is this appointment being cancelled? (Required)"
+                                                className="w-full p-3 text-sm border border-red-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white placeholder:text-red-300 text-red-900"
+                                                rows="3"
+                                            />
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => { setIsCancelling(false); setCancelReason(''); }}
+                                                    className="flex-1 py-2 bg-white border border-red-200 text-red-600 font-bold rounded-lg text-sm hover:bg-red-50"
+                                                >
+                                                    Keep Appointment
+                                                </button>
+                                                <button
+                                                    onClick={() => handleCancelDemo(selectedDemo.id)}
+                                                    disabled={!cancelReason.trim()}
+                                                    className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg text-sm hover:bg-red-700 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    Confirm Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
