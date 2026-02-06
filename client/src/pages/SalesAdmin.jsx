@@ -6,7 +6,7 @@ import {
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
     Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
-    CalendarX2, Ban, Snowflake, AlertTriangle
+    CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -112,6 +112,10 @@ const SalesAdmin = () => {
     const [showCelebration, setShowCelebration] = useState(false);
     const [celebrationData, setCelebrationData] = useState(null);
 
+    // Dismiss Modal State
+    const [showDismissModal, setShowDismissModal] = useState(false);
+    const [dismissReason, setDismissReason] = useState('');
+    const [dismissNotes, setDismissNotes] = useState('');
     const [dismissLoading, setDismissLoading] = useState(false);
 
     // Demo Outcome Modal State
