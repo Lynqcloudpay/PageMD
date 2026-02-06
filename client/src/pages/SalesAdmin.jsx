@@ -1011,7 +1011,7 @@ const SalesAdmin = () => {
                             {viewMode === 'pool' && (
                                 <div className="flex gap-2 mb-4">
                                     {(() => {
-                                        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+                                        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
                                         // Calculate verified and unverified counts
                                         const verifiedLeads = inquiries.filter(i => {
@@ -1026,8 +1026,8 @@ const SalesAdmin = () => {
                                         });
 
                                         // Check for recent activity (hot leads)
-                                        const hasHotVerified = verifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > fifteenMinutesAgo);
-                                        const hasHotUnverified = unverifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > fifteenMinutesAgo);
+                                        const hasHotVerified = verifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > oneWeekAgo);
+                                        const hasHotUnverified = unverifiedLeads.some(i => i.last_activity_at && new Date(i.last_activity_at) > oneWeekAgo);
 
                                         return (
                                             <>
@@ -1084,7 +1084,7 @@ const SalesAdmin = () => {
                                         // Calculate counts for badges
                                         const counts = { all: 0, new: 0, contacted: 0, demo_scheduled: 0, converted: 0, closed: 0, cancelled: 0 };
                                         const hotCounts = { all: false, new: false, contacted: false, demo_scheduled: false, converted: false, closed: false, cancelled: false };
-                                        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+                                        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
                                         inquiries.forEach(i => {
                                             // Check ViewMode visibility
@@ -1095,7 +1095,7 @@ const SalesAdmin = () => {
 
                                             if (!visible) return;
 
-                                            const isHot = i.last_activity_at && new Date(i.last_activity_at) > fifteenMinutesAgo;
+                                            const isHot = i.last_activity_at && new Date(i.last_activity_at) > oneWeekAgo;
 
                                             counts.all++;
                                             if (isHot) hotCounts.all = true;
@@ -1298,8 +1298,8 @@ const SalesAdmin = () => {
                                     const isHotLead = (inquiry) => {
                                         if (!inquiry.last_activity_at) return false;
                                         const lastActivity = new Date(inquiry.last_activity_at);
-                                        const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-                                        return lastActivity > fifteenMinutesAgo;
+                                        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                                        return lastActivity > oneWeekAgo;
                                     };
 
                                     const sortedItems = [...displayItems].sort((a, b) => {
@@ -1328,10 +1328,10 @@ const SalesAdmin = () => {
                                                         key={inquiry.id}
                                                         onClick={() => handleSelectInquiry(inquiry)}
                                                         className={`px-3 py-2 cursor-pointer transition-all border-l-4 flex items-center gap-3 ${selectedInquiry?.id === inquiry.id
-                                                                ? 'bg-blue-50/60 border-l-blue-500'
-                                                                : isHot
-                                                                    ? 'border-l-orange-500 bg-gradient-to-r from-orange-50 to-amber-50/50 hover:from-orange-100 hover:to-amber-100/50 animate-pulse'
-                                                                    : 'border-l-transparent hover:bg-slate-50/80'
+                                                            ? 'bg-blue-50/60 border-l-blue-500'
+                                                            : isHot
+                                                                ? 'border-l-orange-500 bg-gradient-to-r from-orange-50 to-amber-50/50 hover:from-orange-100 hover:to-amber-100/50 animate-pulse'
+                                                                : 'border-l-transparent hover:bg-slate-50/80'
                                                             }`}
                                                     >
                                                         {/* Name + Status */}
