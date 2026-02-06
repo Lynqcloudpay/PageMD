@@ -6,7 +6,7 @@ import {
     TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
     Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
-    CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare, Trophy, HelpCircle, Timer, DollarSign, Wallet, CircleDashed, UserMinus
+    CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare, Trophy, HelpCircle, Timer, DollarSign, Wallet, CircleDashed, UserMinus, RotateCcw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -128,6 +128,8 @@ const SalesAdmin = () => {
     const [showReclaimModal, setShowReclaimModal] = useState(false);
     const [reclaimNotes, setReclaimNotes] = useState('');
     const [reclaimLoading, setReclaimLoading] = useState(false);
+    const [restoreTarget, setRestoreTarget] = useState('pool'); // 'pool', 'original', 'assign'
+    const [restoreSellerId, setRestoreSellerId] = useState('');
 
     // Salvage Sub-Category Filter
     const [salvageFilter, setSalvageFilter] = useState('all'); // 'all', 'cancelled', 'closed', 'dismissed', 'cold'
@@ -147,6 +149,7 @@ const SalesAdmin = () => {
     };
 
     const baseUrl = import.meta.env.VITE_API_URL || '/api';
+    const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'sales_manager';
 
     // --- Authentication ---
 
@@ -550,9 +553,43 @@ const SalesAdmin = () => {
 
         try {
             setReclaimLoading(true);
+
+            // Calculate the previous owner ID for 'original' target
+            let previousOwnerId = null;
+            if (restoreTarget === 'original') {
+                // Priority: dismissed_by > last demo seller > claimed_by
+                if (selectedInquiry.dismissed_by) {
+                    previousOwnerId = selectedInquiry.dismissed_by;
+                } else {
+                    const lastDemo = masterDemos
+                        .filter(d => d.inquiry_id === selectedInquiry.id)
+                        .sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at))[0];
+                    if (lastDemo?.seller_id) {
+                        previousOwnerId = lastDemo.seller_id;
+                    } else if (selectedInquiry.claimed_by) {
+                        previousOwnerId = selectedInquiry.claimed_by;
+                    }
+                }
+            }
+
+            // When restoring to 'original', convert to 'assign' with explicit ID
+            // This ensures the backend doesn't have to guess
+            const effectiveTarget = (restoreTarget === 'original' && previousOwnerId) ? 'assign' : restoreTarget;
+            const effectiveSellerId = restoreTarget === 'assign' ? restoreSellerId : previousOwnerId;
+
+            const payload = {
+                notes: reclaimNotes,
+                target: effectiveTarget,
+                sellerId: effectiveSellerId
+            };
+            console.log('Sending Reclaim Request:', payload);
+
             const response = await authenticatedFetch(`/sales/inquiries/${selectedInquiry.id}/reclaim`, {
                 method: 'POST',
-                body: JSON.stringify({ notes: reclaimNotes })
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
@@ -563,13 +600,22 @@ const SalesAdmin = () => {
             // Reset modal
             setShowReclaimModal(false);
             setReclaimNotes('');
+            setRestoreTarget('pool');
+            setRestoreSellerId('');
 
             // Refresh inquiries
             await fetchInquiries();
 
-            // Move to Lead Pool view
-            setViewMode('pool');
-            setStatusFilter('verified');
+            // Move to appropriate view based on assignment
+            if (restoreTarget === 'pool') {
+                setViewMode('pool');
+                setStatusFilter('verified');
+            } else {
+                setViewMode('personal');
+                setPipelineUserFilter('all');
+            }
+
+            setSelectedInquiry(null);
         } catch (err) {
             console.error('Reclaim error:', err);
             alert(err.message);
@@ -705,9 +751,9 @@ const SalesAdmin = () => {
                 method: 'POST'
             });
             if (response.ok) {
-                // Locally clear the unread count
+                // Locally update unread count and last_viewed_at to stop pulsing immediately
                 setInquiries(prev => prev.map(inq =>
-                    inq.id === inquiryId ? { ...inq, unread_count: 0 } : inq
+                    inq.id === inquiryId ? { ...inq, unread_count: 0, last_viewed_at: new Date().toISOString() } : inq
                 ));
             }
         } catch (err) {
@@ -717,9 +763,8 @@ const SalesAdmin = () => {
 
     const handleSelectInquiry = (inquiry) => {
         setSelectedInquiry(inquiry);
-        if (parseInt(inquiry.unread_count || 0) > 0) {
-            markLeadAsViewed(inquiry.id);
-        }
+        // Always mark as viewed to update last_viewed_at and stop pulsing
+        markLeadAsViewed(inquiry.id);
     };
 
     const handleDeleteDemo = async (demoId, requireConfirm = true) => {
@@ -958,6 +1003,19 @@ const SalesAdmin = () => {
         );
     }
 
+    // Check if lead has recent activity (within 15 minutes) - "HOT" lead
+    const isHotLead = (inquiry) => {
+        if (!inquiry.last_activity_at) return false;
+        const lastActivity = new Date(inquiry.last_activity_at);
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+        // Pulse logic: MUST be recent activity AND never viewed since that activity
+        const isRecent = lastActivity > oneWeekAgo;
+        const isUnviewed = !inquiry.last_viewed_at || (new Date(inquiry.last_viewed_at) < lastActivity);
+
+        return isRecent && isUnviewed;
+    };
+
     return (
         <div className="min-h-screen bg-slate-50 relative font-figtree antialiased">
             {/* Header */}
@@ -1142,11 +1200,11 @@ const SalesAdmin = () => {
                                             if (i.dismissal_reason || s === 'dismissed') return false;
 
                                             if (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') {
-                                                if (pipelineUserFilter === 'mine') return i.owner_id === currentUser?.id;
-                                                if (pipelineUserFilter !== 'all') return i.owner_id == pipelineUserFilter;
+                                                if (pipelineUserFilter === 'mine') return i.claimed_by == currentUser?.id;
+                                                if (pipelineUserFilter !== 'all') return i.claimed_by == pipelineUserFilter;
                                                 return true; // All claimed
                                             }
-                                            return i.owner_id === currentUser?.id;
+                                            return i.claimed_by == currentUser?.id;
                                         }).length}
                                     </span>
                                 </button>
@@ -1269,11 +1327,22 @@ const SalesAdmin = () => {
                                         const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
                                         inquiries.forEach(i => {
-                                            // Check ViewMode visibility
-                                            let visible = false;
-                                            if (viewMode === 'pool') visible = !i.is_claimed;
-                                            else if (viewMode === 'personal') visible = i.is_claimed && i.owner_id === currentUser?.id;
-                                            else visible = true;
+                                            const s = (i.status || 'new').toLowerCase().trim();
+
+                                            // Check visibility using identical logic to main filter
+                                            let visible = true;
+                                            if (i.dismissal_reason || s === 'dismissed') visible = false;
+                                            else if (viewMode === 'pool') visible = !i.is_claimed;
+                                            else if (viewMode === 'salvage') visible = false; // Handled by separate logic
+                                            else if (viewMode === 'personal') {
+                                                if (!i.is_claimed) visible = false;
+                                                else if (isAdmin) {
+                                                    if (pipelineUserFilter === 'mine') visible = i.claimed_by === currentUser?.id;
+                                                    else if (pipelineUserFilter !== 'all') visible = i.claimed_by == pipelineUserFilter;
+                                                } else {
+                                                    visible = i.claimed_by === currentUser?.id;
+                                                }
+                                            }
 
                                             if (!visible) return;
 
@@ -1281,8 +1350,6 @@ const SalesAdmin = () => {
 
                                             counts.all++;
                                             if (isHot) hotCounts.all = true;
-
-                                            const s = (i.status || 'new').toLowerCase().trim();
 
                                             const isSalvage = s === 'closed' && (i.notes || '').includes('SALVAGE');
 
@@ -1364,14 +1431,13 @@ const SalesAdmin = () => {
 
                                         // Calculate salvage category counts
                                         const cancelledCount = inquiries.filter(i => {
-                                            const hasDemo = i.demo_scheduled_at;
                                             const s = (i.status || '').toLowerCase();
-                                            return hasDemo && (s === 'closed' || s === 'cancelled');
+                                            return s === 'cancelled' && !i.dismissal_reason;
                                         }).length;
 
                                         const closedCount = inquiries.filter(i => {
                                             const s = (i.status || '').toLowerCase();
-                                            return s === 'closed' && !i.demo_scheduled_at && !i.dismissal_reason;
+                                            return s === 'closed' && !i.dismissal_reason;
                                         }).length;
 
                                         const dismissedCount = inquiries.filter(i => i.dismissal_reason || i.status === 'dismissed').length;
@@ -1392,25 +1458,46 @@ const SalesAdmin = () => {
                                             { id: 'cold', label: 'Cold', count: coldCount, icon: Snowflake, color: 'blue' },
                                         ];
 
-                                        return categories.map(cat => (
-                                            <button
-                                                key={cat.id}
-                                                onClick={() => setSalvageFilter(cat.id)}
-                                                className={`px-2 py-1.5 rounded text-[9px] font-bold uppercase tracking-wide transition-all flex items-center gap-1 border ${salvageFilter === cat.id
-                                                    ? (cat.id === 'all' ? 'bg-slate-800 text-white border-slate-800' : `bg-${cat.color}-600 text-white border-${cat.color}-600`)
-                                                    : `bg-white text-slate-500 border-slate-200 hover:border-${cat.color}-300`
-                                                    }`}
-                                            >
-                                                <cat.icon className="w-3 h-3" />
-                                                {cat.label}
-                                                <span className={`ml-1 px-1 py-0.5 rounded text-[8px] ${salvageFilter === cat.id
-                                                    ? 'bg-white/20 text-white'
-                                                    : 'bg-slate-100 text-slate-400'
-                                                    }`}>
-                                                    {cat.count}
-                                                </span>
-                                            </button>
-                                        ));
+                                        return categories.map(cat => {
+                                            const hotCount = inquiries.filter(i => {
+                                                // Re-use category logic to verify it belongs here
+                                                let inCategory = false;
+                                                const s = (i.status || '').toLowerCase();
+                                                if (cat.id === 'all') {
+                                                    const isCancelled = s === 'cancelled' && !i.dismissal_reason;
+                                                    const isClosed = s === 'closed' && !i.dismissal_reason;
+                                                    const isDismissed = i.dismissal_reason || s === 'dismissed';
+                                                    const isCold = !['closed', 'converted', 'dismissed'].includes(s) && !i.dismissal_reason && (i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at)) < thirtyDaysAgo;
+                                                    inCategory = isCancelled || isClosed || isDismissed || isCold;
+                                                } else if (cat.id === 'cancelled') inCategory = s === 'cancelled' && !i.dismissal_reason;
+                                                else if (cat.id === 'closed') inCategory = s === 'closed' && !i.dismissal_reason;
+                                                else if (cat.id === 'dismissed') inCategory = i.dismissal_reason || s === 'dismissed';
+                                                else if (cat.id === 'cold') {
+                                                    inCategory = !['closed', 'converted', 'dismissed'].includes(s) && !i.dismissal_reason && (i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at)) < thirtyDaysAgo;
+                                                }
+                                                return inCategory && isHotLead(i);
+                                            }).length;
+
+                                            return (
+                                                <button
+                                                    key={cat.id}
+                                                    onClick={() => setSalvageFilter(cat.id)}
+                                                    className={`px-2 py-1.5 rounded text-[9px] font-bold uppercase tracking-wide transition-all flex items-center gap-1 border ${salvageFilter === cat.id
+                                                        ? (cat.id === 'all' ? 'bg-slate-800 text-white border-slate-800' : `bg-${cat.color}-600 text-white border-${cat.color}-600`)
+                                                        : `bg-white text-slate-500 border-slate-200 hover:border-${cat.color}-300`
+                                                        }`}
+                                                >
+                                                    <cat.icon className="w-3 h-3" />
+                                                    {cat.label}
+                                                    <span className={`ml-1 px-1 py-0.5 rounded text-[8px] flex items-center gap-1 ${hotCount > 0
+                                                        ? 'bg-orange-500 text-white animate-pulse'
+                                                        : (salvageFilter === cat.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400')
+                                                        }`}>
+                                                        {cat.count}
+                                                    </span>
+                                                </button>
+                                            );
+                                        });
                                     })()}
                                 </div>
                             )}
@@ -1461,21 +1548,21 @@ const SalesAdmin = () => {
                                     };
 
                                     const displayItems = filteredInquiries.filter(i => {
-                                        const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'sales_manager';
+
                                         const s = (i.status || 'new').toLowerCase().trim();
                                         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
                                         // 0. Salvage logic (Dedicated View)
                                         if (viewMode === 'salvage') {
                                             // Determine which sub-category this lead falls into
-                                            const isCancelledAppt = i.demo_scheduled_at && ['closed', 'cancelled'].includes(s);
-                                            const isClosedWonButNoDemo = s === 'closed' && !i.demo_scheduled_at && !i.dismissal_reason;
+                                            const isCancelledStatus = s === 'cancelled' && !i.dismissal_reason;
+                                            const isClosedStatus = s === 'closed' && !i.dismissal_reason;
                                             const isManuallyDismissed = i.dismissal_reason || s === 'dismissed';
                                             const isColdLead = !['closed', 'converted', 'dismissed'].includes(s) && !i.dismissal_reason && (i.last_activity_at ? new Date(i.last_activity_at) : new Date(i.created_at)) < thirtyDaysAgo;
 
-                                            if (salvageFilter === 'all') return isCancelledAppt || isClosedWonButNoDemo || isManuallyDismissed || isColdLead;
-                                            if (salvageFilter === 'cancelled') return isCancelledAppt;
-                                            if (salvageFilter === 'closed') return isClosedWonButNoDemo;
+                                            if (salvageFilter === 'all') return isCancelledStatus || isClosedStatus || isManuallyDismissed || isColdLead;
+                                            if (salvageFilter === 'cancelled') return isCancelledStatus;
+                                            if (salvageFilter === 'closed') return isClosedStatus;
                                             if (salvageFilter === 'dismissed') return isManuallyDismissed;
                                             if (salvageFilter === 'cold') return isColdLead;
                                             return false;
@@ -1487,15 +1574,15 @@ const SalesAdmin = () => {
                                         // 2. View Mode Filter
                                         if (viewMode === 'pool' && i.is_claimed) return false;
                                         if (viewMode === 'master' && !isAdmin) {
-                                            if (i.owner_id !== currentUser?.id && i.seller_id !== currentUser?.id) return false;
+                                            if (i.claimed_by !== currentUser?.id && i.seller_id !== currentUser?.id) return false;
                                         }
                                         if (viewMode === 'personal') {
                                             if (!i.is_claimed) return false;
                                             if (isAdmin) {
-                                                if (pipelineUserFilter === 'mine' && i.owner_id !== currentUser?.id) return false;
-                                                if (pipelineUserFilter !== 'all' && pipelineUserFilter !== 'mine' && i.owner_id != pipelineUserFilter) return false;
+                                                if (pipelineUserFilter === 'mine' && i.claimed_by !== currentUser?.id) return false;
+                                                if (pipelineUserFilter !== 'all' && pipelineUserFilter !== 'mine' && i.claimed_by != pipelineUserFilter) return false;
                                             } else {
-                                                if (i.owner_id !== currentUser?.id) return false;
+                                                if (i.claimed_by !== currentUser?.id) return false;
                                             }
                                         }
 
@@ -1544,13 +1631,7 @@ const SalesAdmin = () => {
                                         return 3; // Default to middle priority for unknown statuses
                                     };
 
-                                    // Check if lead has recent activity (within 15 minutes) - "HOT" lead
-                                    const isHotLead = (inquiry) => {
-                                        if (!inquiry.last_activity_at) return false;
-                                        const lastActivity = new Date(inquiry.last_activity_at);
-                                        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                                        return lastActivity > oneWeekAgo;
-                                    };
+
 
                                     const sortedItems = [...displayItems].sort((a, b) => {
                                         // Hot leads ALWAYS float to the top
@@ -1714,7 +1795,7 @@ const SalesAdmin = () => {
                                                     const isCurrentMonth = isSameMonth(day, currentMonth);
                                                     const hasDemos = masterDemos.some(d =>
                                                         isSameDay(parseISO(d.scheduled_at), day) &&
-                                                        (scheduleFilter === 'all' || d.owner_id === currentUser?.id)
+                                                        (scheduleFilter === 'all' || d.seller_id === currentUser?.id)
                                                     );
 
                                                     return (
@@ -1771,7 +1852,7 @@ const SalesAdmin = () => {
                                                 .filter(d =>
                                                     isSameDay(parseISO(d.scheduled_at), selectedDate) &&
                                                     d.status !== 'completed' &&
-                                                    (scheduleFilter === 'all' || d.owner_id === currentUser?.id || d.seller_id === currentUser?.id)
+                                                    (scheduleFilter === 'all' || d.seller_id === currentUser?.id)
                                                 )
                                                 .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
 
@@ -1881,7 +1962,14 @@ const SalesAdmin = () => {
                                                     </div>
                                                     <select
                                                         value={selectedInquiry.status || 'new'}
-                                                        onChange={(e) => updateInquiryStatus(selectedInquiry.id, e.target.value)}
+                                                        onChange={(e) => {
+                                                            const newValue = e.target.value;
+                                                            if (newValue === 'closed' || newValue === 'cancelled') {
+                                                                setShowDismissModal(true);
+                                                                return;
+                                                            }
+                                                            updateInquiryStatus(selectedInquiry.id, newValue);
+                                                        }}
                                                         disabled={updating || selectedInquiry.status === 'converted'}
                                                         className={`appearance-none pl-8 pr-8 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg border cursor-pointer focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm ${selectedInquiry.status === 'converted'
                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -1901,7 +1989,22 @@ const SalesAdmin = () => {
 
                                         {/* Actions Bar */}
                                         <div className="flex flex-wrap items-center gap-3">
-                                            {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && (
+                                            {(selectedInquiry.status === 'closed' || selectedInquiry.status === 'cancelled' || selectedInquiry.dismissal_reason) && (
+                                                <button
+                                                    onClick={() => {
+                                                        const lastDemo = masterDemos.filter(d => d.inquiry_id === selectedInquiry.id).sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at))[0];
+                                                        // Fix: proper parentheses for ternary - check if there's a previous owner, then set to 'original', else 'pool'
+                                                        const hasPreviousOwner = selectedInquiry.claimed_by || lastDemo || selectedInquiry.dismissed_by;
+                                                        setRestoreTarget(hasPreviousOwner ? 'original' : 'pool');
+                                                        setShowReclaimModal(true);
+                                                    }}
+                                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-100 group"
+                                                >
+                                                    <RotateCcw className="w-4 h-4 group-hover:rotate-[-45deg] transition-transform" />
+                                                    Restore Lead
+                                                </button>
+                                            )}
+                                            {selectedInquiry.status !== 'converted' && selectedInquiry.status !== 'closed' && selectedInquiry.status !== 'cancelled' && !selectedInquiry.dismissal_reason && (
                                                 <>
                                                     {selectedInquiry.is_claimed ? (
                                                         <>
@@ -2055,8 +2158,8 @@ const SalesAdmin = () => {
                                                     logs.filter(log => {
                                                         if (logFilter === 'all') return true;
                                                         const userTypes = ['user_inquiry', 'return_visit', 'demo_attempt', 'demo_response'];
-                                                        const teamTypes = ['note', 'demo_scheduled', 'status_change', 'demo_cancelled_seller', 'demo_deleted'];
-                                                        return logFilter === 'user' ? userTypes.includes(log.type) : teamTypes.includes(log.type);
+                                                        const teamTypes = ['note', 'demo_scheduled', 'status_change', 'demo_cancelled_seller', 'demo_deleted', 'demo_complete'];
+                                                        return logFilter === 'all' ? true : (logFilter === 'user' ? userTypes.includes(log.type) : teamTypes.includes(log.type));
                                                     }).map((log) => {
                                                         const isUser = ['user_inquiry', 'return_visit', 'demo_attempt', 'demo_response'].includes(log.type)
                                                             || (log.type === 'demo_status_change' && (log.metadata?.from === 'email_link' || log.content?.toLowerCase().includes('prospect')));
@@ -2096,7 +2199,14 @@ const SalesAdmin = () => {
                                                                     ? 'bg-white border-slate-100 text-slate-600 rounded-tl-sm'
                                                                     : 'bg-blue-600 border-blue-600 text-white rounded-tr-sm shadow-blue-500/20'
                                                                     }`}>
-                                                                    {log.content}
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <div className="font-bold mb-0.5">{log.content}</div>
+                                                                        {log.metadata?.notes && (
+                                                                            <div className={`mt-1 pt-1 border-t ${isUser ? 'border-slate-100 text-slate-500' : 'border-blue-500/30 text-blue-50'} italic whitespace-pre-wrap`}>
+                                                                                "{log.metadata.notes}"
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                                 <div className="flex items-center gap-1.5 px-1 opacity-60">
                                                                     {log.type === 'demo_scheduled' && <CalendarCheck className="w-3 h-3 text-indigo-500" />}
@@ -2920,33 +3030,89 @@ const SalesAdmin = () => {
                                     <RefreshCw className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800">Send to Lead Pool</h3>
-                                    <p className="text-xs text-emerald-600 font-medium tracking-tight">Re-inserting into active pipeline</p>
+                                    <h3 className="font-bold text-slate-800">Restore Lead</h3>
+                                    <p className="text-xs text-emerald-600 font-medium tracking-tight">Recovering lead from salvage</p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowReclaimModal(false)} className="p-2 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-400">
+                            <button onClick={() => { setShowReclaimModal(false); setRestoreTarget('pool'); setRestoreSellerId(''); }} className="p-2 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-400">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                             <div className="bg-emerald-50/50 p-4 rounded-xl border border-emerald-100 flex gap-3">
                                 <AlertTriangle className="w-5 h-5 text-emerald-600 shrink-0" />
                                 <p className="text-xs text-emerald-700 leading-relaxed font-medium">
-                                    The salvage team is moving this lead back to the main pool. Please document the reason so the next owner has the full context.
+                                    Document the reason for restoring this lead so the next owner has context.
                                 </p>
                             </div>
 
+                            <div className="space-y-3">
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Restoration Target</label>
+                                <div className="space-y-2">
+                                    {[
+                                        { id: 'pool', label: 'Return to Lead Pool', desc: 'Allows anyone to claim' },
+                                        {
+                                            id: 'original', label: 'Return to Previous Owner', desc: (() => {
+                                                const lastDemo = masterDemos.filter(d => d.inquiry_id === selectedInquiry.id).sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at))[0];
+                                                const owner = selectedInquiry.claimed_by
+                                                    ? teamUsers.find(u => u.id === selectedInquiry.claimed_by)?.username
+                                                    : (lastDemo?.seller_name || (selectedInquiry.dismissed_by ? teamUsers.find(u => u.id === selectedInquiry.dismissed_by)?.username : null));
+                                                return owner ? `Assign back to ${owner}` : 'Not available';
+                                            })()
+                                        },
+                                        { id: 'assign', label: 'Assign to Specific Seller', desc: 'Pick a team member' }
+                                    ].map(opt => {
+                                        const isDisabled = opt.id === 'original' && !selectedInquiry.claimed_by && !masterDemos.some(d => d.inquiry_id === selectedInquiry.id) && !selectedInquiry.dismissed_by;
+                                        return (
+                                            <button
+                                                key={opt.id}
+                                                disabled={isDisabled}
+                                                onClick={() => setRestoreTarget(opt.id)}
+                                                className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''} ${restoreTarget === opt.id
+                                                    ? 'bg-emerald-50 border-emerald-200 ring-2 ring-emerald-500/10'
+                                                    : 'bg-white border-slate-100 hover:bg-slate-50'
+                                                    }`}
+                                            >
+                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${restoreTarget === opt.id ? 'border-emerald-500 bg-emerald-500' : 'border-slate-200'}`}>
+                                                    {restoreTarget === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                                </div>
+                                                <div>
+                                                    <div className={`text-xs font-bold ${restoreTarget === opt.id ? 'text-emerald-900' : 'text-slate-700'}`}>{opt.label}</div>
+                                                    <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {restoreTarget === 'assign' && (
+                                <div className="animate-in slide-in-from-top-2 duration-300">
+                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Select Team Member</label>
+                                    <select
+                                        value={restoreSellerId}
+                                        onChange={(e) => setRestoreSellerId(e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all font-bold text-sm"
+                                    >
+                                        <option value="">Choose seller...</option>
+                                        {teamUsers.map(u => (
+                                            <option key={u.id} value={u.id}>{u.username} ({u.role})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-                                    Reclaim Reason / Internal Note *
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                                    Contextual Internal Note *
                                 </label>
                                 <textarea
                                     value={reclaimNotes}
                                     onChange={(e) => setReclaimNotes(e.target.value)}
-                                    placeholder="Explain why this lead should be remanaged..."
-                                    rows={4}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all resize-none font-medium"
+                                    placeholder="Explain why this lead is being remanaged..."
+                                    rows={3}
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all resize-none font-medium text-sm"
                                     autoFocus
                                 />
                             </div>
@@ -2954,22 +3120,26 @@ const SalesAdmin = () => {
 
                         <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
                             <button
-                                onClick={() => setShowReclaimModal(false)}
-                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 border border-slate-200 transition-colors"
+                                onClick={() => {
+                                    setShowReclaimModal(false);
+                                    setRestoreTarget('pool');
+                                    setRestoreSellerId('');
+                                }}
+                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 border border-slate-200 transition-colors text-sm"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleReclaimLead}
-                                disabled={reclaimLoading || !reclaimNotes.trim()}
-                                className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                                disabled={reclaimLoading || !reclaimNotes.trim() || (restoreTarget === 'assign' && !restoreSellerId)}
+                                className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
                             >
                                 {reclaimLoading ? (
                                     <RefreshCw className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
                                         <Database className="w-4 h-4" />
-                                        Confirm Re-insertion
+                                        Complete Restoration
                                     </>
                                 )}
                             </button>

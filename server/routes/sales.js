@@ -905,8 +905,18 @@ router.post('/inquiries/:id/dismiss', verifyToken, async (req, res) => {
 router.post('/inquiries/:id/reclaim', verifyToken, async (req, res) => {
     try {
         const { id } = req.params;
-        const { notes } = req.body;
+
+        // CRITICAL DEBUG: Log the raw request body
+        console.log('[SALES][RECLAIM] ========== RECLAIM REQUEST RECEIVED ==========');
+        console.log('[SALES][RECLAIM] Raw req.body:', JSON.stringify(req.body, null, 2));
+        console.log('[SALES][RECLAIM] req.body.target:', req.body.target, '| Type:', typeof req.body.target);
+        console.log('[SALES][RECLAIM] req.body.sellerId:', req.body.sellerId, '| Type:', typeof req.body.sellerId);
+        console.log('[SALES][RECLAIM] req.body.notes:', req.body.notes?.substring(0, 50));
+
+        const { notes, target = 'pool', sellerId } = req.body;
         const adminId = req.user.id;
+
+        console.log('[SALES][RECLAIM] After destructuring - target:', target, '| sellerId:', sellerId);
 
         if (!notes || notes.trim().length < 1) {
             return res.status(400).json({ error: 'Reclaim notes are required' });
@@ -914,7 +924,7 @@ router.post('/inquiries/:id/reclaim', verifyToken, async (req, res) => {
 
         // Get current inquiry
         const currentRes = await pool.query(
-            'SELECT name, email, status, dismissal_reason, email_verified FROM sales_inquiries WHERE id = $1',
+            'SELECT name, email, status, dismissal_reason, email_verified, claimed_by, dismissed_by FROM sales_inquiries WHERE id = $1',
             [id]
         );
         if (currentRes.rows.length === 0) {
@@ -925,19 +935,74 @@ router.post('/inquiries/:id/reclaim', verifyToken, async (req, res) => {
         // Determine new status based on verification
         const newStatus = inquiry.email_verified ? 'verified' : 'new';
 
-        // Clear dismissal and move back to pool
+        // Determine assignment logic
+        let finalSellerId = null;
+        let isClaimed = false;
+
+        if (target === 'assign') {
+            if (!sellerId) {
+                return res.status(400).json({ error: 'Seller ID is required for assignment' });
+            }
+            finalSellerId = sellerId;
+            isClaimed = true;
+        } else if (target === 'original') {
+            // Priority 1: Current claimed_by (if not null)
+            if (inquiry.claimed_by) {
+                finalSellerId = inquiry.claimed_by;
+                isClaimed = true;
+            } else {
+                // Priority 2: Last seller from demos
+                const lastDemoRes = await pool.query(`
+                    SELECT seller_id FROM sales_demos 
+                    WHERE inquiry_id = $1 
+                    ORDER BY scheduled_at DESC LIMIT 1
+                `, [id]);
+
+                if (lastDemoRes.rows.length > 0) {
+                    finalSellerId = lastDemoRes.rows[0].seller_id;
+                    isClaimed = true;
+                } else if (inquiry.dismissed_by) {
+                    // Priority 3: Person who dismissed it
+                    finalSellerId = inquiry.dismissed_by;
+                    isClaimed = true;
+                }
+            }
+
+            if (!isClaimed) {
+                return res.status(400).json({
+                    error: 'Previous owner could not be determined. Please assign to a specific seller manually.',
+                    debug: { claimed_by: inquiry.claimed_by, dismissed_by: inquiry.dismissed_by }
+                });
+            }
+        } else {
+            // Pool target (implicit, but explicit for clarity)
+            finalSellerId = null;
+            isClaimed = false;
+        }
+
+        console.log('[SALES] Reclaim Lead:', {
+            id,
+            target,
+            requestSellerId: sellerId,
+            resolvedSellerId: finalSellerId,
+            isClaimed
+        });
+
+        // Clear dismissal and move back
         const result = await pool.query(`
             UPDATE sales_inquiries
             SET status = $1,
+                claimed_by = $2,
+                is_claimed = $3,
                 dismissal_reason = NULL,
                 dismissal_notes = NULL,
                 dismissed_at = NULL,
                 dismissed_by = NULL,
                 updated_at = NOW(),
                 last_activity_at = NOW()
-            WHERE id = $2
+            WHERE id = $4
             RETURNING *
-        `, [newStatus, id]);
+        `, [newStatus, finalSellerId, isClaimed, id]);
 
         // Log the reclaim
         await pool.query(`
