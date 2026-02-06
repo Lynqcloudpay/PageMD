@@ -19,7 +19,38 @@ router.post('/provision', async (req, res) => {
 
     let client;
     try {
+        const { leadId } = req.body;
         console.log(`[Sandbox] Provisioning new demo: ${schemaName}`);
+
+        // Log the activity if linked to a lead
+        if (leadId) {
+            try {
+                const leadRes = await pool.controlPool.query(
+                    'SELECT id FROM sales_inquiries WHERE uuid = $1 OR id::text = $1',
+                    [leadId]
+                );
+
+                if (leadRes.rows.length > 0) {
+                    const inquiryId = leadRes.rows[0].id;
+                    await pool.controlPool.query(
+                        `INSERT INTO sales_inquiry_logs (inquiry_id, type, content) 
+                         VALUES ($1, 'system', 'User launched Sandbox Demo environment')`,
+                        [inquiryId]
+                    );
+
+                    // Update last activity
+                    await pool.controlPool.query(
+                        'UPDATE sales_inquiries SET last_activity_at = NOW() WHERE id = $1',
+                        [inquiryId]
+                    );
+
+                    console.log(`[Sandbox] Associated demo launch with lead ${inquiryId}`);
+                }
+            } catch (logErr) {
+                console.error('[Sandbox] Failed to log lead activity', logErr);
+            }
+        }
+
         client = await pool.controlPool.connect();
 
         await client.query('BEGIN');

@@ -237,6 +237,9 @@ const SalesAdmin = () => {
             const interval = setInterval(() => {
                 fetchInquiries(true);
                 fetchMasterSchedule();
+                if (selectedInquiry) {
+                    fetchLogs(selectedInquiry.id);
+                }
             }, 4000); // Poll frequently for live updates
             return () => clearInterval(interval);
         }
@@ -1200,7 +1203,7 @@ const SalesAdmin = () => {
                                 <button
                                     onClick={() => {
                                         setViewMode('personal');
-                                        setStatusFilter(''); // Default to 'All' in Pipeline
+                                        setStatusFilter('new'); // Default to 'New' instead of 'All' in Pipeline
                                     }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'personal'
                                         ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'

@@ -127,7 +127,8 @@ const LandingPage = () => {
             const baseUrl = import.meta.env.VITE_API_URL || '/api';
             const res = await fetch(`${baseUrl}/auth/sandbox/provision`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ leadId: getLeadCookie('pagemd_lead_id') })
             });
 
             if (!res.ok) {
