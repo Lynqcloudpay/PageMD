@@ -192,6 +192,37 @@ router.post('/invite', async (req, res) => {
 
         console.log(`[Growth] Dynamic invitation sent to ${email} (token: ${token}) from clinic ${clinicId}`);
 
+        // 4. Auto-Create Lead in Sales Pool
+        try {
+            // Check for existing lead
+            const existingLead = await pool.controlPool.query(
+                'SELECT id FROM sales_inquiries WHERE LOWER(email) = LOWER($1)',
+                [email]
+            );
+
+            if (existingLead.rows.length === 0) {
+                // Fetch referrer's referral code to link it properly
+                // (Assumes the clinic sending the invite IS the referrer)
+                // We'll try to get it from practice_settings or clinics table if widely available, 
+                // but for now, we'll just populate the token which is the critical link.
+
+                await pool.controlPool.query(`
+                    INSERT INTO sales_inquiries (
+                        name, email, source, interest_type, status, 
+                        referral_token, created_at, last_activity_at
+                    ) VALUES ($1, $2, 'Clinic_Referral', 'referral_invite', 'new', $3, NOW(), NOW())
+                `, [name, email, token]);
+
+                console.log(`[Growth] Auto-created lead in sales pool for ${email}`);
+            } else {
+                console.log(`[Growth] Lead already exists for ${email}, skipping auto-creation.`);
+            }
+        } catch (leadError) {
+            console.error('[Growth] Failed to auto-create lead:', leadError);
+            // Don't fail the request, just log it
+        }
+
+
         res.json({
             success: true,
             message: emailSent ? 'Invitation sent' : 'Invitation recorded (email failed to send)',

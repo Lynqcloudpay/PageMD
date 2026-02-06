@@ -433,6 +433,19 @@ router.post('/verify-code', async (req, res) => {
 
         console.log(`[SALES] Inquiry #${inquiry.id} verified via code for ${inquiry.email}`);
 
+        // 3b. Activate Referral Credit (if applicable)
+        if (inquiry.referral_token) {
+            await pool.query(`
+                UPDATE public.clinic_referrals 
+                SET status = 'active', 
+                    signed_up_at = NOW(), 
+                    updated_at = NOW()
+                WHERE token = $1 AND status = 'pending'
+            `, [inquiry.referral_token]);
+            console.log(`[SALES] Activated referral for ${inquiry.email} (Token: ${inquiry.referral_token})`);
+        }
+
+
         // 4. Provision sandbox
         const crypto = require('crypto');
         const tenantSchemaSQL = require('../config/tenantSchema');
@@ -564,6 +577,19 @@ router.get('/verify/:token', async (req, res) => {
         );
 
         console.log(`[SALES] Inquiry #${inquiry.id} verified for ${inquiry.email}`);
+
+        // 4b. Activate Referral Credit (if applicable)
+        if (inquiry.referral_token) {
+            await pool.query(`
+                UPDATE public.clinic_referrals 
+                SET status = 'active', 
+                    signed_up_at = NOW(), 
+                    updated_at = NOW()
+                WHERE token = $1 AND status = 'pending'
+            `, [inquiry.referral_token]);
+            console.log(`[SALES] Activated referral for ${inquiry.email} (Token: ${inquiry.referral_token})`);
+        }
+
 
         // 5. Provision sandbox (import sandboxAuth logic)
         const crypto = require('crypto');
