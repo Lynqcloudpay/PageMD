@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Send, X, AlertCircle, Clock, ShieldCheck } from 'lucide-react';
+import { Send, X, AlertCircle, Clock, ShieldCheck, Mail } from 'lucide-react';
 import Modal from './ui/Modal';
 import { inboxAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
@@ -8,7 +8,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
     const [body, setBody] = useState('');
     const [subject, setSubject] = useState(`Message from ${currentUser?.first_name || 'your provider'}`);
     const [priority, setPriority] = useState('normal'); // 'normal', 'urgent'
-    const [notifyPatient, setNotifyPatient] = useState(false); // Default to false (save cost/spam)
+    const [notifyPatient, setNotifyPatient] = useState(false);
     const [sending, setSending] = useState(false);
 
     if (!patient) return null;
@@ -48,147 +48,126 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Send Secure Message"
-            size="md"
-        >
-            <div className="space-y-6">
-                {/* Patient Context */}
-                <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-200 font-bold text-lg">
-                        {patient.first_name?.[0]}{patient.last_name?.[0]}
-                    </div>
-                    <div className="flex-1">
-                        <h4 className="text-base font-bold text-slate-900">{patient.first_name} {patient.last_name}</h4>
-                        <p className="text-xs text-blue-600 font-medium">To: {patient.email || <span className="text-red-500 italic">No email on file</span>}</p>
-                    </div>
-                    {patient.email && (
-                        <div className="flex items-center gap-1.5 px-3 py-1 bg-white border border-blue-100 rounded-full text-[10px] font-bold text-blue-700 shadow-sm">
-                            <ShieldCheck size={12} />
-                            SECURE
-                        </div>
-                    )}
+            title={
+                <div className="flex items-center gap-2">
+                    <ShieldCheck size={18} className="text-blue-600" />
+                    <span>New Secure Message</span>
                 </div>
-
-                {!patient.email && (
-                    <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
-                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                        <div>
-                            <p className="font-bold mb-1">Missing Email Address</p>
-                            <p>You cannot send a portal message without a valid email address on file. Please update the patient's demographics first.</p>
+            }
+            size="lg" // Widen the modal slightly to allow side-by-side layout if needed
+        >
+            <div className="flex flex-col h-full gap-4">
+                {/* Header Context - Compact */}
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                            {patient.first_name?.[0]}{patient.last_name?.[0]}
                         </div>
-                    </div>
-                )}
-
-                {/* Message Fields */}
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Subject</label>
-                        <input
-                            type="text"
-                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium"
-                            placeholder="Message Subject..."
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                            disabled={sending}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Message Body</label>
-                        <textarea
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all min-h-[160px] resize-none"
-                            placeholder="Type your secure message/reminder to the patient here..."
-                            value={body}
-                            onChange={(e) => setBody(e.target.value)}
-                            disabled={sending}
-                        />
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Priority</label>
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setPriority('normal')}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${priority === 'normal'
-                                        ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    Normal
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setPriority('urgent')}
-                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${priority === 'urgent'
-                                        ? 'bg-red-50 border-red-200 text-red-700'
-                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    Urgent
-                                </button>
+                        <div>
+                            <h4 className="text-sm font-bold text-slate-900 leading-tight">{patient.first_name} {patient.last_name}</h4>
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium h-4">
+                                {patient.email || <span className="text-red-500 italic">No email on file</span>}
                             </div>
                         </div>
                     </div>
-                </div>
-
-                {/* Notification Options */}
-                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <div className="relative flex items-center">
-                        <input
-                            type="checkbox"
-                            role="checkbox"
-                            checked={notifyPatient}
-                            onChange={(e) => setNotifyPatient(e.target.checked)}
-                            className="w-5 h-5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-                        />
+                    {/* Priority Toggle - Compact */}
+                    <div className="flex p-1 bg-white border border-slate-200 rounded-lg">
+                        <button
+                            type="button"
+                            onClick={() => setPriority('normal')}
+                            className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${priority === 'normal'
+                                ? 'bg-blue-50 text-blue-700 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                        >
+                            Normal
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPriority('urgent')}
+                            className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${priority === 'urgent'
+                                ? 'bg-red-50 text-red-700 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                        >
+                            Urgent
+                        </button>
                     </div>
-                    <div>
-                        <p className="text-sm font-bold text-slate-700">Send Email Notification</p>
-                        <p className="text-[10px] text-slate-500">Uncheck to send message silently to portal only.</p>
+                </div>
+
+                {!patient.email && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs text-red-700">
+                        <AlertCircle size={14} />
+                        <span className="font-medium">Cannot send message: No email address on file.</span>
                     </div>
-                </div>
+                )}
 
-                {/* Privacy Note */}
-                <div className="flex items-start gap-2.5 px-4 py-3 bg-blue-50/50 border border-blue-100 rounded-xl text-[11px] text-blue-600/80 italic">
-                    <Clock size={16} className="text-blue-400 shrink-0 mt-0.5" />
-                    <span>
-                        {notifyPatient
-                            ? "Patient will receive an email notification and can view this message in the secure portal."
-                            : "Patient will NOT receive an email. They will see this message next time they log in."}
-                    </span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-2">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                {/* Input Fields */}
+                <div className="space-y-3 flex-1 flex flex-col">
+                    <input
+                        type="text"
+                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        placeholder="Subject"
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
                         disabled={sending}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSend}
-                        disabled={sending || !patient.email || !body.trim()}
-                        className={`flex-2 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 shadow-lg ${sending || !patient.email || !body.trim()
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20 active:scale-95'
-                            }`}
-                    >
-                        {sending ? (
-                            <>
-                                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                                Sending...
-                            </>
-                        ) : (
-                            <>
-                                <Send size={16} />
-                                Send Message
-                            </>
-                        )}
-                    </button>
+                    />
+
+                    <textarea
+                        className="w-full flex-1 p-4 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm min-h-[200px]"
+                        placeholder="Type your secure message here..."
+                        value={body}
+                        onChange={(e) => setBody(e.target.value)}
+                        disabled={sending}
+                    />
+                </div>
+
+                {/* Footer Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-4">
+                    {/* Notification Toggle - Compact Switch Style */}
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={notifyPatient}
+                                onChange={(e) => setNotifyPatient(e.target.checked)}
+                                disabled={!patient.email}
+                            />
+                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className={`text-xs font-bold ${notifyPatient ? 'text-blue-700' : 'text-slate-500'}`}>Email Notification</span>
+                            <span className="text-[9px] text-slate-400">
+                                {notifyPatient ? 'Patient will be emailed' : 'Silent (Portal only)'}
+                            </span>
+                        </div>
+                    </label>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
+                            disabled={sending}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSend}
+                            disabled={sending || !patient.email || !body.trim()}
+                            className={`px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-wider text-white shadow-md transition-all flex items-center gap-2 ${sending || !patient.email || !body.trim()
+                                    ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                                    : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg active:scale-95'
+                                }`}
+                        >
+                            {sending ? 'Sending...' : (
+                                <>
+                                    <Send size={14} />
+                                    Send now
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </Modal>
