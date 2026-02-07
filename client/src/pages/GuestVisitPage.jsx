@@ -176,11 +176,46 @@ const GuestVisitPage = () => {
     };
 
     const handleLeaveCall = useCallback((reason) => {
-        // If called by onClick, reason will be the event object
+        // If called by onClick, reason will be the event object. Default to 'completed'.
         const finalReason = typeof reason === 'string' ? reason : 'completed';
+        console.log(`[Guest Access] Leaving session with reason: ${finalReason}`);
+
+        // Use functional updates to ensure we are working with the latest state
         setRoomUrl(null);
         setStatus(finalReason);
     }, []);
+
+    // PROACTIVE POLLING: Sync status changes (Provider ending visit or early window opening)
+    useEffect(() => {
+        if (status !== 'verified' && status !== 'too_early') return;
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await axios.get(`${apiBase}/visit/guest/validate`, {
+                    params: { token }
+                });
+
+                const newServerStatus = res.data.status;
+
+                // 1. Visit ended on server side -> Show Thank You
+                if (status === 'verified' && (newServerStatus === 'completed' || newServerStatus === 'expired')) {
+                    console.log(`[Guest Access] Visit ended on server (${newServerStatus}).`);
+                    handleLeaveCall(newServerStatus);
+                }
+
+                // 2. Early window opened -> Move to Joining Page
+                if (status === 'too_early' && newServerStatus === 'ready') {
+                    console.log('[Guest Access] Early window opened. Moving to verification.');
+                    setAppointmentInfo(res.data);
+                    setStatus('ready');
+                }
+            } catch (error) {
+                console.error('[Guest Access] Polling failed:', error);
+            }
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, [status, token, handleLeaveCall]);
 
     // LOADING STATE
     if (status === 'loading') {
@@ -305,7 +340,7 @@ const GuestVisitPage = () => {
                     </div>
 
                     <button
-                        onClick={handleLeaveCall}
+                        onClick={() => handleLeaveCall('completed')}
                         className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-xl transition-all font-bold text-xs shadow-lg shadow-red-500/20"
                     >
                         <PhoneOff size={16} />
