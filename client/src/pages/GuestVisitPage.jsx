@@ -36,10 +36,11 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
                 callFrame.join({ url: roomUrl, userName });
 
                 callFrame.on('joined-meeting', () => setIsLoading(false));
-                callFrame.on('left-meeting', onLeave);
+                callFrame.on('left-meeting', () => onLeave('expired'));
                 callFrame.on('error', (e) => {
                     console.error('Daily.co error:', e);
                     setIsLoading(false);
+                    onLeave('invalid'); // Show technical error screen
                 });
             }
         };
@@ -174,9 +175,9 @@ const GuestVisitPage = () => {
         }
     };
 
-    const handleLeaveCall = useCallback(() => {
+    const handleLeaveCall = useCallback((reason = 'expired') => {
         setRoomUrl(null);
-        setStatus('expired');
+        setStatus(reason);
     }, []);
 
     // LOADING STATE
