@@ -7,7 +7,7 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
         <Link
             to={to}
             className={cn(
-                "group relative flex items-center gap-2.5 px-3.5 py-2 rounded-[1.2rem] transition-all duration-300 overflow-hidden mb-0.5",
+                "group relative flex items-center gap-3 px-4 py-2.25 rounded-[1.2rem] transition-all duration-300 overflow-hidden mb-0.5",
                 active
                     ? "text-primary-900 bg-white shadow-sm"
                     : "text-slate-600 hover:text-primary-700 hover:bg-white/40"
@@ -28,7 +28,7 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
                 {!collapsed && (
                     <>
                         <span className={cn(
-                            "ml-2.5 text-[12.5px] font-semibold transition-all duration-300 flex-1 tracking-tight",
+                            "ml-2.5 text-[13px] font-semibold transition-all duration-300 flex-1 tracking-tight",
                             active ? "text-primary-900" : "text-slate-600 group-hover:text-primary-700"
                         )}>
                             {label}

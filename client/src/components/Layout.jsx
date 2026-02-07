@@ -306,7 +306,7 @@ const Layout = ({ children }) => {
 
                 {/* Sidebar - Reverted to Floating Bubble Design */}
                 <aside
-                    className={`${sidebarCollapsed ? 'w-24' : 'w-[18rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
+                    className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
                 >
                     <div className={cn(
                         "flex flex-col h-full bg-gradient-to-b from-blue-50/90 to-blue-100/90 backdrop-blur-md rounded-[2.5rem] shadow-2xl border border-white/50 relative overflow-hidden transition-all duration-500",
@@ -317,7 +317,7 @@ const Layout = ({ children }) => {
                         <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
                         {/* Logo/Brand Area + Relocated Toggle */}
-                        <div className="px-5 py-6 flex items-center justify-between relative z-10">
+                        <div className="px-5 py-5 flex items-center justify-between relative z-10">
                             {!sidebarCollapsed ? (
                                 <>
                                     <Link to="/dashboard" className="flex items-center group">
@@ -325,14 +325,14 @@ const Layout = ({ children }) => {
                                             <img
                                                 src="/logo.png"
                                                 alt="PageMD Logo"
-                                                className="h-8 w-auto object-contain max-w-[140px]"
+                                                className="h-8.5 w-auto object-contain max-w-[145px]"
                                                 onError={(e) => { e.target.style.display = 'none'; }}
                                             />
                                         </div>
                                     </Link>
                                     <button
                                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                        className="p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-blue-600 transition-all group ml-2"
+                                        className="p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-blue-600 transition-all group ml-1"
                                         title="Collapse sidebar"
                                     >
                                         <Menu className="w-4 h-4 transition-transform duration-500 group-hover:rotate-180" />
@@ -347,20 +347,20 @@ const Layout = ({ children }) => {
                                     <img
                                         src="/logo-icon.png"
                                         alt="PMD"
-                                        className="w-10 h-10 object-contain"
+                                        className="w-11 h-11 object-contain"
                                         onError={(e) => {
                                             // Fallback if image missing
                                             e.target.style.display = 'none';
                                             e.target.nextSibling.classList.remove('hidden');
                                         }}
                                     />
-                                    <Menu className="w-6 h-6 text-blue-600 hidden" />
+                                    <div className="hidden bg-blue-600 rounded-xl w-10 h-10 flex items-center justify-center text-white font-bold">P</div>
                                 </button>
                             )}
                         </div>
 
                         {/* Navigation Section - COMPACT & NO SCROLL */}
-                        <nav className="flex-1 overflow-hidden px-3 py-0 flex flex-col relative z-10 gap-3">
+                        <nav className="flex-1 overflow-hidden px-3 py-0 flex flex-col relative z-10 gap-2">
                             {/* Primary Navigation */}
                             <div className="flex-shrink-0">
                                 {!sidebarCollapsed && (
@@ -534,8 +534,8 @@ const Layout = ({ children }) => {
                 {/* Main Content - REVERTED TO FULL SCREEN */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-500 ease-in-out relative flex flex-col",
-                        sidebarCollapsed ? "ml-24" : "ml-[18rem]"
+                        "flex-1 transition-all duration-500 ease-in-out relative flex flex-col h-screen overflow-hidden",
+                        sidebarCollapsed ? "ml-24" : "ml-[19rem]"
                     )}
                 >
                     <div className="flex-1 mt-12 bg-white min-h-0 overflow-y-auto">
