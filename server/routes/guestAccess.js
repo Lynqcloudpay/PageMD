@@ -71,11 +71,22 @@ router.get('/validate', async (req, res) => {
             return res.json({ status: 'invalid' });
         }
 
-        // Check if appointment was completed/cancelled
-        const closedStatuses = ['completed', 'checked_out', 'cancelled', 'no_show'];
-        if (closedStatuses.includes(record.appointment_status) ||
-            closedStatuses.includes(record.patient_status)) {
-            console.log('[Guest Access] Appointment is closed. Status:', record.appointment_status);
+        // Check if appointment was completed or cancelled
+        const completedStatuses = ['completed', 'checked_out'];
+        const cancelledStatuses = ['cancelled', 'no_show'];
+
+        if (completedStatuses.includes(record.appointment_status) ||
+            completedStatuses.includes(record.patient_status)) {
+            console.log('[Guest Access] Appointment is completed. Returning status: completed');
+            return res.json({
+                status: 'completed',
+                providerName: `Dr. ${record.provider_last_name || 'Provider'}`
+            });
+        }
+
+        if (cancelledStatuses.includes(record.appointment_status) ||
+            cancelledStatuses.includes(record.patient_status)) {
+            console.log('[Guest Access] Appointment is cancelled/no-show. Status: expired');
             return res.json({ status: 'expired' });
         }
 

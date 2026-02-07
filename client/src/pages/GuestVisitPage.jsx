@@ -36,7 +36,7 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
                 callFrame.join({ url: roomUrl, userName });
 
                 callFrame.on('joined-meeting', () => setIsLoading(false));
-                callFrame.on('left-meeting', () => onLeave('expired'));
+                callFrame.on('left-meeting', () => onLeave('completed'));
                 callFrame.on('error', (e) => {
                     console.error('Daily.co error:', e);
                     setIsLoading(false);
@@ -175,7 +175,7 @@ const GuestVisitPage = () => {
         }
     };
 
-    const handleLeaveCall = useCallback((reason = 'expired') => {
+    const handleLeaveCall = useCallback((reason = 'completed') => {
         setRoomUrl(null);
         setStatus(reason);
     }, []);
@@ -189,6 +189,40 @@ const GuestVisitPage = () => {
                     <p className="text-slate-500 font-medium">Verifying your access link...</p>
                 </div>
             </div>
+        );
+    }
+
+    // COMPLETED / THANK YOU STATE
+    if (status === 'completed') {
+        return (
+            <StatusScreen
+                icon={Video}
+                iconColor="bg-emerald-500 shadow-emerald-200"
+                title="Visit Completed"
+                message={`Thank you for attending your video visit with ${appointmentInfo?.providerName || 'your provider'}. Your session has successfully ended.`}
+            >
+                <div className="space-y-4">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm text-slate-600 italic">
+                        "Your care is our priority. If you have follow-up questions, please reach out via the patient portal or call our office."
+                    </div>
+                    {/* Only show re-join if we think it's still alive (not from server status) */}
+                    {roomUrl === null && appointmentInfo?.status !== 'completed' && (
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all"
+                        >
+                            <RefreshCw size={20} />
+                            Re-join Session
+                        </button>
+                    )}
+                    <a
+                        href="/portal/login"
+                        className="block w-full py-3 text-slate-500 font-bold hover:text-blue-600 transition-colors text-sm"
+                    >
+                        Go to Patient Portal
+                    </a>
+                </div>
+            </StatusScreen>
         );
     }
 
