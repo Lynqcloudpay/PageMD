@@ -124,33 +124,35 @@ const resolveTenant = async (req, res, next) => {
 
                 for (const row of schemas.rows) {
                     const schema = row.schema_name;
+                    try {
+                        // Search in appropriate table based on request type
+                        let tableToCheck = 'patient_portal_invites';
+                        let colToCheck = 'token_hash';
 
-                    // Search in appropriate table based on request type
-                    let tableToCheck = 'patient_portal_invites';
-                    let colToCheck = 'token_hash';
+                        if (isIntakePublic) {
+                            tableToCheck = 'intake_sessions';
+                            colToCheck = 'resume_code_hash';
+                        } else if (isGuestVisit) {
+                            tableToCheck = 'guest_access_tokens';
+                            colToCheck = 'token_hash';
+                        }
 
-                    if (isIntakePublic) {
-                        tableToCheck = 'intake_sessions';
-                        colToCheck = 'resume_code_hash';
-                    } else if (isGuestVisit) {
-                        tableToCheck = 'guest_access_tokens';
-                        colToCheck = 'token_hash';
-                    }
+                        // CRITICAL FIX: Do NOT check expiration here.
+                        // If the token is valid but expired, we still need to resolve the tenant.
+                        const check = await pool.controlPool.query(
+                            `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck} = $1`,
+                            [tokenHash]
+                        );
 
-                    // CRITICAL FIX: Do NOT check expiration here.
-                    // If the token is valid but expired, we still need to resolve the tenant
-                    // so the endpoint can return a friendly "Expired" message (200 OK)
-                    // instead of a 403 Forbidden "Clinic access required" error.
-                    // The actual route handler (guestAccess.js) validates expiration.
-                    const check = await pool.controlPool.query(
-                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck} = $1`,
-                        [tokenHash]
-                    );
-
-                    if (check.rows.length > 0) {
-                        lookupSchema = schema;
-                        console.log(`[Tenant] Found token in schema: ${schema} (Table: ${tableToCheck})`);
-                        break;
+                        if (check.rows.length > 0) {
+                            lookupSchema = schema;
+                            console.log(`[Tenant] Found token in schema: ${schema} (Table: ${tableToCheck})`);
+                            break;
+                        }
+                    } catch (schemaError) {
+                        // Soft error - just log and continue to next schema
+                        // This prevents one bad schema (missing table) from breaking global lookup
+                        console.warn(`[Tenant] Warning: Failed to check schema ${schema}:`, schemaError.message);
                     }
                 }
 
