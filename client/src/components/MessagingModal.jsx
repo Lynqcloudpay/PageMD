@@ -131,7 +131,10 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                                 type="checkbox"
                                 className="sr-only peer"
                                 checked={notifyPatient}
-                                onChange={(e) => setNotifyPatient(e.target.checked)}
+                                onChange={(e) => {
+                                    console.log('Toggling email notification:', e.target.checked);
+                                    setNotifyPatient(e.target.checked);
+                                }}
                                 disabled={!patient.email}
                             />
                             <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
@@ -156,8 +159,8 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                             onClick={handleSend}
                             disabled={sending || !patient.email || !body.trim()}
                             className={`px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-wider text-white shadow-md transition-all flex items-center gap-2 ${sending || !patient.email || !body.trim()
-                                    ? 'bg-slate-300 cursor-not-allowed shadow-none'
-                                    : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg active:scale-95'
+                                ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                                : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg active:scale-95'
                                 }`}
                         >
                             {sending ? 'Sending...' : (
