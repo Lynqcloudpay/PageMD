@@ -13,14 +13,14 @@ async function up() {
         CREATE TABLE IF NOT EXISTS guest_access_tokens (
             id SERIAL PRIMARY KEY,
             appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
-            patient_id INTEGER NOT NULL REFERENCES patients(id),
+            patient_id UUID NOT NULL REFERENCES patients(id),
             token_hash VARCHAR(64) NOT NULL UNIQUE,
             expires_at TIMESTAMPTZ NOT NULL,
             dob_attempts INTEGER DEFAULT 0,
             used_at TIMESTAMPTZ,
             invalidated_at TIMESTAMPTZ,
             created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-            created_by INTEGER REFERENCES users(id)
+            created_by UUID REFERENCES users(id)
         )
     `);
 
