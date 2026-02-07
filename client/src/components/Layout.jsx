@@ -296,12 +296,12 @@ const Layout = ({ children }) => {
                     className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-2 py-4`}
                 >
                     <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-br from-blue-200/50 via-blue-100/40 to-white/10 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-500",
+                        "flex flex-col h-full bg-gradient-to-br from-sky-200/80 via-sky-100/70 to-sky-200/60 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-500",
                         sidebarCollapsed ? "rounded-[2.2rem]" : "rounded-[2.5rem]"
                     )}>
                         {/* Decorative background bubbles */}
-                        <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -top-10 -left-10 w-32 h-32 bg-sky-300/30 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
                         {/* Logo/Brand Area + Relocated Toggle */}
                         <div className="px-5 py-5 flex items-center justify-between relative z-10">
