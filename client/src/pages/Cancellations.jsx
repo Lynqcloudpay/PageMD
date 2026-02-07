@@ -67,7 +67,7 @@ const Cancellations = () => {
 
             // Filter for cancelled and no-show appointments
             const cancelledAppointments = allAppointments.filter(
-                appt => appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
+                appt => appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status)
             );
 
             console.log('Cancelled/No-show appointments found:', cancelledAppointments.length);
@@ -395,7 +395,7 @@ const Cancellations = () => {
                             <div key={followup.id} className="transition-all">
                                 {/* Main Row */}
                                 <div
-                                    className={`p-3 cursor-pointer hover:bg-gray-50 ${followup.appointmentStatus === 'no_show'
+                                    className={`p-3 cursor-pointer hover:bg-gray-50 ${['no_show', 'no-show'].includes(followup.appointmentStatus)
                                         ? 'border-l-4 border-l-orange-400'
                                         : 'border-l-4 border-l-red-400'
                                         }`}
@@ -413,11 +413,11 @@ const Cancellations = () => {
                                                 >
                                                     {followup.patientName}
                                                 </span>
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${followup.appointmentStatus === 'no_show'
+                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${['no_show', 'no-show'].includes(followup.appointmentStatus)
                                                     ? 'bg-orange-100 text-orange-700'
                                                     : 'bg-red-100 text-red-700'
                                                     }`}>
-                                                    {followup.appointmentStatus === 'no_show' ? 'NO SHOW' : 'CANCELLED'}
+                                                    {['no_show', 'no-show'].includes(followup.appointmentStatus) ? 'NO SHOW' : 'CANCELLED'}
                                                 </span>
                                             </div>
 
@@ -509,7 +509,7 @@ const Cancellations = () => {
                                                 )}
 
                                                 <div className="pt-2 border-t border-gray-200">
-                                                    <p className="text-xs text-gray-500 mb-1">Reason for {followup.appointmentStatus === 'no_show' ? 'No Show' : 'Cancellation'}</p>
+                                                    <p className="text-xs text-gray-500 mb-1">Reason for {['no_show', 'no-show'].includes(followup.appointmentStatus) ? 'No Show' : 'Cancellation'}</p>
                                                     <p className="text-sm text-gray-700">{followup.cancellationReason}</p>
                                                 </div>
 

@@ -23,7 +23,7 @@ const MySchedule = () => {
                 setLoading(false);
                 return;
             }
-            
+
             // My Schedule is only for users with SELF scope (clinicians)
             if (scope.scheduleScope !== 'SELF') {
                 setLoading(false);
@@ -32,34 +32,34 @@ const MySchedule = () => {
 
             try {
                 const dateStr = format(selectedDate, 'yyyy-MM-dd');
-                const response = await appointmentsAPI.get({ 
+                const response = await appointmentsAPI.get({
                     date: dateStr,
-                    providerId: user.id 
+                    providerId: user.id
                 });
-                
+
                 // Handle both array response and {data: array} response
-                const appointmentsData = Array.isArray(response) 
-                    ? response 
+                const appointmentsData = Array.isArray(response)
+                    ? response
                     : (response.data || []);
-                
+
                 // Separate appointments into categories
                 const activeStatuses = ['arrived', 'checked_in', 'in_room'];
-                const activeAppointments = appointmentsData.filter(appt => 
+                const activeAppointments = appointmentsData.filter(appt =>
                     activeStatuses.includes(appt.patient_status)
                 );
-                const checkedOutAppointments = appointmentsData.filter(appt => 
+                const checkedOutAppointments = appointmentsData.filter(appt =>
                     appt.patient_status === 'checked_out'
                 );
-                const cancelledNoShowAppointments = appointmentsData.filter(appt => 
-                    appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
+                const cancelledNoShowAppointments = appointmentsData.filter(appt =>
+                    appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status)
                 );
-                const scheduledAppointments = appointmentsData.filter(appt => 
-                    !activeStatuses.includes(appt.patient_status) && 
-                    appt.patient_status !== 'checked_out' && 
-                    appt.patient_status !== 'cancelled' && 
-                    appt.patient_status !== 'no_show'
+                const scheduledAppointments = appointmentsData.filter(appt =>
+                    !activeStatuses.includes(appt.patient_status) &&
+                    appt.patient_status !== 'checked_out' &&
+                    appt.patient_status !== 'cancelled' &&
+                    !['no_show', 'no-show'].includes(appt.patient_status)
                 );
-                
+
                 // Sort active appointments by arrival_time (time in clinic)
                 activeAppointments.sort((a, b) => {
                     const aArrival = a.arrival_time ? new Date(a.arrival_time).getTime() : 0;
@@ -67,7 +67,7 @@ const MySchedule = () => {
                     // Sort by arrival time descending (longest time first)
                     return bArrival - aArrival;
                 });
-                
+
                 // Sort checked out appointments by checkout_time (most recent first)
                 checkedOutAppointments.sort((a, b) => {
                     const aCheckout = a.checkout_time ? new Date(a.checkout_time).getTime() : 0;
@@ -75,17 +75,17 @@ const MySchedule = () => {
                     // Sort by checkout time descending (most recent first)
                     return bCheckout - aCheckout;
                 });
-                
+
                 // Sort scheduled appointments by scheduled time
-                scheduledAppointments.sort((a, b) => 
+                scheduledAppointments.sort((a, b) =>
                     (a.time || '').localeCompare(b.time || '')
                 );
-                
+
                 // Sort cancelled/no-show by scheduled time
-                cancelledNoShowAppointments.sort((a, b) => 
+                cancelledNoShowAppointments.sort((a, b) =>
                     (a.time || '').localeCompare(b.time || '')
                 );
-                
+
                 // Store categorized appointments
                 setAppointments({
                     active: activeAppointments,
@@ -104,13 +104,13 @@ const MySchedule = () => {
         };
 
         fetchAppointments();
-        
+
         // Auto-refresh every 10 seconds (silent refresh, no loading state)
         const interval = setInterval(() => {
             setLoading(false); // Don't show loading on refresh
             fetchAppointments();
         }, 10000);
-        
+
         return () => clearInterval(interval);
     }, [user, selectedDate]);
 
@@ -151,8 +151,10 @@ const MySchedule = () => {
             case 'checked_in': return { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-400' };
             case 'in_room': return { bg: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-400' };
             case 'checked_out': return { bg: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-400' };
-            case 'cancelled': return { bg: 'bg-gray-900', text: 'text-white', border: 'border-gray-900' };
-            case 'no_show': return { bg: 'bg-gray-900', text: 'text-white', border: 'border-gray-900' };
+            case 'cancelled':
+            case 'no_show':
+            case 'no-show':
+                return { bg: 'bg-gray-900', text: 'text-white', border: 'border-gray-900' };
             default: return { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' };
         }
     };
@@ -164,7 +166,9 @@ const MySchedule = () => {
             case 'in_room': return currentRoom ? `Room ${currentRoom}` : 'In Room';
             case 'checked_out': return 'Checked Out';
             case 'cancelled': return 'Cancelled';
-            case 'no_show': return 'No Show';
+            case 'no_show':
+            case 'no-show':
+                return 'No Show';
             default: return status || 'Scheduled';
         }
     };
@@ -183,15 +187,14 @@ const MySchedule = () => {
                             <p className="text-xs text-slate-500">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</p>
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setShowCancelledAppointments(!showCancelledAppointments)}
-                            className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded transition-colors ${
-                                showCancelledAppointments 
-                                    ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' 
+                            className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded transition-colors ${showCancelledAppointments
+                                    ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                            }`}
+                                }`}
                             title={showCancelledAppointments ? 'Hide cancelled/no-show' : 'Show cancelled/no-show'}
                         >
                             {showCancelledAppointments ? (
@@ -241,10 +244,10 @@ const MySchedule = () => {
                 {(() => {
                     const isArray = Array.isArray(appointments);
                     const apptData = isArray ? { active: [], scheduled: appointments, checkedOut: [], cancelledNoShow: [] } : appointments;
-                    const totalCount = (apptData.active?.length || 0) + 
-                                     (apptData.scheduled?.length || 0) + 
-                                     (apptData.checkedOut?.length || 0) + 
-                                     (showCancelledAppointments ? (apptData.cancelledNoShow?.length || 0) : 0);
+                    const totalCount = (apptData.active?.length || 0) +
+                        (apptData.scheduled?.length || 0) +
+                        (apptData.checkedOut?.length || 0) +
+                        (showCancelledAppointments ? (apptData.cancelledNoShow?.length || 0) : 0);
                     return totalCount > 0 ? (
                         <div className="mb-3 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
                             <div className="flex items-center gap-2">
@@ -263,19 +266,19 @@ const MySchedule = () => {
                     // Handle both array (old format) and object (new format) for backward compatibility
                     const isArray = Array.isArray(appointments);
                     const apptData = isArray ? { active: [], scheduled: appointments, checkedOut: [], cancelledNoShow: [] } : appointments;
-                    
+
                     const allAppointments = [
                         ...(apptData.active || []),
                         ...(apptData.scheduled || []),
                         ...(apptData.checkedOut || []),
                         ...(showCancelledAppointments ? (apptData.cancelledNoShow || []) : [])
                     ];
-                    
-                    const totalCount = (apptData.active?.length || 0) + 
-                                     (apptData.scheduled?.length || 0) + 
-                                     (apptData.checkedOut?.length || 0) + 
-                                     (showCancelledAppointments ? (apptData.cancelledNoShow?.length || 0) : 0);
-                    
+
+                    const totalCount = (apptData.active?.length || 0) +
+                        (apptData.scheduled?.length || 0) +
+                        (apptData.checkedOut?.length || 0) +
+                        (showCancelledAppointments ? (apptData.cancelledNoShow?.length || 0) : 0);
+
                     if (totalCount === 0) {
                         return (
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
@@ -289,43 +292,40 @@ const MySchedule = () => {
                             </div>
                         );
                     }
-                    
+
                     const renderAppointment = (appt, index) => {
-                        const isCancelledOrNoShow = appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
+                        const isCancelledOrNoShow = appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status);
                         const statusColor = getStatusColor(appt.patient_status || 'scheduled');
-                        
+
                         return (
                             <div
                                 key={appt.id}
                                 onClick={() => handlePatientClick(appt)}
-                                className={`p-3 hover:bg-slate-50 cursor-pointer transition-all border-l-4 ${
-                                    isCancelledOrNoShow 
-                                        ? 'bg-gray-50/50 opacity-70 border-gray-300' 
+                                className={`p-3 hover:bg-slate-50 cursor-pointer transition-all border-l-4 ${isCancelledOrNoShow
+                                        ? 'bg-gray-50/50 opacity-70 border-gray-300'
                                         : `${statusColor.border} hover:${statusColor.bg}/20`
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     {/* Compact Number Badge */}
-                                    <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${
-                                        isCancelledOrNoShow 
-                                            ? 'bg-gray-200 text-gray-500' 
+                                    <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${isCancelledOrNoShow
+                                            ? 'bg-gray-200 text-gray-500'
                                             : 'bg-blue-100 text-blue-700'
-                                    }`}>
+                                        }`}>
                                         {index + 1}
                                     </div>
-                                    
+
                                     {/* Patient Name */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-sm font-bold truncate ${
-                                                isCancelledOrNoShow 
-                                                    ? 'text-gray-500 line-through' 
+                                            <span className={`text-sm font-bold truncate ${isCancelledOrNoShow
+                                                    ? 'text-gray-500 line-through'
                                                     : 'text-slate-900'
-                                            }`}>
+                                                }`}>
                                                 {appt.patientName}
                                             </span>
                                         </div>
-                                        
+
                                         {/* Compact Info Row */}
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-xs font-semibold text-blue-600">
@@ -349,16 +349,16 @@ const MySchedule = () => {
                                             )}
                                         </div>
                                     </div>
-                                    
+
                                     {/* Arrow */}
                                     <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                                 </div>
                             </div>
                         );
                     };
-                    
+
                     let globalIndex = 0;
-                    
+
                     return (
                         <div className="space-y-4">
                             {/* Active Patients Section */}
@@ -378,7 +378,7 @@ const MySchedule = () => {
                                     </div>
                                 </div>
                             )}
-                            
+
                             {/* Scheduled Section */}
                             {apptData.scheduled && apptData.scheduled.length > 0 && (
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -396,7 +396,7 @@ const MySchedule = () => {
                                     </div>
                                 </div>
                             )}
-                            
+
                             {/* Checked Out Section */}
                             {apptData.checkedOut && apptData.checkedOut.length > 0 && (
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -414,7 +414,7 @@ const MySchedule = () => {
                                     </div>
                                 </div>
                             )}
-                            
+
                             {/* Cancelled/No Show Section */}
                             {showCancelledAppointments && apptData.cancelledNoShow && apptData.cancelledNoShow.length > 0 && (
                                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

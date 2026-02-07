@@ -13,6 +13,24 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
   try {
     const { date, startDate, endDate, providerId } = req.query;
 
+    // Auto-cleanup: Transition past appointments that haven't been completed/cancelled to 'no-show'
+    // This ensures they appear in the cancellations/follow-up tab correctly.
+    // We only touch appointments older than today.
+    try {
+      await pool.query(`
+        UPDATE appointments 
+        SET status = 'no-show', 
+            patient_status = 'no-show',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE appointment_date < CURRENT_DATE 
+          AND status NOT IN ('completed', 'checked-out', 'cancelled', 'no-show')
+          AND (patient_status IS NULL OR patient_status NOT IN ('completed', 'checked_out', 'cancelled', 'no-show', 'checked-out'))
+      `);
+    } catch (cleanupError) {
+      console.error('[CLEANUP] Failed to auto-transition past appointments:', cleanupError);
+      // Continue fetching - don't block the view if cleanup fails
+    }
+
     let query = `
       SELECT a.*,
              p.first_name as patient_first_name,
@@ -429,8 +447,8 @@ router.put('/:id', requirePermission('schedule:edit'), async (req, res) => {
         });
       }
 
-      // Validate patient_status value
-      const validStatuses = ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'];
+      // Validate patient_status value - support both underscore and hyphen for resilience
+      const validStatuses = ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'checked-out', 'no_show', 'no-show', 'cancelled'];
       if (!validStatuses.includes(normalizedPatientStatus)) {
         return res.status(400).json({
           error: 'Invalid patient_status value',

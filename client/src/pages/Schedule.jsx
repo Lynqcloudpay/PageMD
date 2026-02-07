@@ -19,12 +19,13 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
     const [reasonInput, setReasonInput] = useState('');
 
     const status = appointment?.patient_status || 'scheduled';
-    const isTerminalState = status === 'checked_out' || status === 'no_show' || status === 'cancelled';
+    const isTerminalState = ['checked_out', 'checked-out', 'completed'].includes(status) || ['no_show', 'no-show'].includes(status) || status === 'cancelled';
 
     const handleNoShowOrCancelled = (newStatus) => {
-        if (newStatus === 'no_show') {
+
+        if (['no_show', 'no-show'].includes(newStatus)) {
             // No Show doesn't require a reason - mark directly
-            handleStatusChange(newStatus, null);
+            handleStatusChange('no-show', null);
         } else {
             // Cancelled requires a reason
             setPendingStatus(newStatus);
@@ -84,10 +85,10 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
     };
 
     const NoShowCancelledBtn = ({ statusKey, label }) => {
-        const isActive = status === statusKey;
+        const isActive = ['no_show', 'no-show'].includes(status) ? statusKey === 'no-show' : status === statusKey;
         const color = isActive
-            ? (statusKey === 'no_show' ? 'text-orange-700 font-bold' : 'text-red-700 font-bold')
-            : (statusKey === 'no_show' ? 'text-orange-500 hover:text-orange-600' : 'text-red-500 hover:text-red-600');
+            ? (['no_show', 'no-show'].includes(statusKey) ? 'text-orange-700 font-bold' : 'text-red-700 font-bold')
+            : (['no_show', 'no-show'].includes(statusKey) ? 'text-orange-500 hover:text-orange-600' : 'text-red-500 hover:text-red-600');
 
         return (
             <button
@@ -111,7 +112,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
     return (
         <>
             <div className="flex items-center gap-1">
-                <NoShowCancelledBtn statusKey="no_show" label="No Show" />
+                <NoShowCancelledBtn statusKey="no-show" label="No Show" />
                 <span className="text-gray-300 text-[8px]">·</span>
                 <NoShowCancelledBtn statusKey="cancelled" label="Cancelled" />
             </div>
@@ -643,7 +644,7 @@ const Schedule = () => {
                 const aTime = a.time.substring(0, 5);
                 return aTime === apptTime;
             }).filter(appt => {
-                const isCancelledOrNoShow = appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
+                const isCancelledOrNoShow = appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status);
                 return showCancelledAppointments || !isCancelledOrNoShow;
             });
 
@@ -692,7 +693,7 @@ const Schedule = () => {
         // Check if both are cancelled/no-show
         const allCancelled = appointmentsAtSelectedSlot.length === 2 &&
             appointmentsAtSelectedSlot.every(appt =>
-                appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
+                appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status)
             );
 
         // If both are cancelled, allow booking (treat as empty)
@@ -781,8 +782,8 @@ const Schedule = () => {
 
         // Sort all appointments by status (active first, then cancelled/no-show) and then by ID
         allAtSameTime.sort((a, b) => {
-            const aIsActive = a.patient_status !== 'cancelled' && a.patient_status !== 'no_show';
-            const bIsActive = b.patient_status !== 'cancelled' && b.patient_status !== 'no_show';
+            const aIsActive = a.patient_status !== 'cancelled' && !['no_show', 'no-show'].includes(a.patient_status);
+            const bIsActive = b.patient_status !== 'cancelled' && !['no_show', 'no-show'].includes(b.patient_status);
             if (aIsActive !== bIsActive) {
                 return aIsActive ? -1 : 1; // Active appointments first
             }
@@ -1463,7 +1464,7 @@ const Schedule = () => {
                                                         // Check if both are cancelled/no-show
                                                         const allCancelled = appointmentsAtSlot.length === 2 &&
                                                             appointmentsAtSlot.every(appt =>
-                                                                appt.patient_status === 'cancelled' || appt.patient_status === 'no_show'
+                                                                appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status)
                                                             );
 
                                                         // If both cancelled, treat as 0 bookings (empty slot)
@@ -1475,9 +1476,9 @@ const Schedule = () => {
 
                                                         // Get patient names for tooltip (include cancelled status)
                                                         const bookedPatients = appointmentsAtSlot.map(a => {
-                                                            const status = a.patient_status === 'cancelled' ? ' (Cancelled)' :
-                                                                a.patient_status === 'no_show' ? ' (No Show)' : '';
-                                                            return a.patientName + status;
+                                                            const statusSuffix = a.patient_status === 'cancelled' ? ' (Cancelled)' :
+                                                                ['no_show', 'no-show'].includes(a.patient_status) ? ' (No Show)' : '';
+                                                            return a.patientName + statusSuffix;
                                                         }).join(', ');
 
                                                         return (
