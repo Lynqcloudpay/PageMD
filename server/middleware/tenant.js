@@ -9,14 +9,12 @@ const tenantManager = require('../services/tenantManager');
  */
 const resolveTenant = async (req, res, next) => {
     // 0. Exempt public / tenant-agnostic routes from resolution
-    if (req.path.includes('/auth/sandbox') || req.path.includes('/sales') || req.path.includes('/growth')) {
+    if (req.path.includes('/auth/sandbox')) {
         return next();
     }
-    // 1. Skip Tenant Context for Platform Admin / Public Routes
+    // 1. Skip Tenant Context for Platform Admin
     if (req.path.startsWith('/super/') || req.path.startsWith('/platform-auth/') ||
-        req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/') ||
-        req.path.startsWith('/sales/') || req.path.startsWith('/api/sales/') ||
-        req.path.startsWith('/growth/') || req.path.startsWith('/api/growth/')) {
+        req.path.startsWith('/api/super/') || req.path.startsWith('/api/platform-auth/')) {
         return next();
     }
 
@@ -151,6 +149,11 @@ const resolveTenant = async (req, res, next) => {
 
     // Default Fallback (Legacy Support)
     if (!slug && !lookupSchema) {
+        // Public endpoints that don't need tenant schema can pass through
+        if (req.path.includes('/verify-token') || req.path.includes('/sales/inquiry')) {
+            return next();
+        }
+
         if (process.env.NODE_ENV === 'production') {
             console.error(`[Tenant] SECURITY ERROR: No slug or schema found for path: ${req.path}. Denying access in production.`);
             return res.status(403).json({ error: 'Clinic access required.' });

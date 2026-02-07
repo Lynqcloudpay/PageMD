@@ -192,8 +192,22 @@ router.get('/stats', async (req, res) => {
             // Predictable code for sandboxes: SANDBOXCLINIC-[short-id]
             referralCode = `SANDBOXCLINIC-${req.sandboxId.substring(0, 4).toUpperCase()}`;
         } else {
-            const clinicRes = await pool.controlPool.query("SELECT referral_code FROM public.clinics WHERE id = $1", [clinicId]);
+            const clinicRes = await pool.controlPool.query("SELECT referral_code, slug FROM public.clinics WHERE id = $1", [clinicId]);
             referralCode = clinicRes.rows[0]?.referral_code;
+
+            // AUTO-GENERATE if missing
+            if (!referralCode && clinicRes.rows[0]) {
+                const crypto = require('crypto');
+                const randomPart = crypto.randomBytes(2).toString('hex').toUpperCase();
+                const slugPart = (clinicRes.rows[0].slug || 'PAGEMD').toUpperCase().substring(0, 6);
+                referralCode = `${slugPart}-${randomPart}`;
+
+                await pool.controlPool.query(
+                    "UPDATE public.clinics SET referral_code = $1 WHERE id = $2",
+                    [referralCode, clinicId]
+                );
+                console.log(`[Growth] Auto-generated referral code ${referralCode} for clinic ${clinicId}`);
+            }
         }
 
         // Get Active Referral List (masked)
