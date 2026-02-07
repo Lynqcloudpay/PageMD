@@ -1,4 +1,6 @@
 const express = require('express');
+const axios = require('axios');
+const pool = require('../db');
 const { authenticate } = require('../middleware/auth');
 const featureGuard = require('../middleware/featureGuard');
 const { simulate, isSandboxMode } = require('../services/simulationInterceptor');
