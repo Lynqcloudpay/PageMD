@@ -1085,7 +1085,17 @@ router.post('/patient-message', async (req, res) => {
   const client = req.dbClient || pool;
   const isDedicatedClient = req.dbClient ? true : false;
   try {
-    const { patientId, subject, body } = req.body;
+    const { patientId, subject, body, priority, notifyPatient } = req.body;
+
+    // Debug log for patient message
+    console.log('[Inbasket] POST /patient-message payload:', {
+      patientId,
+      subject,
+      hasBody: !!body,
+      priority,
+      notifyPatient,
+      user: req.user.email
+    });
 
     if (!patientId || !body) {
       return res.status(400).json({ error: 'Patient and message body are required' });
