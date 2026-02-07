@@ -19,6 +19,8 @@ import SupportModal from './SupportModal';
 import BreakTheGlassModal from './BreakTheGlassModal';
 import AlertBell from './AlertBell';
 import DemoBanner from './DemoBanner';
+import { cn } from '../lib/utils';
+import SidebarItem from './ui/SidebarItem';
 
 const Layout = ({ children }) => {
     const location = useLocation();
@@ -298,202 +300,144 @@ const Layout = ({ children }) => {
                     </div>
                 </div>
 
-                {/* Sidebar */}
-                <aside className={`${sidebarCollapsed ? 'w-20' : 'w-72'} fixed left-0 top-0 bottom-0 z-30 bg-white border-r-4 border-strong-azure flex flex-col transition-all duration-300 shadow-xl`}>
-                    {/* Logo/Brand */}
-                    <div className="h-20 px-6 flex items-center justify-between border-b-2 border-strong-azure/20 bg-white">
-                        {!sidebarCollapsed && (
-                            <Link to="/dashboard" className="flex items-center space-x-3 group">
-                                <img
-                                    src="/logo.png"
-                                    alt="PageMD Logo"
-                                    className="h-10 w-auto object-contain max-w-[180px]"
-                                    onError={(e) => {
-                                        // Hide broken image, show fallback text
-                                        e.target.style.display = 'none';
-                                    }}
-                                />
-                            </Link>
-                        )}
-                        {sidebarCollapsed && (
-                            <img
-                                src="/logo.png"
-                                alt="PageMD"
-                                className="h-10 w-auto object-contain mx-auto"
-                                onError={(e) => {
-                                    // Hide broken image
-                                    e.target.style.display = 'none';
-                                }}
-                            />
-                        )}
-                        <button
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            className="p-2 rounded-lg hover:bg-soft-gray transition-all text-deep-gray hover:text-strong-azure"
-                            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                        >
-                            <Menu className="w-4 h-4" />
-                        </button>
-                    </div>
+                {/* Sidebar - Redesigned as a Soft Bubble */}
+                <aside
+                    className={`${sidebarCollapsed ? 'w-24' : 'w-72'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
+                >
+                    <div className={cn(
+                        "flex flex-col h-full bg-gradient-to-b from-blue-50/90 to-blue-100/90 backdrop-blur-md rounded-[2.5rem] shadow-2xl border border-white/50 relative overflow-hidden transition-all duration-500",
+                        sidebarCollapsed ? "rounded-[2rem]" : "rounded-[2.5rem]"
+                    )}>
+                        {/* Decorative background bubbles */}
+                        <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
-
-                    {/* Navigation - Futuristic Compact Design */}
-                    <nav className="flex-1 overflow-hidden px-3 py-3 flex flex-col">
-                        {/* Primary Navigation */}
-                        <div className="mb-3 flex-shrink-0">
-                            <div className="px-2.5 mb-2">
-                                <div className="text-[9px] font-bold text-deep-gray/40 uppercase tracking-widest">
-                                    Navigation
-                                </div>
-                            </div>
-                            <div className="space-y-0.5">
-                                {navigationSection.map((item) => {
-                                    const Icon = item.icon;
-                                    const active = isActive(item.path);
-                                    return (
-                                        <Link
-                                            key={item.path}
-                                            to={item.path}
-                                            className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
-                                                ? 'text-white shadow-lg'
-                                                : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
-                                                }`}
-                                            style={active ? {
-                                                background: 'linear-gradient(to right, #3B82F6, #2563EB)',
-                                                boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
-                                            } : {}}
-                                        >
-                                            {/* Futuristic active indicator - Azure accent bar */}
-
-                                            <div className="relative flex-shrink-0 z-10">
-                                                <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
-                                                {item.badge && sidebarCollapsed && (
-                                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold rounded-full bg-fresh-green text-white shadow-sm">
-                                                        {item.badge > 99 ? '99+' : item.badge}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {!sidebarCollapsed && (
-                                                <>
-                                                    <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
-                                                        {item.label}
-                                                    </span>
-                                                    {item.badge && (
-                                                        <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
-                                                            ? 'bg-white/20 text-white'
-                                                            : 'bg-fresh-green/10 text-fresh-green'
-                                                            }`}>
-                                                            {item.badge}
-                                                        </span>
-                                                    )}
-                                                </>
-                                            )}
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Secondary Navigation */}
-                        <div className="flex-1 overflow-y-auto hide-scrollbar">
-                            <div className="px-2.5 mb-2 mt-1">
-                                <div className="text-[9px] font-bold text-deep-gray/40 uppercase tracking-widest">
-                                    Workflow
-                                </div>
-                            </div>
-                            <div className="space-y-0.5">
-                                {workflowSection.map((item) => {
-                                    const Icon = item.icon;
-                                    const active = isActive(item.path);
-                                    return (
-                                        <Link
-                                            key={item.path}
-                                            to={item.path}
-                                            className={`group relative flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 ${active
-                                                ? 'text-white shadow-lg'
-                                                : 'text-deep-gray hover:bg-soft-gray hover:text-strong-azure hover:border-l-2 hover:border-strong-azure/30'
-                                                }`}
-                                            style={active ? {
-                                                background: 'linear-gradient(to right, #3B82F6, #2563EB)',
-                                                boxShadow: '0 10px 15px -3px rgba(59, 130, 246, 0.3), 0 4px 6px -2px rgba(59, 130, 246, 0.2)'
-                                            } : {}}
-                                        >
-                                            {/* Futuristic active indicator - Azure accent bar */}
-
-                                            <div className="relative flex-shrink-0 z-10">
-                                                <Icon className={`w-4 h-4 transition-all duration-200 ${active ? 'text-white' : 'text-deep-gray/50 group-hover:text-strong-azure'}`} />
-                                                {item.badge && sidebarCollapsed && (
-                                                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center px-1 text-[9px] font-bold rounded-full bg-fresh-green text-white shadow-sm">
-                                                        {item.badge > 99 ? '99+' : item.badge}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {!sidebarCollapsed && (
-                                                <>
-                                                    <span className={`flex-1 text-[13px] font-semibold ${active ? 'text-white' : 'text-deep-gray'} z-10 relative`}>
-                                                        {item.label}
-                                                    </span>
-                                                    {item.badge && (
-                                                        <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-all z-10 relative ${active
-                                                            ? 'bg-white/20 text-white'
-                                                            : 'bg-fresh-green/10 text-fresh-green'
-                                                            }`}>
-                                                            {item.badge}
-                                                        </span>
-                                                    )}
-                                                </>
-                                            )}
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </nav>
-
-                    {/* Bottom Section - Futuristic User Panel */}
-                    <div className="mt-auto px-3 py-2.5 border-t border-deep-gray/10 bg-gradient-to-b from-white to-soft-gray/20">
-                        {user && (
-                            <div className="flex items-center gap-2">
-                                {/* User Button */}
-                                <button
-                                    onClick={() => navigate('/profile')}
-                                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all flex-1 ${sidebarCollapsed ? 'justify-center' : ''} ${sidebarCollapsed
-                                        ? 'hover:bg-soft-gray/80'
-                                        : 'bg-white/60 backdrop-blur-sm hover:bg-white border border-deep-gray/5 hover:border-deep-gray/20 hover:shadow-sm'
-                                        }`}
-                                    title={`${user.firstName} ${user.lastName} - ${user.role_name || user.role || 'User'}${user.isAdmin ? ' (Admin)' : ''} - Click to view profile`}
-                                >
-                                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-strong-azure to-strong-azure/80 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 shadow-sm">
-                                        {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
+                        {/* Logo/Brand Area */}
+                        <div className="h-24 px-6 flex items-center justify-between relative z-10">
+                            {!sidebarCollapsed && (
+                                <Link to="/dashboard" className="flex items-center space-x-3 group">
+                                    <div className="p-2 bg-white/80 rounded-2xl shadow-sm border border-white/50 transition-transform group-hover:scale-105 duration-300">
+                                        <img
+                                            src="/logo.png"
+                                            alt="PageMD Logo"
+                                            className="h-8 w-auto object-contain max-w-[150px]"
+                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
                                     </div>
-                                    {!sidebarCollapsed && (
-                                        <div className="text-left flex-1 min-w-0">
-                                            <div className="text-[12px] font-semibold text-deep-gray leading-tight truncate">{user.firstName} {user.lastName}</div>
-                                            <div className="text-[10px] text-deep-gray/50 capitalize leading-tight truncate font-medium">
-                                                {user.role_name || user.role || 'User'}
-                                            </div>
+                                </Link>
+                            )}
+                            {sidebarCollapsed && (
+                                <div className="mx-auto p-2 bg-white/80 rounded-xl shadow-sm">
+                                    <img
+                                        src="/logo.png"
+                                        alt="PageMD"
+                                        className="h-6 w-auto object-contain"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Navigation Section */}
+                        <nav className="flex-1 overflow-y-auto hide-scrollbar px-3 py-2 flex flex-col relative z-10">
+                            {/* Primary Navigation */}
+                            <div className="mb-6">
+                                {!sidebarCollapsed && (
+                                    <div className="px-4 mb-3">
+                                        <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-[0.2em]">
+                                            Main Menu
                                         </div>
-                                    )}
-                                </button>
-                                {/* Sign Out Button */}
-                                <button
-                                    onClick={() => {
-                                        if (window.confirm('Are you sure you want to sign out?')) {
-                                            logout();
-                                            navigate('/login');
-                                        }
-                                    }}
-                                    className={`flex items-center justify-center px-2 py-1.5 rounded-lg transition-all hover:bg-red-50/80 hover:border-red-300 ${sidebarCollapsed ? 'w-7 h-7' : 'px-2.5'} border border-red-200/50 text-red-600 hover:text-red-700 hover:shadow-sm`}
-                                    title="Sign Out"
-                                >
-                                    <LogOut className="w-3.5 h-3.5" />
-                                    {!sidebarCollapsed && (
-                                        <span className="ml-1 text-[11px] font-semibold">Out</span>
-                                    )}
-                                </button>
+                                    </div>
+                                )}
+                                <div className="space-y-1">
+                                    {navigationSection.map((item) => (
+                                        <SidebarItem
+                                            key={item.path}
+                                            to={item.path}
+                                            icon={item.icon}
+                                            label={item.label}
+                                            badge={item.badge}
+                                            active={isActive(item.path)}
+                                            collapsed={sidebarCollapsed}
+                                        />
+                                    ))}
+                                </div>
                             </div>
-                        )}
+
+                            {/* Workflow Section */}
+                            <div>
+                                {!sidebarCollapsed && (
+                                    <div className="px-4 mb-3">
+                                        <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-[0.2em]">
+                                            Workflows
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="space-y-1">
+                                    {workflowSection.map((item) => (
+                                        <SidebarItem
+                                            key={item.path}
+                                            to={item.path}
+                                            icon={item.icon}
+                                            label={item.label}
+                                            badge={item.badge}
+                                            active={isActive(item.path)}
+                                            collapsed={sidebarCollapsed}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        </nav>
+
+                        {/* Collapse Toggle - Floating effect */}
+                        <div className="px-4 pb-4">
+                            <button
+                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                className="w-full h-10 flex items-center justify-center rounded-2xl bg-white/50 hover:bg-white/80 text-blue-600 border border-white/50 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group"
+                            >
+                                <Menu className={cn("w-4 h-4 transition-transform duration-500", sidebarCollapsed ? "rotate-180" : "")} />
+                                {!sidebarCollapsed && <span className="ml-2 text-xs font-bold">Collapse</span>}
+                            </button>
+                        </div>
+
+                        {/* Bottom User Profile Section */}
+                        <div className="p-4 bg-white/40 backdrop-blur-sm border-t border-white/20">
+                            {user && (
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => navigate('/profile')}
+                                        className={cn(
+                                            "flex items-center gap-3 p-2 rounded-2xl transition-all flex-1 group",
+                                            sidebarCollapsed ? "justify-center" : "bg-white/80 shadow-sm hover:shadow-md border border-white/50"
+                                        )}
+                                    >
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 shadow-md transform transition-transform group-hover:scale-110">
+                                            {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
+                                        </div>
+                                        {!sidebarCollapsed && (
+                                            <div className="text-left flex-1 min-w-0">
+                                                <div className="text-[13px] font-bold text-slate-800 leading-tight truncate">{user.firstName} {user.lastName}</div>
+                                                <div className="text-[10px] text-slate-500 font-medium truncate uppercase tracking-wider">{user.role_name || user.role || 'User'}</div>
+                                            </div>
+                                        )}
+                                    </button>
+                                    {!sidebarCollapsed && (
+                                        <button
+                                            onClick={() => {
+                                                if (window.confirm('Are you sure you want to sign out?')) {
+                                                    logout();
+                                                    navigate('/login');
+                                                }
+                                            }}
+                                            className="p-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+                                            title="Sign Out"
+                                        >
+                                            <LogOut className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </aside>
 
