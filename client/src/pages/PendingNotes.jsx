@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    FileText, User, AlertCircle, CheckCircle2,
-    Search, Calendar, Filter, ArrowRight, Sparkles
+    Search, Calendar, Filter, ArrowRight, Sparkles, ChevronDown, ChevronUp, FileText, CheckCircle2, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { visitsAPI } from '../services/api';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, parseISO } from 'date-fns';
 
 const PendingNotes = () => {
     const navigate = useNavigate();
@@ -14,12 +13,22 @@ const PendingNotes = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'draft', 'incomplete'
 
+    const [collapsedGroups, setCollapsedGroups] = useState({});
+
     useEffect(() => {
         fetchPendingNotes();
         // Refresh every 30 seconds
         const interval = setInterval(fetchPendingNotes, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // Toggle collapse state for a date group
+    const toggleGroup = (date) => {
+        setCollapsedGroups(prev => ({
+            ...prev,
+            [date]: !prev[date]
+        }));
+    };
 
     const fetchPendingNotes = async () => {
         setLoading(true);
@@ -39,12 +48,12 @@ const PendingNotes = () => {
         const noteText = typeof rawNote === 'string' ? rawNote : String(rawNote);
 
         if (visit.status === 'preliminary') {
-            return { label: 'Needs Cosign', color: 'bg-amber-100 text-amber-700', icon: Sparkles };
+            return { label: 'Needs Cosign', color: 'bg-indigo-50 text-indigo-700 border-indigo-100', icon: Sparkles };
         }
 
         // Handle null or undefined note_draft
         if (noteText.trim().length === 0) {
-            return { label: 'Not Started', color: 'bg-red-100 text-red-700', icon: AlertCircle };
+            return { label: 'Not Started', color: 'bg-rose-50 text-rose-700 border-rose-100', icon: AlertCircle };
         }
 
         // Check if note has all required sections
@@ -53,9 +62,9 @@ const PendingNotes = () => {
         const hasPlan = /Plan|P:/i.test(noteText);
 
         if (hasHPI && hasAssessment && hasPlan) {
-            return { label: 'Ready to Sign', color: 'bg-green-100 text-green-700', icon: CheckCircle2 };
+            return { label: 'Ready to Sign', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2 };
         }
-        return { label: 'Incomplete', color: 'bg-orange-100 text-orange-700', icon: FileText };
+        return { label: 'Incomplete', color: 'bg-amber-50 text-amber-700 border-amber-100', icon: FileText };
     };
 
     const getNotePreview = (rawNote) => {
@@ -116,6 +125,26 @@ const PendingNotes = () => {
         return true;
     });
 
+    // Group visits by date
+    const groupedVisits = React.useMemo(() => {
+        const groups = {};
+        filteredVisits.forEach(v => {
+            const date = format(new Date(v.visit_date), 'yyyy-MM-dd');
+            if (!groups[date]) {
+                groups[date] = [];
+            }
+            groups[date].push(v);
+        });
+
+        return Object.keys(groups)
+            .sort((a, b) => b.localeCompare(a)) // Newest dates first
+            .map(date => ({
+                date,
+                displayDate: format(parseISO(date), 'EEEE, MMM d, yyyy'),
+                items: groups[date]
+            }));
+    }, [filteredVisits]);
+
     const handleOpenNote = (visit) => {
         const patientId = visit.patient_id || visit.patientId;
         const visitId = visit.id;
@@ -151,190 +180,267 @@ const PendingNotes = () => {
         <div className="p-6 max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-orange-100 rounded-lg">
-                            <FileText className="w-6 h-6 text-orange-600" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-primary-900">Pending Notes</h1>
-                            <p className="text-gray-600 text-sm mt-1">
-                                {pendingVisits.length} note{pendingVisits.length !== 1 ? 's' : ''} pending completion or signature
-                            </p>
+                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Pending Notes</h1>
+                <p className="text-sm text-slate-500 mt-1">{pendingVisits.length} note{pendingVisits.length !== 1 ? 's' : ''} pending completion or signature</p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <button
+                    onClick={() => setFilterStatus('all')}
+                    className={`p-4 rounded-xl border transition-all relative overflow-hidden group text-left ${filterStatus === 'all'
+                        ? 'bg-blue-50 border-blue-200 shadow-md ring-1 ring-blue-100'
+                        : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-sm'
+                        }`}
+                >
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${filterStatus === 'all' ? 'text-blue-700' : 'text-slate-500'}`}>Total Pending</span>
+                        <div className={`p-1.5 rounded-lg ${filterStatus === 'all' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                            <FileText size={16} />
                         </div>
                     </div>
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-bold ${filterStatus === 'all' ? 'text-blue-700' : 'text-slate-700'}`}>
+                            {pendingVisits.length}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">notes</span>
+                    </div>
+                </button>
+
+                <button
+                    onClick={() => setFilterStatus('draft')}
+                    className={`p-4 rounded-xl border transition-all relative overflow-hidden group text-left ${filterStatus === 'draft'
+                        ? 'bg-emerald-50 border-emerald-200 shadow-md ring-1 ring-emerald-100'
+                        : 'bg-white border-slate-200 hover:border-emerald-200 hover:shadow-sm'
+                        }`}
+                >
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${filterStatus === 'draft' ? 'text-emerald-700' : 'text-slate-500'}`}>Ready to Sign</span>
+                        <div className={`p-1.5 rounded-lg ${filterStatus === 'draft' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500'}`}>
+                            <CheckCircle2 size={16} />
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-bold ${filterStatus === 'draft' ? 'text-emerald-700' : 'text-slate-700'}`}>
+                            {pendingVisits.filter(v => getNoteStatus(v).label === 'Ready to Sign').length}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">review</span>
+                    </div>
+                </button>
+
+                <button
+                    onClick={() => setFilterStatus('incomplete')}
+                    className={`p-4 rounded-xl border transition-all relative overflow-hidden group text-left ${filterStatus === 'incomplete'
+                        ? 'bg-amber-50 border-amber-200 shadow-md ring-1 ring-amber-100'
+                        : 'bg-white border-slate-200 hover:border-amber-200 hover:shadow-sm'
+                        }`}
+                >
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${filterStatus === 'incomplete' ? 'text-amber-700' : 'text-slate-500'}`}>Incomplete</span>
+                        <div className={`p-1.5 rounded-lg ${filterStatus === 'incomplete' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-500'}`}>
+                            <AlertCircle size={16} />
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-bold ${filterStatus === 'incomplete' ? 'text-amber-700' : 'text-slate-700'}`}>
+                            {pendingVisits.filter(v => {
+                                const status = getNoteStatus(v);
+                                return status.label === 'Incomplete' || status.label === 'Not Started';
+                            }).length}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">drafts</span>
+                    </div>
+                </button>
+            </div>
+
+            {/* Filters Row */}
+            <div className="flex items-center gap-3 mb-6">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search by patient name, MRN, or note content..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
+                    />
+                </div>
+
+                {/* Visual filter indicator (optional, mostly handled by cards) but keeping simple filter dropdown if complex filtering needed later */}
+                <div className="flex items-center gap-2">
+                    <div className="bg-slate-100 rounded-xl p-1 flex">
+                        <button
+                            onClick={() => setFilterStatus('all')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filterStatus === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            All
+                        </button>
+                        <button
+                            onClick={() => setFilterStatus('draft')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filterStatus === 'draft' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Ready
+                        </button>
+                        <button
+                            onClick={() => setFilterStatus('incomplete')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${filterStatus === 'incomplete' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Incomplete
+                        </button>
+                    </div>
+
                     <button
                         onClick={fetchPendingNotes}
-                        className="px-4 py-2 text-white rounded-lg transition-all duration-200 hover:shadow-md flex items-center space-x-2"
-                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}
+                        className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm rounded-xl transition-all"
+                        title="Refresh Data"
                     >
-                        <Sparkles className="w-4 h-4" />
-                        <span>Refresh</span>
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
             </div>
 
-            {/* Filters and Search */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-                <div className="flex flex-col md:flex-row gap-4">
-                    {/* Search */}
-                    <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search by patient name, MRN, or note content..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
-                        />
-                    </div>
-
-                    {/* Status Filter */}
-                    <div className="flex items-center space-x-2">
-                        <Filter className="w-5 h-5 text-gray-400" />
-                        <div className="flex space-x-2">
-                            <button
-                                onClick={() => setFilterStatus('all')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterStatus === 'all'
-                                    ? 'text-white shadow-sm'
-                                    : 'bg-neutral-100 text-gray-700 hover:bg-neutral-200'
-                                    }`}
-                            >
-                                All ({pendingVisits.length})
-                            </button>
-                            <button
-                                onClick={() => setFilterStatus('draft')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterStatus === 'draft'
-                                    ? 'bg-green-600 text-white shadow-sm'
-                                    : 'bg-neutral-100 text-gray-700 hover:bg-neutral-200'
-                                    }`}
-                            >
-                                Ready to Sign ({pendingVisits.filter(v => getNoteStatus(v).label === 'Ready to Sign').length})
-                            </button>
-                            <button
-                                onClick={() => setFilterStatus('incomplete')}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterStatus === 'incomplete'
-                                    ? 'bg-orange-600 text-white shadow-sm'
-                                    : 'bg-neutral-100 text-gray-700 hover:bg-neutral-200'
-                                    }`}
-                            >
-                                Incomplete ({pendingVisits.filter(v => {
-                                    const status = getNoteStatus(v);
-                                    return status.label === 'Incomplete' || status.label === 'Not Started';
-                                }).length})
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Pending Notes List */}
+            {/* Pending Notes List Grouped */}
             {filteredVisits.length === 0 ? (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                    <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-xl font-semibold text-primary-900 mb-2">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+                    <FileText className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                    <h3 className="text-xl font-semibold text-slate-800 mb-2">
                         {searchQuery || filterStatus !== 'all' ? 'No notes match your filters' : 'No pending notes'}
                     </h3>
-                    <p className="text-gray-600">
+                    <p className="text-slate-500">
                         {searchQuery || filterStatus !== 'all'
                             ? 'Try adjusting your search or filter criteria'
                             : 'All visit notes have been completed and signed'}
                     </p>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="divide-y divide-gray-200">
-                        {filteredVisits.map((visit) => {
-                            const status = getNoteStatus(visit);
-                            const StatusIcon = status.icon;
-                            const daysSince = getDaysSinceVisit(visit.visit_date);
-                            const notePreview = getNotePreview(visit.note_draft);
-                            const patientName = `${visit.patient_first_name || ''} ${visit.patient_last_name || ''}`.trim() || 'Unknown Patient';
-                            const providerName = visit.provider_first_name && visit.provider_last_name
-                                ? `${visit.provider_first_name} ${visit.provider_last_name}`
-                                : 'Unknown Provider';
-
-                            return (
-                                <div
-                                    key={visit.id}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleOpenNote(visit);
-                                    }}
-                                    className="px-4 py-3 hover:bg-neutral-50 cursor-pointer transition-colors group"
-                                >
-                                    <div className="flex items-center justify-between gap-4">
-                                        {/* Left side - Patient & Visit Info */}
-                                        <div className="flex-1 min-w-0 flex items-center gap-4">
-                                            {/* Status Indicator */}
-                                            <div className={`flex-shrink-0 w-1 h-12 rounded-full ${status.label === 'Ready to Sign' ? 'bg-green-500' :
-                                                status.label === 'Incomplete' ? 'bg-orange-500' :
-                                                    'bg-red-500'
-                                                }`} />
-
-                                            {/* Patient Name */}
-                                            <div className="flex-shrink-0 w-40">
-                                                <div className="font-semibold text-sm text-primary-900 truncate group-hover:text-primary-700">
-                                                    {patientName}
-                                                </div>
-                                                <div className="text-xs text-gray-500 font-mono mt-0.5">
-                                                    {visit.mrn}
-                                                </div>
-                                            </div>
-
-                                            {/* Visit Date */}
-                                            <div className="flex-shrink-0 w-32 text-sm text-gray-600">
-                                                <div className="flex items-center space-x-1">
-                                                    <Calendar className="w-3.5 h-3.5" />
-                                                    <span>{format(new Date(visit.visit_date), 'MMM d, yyyy')}</span>
-                                                </div>
-                                                {daysSince > 0 && (
-                                                    <div className={`text-xs mt-0.5 ${daysSince > 7 ? 'text-red-600' : daysSince > 3 ? 'text-orange-600' : 'text-gray-500'}`}>
-                                                        {daysSince} day{daysSince !== 1 ? 's' : ''} ago
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Visit Type & Provider */}
-                                            <div className="flex-shrink-0 w-48 text-sm text-gray-600">
-                                                <div className="truncate">{visit.visit_type || 'Office Visit'}</div>
-                                                <div className="text-xs text-gray-500 truncate mt-0.5">{providerName}</div>
-                                            </div>
-
-                                            {/* Note Preview */}
-                                            <div className="flex-1 min-w-0 text-sm text-gray-600 hidden md:block">
-                                                {notePreview?.hpi ? (
-                                                    <div className="truncate">
-                                                        <span className="font-medium text-gray-700">HPI: </span>
-                                                        <span>{notePreview.hpi.substring(0, 80)}...</span>
-                                                    </div>
-                                                ) : notePreview?.assessment ? (
-                                                    <div className="truncate">
-                                                        <span className="font-medium text-gray-700">A: </span>
-                                                        <span>{notePreview.assessment.substring(0, 80)}...</span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-gray-400 italic">No note content</span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Right side - Status Badge & Arrow */}
-                                        <div className="flex items-center gap-3 flex-shrink-0">
-                                            <div className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center space-x-1.5 ${status.color}`}>
-                                                <StatusIcon className="w-3 h-3" />
-                                                <span>{status.label}</span>
-                                            </div>
-                                            <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-primary-600 transition-colors flex-shrink-0" />
+                <div className="space-y-6">
+                    {groupedVisits.map((group, index) => (
+                        <div key={group.date} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group/card transition-all hover:shadow-md">
+                            {/* Date Header */}
+                            <div
+                                className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                onClick={() => toggleGroup(group.date)}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) // Check if collapsed
+                                        ? 'bg-white border border-slate-200 text-slate-400'
+                                        : 'bg-blue-600 border border-blue-600 text-white'
+                                        }`}>
+                                        <Calendar size={18} />
+                                    </div>
+                                    <div>
+                                        <h3 className={`text-sm font-semibold tracking-tight transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                            ? 'text-slate-600'
+                                            : 'text-blue-900'
+                                            }`}>
+                                            {group.displayDate}
+                                        </h3>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                                ? 'bg-slate-200 text-slate-600'
+                                                : 'bg-blue-100 text-blue-700'
+                                                }`}>
+                                                {group.items.length} Note{group.items.length !== 1 ? 's' : ''}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
-                            );
-                        })}
-                    </div>
+                                <div className={`p-2 rounded-lg transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                    ? 'text-slate-400 group-hover/card:bg-white'
+                                    : 'text-blue-600 bg-blue-50'
+                                    }`}>
+                                    {(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) ? (
+                                        <ChevronDown className="w-5 h-5" />
+                                    ) : (
+                                        <ChevronUp className="w-5 h-5" />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Items in Group */}
+                            {!(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) && (
+                                <div className="divide-y divide-slate-100">
+                                    {group.items.map((visit) => {
+                                        const status = getNoteStatus(visit);
+                                        const StatusIcon = status.icon;
+                                        const daysSince = getDaysSinceVisit(visit.visit_date);
+                                        const notePreview = getNotePreview(visit.note_draft);
+                                        const patientName = `${visit.patient_first_name || ''} ${visit.patient_last_name || ''}`.trim() || 'Unknown Patient';
+
+                                        return (
+                                            <div
+                                                key={visit.id}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleOpenNote(visit);
+                                                }}
+                                                className="px-5 py-4 hover:bg-slate-50 cursor-pointer transition-colors group relative border-l-[3px] border-l-transparent hover:border-l-blue-500"
+                                            >
+                                                <div className="flex items-start justify-between gap-4">
+                                                    {/* Left side - Patient & Visit Info */}
+                                                    <div className="flex-1 min-w-0 flex items-start flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+
+                                                        {/* Patient Name */}
+                                                        <div className="flex-shrink-0 w-44">
+                                                            <div className="font-semibold text-sm text-slate-800 truncate group-hover:text-blue-700 transition-colors">
+                                                                {patientName}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 font-mono mt-0.5 bg-slate-100 inline-block px-1.5 rounded">
+                                                                {visit.mrn}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Visit Date & Type */}
+                                                        <div className="flex-shrink-0 w-40 text-sm text-slate-600">
+                                                            <div className="font-medium text-slate-700">{visit.visit_type || 'Office Visit'}</div>
+                                                            <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
+                                                                <Calendar className="w-3 h-3" />
+                                                                <span>{format(new Date(visit.visit_date), 'MMM d')}</span>
+                                                                {daysSince > 0 && (
+                                                                    <span className={`px-1.5 rounded text-[10px] font-medium ${daysSince > 7 ? 'bg-red-50 text-red-600' : daysSince > 3 ? 'bg-orange-50 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                                        {daysSince}d old
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Note Preview */}
+                                                        <div className="flex-1 min-w-0 text-sm text-slate-600 hidden md:block">
+                                                            {notePreview?.hpi ? (
+                                                                <div className="truncate opacity-80 group-hover:opacity-100 transition-opacity">
+                                                                    <span className="font-medium text-slate-700">HPI: </span>
+                                                                    <span>{notePreview.hpi.substring(0, 120)}...</span>
+                                                                </div>
+                                                            ) : notePreview?.assessment ? (
+                                                                <div className="truncate opacity-80 group-hover:opacity-100 transition-opacity">
+                                                                    <span className="font-medium text-slate-700">A: </span>
+                                                                    <span>{notePreview.assessment.substring(0, 120)}...</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-slate-400 italic text-xs">No content draft started...</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Right side - Status Badge & Arrow */}
+                                                    <div className="flex items-center gap-4 flex-shrink-0">
+                                                        <div className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 border shadow-sm ${status.color}`}>
+                                                            <StatusIcon className="w-3.5 h-3.5" />
+                                                            <span>{status.label}</span>
+                                                        </div>
+                                                        <div className="p-1 rounded-full text-slate-300 group-hover:text-blue-600 group-hover:bg-blue-50 transition-all">
+                                                            <ArrowRight className="w-5 h-5" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </div>
             )}
 
