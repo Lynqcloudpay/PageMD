@@ -5,7 +5,7 @@ import {
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
   Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
-  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, ArrowRight
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, ArrowRight, Mail
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
@@ -142,6 +142,7 @@ const Telehealth = () => {
     );
   }
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [sendingGuestLink, setSendingGuestLink] = useState(null);
   const [viewingPatientId, setViewingPatientId] = useState(null);
 
   // --- NEW: Patient Chart Panel State ---
@@ -397,6 +398,26 @@ const Telehealth = () => {
   useEffect(() => {
     if (activeCall) fetchPatientSnapshot();
   }, [activeCall, fetchPatientSnapshot]);
+
+  // Send Guest Access Link for patients who can't log in
+  const handleSendGuestLink = async (apptId) => {
+    setSendingGuestLink(apptId);
+    try {
+      const res = await axios.post(`/api/appointments/${apptId}/generate-guest-link`);
+      if (res.data.success) {
+        alert(`Guest link sent to ${res.data.sentTo}`);
+      } else {
+        alert(res.data.error || 'Failed to send guest link');
+      }
+    } catch (err) {
+      console.error('Failed to send guest link:', err);
+      const message = err.response?.data?.error || 'Failed to send guest link';
+      alert(message);
+    } finally {
+      setSendingGuestLink(null);
+      setActiveDropdown(null);
+    }
+  };
 
   const handleStartCall = async (appt, options = { video: true }) => {
     if (creatingRoom || isSubmitting) return;
@@ -1434,6 +1455,24 @@ const Telehealth = () => {
                             <div>
                               <p className="font-bold text-sm">Resume Note</p>
                               <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => handleSendGuestLink(appt.id)}
+                            disabled={sendingGuestLink === appt.id}
+                            className="w-full px-4 py-3 text-left hover:bg-amber-50 text-slate-700 flex items-center gap-3 transition-colors group disabled:opacity-50"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                              {sendingGuestLink === appt.id ? (
+                                <Loader2 size={16} className="animate-spin" />
+                              ) : (
+                                <Mail size={16} />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">Send Guest Link</p>
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Patient Can't Log In</p>
                             </div>
                           </button>
 

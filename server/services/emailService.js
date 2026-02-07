@@ -284,6 +284,55 @@ class EmailService {
     }
 
     /**
+     * Send Guest Access Link for Telehealth
+     * Magic link for patients who can't log into the portal
+     */
+    async sendGuestAccessLink(email, patientName, providerName, appointmentTime, guestLink, clinicPhone) {
+        const subject = `Link for Your Appointment with ${providerName}`;
+        const html = `
+            <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="https://pagemdemr.com/logo.png" alt="PageMD" width="164" height="48" style="height: 48px; width: auto; border: 0;">
+                </div>
+                
+                <h2 style="color: #0f172a; text-align: center; margin-bottom: 8px; font-size: 24px;">Your Video Visit Link</h2>
+                
+                <p style="font-size: 16px; line-height: 1.6; text-align: center; color: #64748b; margin-bottom: 24px;">
+                    Hi ${patientName}, we noticed you might be having trouble accessing the portal. Here is a direct, one-time link to your video room.
+                </p>
+                
+                <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;">
+                    <p style="margin: 0; color: #64748b; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Your Appointment</p>
+                    <p style="margin: 8px 0 0 0; color: #0f172a; font-size: 18px; font-weight: 700;">${appointmentTime}</p>
+                    <p style="margin: 4px 0 0 0; color: #64748b; font-size: 14px;">with ${providerName}</p>
+                </div>
+                
+                <div style="margin: 32px 0; text-align: center;">
+                    <a href="${guestLink}" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 16px 40px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);">
+                        Join Video Visit Now
+                    </a>
+                </div>
+                
+                <div style="background: #fef3c7; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                    <p style="margin: 0; font-size: 13px; color: #92400e;">
+                        <strong>🔒 Security Note:</strong> This link is valid for this appointment only. You may be asked to confirm your Date of Birth for verification.
+                    </p>
+                </div>
+                
+                <p style="font-size: 14px; color: #64748b; text-align: center;">
+                    If you have questions or need to reschedule, please call us at:<br>
+                    <a href="tel:${clinicPhone}" style="color: #2563eb; font-weight: 600; text-decoration: none;">${clinicPhone}</a>
+                </p>
+                
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
+                <p style="font-size: 12px; color: #94a3b8; text-align: center;">© ${new Date().getFullYear()} PageMD EMR. All rights reserved.<br>This is a secure, HIPAA-compliant communication.</p>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
+
+    /**
     * Send Demo Invitation
     */
     async sendDemoInvitation(email, leadName, sellerName, date, meetingLink, confirmUrl, denyUrl) {

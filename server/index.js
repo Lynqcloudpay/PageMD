@@ -347,6 +347,10 @@ app.use('/api', require('./routes/clinicalWorkspace'));
 // Telehealth (Daily.co video conferencing)
 app.use('/api/telehealth', require('./routes/telehealth'));
 
+// Guest Access for Telehealth (Public - No Auth Required)
+// Magic link access for patients who can't log into the portal
+app.use('/api/visit/guest', require('./routes/guestAccess'));
+
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {
   res.json({

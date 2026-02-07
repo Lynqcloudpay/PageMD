@@ -759,6 +759,141 @@ router.delete('/:id', requirePermission('schedule:edit'), async (req, res) => {
   }
 });
 
+/**
+ * POST /:id/generate-guest-link
+ * Generate a magic link for guest telehealth access
+ * Only for telehealth appointments
+ */
+router.post('/:id/generate-guest-link', requirePermission('schedule:view'), async (req, res) => {
+  const crypto = require('crypto');
+  const emailService = require('../services/emailService');
+
+  try {
+    const { id } = req.params;
+
+    // Get appointment with patient details
+    const result = await pool.query(`
+      SELECT 
+        a.*,
+        p.id as patient_id,
+        p.first_name,
+        p.last_name,
+        p.email,
+        p.encryption_metadata,
+        u.first_name as provider_first_name,
+        u.last_name as provider_last_name,
+        cs.phone as clinic_phone,
+        cs.name as clinic_name
+      FROM appointments a
+      JOIN patients p ON a.patient_id = p.id
+      LEFT JOIN users u ON a.provider_id = u.id
+      LEFT JOIN clinic_settings cs ON cs.id = 1
+      WHERE a.id = $1
+    `, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    const appt = result.rows[0];
+
+    // Verify it's a telehealth appointment
+    const visitMethod = (appt.visit_method || '').toLowerCase();
+    const apptType = (appt.appointment_type || '').toLowerCase();
+    const isTelehealth = visitMethod === 'telehealth' ||
+      apptType.includes('telehealth') ||
+      apptType.includes('video') ||
+      apptType.includes('virtual');
+
+    if (!isTelehealth) {
+      return res.status(400).json({ error: 'Guest links can only be generated for telehealth appointments' });
+    }
+
+    // Check appointment status
+    const closedStatuses = ['completed', 'checked_out', 'cancelled', 'no_show'];
+    if (closedStatuses.includes(appt.status) || closedStatuses.includes(appt.patient_status)) {
+      return res.status(400).json({ error: 'Cannot generate link for closed appointments' });
+    }
+
+    // Decrypt patient data
+    const decryptedPatient = preparePatientForResponse({
+      first_name: appt.first_name,
+      last_name: appt.last_name,
+      email: appt.email,
+      encryption_metadata: appt.encryption_metadata
+    });
+
+    const patientEmail = decryptedPatient.email;
+    if (!patientEmail) {
+      return res.status(400).json({ error: 'Patient does not have an email address on file' });
+    }
+
+    const patientName = `${decryptedPatient.first_name || ''} ${decryptedPatient.last_name || ''}`.trim() || 'Patient';
+    const providerName = `Dr. ${appt.provider_last_name || appt.provider_first_name || 'Provider'}`;
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Calculate expiry: appointment time + duration + 90 minutes
+    const appointmentDate = new Date(appt.appointment_date);
+    const [hours, minutes] = (appt.appointment_time || '09:00').split(':').map(Number);
+    appointmentDate.setHours(hours, minutes, 0, 0);
+
+    const durationMinutes = appt.duration || 30;
+    const expiresAt = new Date(appointmentDate.getTime() + (durationMinutes + 90) * 60 * 1000);
+
+    // Invalidate any existing tokens for this appointment
+    await pool.query(`
+      UPDATE guest_access_tokens 
+      SET invalidated_at = CURRENT_TIMESTAMP 
+      WHERE appointment_id = $1 AND invalidated_at IS NULL
+    `, [id]);
+
+    // Create new token
+    await pool.query(`
+      INSERT INTO guest_access_tokens (appointment_id, patient_id, token_hash, expires_at, created_by)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [id, appt.patient_id, tokenHash, expiresAt, req.user.id]);
+
+    // Build guest link
+    const baseUrl = process.env.BASE_URL || 'https://pagemdemr.com';
+    const guestLink = `${baseUrl}/visit/guest?token=${token}`;
+
+    // Format appointment time for email
+    const appointmentTimeFormatted = appointmentDate.toLocaleString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    // Send email
+    await emailService.sendGuestAccessLink(
+      patientEmail,
+      patientName,
+      providerName,
+      appointmentTimeFormatted,
+      guestLink,
+      appt.clinic_phone || '(555) 555-5555'
+    );
+
+    console.log(`[Guest Access] Link generated for appointment ${id}, sent to ${patientEmail}`);
+
+    res.json({
+      success: true,
+      message: 'Guest access link sent successfully',
+      sentTo: patientEmail
+    });
+
+  } catch (error) {
+    console.error('[Guest Access] Error generating link:', error);
+    res.status(500).json({ error: 'Failed to generate guest access link' });
+  }
+});
+
 module.exports = router;
 
 
