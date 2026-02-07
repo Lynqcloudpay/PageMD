@@ -51,12 +51,6 @@ const PricingPage = () => {
     const currentYear = new Date().getFullYear();
 
     useEffect(() => {
-        document.title = "Pricing | Transparent Growth | PageMD";
-        const meta = document.querySelector('meta[name="description"]');
-        if (meta) meta.setAttribute("content", "Transparent, staircase pricing designed by physicians for physicians. $0 implementation and no contracts. Experience PageMD today.");
-    }, []);
-
-    useEffect(() => {
         setIsAnimating(true);
         const timer = setTimeout(() => setIsAnimating(false), 300);
         return () => clearTimeout(timer);
@@ -68,6 +62,7 @@ const PricingPage = () => {
 
     const calculateTotal = (numSeats) => {
         let virtualTotal = 0;
+        // 1. Calculate the cost for any N seats using the staircase buckets
         for (let i = 1; i <= numSeats; i++) {
             const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
             virtualTotal += tier.rate;
@@ -77,7 +72,7 @@ const PricingPage = () => {
 
     const virtualTotal = useMemo(() => calculateTotal(seats), [seats]);
     const avgCostPerSeat = useMemo(() => Math.round(virtualTotal / seats), [virtualTotal, seats]);
-    const totalMonthly = useMemo(() => virtualTotal, [virtualTotal]);
+    const totalMonthly = useMemo(() => seats * (virtualTotal / seats), [seats, virtualTotal]); // This is just virtualTotal for the slider
     const totalSavings = useMemo(() => (seats * 399) - virtualTotal, [seats, virtualTotal]);
 
     const incrementSeats = () => setSeats(prev => Math.min(prev + 1, 11));
@@ -85,152 +80,205 @@ const PricingPage = () => {
 
     const pricingEquation = useMemo(() => {
         if (seats === 1) return `1 × $399`;
+
         let parts = [];
         let remaining = seats;
+
+        // Tier 1 (Solo) is always fully consumed if seats >= 1
         parts.push(`1 × $399`);
         remaining -= 1;
+
         for (let i = 1; i < TIERS.length; i++) {
             if (remaining <= 0) break;
+
             const tier = TIERS[i];
             const tierCapacity = tier.max - tier.min + 1;
             const inThisTier = Math.min(remaining, tierCapacity);
+
             if (inThisTier > 0) {
                 parts.push(`${inThisTier} × $${tier.rate}`);
                 remaining -= inThisTier;
             }
         }
+
         return parts.join(" + ");
     }, [seats]);
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-white font-inter text-gray-900 selection:bg-blue-100">
             <LandingNav />
 
-            {/* Premium Hero */}
-            <section className="relative pt-32 pb-24 lg:pt-48 lg:pb-40 px-6 bg-white overflow-hidden">
-                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-[800px] h-[800px] bg-sky-50 rounded-full blur-[120px] opacity-60 pointer-events-none"></div>
+            {/* Hero Section */}
+            <section className="pt-32 pb-20 px-6 relative overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full pointer-events-none opacity-50">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-blue-50 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-50 rounded-full blur-3xl -ml-20 -mb-20"></div>
+                </div>
 
-                <div className="max-w-6xl mx-auto text-center relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-full text-[10px] font-semibold tracking-wider uppercase mb-8 border border-sky-100/40">
-                        <TrendingDown className="w-3.5 h-3.5" />
-                        Smart Growth
+                <div className="max-w-5xl mx-auto text-center relative z-10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm">
+                        <Zap className="w-3 h-3" />
+                        The Growth Engine
                     </div>
-                    <h1 className="text-3xl md:text-5xl lg:text-6xl font-semibold text-slate-800 leading-[1.1] mb-6 tracking-tight">
-                        Transparent design. <br />
-                        <span className="text-sky-500">Zero barriers.</span>
+                    <h1 className="text-4xl lg:text-6xl font-black tracking-tight mb-8">
+                        $0 Implementation. <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 uppercase tracking-wider">Zero Barriers</span>
                     </h1>
-                    <p className="text-base md:text-lg text-slate-500 max-w-xl mx-auto font-normal leading-relaxed mb-10">
-                        Most EMRs penalize your growth with flat-rate fees. PageMD rewards it. As your practice expands, your average cost per doctor drops automatically.
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed mb-10">
+                        Most EMRs penalize your growth with flat-rate fees. <span className="font-bold text-gray-900">PageMD rewards it.</span><br />
+                        As your practice expands, your average cost per doctor drops automatically.
                     </p>
-                    <div className="flex flex-wrap justify-center gap-4">
-                        <div className="flex items-center gap-2 text-[10px] font-semibold text-sky-600 bg-sky-50/50 px-4 py-2 rounded-full uppercase tracking-wider border border-sky-100/50">
-                            <Check className="w-3.5 h-3.5" /> Month-to-month
+                    <div className="flex justify-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-4 py-2 rounded-full uppercase tracking-widest shadow-sm transition-transform hover:scale-105">
+                            <Check className="w-3.5 h-3.5" />
+                            Month-to-month
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-500 bg-slate-50/50 px-4 py-2 rounded-full uppercase tracking-wider border border-slate-100">
-                            <Check className="w-3.5 h-3.5" /> $0 Implementation
+                        <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-full uppercase tracking-widest shadow-sm transition-transform hover:scale-105">
+                            <Check className="w-3.5 h-3.5" />
+                            No Contracts
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Savings Slider Section - Zen Refinement */}
-            <section className="pb-24 lg:pb-32 px-6">
+            {/* Savings Slider Section */}
+            <section className="pb-24 px-6 overflow-hidden">
                 <div className="max-w-6xl mx-auto">
-                    <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/40 border border-slate-50 overflow-hidden lg:flex items-stretch">
-                        <div className="lg:w-1/2 p-10 lg:p-16 border-b lg:border-b-0 lg:border-r border-slate-50 relative bg-white">
-                            <div className="flex items-center gap-3 mb-12">
-                                <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center">
-                                    <Calculator className="w-5 h-5 text-white" />
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-blue-100/50 border border-blue-50 overflow-hidden lg:flex items-stretch transition-all">
+                        <div className="lg:w-1/2 p-8 lg:p-10 border-b lg:border-b-0 lg:border-r border-gray-100 relative bg-white">
+                            <div className="flex items-center justify-between mb-10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
+                                        <Calculator className="w-5 h-5 text-white" />
+                                    </div>
+                                    <h2 className="text-lg font-bold">Interactive Cost Explorer</h2>
                                 </div>
-                                <h2 className="text-xl font-semibold text-slate-800 tracking-tight">Interactive Cost Explorer</h2>
                             </div>
 
-                            <div className="mb-14 relative z-10">
-                                <div className="flex justify-between items-end mb-8">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Practice Size</label>
+                            <div className="mb-12 relative z-10">
+                                <div className="flex justify-between items-end mb-6">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] leading-none">Practice Size</label>
                                     <div className="flex items-baseline gap-1">
-                                        <span className={`text-4xl font-semibold tracking-tighter tabular-nums transition-all ${isAnimating ? 'text-sky-500' : 'text-slate-800'}`}>
-                                            {seats === 11 ? '11+' : seats}
+                                        <span className={`text-4xl font-black tracking-tighter tabular-nums transition-all duration-300 ${isAnimating ? 'text-blue-600' : 'text-gray-900'}`}>
+                                            {seats === 11 ? '11' : seats}{seats === 11 && '+'}
                                         </span>
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Providers</span>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">MD</span>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-4">
                                     <button
                                         onClick={decrementSeats}
-                                        className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all disabled:opacity-30"
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
                                         disabled={seats <= 1}
+                                        aria-label="Decrease providers"
                                     >
-                                        <ChevronLeft className="w-5 h-5 text-slate-600" />
+                                        <ChevronLeft className="w-4 h-4" />
                                     </button>
 
-                                    <div className="relative flex-1 h-2 bg-slate-50 rounded-full">
+                                    <div className="relative flex-1 h-3">
                                         <input
                                             type="range"
                                             min="1"
                                             max="11"
                                             value={seats}
                                             onChange={(e) => setSeats(parseInt(e.target.value))}
-                                            className="w-full h-full appearance-none bg-transparent cursor-pointer accent-sky-500"
+                                            className="w-full h-full bg-gray-100 rounded-full appearance-none cursor-pointer accent-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                         />
                                     </div>
 
                                     <button
                                         onClick={incrementSeats}
-                                        className="w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all disabled:opacity-30"
+                                        className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:border-blue-300 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
                                         disabled={seats >= 11}
+                                        aria-label="Increase providers"
                                     >
-                                        <ChevronRight className="w-5 h-5 text-slate-600" />
+                                        <ChevronRight className="w-4 h-4" />
                                     </button>
+                                </div>
+
+                                <div className="flex justify-between mt-4 px-12 text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">
+                                    <span className={seats === 1 ? 'text-blue-500' : ''}>Solo</span>
+                                    <span className={seats > 1 && seats < 11 ? 'text-blue-500' : ''}>Scaling</span>
+                                    <span className={seats === 11 ? 'text-blue-500' : ''}>Enterprise</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-6">
+
+                            <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100/50 text-center">
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Avg Monthly / Dr</p>
-                                        <p className="text-3xl font-semibold text-slate-800 tracking-tight">${avgCostPerSeat}</p>
+                                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100">
+                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Tier</p>
+                                        <p className="text-base font-bold text-gray-900">{currentTier.name}</p>
                                     </div>
-                                    <div className="p-6 rounded-2xl bg-sky-500 text-white text-center shadow-lg shadow-sky-200/50">
-                                        <p className="text-[9px] font-semibold text-sky-100 uppercase tracking-widest mb-1.5">Total Monthly</p>
-                                        <p className="text-3xl font-semibold tracking-tight">${totalMonthly.toLocaleString()}</p>
+                                    <div className="p-5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-100 transition-transform active:scale-[0.98]">
+                                        <p className="text-[9px] font-bold text-blue-100 uppercase tracking-widest mb-1">Avg. Monthly / Doctor</p>
+                                        <p className={`text-2xl font-black tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${avgCostPerSeat}</p>
                                     </div>
                                 </div>
 
-                                <div className="p-6 rounded-2xl bg-slate-50/50 border border-slate-100">
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <TrendingDown className="w-4 h-4 text-sky-500" />
-                                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Staircase Calculation</h3>
+                                <div className="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center">
+                                            <TrendingDown className="w-3.5 h-3.5 text-white" />
+                                        </div>
+                                        <h3 className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Staircase Calculation</h3>
                                     </div>
-                                    <p className="font-mono text-[11px] text-slate-400 mb-4 break-words">{pricingEquation}</p>
-                                    {totalSavings > 0 && (
-                                        <div className="flex items-center justify-between pt-4 border-t border-slate-100/50">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Monthly Savings</span>
-                                            <span className="text-sm font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                                                -${totalSavings.toLocaleString()}
-                                            </span>
+                                    {seats === 1 ? (
+                                        <p className="text-[10px] font-bold text-indigo-900/60 leading-relaxed italic">Add providers to see the discounted breakdown.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="font-mono text-[10px] text-indigo-600/70 break-all leading-tight">{pricingEquation}</span>
+                                            </div>
+
+                                            {/* Price Comparison: Original vs Discounted */}
+                                            <div className="flex items-center justify-between pt-2 border-t border-indigo-100">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Without Discount</span>
+                                                    <span className="text-base font-bold text-gray-400 line-through tabular-nums">${(seats * 399).toLocaleString()}</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Your Price</span>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span className={`text-2xl font-black text-indigo-900 tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${totalMonthly.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Savings Badge */}
+                                            {totalSavings > 0 && (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                                                        ↓ Save ${totalSavings.toLocaleString()}/mo
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="h-1.5 w-full bg-indigo-100/50 rounded-full overflow-hidden">
+                                                <div className="h-full bg-blue-600 transition-all duration-700" style={{ width: `${(avgCostPerSeat / 399) * 100}%` }}></div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="lg:w-1/2 bg-slate-50/30 p-10 lg:p-16 flex flex-col justify-center border-l border-slate-50">
-                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-12">The Reward Curve</h3>
-                            <div className="space-y-8">
-                                {TIERS.map((tier, idx) => {
+                        <div className="lg:w-1/2 bg-gray-50/50 p-8 lg:p-14 flex flex-col justify-center border-l border-gray-100">
+                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-10">The Reward Curve</h3>
+                            <div className="space-y-6">
+                                {TIERS.slice(0, 6).map((tier, idx) => {
                                     const isCurrent = currentTier.name === tier.name;
                                     const percentage = (tier.rate / TIERS[0].rate) * 100;
                                     return (
-                                        <div key={idx} className={`relative transition-all duration-500 ${isCurrent ? 'opacity-100 translate-x-1' : 'opacity-30'}`}>
-                                            <div className="flex justify-between items-center mb-2 font-semibold text-[10px] uppercase tracking-wider text-slate-500">
-                                                <span>{tier.name} Tier</span>
-                                                <span className={isCurrent ? 'text-sky-500' : ''}>${tier.rate}/MO</span>
+                                        <div key={idx} className={`relative transition-all duration-500 ${isCurrent ? 'opacity-100' : 'opacity-40 grayscale'}`}>
+                                            <div className="flex justify-between items-center mb-1 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                                <span>{tier.name}</span>
+                                                <span className={isCurrent ? 'text-blue-600' : ''}>${tier.rate}/MO</span>
                                             </div>
-                                            <div className="h-2 bg-white rounded-full overflow-hidden border border-slate-100">
+                                            <div className="h-3 bg-white rounded-full overflow-hidden border border-gray-100 shadow-sm">
                                                 <div
-                                                    className={`h-full transition-all duration-700 ease-out ${isCurrent ? 'bg-sky-500' : 'bg-slate-200'}`}
+                                                    className={`h-full transition-all duration-1000 ease-out rounded-full ${isCurrent ? 'bg-gradient-to-r from-blue-400 to-indigo-500' : 'bg-gray-200'}`}
                                                     style={{ width: `${percentage}%` }}
                                                 ></div>
                                             </div>
@@ -243,39 +291,92 @@ const PricingPage = () => {
                 </div>
             </section>
 
-            {/* Feature Unification - Statement Card */}
-            <section className="py-24 lg:py-32 px-6">
-                <div className="max-w-6xl mx-auto">
-                    <div className="p-10 lg:p-16 rounded-[3rem] bg-slate-900 overflow-hidden relative group">
-                        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div className="relative z-10 grid lg:grid-cols-2 gap-16 items-center">
-                            <div>
-                                <span className="inline-block px-4 py-1 rounded-full bg-sky-500/10 text-sky-400 text-[10px] font-semibold uppercase tracking-wider mb-8 border border-sky-400/20">
-                                    Inclusive Access
-                                </span>
-                                <h3 className="text-3xl md:text-5xl font-semibold text-white mb-8 leading-tight tracking-tight">
-                                    Every plan includes <br />
-                                    <span className="text-sky-400">everything.</span>
-                                </h3>
-                                <p className="text-slate-400 text-base leading-relaxed mb-10 font-normal">
-                                    Other platforms force you to choose between "Basic" and "Pro" versions, often stripping away essential tools like Telehealth or ePrescribe. We believe every physician deserves the best tools, regardless of practice size.
-                                </p>
-                                <Link to="/contact" className="inline-flex items-center gap-3 px-8 py-4 bg-sky-500 hover:bg-sky-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-sky-500/20 text-sm">
-                                    Talk to Sales
-                                    <ArrowRight className="w-4 h-4" />
-                                </Link>
+            {/* Referral Rewards Advertising (The Growth Loop) */}
+            <section className="py-24 px-6 relative overflow-hidden bg-slate-900 border-y border-white/5">
+                <div className="absolute top-0 right-0 w-full h-full opacity-20 pointer-events-none">
+                    <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[120px]"></div>
+                    <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500 rounded-full blur-[120px]"></div>
+                </div>
+
+                <div className="max-w-6xl mx-auto relative z-10">
+                    <div className="lg:flex items-center gap-20">
+                        <div className="lg:w-5/12 mb-12 lg:mb-0">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-blue-500/20">
+                                <Users className="w-3 h-3" />
+                                Exclusive Referral Benefit
                             </div>
-                            <div className="bg-white/5 backdrop-blur-3xl rounded-3xl p-8 border border-white/10">
-                                <h4 className="text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] mb-8 border-b border-white/5 pb-4">Standard Features</h4>
-                                <div className="grid sm:grid-cols-2 gap-y-6 gap-x-8">
-                                    {FEATURES.map((f, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <div className="w-5 h-5 rounded-full bg-sky-500/20 flex items-center justify-center shrink-0">
-                                                <Check className="w-3 h-3 text-sky-400" />
-                                            </div>
-                                            <span className="text-sm font-medium text-slate-300">{f}</span>
+                            <h2 className="text-4xl font-black text-white tracking-tight mb-8 leading-tight">
+                                Unlock <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 uppercase tracking-wider">Ghost Seats</span> <br />
+                                & Subsidize Your Practice.
+                            </h2>
+                            <p className="text-slate-400 text-lg leading-relaxed mb-10">
+                                Why pay full price when your network can pay it for you? Refer a colleague to PageMD, and we’ll credit your account with a <span className="text-white font-bold">Ghost Seat</span>.
+                                <br /><br />
+                                These seats count toward your billing tiers just like a physical provider, automatically lowering your monthly rate per doctor for as long as your referral stays active.
+                            </p>
+
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-6 h-6 rounded-full bg-[#059669]/20 flex items-center justify-center shrink-0 mt-1">
+                                        <Check className="w-3.5 h-3.5 text-[#059669]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white">Compound Savings</p>
+                                        <p className="text-xs text-slate-500">The more you refer, the more your individual cost drops.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-4">
+                                    <div className="w-6 h-6 rounded-full bg-[#059669]/20 flex items-center justify-center shrink-0 mt-1">
+                                        <Check className="w-3.5 h-3.5 text-[#059669]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-white">30-Day Churn Grace Period</p>
+                                        <p className="text-xs text-slate-500">If a referral leaves, we keep your discount active for 30 days while you find a replacement.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="lg:w-7/12">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="p-8 rounded-[2rem] bg-white/5 border border-white/10 backdrop-blur-xl group hover:bg-white/10 transition-all">
+                                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center mb-6 shadow-xl shadow-blue-900/40">
+                                        <TrendingDown className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-white mb-4 uppercase tracking-wider">Physical vs. Ghost</h3>
+                                    <p className="text-sm text-slate-400 leading-relaxed mb-6 italic">
+                                        "I have 2 doctors in our practice, but I referred 4 friends. My billing tier jumped from 'Partner' to 'Premier', saving me $3,600 this year."
+                                    </p>
+                                    <div className="flex items-center gap-2 pt-6 border-t border-white/10">
+                                        <div className="flex -space-x-2">
+                                            {[1, 2].map(i => (
+                                                <div key={i} className="w-8 h-8 rounded-full bg-slate-700 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-tighter">MD</div>
+                                            ))}
+                                            {[1, 2, 3, 4].map(i => (
+                                                <div key={i} className="w-8 h-8 rounded-full bg-blue-500 border-2 border-slate-900 flex items-center justify-center text-[10px] font-black text-white uppercase tracking-tighter shadow-lg shadow-blue-500/50">G</div>
+                                            ))}
                                         </div>
-                                    ))}
+                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-auto">Level 6 Pricing Unlocked</span>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 rounded-[2rem] bg-gradient-to-br from-indigo-600 to-blue-700 shadow-2xl shadow-indigo-500/20 flex flex-col justify-between group hover:scale-[1.02] transition-all">
+                                    <div>
+                                        <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
+                                            <Calculator className="w-6 h-6 text-white" />
+                                        </div>
+                                        <h3 className="text-xl font-black text-white mb-4 uppercase tracking-wider">Viral Subsidy Logic</h3>
+                                        <p className="text-sm text-blue-100 leading-relaxed">
+                                            Refer just 10 colleagues and unlock <span className="font-black text-white underline decoration-cyan-400 decoration-4 underline-offset-4">Enterprise Pricing</span> regardless of your actual practice size.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate('/contact')}
+                                        className="mt-8 w-full py-4 bg-white text-blue-600 font-black rounded-xl hover:shadow-xl hover:shadow-white/20 transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                                    >
+                                        Start Referring
+                                        <ArrowRight className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -283,52 +384,195 @@ const PricingPage = () => {
                 </div>
             </section>
 
-            {/* Implementation Fee - Minimalist */}
-            <section className="py-24 lg:py-32 px-6 bg-slate-50/50 border-y border-slate-100">
-                <div className="max-w-3xl mx-auto text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center mx-auto mb-8 border border-slate-100">
-                        <Shield className="w-8 h-8 text-sky-500" />
+            {/* Pricing Table Section */}
+            <section className="py-24 px-6 bg-gray-50/30">
+                <div className="max-w-6xl mx-auto">
+                    <div className="text-center mb-12">
+                        <h2 className="text-2xl font-black text-gray-900 mb-2">Transparent Growth Model</h2>
+                        <p className="text-xs text-gray-500 font-medium">As you grow, your licensing cost per seat automatically drops.</p>
                     </div>
-                    <h2 className="text-2xl font-semibold text-slate-800 mb-4 tracking-tight">Onboarding & Compliance</h2>
-                    <p className="text-base text-slate-500 mb-8 leading-relaxed font-normal">
-                        A one-time $25.00 credentialing fee is applied per new provider for Surescripts identity verification and DEA compliance.
-                    </p>
-                    <div className="inline-flex items-center gap-3 px-4 py-2 bg-white rounded-full border border-slate-200 text-xs font-semibold text-slate-400 shadow-sm uppercase tracking-widest italic">
-                        "Secure, compliant, and ready for practice."
-                    </div>
-                </div>
-            </section>
 
-            {/* CTA */}
-            <section className="py-24 lg:py-32 bg-white px-6">
-                <div className="max-w-3xl mx-auto text-center">
-                    <h2 className="text-3xl md:text-5xl font-semibold text-slate-800 mb-10 leading-tight tracking-tight">Join the <span className="text-sky-500">mission</span> to fix medicine.</h2>
-                    <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <Link to="/contact" className="px-10 py-5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl shadow-lg shadow-slate-200/50 transition-all hover:-translate-y-0.5 text-base flex items-center justify-center gap-3">
-                            Work with Us
-                            <ArrowRight className="w-5 h-5" />
-                        </Link>
-                        <Link to="/" className="px-10 py-5 bg-white hover:bg-slate-50 text-slate-800 font-medium rounded-xl border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5 text-base flex items-center justify-center">
-                            Explore PageMD
-                        </Link>
+                    <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-100/30 border border-gray-100 overflow-hidden mb-16">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-gray-100 bg-white">
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400">Tier Name</th>
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400 text-center">Practice Size</th>
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400 text-center">Standard Rate</th>
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-blue-500 text-center bg-blue-50/30">Avg. Monthly / Doctor</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {TIERS.map((tier, idx) => {
+                                    const isCurrent = currentTier.name === tier.name;
+                                    return (
+                                        <tr
+                                            key={idx}
+                                            className={`transition-all duration-500 ${isCurrent ? 'bg-blue-50/40 relative z-10' : 'hover:bg-gray-50/50'}`}
+                                        >
+                                            <td className="px-6 py-5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${isCurrent ? 'bg-blue-600 animate-pulse' : 'bg-transparent'}`} />
+                                                    <div>
+                                                        <span className={`text-base font-bold text-gray-900 tracking-tight uppercase ${isCurrent ? 'text-blue-700' : ''}`}>{tier.name}</span>
+                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Level {idx + 1}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5 text-center">
+                                                <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold font-mono transition-colors ${isCurrent ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-500'}`}>
+                                                    {tier.label}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5 text-center">
+                                                <span className="text-sm font-bold text-gray-400 line-through mr-1">${TIERS[0].rate}</span>
+                                                <span className={`text-sm font-black transition-colors ${isCurrent ? 'text-gray-900 scale-110 inline-block' : 'text-gray-900'}`}>${tier.rate}</span>
+                                                <span className="text-[9px] text-gray-400 font-bold ml-1">/mo</span>
+                                            </td>
+                                            <td className={`px-6 py-5 text-center transition-colors ${isCurrent ? 'bg-blue-600/5' : ''}`}>
+                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-lg transition-all duration-500 uppercase tracking-wider ${isCurrent ? 'bg-blue-600 text-white scale-110' : 'bg-blue-50 text-blue-600 shadow-transparent'}`}>
+                                                    <TrendingDown className={`w-3.5 h-3.5 transition-transform ${isCurrent ? 'rotate-0' : '-rotate-45 opacity-50'}`} />
+                                                    {idx === 0 ? '$399' : idx === 1 ? '~$332' : idx === 2 ? '~$299' : idx === 3 ? '~$261' : idx === 4 ? '~$239' : '<$169'}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
-                </div>
-            </section>
 
-            <footer className="py-20 px-6 bg-white border-t border-slate-100">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12 font-black text-[10px] uppercase tracking-[0.4em] text-slate-400">
-                    <Link to="/" className="flex items-center gap-3 grayscale opacity-40 hover:opacity-100 transition-opacity">
-                        <img src="/logo.png" alt="PageMD" className="h-10" />
-                    </Link>
-                    <div className="flex flex-col items-center md:items-end gap-2">
-                        <div className="flex gap-12">
-                            <Link to="/privacy" className="hover:text-sky-500 transition-colors">Privacy</Link>
-                            <Link to="/terms" className="hover:text-sky-500 transition-colors">Terms</Link>
-                            <Link to="/security" className="hover:text-sky-500 transition-colors">Security</Link>
+
+                    <div className="mt-12 group p-10 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-2xl shadow-blue-200 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+
+                        <div className="relative z-10 lg:flex items-start justify-between gap-12">
+                            <div className="lg:w-1/2 mb-8 lg:mb-0">
+                                <span className="inline-block px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 shadow-lg">
+                                    No "Half EMRs"
+                                </span>
+                                <h3 className="text-3xl font-black mb-6 leading-tight">
+                                    Every Plan Includes <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white">Everything.</span>
+                                </h3>
+                                <p className="text-blue-100/90 text-sm leading-relaxed mb-8 font-medium">
+                                    Other platforms force you to choose between "Basic" and "Pro" versions, often stripping away essential tools like <span className="text-white font-bold decoration-blue-300 underline decoration-2 underline-offset-2">Telehealth</span> or <span className="text-white font-bold decoration-blue-300 underline decoration-2 underline-offset-2">ePrescribe</span> to make you pay more.
+                                    <br /><br />
+                                    <span className="text-white font-bold">We don't play that game.</span> Whether you're a solo practitioner or a large enterprise, you get the full power of PageMD — no hidden upgrades, no missing features.
+                                </p>
+                                <button
+                                    onClick={() => navigate('/contact')}
+                                    className="w-full sm:w-auto px-8 py-4 bg-white text-blue-600 font-black rounded-xl hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95 text-xs uppercase tracking-widest"
+                                >
+                                    Get Started Now
+                                    <ArrowRight className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="lg:w-1/2 bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/10 shadow-inner">
+                                <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-6 text-blue-200 border-b border-white/10 pb-4">
+                                    Unrestricted Access To:
+                                </h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+                                    {FEATURES.map((feature, i) => (
+                                        <div key={i} className="flex items-center gap-3">
+                                            <div className="w-6 h-6 rounded-full bg-green-400 flex items-center justify-center shadow-lg shadow-green-900/20 shrink-0">
+                                                <Check className="w-3.5 h-3.5 text-green-900 stroke-[3]" />
+                                            </div>
+                                            <span className="text-sm font-bold text-white tracking-tight">{feature}</span>
+                                        </div>
+                                    ))}
+                                    <div className="flex items-center gap-3 opacity-80">
+                                        <div className="w-6 h-6 rounded-full bg-blue-400/30 flex items-center justify-center shrink-0">
+                                            <div className="w-1.5 h-1.5 bg-blue-200 rounded-full"></div>
+                                        </div>
+                                        <span className="text-sm font-medium text-blue-100 italic">And everything else...</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="text-slate-200 mt-4">© {currentYear} PageMD Inc. All rights reserved.</div>
-                        <div className="text-[8px] font-semibold text-slate-300 uppercase tracking-widest mt-1">Made by a Physician, for Physicians</div>
                     </div>
+                </div>
+            </section>
+
+            {/* Fees Section */}
+            <section className="py-24 px-6 border-b border-gray-100 bg-white">
+                <div className="max-w-4xl mx-auto text-center">
+                    <div className="inline-block p-12 rounded-[4rem] bg-indigo-50 relative border border-indigo-100 shadow-xl shadow-indigo-50/50">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-2xl bg-white shadow-2xl flex items-center justify-center border border-indigo-50">
+                            <Shield className="w-8 h-8 text-indigo-600" />
+                        </div>
+                        <h2 className="text-xl font-bold text-indigo-900 mb-4 uppercase tracking-widest">Onboarding & Compliance</h2>
+                        <p className="text-4xl font-black text-indigo-900 mb-6">$25.00</p>
+                        <p className="text-base font-bold text-indigo-800 mb-2">Provider Credentialing Fee (One-time, per new prescriber)</p>
+                        <p className="text-sm text-gray-500 bg-white/50 backdrop-blur-sm p-4 rounded-2xl italic border border-indigo-100 mt-6">
+                            "Includes secure identity verification required for Surescripts and DEA compliance."
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            {/* Technical Highlights Section */}
+            <section className="py-24 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="text-center mb-16 underline decoration-blue-500 decoration-4 underline-offset-8">
+                        <h2 className="text-3xl font-black tracking-tight">Modern Clinical Infrastructure</h2>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {TECHNICAL_HIGHLIGHTS.map((h, i) => (
+                            <div key={i} className="group p-8 rounded-[2rem] bg-white border border-gray-100 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-50/50 transition-all duration-300">
+                                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
+                                    <h.icon className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-base font-bold mb-3">{h.title}</h3>
+                                <p className="text-xs text-gray-600 leading-relaxed">{h.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Final CTA */}
+            <section className="py-24 px-6 relative overflow-hidden bg-blue-600">
+                <div className="absolute inset-0">
+                    <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent)]"></div>
+                </div>
+
+                <div className="max-w-4xl mx-auto text-center relative z-10">
+                    <h2 className="text-3xl lg:text-5xl font-black text-white mb-8 tracking-tight">
+                        Ready to Transform Your Practice?
+                    </h2>
+                    <p className="text-lg text-blue-100 mb-12 font-medium">
+                        Join the next generation of clinics choosing growth over penalty.
+                    </p>
+                    <div className="flex flex-col sm:flex-row justify-center gap-6">
+                        <button
+                            onClick={() => navigate('/contact')}
+                            className="px-10 py-5 bg-white text-blue-600 font-black rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                        >
+                            Request Demo
+                            <ArrowRight className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => navigate('/contact')}
+                            className="px-10 py-5 bg-blue-800/30 backdrop-blur-md text-white border border-white/20 font-black rounded-2xl hover:bg-blue-800/40 transition-all"
+                        >
+                            Talk to Sales
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="py-12 px-6 bg-white border-t border-gray-100">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+                    <img src="/logo.png" alt="PageMD" className="h-8 w-auto grayscale opacity-50 transition-all hover:grayscale-0 hover:opacity-100" />
+                    <div className="flex gap-8">
+                        <Link to="/about" className="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest">About</Link>
+                        <Link to="/contact" className="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest">Contact</Link>
+                        <Link to="/security" className="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest">Security</Link>
+                    </div>
+                    <div className="text-[10px] font-black text-gray-300 uppercase tracking-widest">© {currentYear} PageMD. All rights reserved.</div>
                 </div>
             </footer>
         </div>

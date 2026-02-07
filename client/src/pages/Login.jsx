@@ -97,17 +97,17 @@ const Login = () => {
                         </div>
 
                         <div className="mt-4 text-center">
-                            <h2 className="text-3xl font-semibold text-slate-800 tracking-tight">
+                            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
                                 Welcome Back
                             </h2>
-                            <p className="text-slate-400 text-[10px] sm:text-xs mt-2 font-semibold uppercase tracking-[0.2em] opacity-80">
+                            <p className="text-slate-400 text-[10px] sm:text-xs mt-2 font-black uppercase tracking-[0.2em] opacity-80">
                                 Secure Access for Professionals
                             </p>
                         </div>
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-sm font-semibold animate-fade-in flex items-center gap-3">
+                        <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-sm font-bold animate-fade-in flex items-center gap-3">
                             <AlertCircle className="w-5 h-5" />
                             {error}
                         </div>
@@ -115,7 +115,7 @@ const Login = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                                     <Mail className="h-4 w-4" />
@@ -132,7 +132,7 @@ const Login = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                                     <Lock className="h-4 w-4" />
@@ -161,7 +161,7 @@ const Login = () => {
                     <div className="mt-8 text-center text-sm">
                         <p className="text-slate-400 font-medium">
                             Forgot your password?{' '}
-                            <button className="text-blue-600 hover:text-blue-700 font-semibold transition-colors underline decoration-blue-500/20 hover:decoration-blue-500">
+                            <button className="text-blue-600 hover:text-blue-700 font-black transition-colors underline decoration-blue-500/20 hover:decoration-blue-500">
                                 Contact Administrator
                             </button>
                         </p>
@@ -170,7 +170,7 @@ const Login = () => {
             </div>
 
             <div className="absolute bottom-10 text-center w-full">
-                <p className="text-slate-300 text-[10px] font-semibold tracking-[0.3em] uppercase">
+                <p className="text-slate-300 text-[10px] font-black tracking-[0.3em] uppercase">
                     HIPAA Compliant & Secure • PageMD EMR v1.0
                 </p>
             </div>
