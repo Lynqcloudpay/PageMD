@@ -286,25 +286,11 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-white transition-colors">
+        <div className="flex flex-col min-h-screen bg-slate-50 transition-colors">
             {user?.isSandbox && <DemoBanner />}
             <div className="flex flex-1">
 
-                {/* Patient Tabs + Alert Bell */}
-                <div className={cn(
-                    "fixed top-0 z-20 transition-all duration-300 flex items-center justify-between",
-                    sidebarCollapsed ? "left-24" : "left-[18rem]",
-                    "right-0 h-12 bg-white border-b border-slate-100 px-2"
-                )}>
-                    <div className="flex-1 overflow-hidden">
-                        <PatientTabs />
-                    </div>
-                    <div className="flex items-center gap-2 px-4 flex-shrink-0">
-                        <AlertBell />
-                    </div>
-                </div>
-
-                {/* Sidebar - Reverted to Floating Bubble Design */}
+                {/* Sidebar - Floating Bubble */}
                 <aside
                     className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
                 >
@@ -325,7 +311,7 @@ const Layout = ({ children }) => {
                                             <img
                                                 src="/logo.png"
                                                 alt="PageMD Logo"
-                                                className="h-8.5 w-auto object-contain max-w-[145px]"
+                                                className="h-9 w-auto object-contain max-w-[150px]"
                                                 onError={(e) => { e.target.style.display = 'none'; }}
                                             />
                                         </div>
@@ -531,15 +517,28 @@ const Layout = ({ children }) => {
                     </div>
                 )}
 
-                {/* Main Content - REVERTED TO FULL SCREEN */}
+                {/* Main Content - Floating Bubble */}
                 <main
                     className={cn(
                         "flex-1 transition-all duration-500 ease-in-out relative flex flex-col h-screen overflow-hidden",
                         sidebarCollapsed ? "ml-24" : "ml-[19rem]"
                     )}
                 >
-                    <div className="flex-1 mt-12 bg-white min-h-0 overflow-y-auto">
-                        {children}
+                    <div className="flex-1 m-4 bg-white rounded-[2.5rem] shadow-2xl border border-white/50 overflow-hidden flex flex-col relative">
+                        {/* Header inside the bubble */}
+                        <div className="h-12 bg-white border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-20">
+                            <div className="flex-1 overflow-hidden">
+                                <PatientTabs />
+                            </div>
+                            <div className="flex items-center gap-2 px-4 flex-shrink-0">
+                                <AlertBell />
+                            </div>
+                        </div>
+
+                        {/* Page Content */}
+                        <div className="flex-1 overflow-y-auto min-h-0 relative z-10">
+                            {children}
+                        </div>
                     </div>
                 </main>
 
