@@ -246,16 +246,16 @@ router.post('/forgot', [
                 [tokenHash, expires, email]
             );
 
-            const resetLink = `${process.env.PORTAL_URL || 'http://localhost:5173/portal'}/reset-password?token=${token}&email=${email}`;
+            // Construct reset link - use FRONTEND_URL or PORTAL_URL as base
+            const baseUrl = process.env.FRONTEND_URL || process.env.PORTAL_URL || 'http://localhost:5173';
+            const resetLink = `${baseUrl}/portal/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
 
             try {
                 await emailService.sendPasswordReset(email, resetLink);
+                console.log('[Portal Auth] Password reset email sent to:', email);
             } catch (emailErr) {
                 console.warn('[Portal Auth] Failed to send reset email:', emailErr.message);
             }
-
-            // For dev visibility
-            console.log(`[AUTH] Reset Link: ${resetLink}`);
         }
 
         // Always return same message for security
