@@ -71,7 +71,13 @@ const resolveTenant = async (req, res, next) => {
         } catch (e) {
             console.error('[Tenant] Staff Lookup failed:', e);
         }
-    } else if (isPortalLogin && req.body && req.body.email) {
+    }
+
+    // Portal patient auth routes that need email-based tenant lookup
+    const isPortalForgot = req.path === '/portal/auth/forgot' || req.path === '/api/portal/auth/forgot';
+    const isPortalReset = req.path === '/portal/auth/reset' || req.path === '/api/portal/auth/reset';
+
+    if ((isPortalLogin || isPortalForgot || isPortalReset) && req.body && req.body.email) {
         try {
             const lookup = await pool.controlPool.query(
                 'SELECT schema_name FROM platform_patient_lookup WHERE email = $1',
@@ -79,6 +85,7 @@ const resolveTenant = async (req, res, next) => {
             );
             if (lookup.rows.length > 0) {
                 lookupSchema = lookup.rows[0].schema_name;
+                console.log(`[Tenant] Patient ${req.body.email} mapped to schema ${lookupSchema} via portal lookup`);
             }
         } catch (e) {
             console.error('[Tenant] Patient Lookup failed:', e);

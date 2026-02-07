@@ -45,9 +45,11 @@ const PortalResetPassword = () => {
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
             <div className="max-w-md w-full bg-white rounded-3xl shadow-xl shadow-slate-200 p-10">
                 <div className="text-center mb-10">
-                    <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-100">
-                        <span className="text-white text-3xl font-black italic">P</span>
-                    </div>
+                    <img
+                        src="https://pagemdemr.com/logo.png"
+                        alt="PageMD"
+                        className="h-12 mx-auto mb-6"
+                    />
                     <h1 className="text-3xl font-black text-slate-800 mb-3">Reset Password</h1>
                     <p className="text-slate-500">Create a new, strong password for your portal account.</p>
                 </div>
