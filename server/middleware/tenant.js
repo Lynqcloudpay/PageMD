@@ -211,7 +211,8 @@ const resolveTenant = async (req, res, next) => {
 
         if (req.isSandbox) {
             tenantInfo = {
-                id: decoded.leadUuid || '00000000-0000-0000-0000-000000000000',
+                id: decoded.clinicId || '60456326-868d-4e21-942a-fd35190ed4fc',
+                lead_uuid: decoded.leadUuid,
                 slug: 'demo',
                 schema_name: lookupSchema,
                 display_name: 'PageMD Sandbox Demo',
