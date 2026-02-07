@@ -1186,6 +1186,7 @@ router.post('/patient-message', async (req, res) => {
         const p = patientRes.rows[0];
 
         if (p) {
+          let recipientEmail = p.email;
           let firstName = p.first_name;
           let lastName = p.last_name;
 
