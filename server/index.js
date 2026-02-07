@@ -161,6 +161,11 @@ app.use('/api', resolveTenant);
 // Session timeout middleware (for authenticated routes)
 app.use('/api', sessionTimeout);
 
+// Guest Access for Telehealth (Public - No Auth Required)
+// Magic link access for patients who can't log into the portal
+// Must be mounted before broad catch-all routers like clinicalWorkspace
+app.use('/api/visit/guest', require('./routes/guestAccess'));
+
 // Rate limiting - exclude certain endpoints from general rate limiting
 // Apply rate limiting only in production (and not in localhost/development)
 const isProduction = process.env.NODE_ENV === 'production' && process.env.DB_HOST !== 'localhost' && !process.env.DISABLE_RATE_LIMIT;
@@ -346,10 +351,6 @@ app.use('/api', require('./routes/clinicalWorkspace'));
 
 // Telehealth (Daily.co video conferencing)
 app.use('/api/telehealth', require('./routes/telehealth'));
-
-// Guest Access for Telehealth (Public - No Auth Required)
-// Magic link access for patients who can't log into the portal
-app.use('/api/visit/guest', require('./routes/guestAccess'));
 
 // Root endpoint - redirect to frontend or show API info
 app.get('/', (req, res) => {

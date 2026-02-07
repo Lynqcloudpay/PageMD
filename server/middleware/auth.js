@@ -11,6 +11,12 @@ const authenticate = async (req, res, next) => {
       token = req.query.token;
     }
 
+    // BREAKTHROUGH FIX: Exempt public Guest Access from JWT authentication
+    // These routes use their own token-hash validation logic.
+    if (req.path.includes('/visit/guest')) {
+      return next();
+    }
+
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
     }
