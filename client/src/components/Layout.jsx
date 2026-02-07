@@ -295,7 +295,7 @@ const Layout = ({ children }) => {
                     className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-2 py-4`}
                 >
                     <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-r from-blue-100/80 via-blue-50/40 to-white/10 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-500",
+                        "flex flex-col h-full bg-gradient-to-r from-blue-200/50 via-blue-100/20 to-transparent backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-500",
                         sidebarCollapsed ? "rounded-[2.2rem]" : "rounded-[2.5rem]"
                     )}>
                         {/* Decorative background bubbles */}
