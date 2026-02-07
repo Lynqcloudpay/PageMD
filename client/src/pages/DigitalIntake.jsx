@@ -6,7 +6,7 @@ import {
     Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key, ShieldOff, ChevronDown, ChevronUp, Calendar, ArrowRight, Notebook
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { intakeAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import Modal from '../components/ui/Modal';
@@ -23,6 +23,12 @@ const DigitalIntake = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
     const [menuSessionId, setMenuSessionId] = useState(null);
+
+    const formatSessionDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return isValid(date) ? format(date, 'MMM d, yyyy • h:mm a') : 'Invalid Date';
+    };
 
     const handleClearLimits = async (lastName, dob) => {
         try {
@@ -89,7 +95,6 @@ const DigitalIntake = () => {
         const name = `${s.prefill_json?.firstName || ''} ${s.prefill_json?.lastName || ''}`.toLowerCase();
         return name.includes(searchQuery.toLowerCase());
     });
-
 
     // Use clinic slug from authenticated user context for tenant-specific URL
     const clinicSlug = user?.clinicSlug || 'sandbox';
@@ -196,7 +201,7 @@ const DigitalIntake = () => {
                                                 </div>
                                                 <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
                                                     <Calendar className="w-3 h-3 text-slate-400" />
-                                                    <span>{format(new Date(session.created_at || session.updated_at), 'MMM d, yyyy • h:mm a')}</span>
+                                                    <span>{formatSessionDate(session.created_at || session.updated_at)}</span>
                                                     {session.prefill_json?.phone && (
                                                         <>
                                                             <span className="w-1 h-1 rounded-full bg-slate-300 mx-1"></span>
