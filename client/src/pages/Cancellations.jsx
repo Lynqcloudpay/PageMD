@@ -299,94 +299,114 @@ const Cancellations = () => {
     return (
         <div className="p-4 max-w-7xl mx-auto">
             {/* Header */}
-            <div className="mb-4">
-                <h1 className="text-xl font-bold text-gray-900">Follow-up Tracker</h1>
-                <p className="text-sm text-gray-600">Manage cancelled appointments and no-show follow-ups</p>
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Follow-up Tracker</h1>
+                <p className="text-sm text-slate-500 mt-1">Manage and track follow-ups for cancellations and no-shows</p>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-4 gap-3 mb-4">
                 <button
                     onClick={() => setActiveTab('pending')}
-                    className={`p-3 rounded-xl border transition-all ${activeTab === 'pending'
-                        ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-200'
-                        : 'bg-white border-gray-200 hover:border-amber-200'
+                    className={`p-4 rounded-xl border transition-all relative overflow-hidden group ${activeTab === 'pending'
+                        ? 'bg-amber-50 border-amber-200 shadow-md ring-1 ring-amber-100'
+                        : 'bg-white border-slate-200 hover:border-amber-200 hover:shadow-sm'
                         }`}
                 >
-                    <div className="flex items-center gap-2">
-                        <Clock className={`w-4 h-4 ${activeTab === 'pending' ? 'text-amber-600' : 'text-gray-400'}`} />
-                        <span className="text-xs text-gray-600">Pending</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'pending' ? 'text-amber-700' : 'text-slate-500'}`}>Pending</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-500'}`}>
+                            <Clock size={16} />
+                        </div>
                     </div>
-                    <p className={`text-2xl font-bold ${activeTab === 'pending' ? 'text-amber-600' : 'text-gray-700'}`}>
-                        {stats.pending_count || 0}
-                    </p>
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-bold ${activeTab === 'pending' ? 'text-amber-700' : 'text-slate-700'}`}>
+                            {stats.pending_count || 0}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">notes</span>
+                    </div>
                 </button>
 
                 <button
                     onClick={() => setActiveTab('addressed')}
-                    className={`p-3 rounded-xl border transition-all ${activeTab === 'addressed'
-                        ? 'bg-green-50 border-green-300 ring-2 ring-green-200'
-                        : 'bg-white border-gray-200 hover:border-green-200'
+                    className={`p-4 rounded-xl border transition-all group ${activeTab === 'addressed'
+                        ? 'bg-emerald-50 border-emerald-200 shadow-md ring-1 ring-emerald-100'
+                        : 'bg-white border-slate-200 hover:border-emerald-200 hover:shadow-sm'
                         }`}
                 >
-                    <div className="flex items-center gap-2">
-                        <CheckCircle className={`w-4 h-4 ${activeTab === 'addressed' ? 'text-green-600' : 'text-gray-400'}`} />
-                        <span className="text-xs text-gray-600">Addressed</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-slate-500'}`}>Addressed</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'addressed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500'}`}>
+                            <CheckCircle size={16} />
+                        </div>
                     </div>
-                    <p className={`text-2xl font-bold ${activeTab === 'addressed' ? 'text-green-600' : 'text-gray-700'}`}>
-                        {stats.addressed_count || 0}
-                    </p>
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-bold ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-slate-700'}`}>
+                            {stats.addressed_count || 0}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">done</span>
+                    </div>
                 </button>
 
                 <button
                     onClick={() => setActiveTab('dismissed')}
-                    className={`p-3 rounded-xl border transition-all ${activeTab === 'dismissed'
-                        ? 'bg-red-50 border-red-300 ring-2 ring-red-200'
-                        : 'bg-white border-gray-200 hover:border-red-200'
+                    className={`p-4 rounded-xl border transition-all group ${activeTab === 'dismissed'
+                        ? 'bg-rose-50 border-rose-200 shadow-md ring-1 ring-rose-100'
+                        : 'bg-white border-slate-200 hover:border-rose-200 hover:shadow-sm'
                         }`}
                 >
-                    <div className="flex items-center gap-2">
-                        <Ban className={`w-4 h-4 ${activeTab === 'dismissed' ? 'text-red-600' : 'text-gray-400'}`} />
-                        <span className="text-xs text-gray-600">Dismissed</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'dismissed' ? 'text-rose-700' : 'text-slate-500'}`}>Dismissed</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'dismissed' ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400 group-hover:bg-rose-50 group-hover:text-rose-500'}`}>
+                            <Ban size={16} />
+                        </div>
                     </div>
-                    <p className={`text-2xl font-bold ${activeTab === 'dismissed' ? 'text-red-600' : 'text-gray-700'}`}>
-                        {stats.dismissed_count || 0}
-                    </p>
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-bold ${activeTab === 'dismissed' ? 'text-rose-700' : 'text-slate-700'}`}>
+                            {stats.dismissed_count || 0}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">closed</span>
+                    </div>
                 </button>
 
                 <button
                     onClick={() => setActiveTab('all')}
-                    className={`p-3 rounded-xl border transition-all ${activeTab === 'all'
-                        ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200'
-                        : 'bg-white border-gray-200 hover:border-blue-200'
+                    className={`p-4 rounded-xl border transition-all group ${activeTab === 'all'
+                        ? 'bg-blue-50 border-blue-200 shadow-md ring-1 ring-blue-100'
+                        : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-sm'
                         }`}
                 >
-                    <div className="flex items-center gap-2">
-                        <Calendar className={`w-4 h-4 ${activeTab === 'all' ? 'text-blue-600' : 'text-gray-400'}`} />
-                        <span className="text-xs text-gray-600">Total</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'all' ? 'text-blue-700' : 'text-slate-500'}`}>Total</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'all' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                            <Calendar size={16} />
+                        </div>
                     </div>
-                    <p className={`text-2xl font-bold ${activeTab === 'all' ? 'text-blue-600' : 'text-gray-700'}`}>
-                        {stats.total_count || 0}
-                    </p>
+                    <div className="flex items-baseline gap-1">
+                        <span className={`text-3xl font-bold ${activeTab === 'all' ? 'text-blue-700' : 'text-slate-700'}`}>
+                            {stats.total_count || 0}
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">records</span>
+                    </div>
                 </button>
             </div>
 
             {/* Filters Row */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-6">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                         type="text"
                         placeholder="Search patient, provider, or reason..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
                     />
                 </div>
                 <select
                     value={dateRange}
                     onChange={(e) => setDateRange(e.target.value)}
-                    className="px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                    className="px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-50 transition-colors"
                 >
                     <option value="7">Last 7 days</option>
                     <option value="30">Last 30 days</option>
@@ -395,7 +415,8 @@ const Cancellations = () => {
                 </select>
                 <button
                     onClick={() => { fetchFollowups(); fetchStats(); }}
-                    className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm rounded-xl transition-all"
+                    title="Refresh Data"
                 >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                 </button>
@@ -421,35 +442,51 @@ const Cancellations = () => {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        {groupedFollowups.map(group => (
-                            <div key={group.date} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        {groupedFollowups.map((group, index) => (
+                            <div key={group.date} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group/card transition-all hover:shadow-md">
                                 {/* Date Header */}
                                 <div
-                                    className="px-5 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
+                                    className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
                                     onClick={() => toggleGroup(group.date)}
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm text-gray-500">
-                                            <Calendar size={16} />
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) // Check if collapsed
+                                            ? 'bg-white border border-slate-200 text-slate-400'
+                                            : 'bg-blue-600 border border-blue-600 text-white'
+                                            }`}>
+                                            <Calendar size={18} />
                                         </div>
                                         <div>
-                                            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+                                            <h3 className={`text-sm font-semibold tracking-tight transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                                ? 'text-slate-600'
+                                                : 'text-blue-900'
+                                                }`}>
                                                 {group.displayDate}
                                             </h3>
-                                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
-                                                {group.items.length} {group.items.length === 1 ? 'Appointment' : 'Appointments'}
-                                            </p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                                    ? 'bg-slate-200 text-slate-600'
+                                                    : 'bg-blue-100 text-blue-700'
+                                                    }`}>
+                                                    {group.items.length} Pending Note{group.items.length !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                    {collapsedGroups[group.date] ? (
-                                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                                    ) : (
-                                        <ChevronUp className="w-5 h-5 text-gray-400" />
-                                    )}
+                                    <div className={`p-2 rounded-lg transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                        ? 'text-slate-400 group-hover/card:bg-white'
+                                        : 'text-blue-600 bg-blue-50'
+                                        }`}>
+                                        {(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) ? (
+                                            <ChevronDown className="w-5 h-5" />
+                                        ) : (
+                                            <ChevronUp className="w-5 h-5" />
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Items in Group */}
-                                {!collapsedGroups[group.date] && (
+                                {!(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) && (
                                     <div className="divide-y divide-gray-100">
                                         {group.items.map(followup => (
                                             <div key={followup.id} className="transition-all">
