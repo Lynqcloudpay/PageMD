@@ -605,7 +605,7 @@ const Telehealth = () => {
 
   const handleEndCall = useCallback(() => {
     setRoomUrl(null);
-    setCreatingRoom(false);
+    setCreatingRoom(null);
     setShowEndCallChoices(true);
     // Don't clear activeCall/Encounter/Note
   }, []);

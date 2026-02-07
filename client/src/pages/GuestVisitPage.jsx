@@ -175,9 +175,11 @@ const GuestVisitPage = () => {
         }
     };
 
-    const handleLeaveCall = useCallback((reason = 'completed') => {
+    const handleLeaveCall = useCallback((reason) => {
+        // If called by onClick, reason will be the event object
+        const finalReason = typeof reason === 'string' ? reason : 'completed';
         setRoomUrl(null);
-        setStatus(reason);
+        setStatus(finalReason);
     }, []);
 
     // LOADING STATE
