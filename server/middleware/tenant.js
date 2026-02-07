@@ -134,8 +134,13 @@ const resolveTenant = async (req, res, next) => {
                         colToCheck = 'token_hash';
                     }
 
+                    // CRITICAL FIX: Do NOT check expiration here.
+                    // If the token is valid but expired, we still need to resolve the tenant
+                    // so the endpoint can return a friendly "Expired" message (200 OK)
+                    // instead of a 403 Forbidden "Clinic access required" error.
+                    // The actual route handler (guestAccess.js) validates expiration.
                     const check = await pool.controlPool.query(
-                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck} = $1 AND expires_at > CURRENT_TIMESTAMP`,
+                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck} = $1`,
                         [tokenHash]
                     );
 
