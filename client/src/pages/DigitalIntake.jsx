@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
     UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
-    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key, ShieldOff
+    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key, ShieldOff, ChevronDown, ChevronUp, Calendar, ArrowRight, Notebook
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { intakeAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
 import Modal from '../components/ui/Modal';
@@ -23,6 +23,15 @@ const DigitalIntake = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
     const [menuSessionId, setMenuSessionId] = useState(null);
+    const [collapsedGroups, setCollapsedGroups] = useState({});
+
+    // Toggle collapse state for a date group
+    const toggleGroup = (date) => {
+        setCollapsedGroups(prev => ({
+            ...prev,
+            [date]: !prev[date]
+        }));
+    };
 
     const handleClearLimits = async (lastName, dob) => {
         try {
@@ -76,12 +85,12 @@ const DigitalIntake = () => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'SUBMITTED': return 'bg-blue-100 text-blue-700 font-bold';
-            case 'IN_PROGRESS': return 'bg-amber-100 text-amber-700';
-            case 'APPROVED': return 'bg-emerald-100 text-emerald-700';
-            case 'NEEDS_EDITS': return 'bg-rose-100 text-rose-700';
-            case 'EXPIRED': return 'bg-gray-200 text-gray-500';
-            default: return 'bg-gray-100 text-gray-700';
+            case 'SUBMITTED': return 'bg-blue-50 text-blue-700 border-blue-100';
+            case 'IN_PROGRESS': return 'bg-amber-50 text-amber-700 border-amber-100';
+            case 'APPROVED': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+            case 'NEEDS_EDITS': return 'bg-rose-50 text-rose-700 border-rose-100';
+            case 'EXPIRED': return 'bg-slate-100 text-slate-500 border-slate-200';
+            default: return 'bg-slate-50 text-slate-700 border-slate-100';
         }
     };
 
@@ -90,6 +99,23 @@ const DigitalIntake = () => {
         return name.includes(searchQuery.toLowerCase());
     });
 
+    const groupedSessions = React.useMemo(() => {
+        const groups = {};
+        filteredSessions.forEach(s => {
+            const date = format(new Date(s.updated_at), 'yyyy-MM-dd');
+            if (!groups[date]) groups[date] = [];
+            groups[date].push(s);
+        });
+
+        return Object.keys(groups)
+            .sort((a, b) => b.localeCompare(a))
+            .map(date => ({
+                date,
+                displayDate: format(parseISO(date), 'EEEE, MMM d, yyyy'),
+                items: groups[date]
+            }));
+    }, [filteredSessions]);
+
     // Use clinic slug from authenticated user context for tenant-specific URL
     const clinicSlug = user?.clinicSlug || 'sandbox';
     const universalURL = `${window.location.origin}/intake?clinic=${clinicSlug}`;
@@ -97,184 +123,226 @@ const DigitalIntake = () => {
     return (
         <div className="p-6 max-w-7xl mx-auto animate-fadeIn">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-3xl font-black text-blue-600 tracking-tight">Digital Intake</h1>
-                    <p className="text-gray-500 mt-1 font-medium italic">Universal QR Workflow • Azure Blue Engine</p>
+                    <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Digital Intake</h1>
+                    <p className="text-sm text-slate-500 mt-1 font-medium">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
-                        onClick={() => fetchSessions(true)}
-                        disabled={refreshing}
-                        className="flex items-center justify-center gap-2 px-6 py-4 bg-white border-2 border-blue-100 text-blue-600 rounded-2xl font-bold hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50"
+                        onClick={() => setShowQRModal(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold shadow-md shadow-blue-100 hover:bg-blue-700 hover:shadow-lg transition-all active:scale-95"
                     >
-                        <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-                        Refresh
+                        <QrCode className="w-4 h-4" />
+                        <span>Display QR</span>
                     </button>
                     <button
-                        onClick={() => setShowQRModal(true)}
-                        className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95"
+                        onClick={() => fetchSessions(true)}
+                        disabled={refreshing}
+                        className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm rounded-xl transition-all"
                     >
-                        <QrCode className="w-5 h-5" />
-                        Display Universal QR
+                        <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
             </div>
 
             {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 {[
                     { label: 'Total Submissions', value: sessions.length, icon: Smartphone, color: 'blue' },
                     { label: 'Pending Review', value: sessions.filter(s => s.status === 'SUBMITTED').length, icon: Clock, color: 'indigo' },
                     { label: 'In Progress', value: sessions.filter(s => s.status === 'IN_PROGRESS' || s.status === 'NEEDS_EDITS').length, icon: RefreshCw, color: 'amber' },
                     { label: 'Created Patients', value: sessions.filter(s => s.status === 'APPROVED').length, icon: CheckCircle, color: 'emerald' },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">{stat.label}</span>
-                            <div className={`w-10 h-10 rounded-xl bg-${stat.color}-50 flex items-center justify-center`}>
-                                <stat.icon className={`w-5 h-5 text-${stat.color}-600`} />
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{stat.label}</span>
+                            <div className={`p-1.5 rounded-lg bg-${stat.color}-50 text-${stat.color}-600 group-hover:scale-110 transition-transform`}>
+                                <stat.icon size={16} />
                             </div>
                         </div>
-                        <div className="text-3xl font-black text-gray-900">{stat.value}</div>
+                        <div className="text-2xl font-bold text-slate-800">{stat.value}</div>
                     </div>
                 ))}
             </div>
 
-            {/* Filters and List */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search registrations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => fetchSessions(true)} className="p-3 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">
-                            <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-                        </button>
-                    </div>
-                </div>
-
-                <div>
-                    <table className="w-full">
-                        <thead>
-                            <tr className="bg-gray-50 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
-                                <th className="px-8 py-5">Patient Details</th>
-                                <th className="px-8 py-5 text-center">Status</th>
-                                <th className="px-8 py-5">Last Activity</th>
-                                <th className="px-8 py-5 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {loading ? (
-                                <tr><td colSpan="4" className="px-8 py-12 text-center text-gray-400 font-medium">Loading session data...</td></tr>
-                            ) : filteredSessions.length === 0 ? (
-                                <tr><td colSpan="4" className="px-8 py-12 text-center text-gray-400 font-medium">No registrations found.</td></tr>
-                            ) : (
-                                filteredSessions.map((session) => (
-                                    <tr key={session.id} className="hover:bg-blue-50/30 transition-colors group">
-                                        <td className="px-8 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 bg-white border border-gray-100 text-blue-600 rounded-2xl flex items-center justify-center font-black shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                                    {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
-                                                </div>
-                                                <div>
-                                                    <div className="text-base font-bold text-gray-900">
-                                                        {session.prefill_json?.firstName} {session.prefill_json?.lastName}
-                                                    </div>
-                                                    <div className="text-xs font-bold text-gray-400 uppercase tracking-tighter">
-                                                        DOB: {session.prefill_json?.dob} • Phone: {session.prefill_json?.phone}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-center">
-                                            <span className={`px-4 py-1.5 rounded-full text-xs font-black tracking-widest ${getStatusColor(session.status)}`}>
-                                                {session.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="text-sm font-bold text-gray-900">
-                                                {format(new Date(session.updated_at), 'MMM d, h:mm a')}
-                                            </div>
-                                            <div className="text-xs text-gray-400 font-medium">
-                                                Started {format(new Date(session.created_at), 'MM/dd/yy')}
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-right relative">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {session.status === 'SUBMITTED' || session.status === 'NEEDS_EDITS' ? (
-                                                    <button
-                                                        onClick={() => setSelectedSessionId(session.id)}
-                                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center gap-1"
-                                                    >
-                                                        <Eye className="w-4 h-4" /> Review
-                                                    </button>
-                                                ) : session.status === 'APPROVED' ? (
-                                                    <button
-                                                        onClick={() => navigate(`/patient/${session.patient_id}/snapshot`)}
-                                                        className="px-4 py-2 border border-blue-100 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-50 transition-all flex items-center gap-1"
-                                                    >
-                                                        View Chart <ExternalLink className="w-4 h-4" />
-                                                    </button>
-                                                ) : null}
-
-                                                <div className="relative">
-                                                    <button
-                                                        onClick={() => setMenuSessionId(menuSessionId === session.id ? null : session.id)}
-                                                        className="p-2 text-gray-400 hover:text-blue-600 rounded-lg transition-colors"
-                                                    >
-                                                        <MoreVertical className="w-5 h-5" />
-                                                    </button>
-                                                    {menuSessionId === session.id && (
-                                                        <>
-                                                            <div className="fixed inset-0 z-30" onClick={() => setMenuSessionId(null)} />
-                                                            <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-40 animate-fadeInShort">
-                                                                {session.patient_id && (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            navigate(`/patient/${session.patient_id}/snapshot`);
-                                                                            setMenuSessionId(null);
-                                                                        }}
-                                                                        className="w-full text-left px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2"
-                                                                    >
-                                                                        <User className="w-4 h-4" /> Open Chart
-                                                                    </button>
-                                                                )}
-                                                                <button
-                                                                    onClick={() => {
-                                                                        handleClearLimits(session.patient_last_name || session.prefill_json?.lastName, session.patient_dob || session.prefill_json?.dob);
-                                                                        setMenuSessionId(null);
-                                                                    }}
-                                                                    className="w-full text-left px-4 py-2.5 text-sm font-bold text-blue-600 hover:bg-blue-50 flex items-center gap-2"
-                                                                >
-                                                                    <ShieldOff className="w-4 h-4" /> Reset Wait Timing
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteSession(session.id)}
-                                                                    className="w-full text-left px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2"
-                                                                >
-                                                                    <X className="w-4 h-4" /> Delete Session
-                                                                </button>
-                                                            </div>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+            {/* Filters and Search */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+                <div className="relative max-w-md w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search registrations..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                    />
                 </div>
             </div>
+
+            {/* Content List */}
+            {loading ? (
+                <div className="flex justify-center p-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+            ) : filteredSessions.length === 0 ? (
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+                    <Smartphone className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <h3 className="text-lg font-semibold text-slate-800 mb-2">No registrations found</h3>
+                    <p className="text-slate-500 text-sm">Waiting for new QR code scans...</p>
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    {groupedSessions.map((group, index) => (
+                        <div key={group.date} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group/card transition-all hover:shadow-md">
+                            {/* Date Header */}
+                            <div
+                                className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                onClick={() => toggleGroup(group.date)}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                        ? 'bg-white border border-slate-200 text-slate-400'
+                                        : 'bg-blue-600 border border-blue-600 text-white'
+                                        }`}>
+                                        <Calendar size={18} />
+                                    </div>
+                                    <div>
+                                        <h3 className={`text-sm font-semibold tracking-tight transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                            ? 'text-slate-600'
+                                            : 'text-blue-900'
+                                            }`}>
+                                            {group.displayDate}
+                                        </h3>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                                ? 'bg-slate-200 text-slate-600'
+                                                : 'bg-blue-100 text-blue-700'
+                                                }`}>
+                                                {group.items.length} Registration{group.items.length !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className={`p-2 rounded-lg transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                    ? 'text-slate-400 group-hover/card:bg-white'
+                                    : 'text-blue-600 bg-blue-50'
+                                    }`}>
+                                    {(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) ? (
+                                        <ChevronDown className="w-5 h-5" />
+                                    ) : (
+                                        <ChevronUp className="w-5 h-5" />
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Items */}
+                            {!(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) && (
+                                <div className="divide-y divide-slate-100">
+                                    {group.items.map((session) => (
+                                        <div key={session.id} className="px-5 py-4 hover:bg-slate-50 group transition-colors">
+                                            <div className="flex items-center justify-between gap-4">
+                                                {/* Left: Patient Info */}
+                                                <div
+                                                    className={`flex-1 min-w-0 flex items-center gap-4 ${session.patient_id ? 'cursor-pointer' : ''}`}
+                                                    onClick={() => session.patient_id && navigate(`/patient/${session.patient_id}/snapshot`)}
+                                                >
+                                                    <div className={`w-10 h-10 bg-white border border-slate-200 text-slate-600 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:border-blue-200 group-hover:text-blue-600 transition-colors ${session.patient_id ? 'group-hover:bg-blue-50' : ''}`}>
+                                                        {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`font-semibold text-sm text-slate-800 ${session.patient_id ? 'group-hover:text-blue-700 underline decoration-blue-200 underline-offset-2' : ''} transition-colors`}>
+                                                                {session.prefill_json?.firstName} {session.prefill_json?.lastName}
+                                                            </div>
+                                                            {session.prefill_json?.dob && (
+                                                                <span className="text-xs text-slate-400 font-mono bg-slate-100 px-1.5 rounded">
+                                                                    {session.prefill_json.dob}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                                                            <span>Started {format(new Date(session.created_at), 'h:mm a')}</span>
+                                                            {session.prefill_json?.phone && (
+                                                                <>
+                                                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                                                                    <span>{session.prefill_json.phone}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Right: Status & Actions */}
+                                                <div className="flex items-center gap-4 flex-shrink-0">
+                                                    <div className={`px-3 py-1 rounded-full text-xs font-semibold border shadow-sm ${getStatusColor(session.status)}`}>
+                                                        {session.status.replace('_', ' ')}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        {session.status === 'SUBMITTED' || session.status === 'NEEDS_EDITS' ? (
+                                                            <button
+                                                                onClick={() => setSelectedSessionId(session.id)}
+                                                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5" /> Review
+                                                            </button>
+                                                        ) : null}
+
+                                                        {/* Simple Menu Trigger (Replacing Complex Dropdown for Cleaner UI) */}
+                                                        <div className="relative">
+                                                            <button
+                                                                onClick={() => setMenuSessionId(menuSessionId === session.id ? null : session.id)}
+                                                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                            >
+                                                                <MoreVertical className="w-4 h-4" />
+                                                            </button>
+
+                                                            {menuSessionId === session.id && (
+                                                                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fadeInShort origin-top-right">
+                                                                    <div className="fixed inset-0 z-40" onClick={() => setMenuSessionId(null)} />
+                                                                    <div className="relative z-50">
+                                                                        {session.patient_id && (
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    navigate(`/patient/${session.patient_id}/snapshot`);
+                                                                                    setMenuSessionId(null);
+                                                                                }}
+                                                                                className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                                                            >
+                                                                                <User className="w-3.5 h-3.5" /> Open Chart
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                handleClearLimits(session.patient_last_name || session.prefill_json?.lastName, session.patient_dob || session.prefill_json?.dob);
+                                                                                setMenuSessionId(null);
+                                                                            }}
+                                                                            className="w-full text-left px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                                                        >
+                                                                            <ShieldOff className="w-3.5 h-3.5" /> Reset Limits
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteSession(session.id)}
+                                                                            className="w-full text-left px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                                                                        >
+                                                                            <X className="w-3.5 h-3.5" /> Delete
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Universal QR Modal */}
             <Modal
@@ -287,9 +355,9 @@ const DigitalIntake = () => {
                     <div className="space-y-2">
                         <div className="inline-flex p-4 bg-emerald-50 text-emerald-600 rounded-2xl mb-2 items-center gap-2">
                             <Shield className="w-5 h-5" />
-                            <span className="text-sm font-bold uppercase tracking-widest">Azure Secure workflow active</span>
+                            <span className="text-sm font-semibold uppercase tracking-widest">Azure Secure workflow active</span>
                         </div>
-                        <p className="text-gray-500 text-sm max-w-xs mx-auto">Patients can scan this to start their registration on their own mobile device.</p>
+                        <p className="text-slate-500 text-sm max-w-xs mx-auto">Patients can scan this to start their registration on their own mobile device.</p>
                     </div>
 
                     <div className="bg-white p-8 rounded-[2rem] inline-block border-4 border-blue-100 shadow-2xl shadow-blue-100">
@@ -303,19 +371,19 @@ const DigitalIntake = () => {
                                 fgColor="#2563eb"
                             />
                         </div>
-                        <div className="mt-6 text-2xl font-black text-gray-900 tracking-tight">Scan to Register</div>
+                        <div className="mt-6 text-2xl font-bold text-slate-900 tracking-tight">Scan to Register</div>
                         <div className="text-blue-500 font-bold text-xs tracking-widest uppercase mt-1">{user?.clinicName || 'Your Clinic'}</div>
                     </div>
 
                     <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 text-left space-y-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-blue-400 uppercase tracking-widest">Clinic Link</span>
+                            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Clinic Link</span>
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(universalURL);
                                     showSuccess('Link copied to clipboard');
                                 }}
-                                className="flex items-center gap-1 text-blue-600 font-bold text-xs"
+                                className="flex items-center gap-1 text-blue-600 font-bold text-xs hover:text-blue-700 transition-colors"
                             >
                                 <Copy className="w-4 h-4" /> Copy
                             </button>
@@ -332,7 +400,7 @@ const DigitalIntake = () => {
 
                     <button
                         onClick={() => window.print()}
-                        className="w-full py-5 bg-blue-600 text-white rounded-[2rem] font-bold text-lg shadow-2xl shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                        className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
                     >
                         Print Signage
                     </button>
@@ -350,9 +418,7 @@ const DigitalIntake = () => {
                     sessionId={selectedSessionId}
                 />
             )}
-
         </div>
     );
 };
-
 export default DigitalIntake;
