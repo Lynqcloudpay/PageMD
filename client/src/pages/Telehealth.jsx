@@ -335,19 +335,25 @@ const Telehealth = () => {
         const isTele = type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
         if (!isTele) return false;
 
+        const rawDate = appt.appointment_date || appt.appointmentDate;
+        if (!rawDate) return false;
+
+        // CRITICAL: Normalize date comparison (stripping time and timezone offsets)
+        // Backend DATE type often arrives as "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS.SSSZ"
+        const normalizedApptDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : format(new Date(rawDate), 'yyyy-MM-dd');
+
         const encounterStatus = (appt.encounter_status || '').toLowerCase();
         const isNoteSigned = encounterStatus === 'signed';
         const isCheckedOut = ['checked_out', 'completed'].includes(status);
-        const apptDate = appt.appointment_date || appt.appointmentDate;
-        if (!apptDate) return false; // Safety check
 
         // Logic: 
         // 1. If today and not checked out -> Always show
         // 2. If today and checked out -> Show only if note is NOT signed
         // 3. If past -> Show only if note is NOT signed
-        if (apptDate === todayStr) {
+        if (normalizedApptDate === todayStr) {
           return !isCheckedOut || !isNoteSigned;
         } else {
+          // It's a past appointment
           return !isNoteSigned;
         }
       });
@@ -1456,23 +1462,30 @@ const Telehealth = () => {
   // --- WAITING ROOM / SCHEDULE VIEW ---
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
+  // Helper to get YYYY-MM-DD from any date source
+  const getApptDate = (appt) => {
+    const raw = appt.appointment_date || appt.appointmentDate;
+    if (!raw) return '';
+    return typeof raw === 'string' ? raw.split('T')[0] : format(new Date(raw), 'yyyy-MM-dd');
+  };
+
   const todayScheduled = appointments.filter(appt => {
-    const isToday = appt.appointment_date === todayStr;
+    const isToday = getApptDate(appt) === todayStr;
     const isCheckedOut = ['checked_out', 'completed'].includes((appt.status || '').toLowerCase());
     return isToday && !isCheckedOut;
   });
 
   const todayFinished = appointments.filter(appt => {
-    const isToday = appt.appointment_date === todayStr;
+    const isToday = getApptDate(appt) === todayStr;
     const isCheckedOut = ['checked_out', 'completed'].includes((appt.status || '').toLowerCase());
     return isToday && isCheckedOut;
   });
 
   const pastPending = appointments.filter(appt => {
-    return (appt.appointment_date || appt.appointmentDate) !== todayStr;
+    return getApptDate(appt) !== todayStr;
   }).sort((a, b) => {
-    const dateA = a.appointment_date || a.appointmentDate || '';
-    const dateB = b.appointment_date || b.appointmentDate || '';
+    const dateA = getApptDate(a);
+    const dateB = getApptDate(b);
     return dateB.localeCompare(dateA);
   });
 
@@ -1513,11 +1526,11 @@ const Telehealth = () => {
                       <p className="text-[11px] text-slate-400 font-medium">
                         {appt.type || appt.appointment_type || 'Telehealth Visit'}
                       </p>
-                      {appt.appointment_date !== todayStr && (
+                      {getApptDate(appt) !== todayStr && (
                         <>
                           <span className="w-1 h-1 rounded-full bg-slate-300" />
                           <p className="text-[11px] text-amber-600 font-black uppercase">
-                            {format(new Date(appt.appointment_date + 'T12:00:00'), 'MMM d')}
+                            {format(new Date(getApptDate(appt) + 'T12:00:00'), 'MMM d')}
                           </p>
                         </>
                       )}
@@ -1646,15 +1659,15 @@ const Telehealth = () => {
         </div>
       </div>
 
-      {/* Security Badge */}
+      {/* Friendly Security Badge */}
       <div className="mb-10 p-5 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 flex items-center gap-5 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-emerald-50/50 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
-        <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-white relative z-10 shadow-lg shadow-emerald-500/20">
+        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-blue-50/50 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
+        <div className="w-14 h-14 rounded-2xl bg-blue-500 flex items-center justify-center text-white relative z-10 shadow-lg shadow-blue-500/20">
           <Shield size={28} />
         </div>
         <div className="relative z-10">
-          <h3 className="font-black text-slate-900 text-lg">Military-Grade Security</h3>
-          <p className="text-sm text-slate-500 font-medium">Video streams are encrypted via Daily.co for full HIPAA compliance.</p>
+          <h3 className="font-black text-slate-900 text-lg">Secure & Private Video</h3>
+          <p className="text-sm text-slate-500 font-medium">Your consultations are protected with end-to-end encryption for full peace of mind.</p>
         </div>
       </div>
 
