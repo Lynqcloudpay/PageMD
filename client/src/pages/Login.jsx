@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, LogIn } from 'lucide-react';
+import { FileText, LogIn, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import tokenManager from '../services/tokenManager';
+import { InteractiveHoverButton } from '../components/ui/InteractiveHoverButton';
+import loginBg from '../assets/login-bg.png';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -15,8 +17,8 @@ const Login = () => {
     // Safety check
     if (!auth) {
         return (
-            <div className="min-h-screen bg-paper-50 flex items-center justify-center">
-                <div className="text-ink-500">Loading...</div>
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="text-slate-500 animate-pulse">Loading secure environment...</div>
             </div>
         );
     }
@@ -62,75 +64,116 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-white flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 w-full max-w-md p-8">
-                <div className="flex items-center justify-center mb-8">
-                    <img
-                        src="/logo.png"
-                        alt="PageMD Logo"
-                        className="h-16 w-auto object-contain max-w-[200px]"
-                        onError={(e) => {
-                            // Hide broken image
-                            e.target.style.display = 'none';
-                        }}
-                    />
+        <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-slate-900">
+            {/* Vivid Background with Animation */}
+            <div className="absolute inset-0 w-full h-full">
+                <img
+                    src={loginBg}
+                    alt="Medical Background"
+                    className="w-full h-full object-cover opacity-90 scale-105 animate-float-slow"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 via-slate-900/20 to-slate-900/80 mix-blend-multiply" />
+                <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+            </div>
+
+            {/* Glassmorphism Card */}
+            <div className="relative z-10 w-full max-w-md p-8 sm:p-10 mx-4">
+                <div className="absolute inset-0 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl transform transition-all hover:scale-[1.01] duration-500" />
+
+                <div className="relative z-20">
+                    <div className="flex flex-col items-center justify-center mb-10">
+                        <div className="relative mb-6 group">
+                            <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
+                            <div className="relative bg-white/90 p-4 rounded-2xl shadow-lg border border-white/50 backdrop-blur-sm transform transition-transform group-hover:scale-105 duration-300">
+                                <img
+                                    src="/logo.png"
+                                    alt="PageMD Logo"
+                                    className="h-12 w-auto object-contain"
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <h2 className="text-3xl font-bold text-white tracking-tight drop-shadow-md text-center">
+                            Welcome Back
+                        </h2>
+                        <p className="text-blue-100 text-sm mt-2 text-center font-medium opacity-90">
+                            Secure Access for Healthcare Professionals
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-100 text-sm backdrop-blur-md animate-fade-in flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-blue-100 ml-1">Email Address</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-200 group-focus-within:text-white transition-colors">
+                                    <Mail className="h-5 w-5" />
+                                </div>
+                                <input
+                                    type="email"
+                                    required
+                                    className="block w-full pl-10 pr-3 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent focus:bg-white/20 transition-all duration-300"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="doctor@pagemd.com"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-blue-100 ml-1">Password</label>
+                            <div className="relative group">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-200 group-focus-within:text-white transition-colors">
+                                    <Lock className="h-5 w-5" />
+                                </div>
+                                <input
+                                    type="password"
+                                    required
+                                    className="block w-full pl-10 pr-3 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent focus:bg-white/20 transition-all duration-300"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="pt-2">
+                            <InteractiveHoverButton
+                                text={loading ? 'Authenticating...' : 'Sign In Securely'}
+                                disabled={loading}
+                                type="submit"
+                                className="w-full border-white/30 text-white hover:text-white"
+                            />
+                        </div>
+                    </form>
+
+                    <div className="mt-8 text-center text-sm">
+                        <p className="text-blue-200/70">
+                            Forgot your password?{' '}
+                            <button className="text-white hover:text-blue-300 font-medium transition-colors underline decoration-blue-400/30 hover:decoration-blue-400">
+                                Contact Administrator
+                            </button>
+                        </p>
+                    </div>
                 </div>
+            </div>
 
-                <h2 className="text-xl font-semibold text-primary-900 mb-6 text-center">Sign In</h2>
-
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                        <input
-                            type="email"
-                            required
-                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 hover:border-gray-400 text-gray-900 placeholder:text-gray-400"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Enter your email address"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                        <input
-                            type="password"
-                            required
-                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-all duration-200 hover:border-gray-400 text-gray-900 placeholder:text-gray-400"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter your password"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-3 text-white rounded-lg font-medium flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-                        style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-                        onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-                        onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
-                    >
-                        <LogIn className="w-5 h-5" />
-                        <span>{loading ? 'Signing in...' : 'Sign In'}</span>
-                    </button>
-                </form>
-
-                <div className="mt-6 p-4 bg-neutral-50 rounded-lg border border-gray-200 text-sm text-gray-600">
-                    <p className="text-center">
-                        Forgot your password? Contact your system administrator.
-                    </p>
-                </div>
+            <div className="absolute bottom-4 text-center w-full">
+                <p className="text-white/30 text-xs font-light tracking-widest uppercase">
+                    HIPAA Compliant & Secure • PageMD EMR v1.0
+                </p>
             </div>
         </div>
     );
 };
 
 export default Login;
-
