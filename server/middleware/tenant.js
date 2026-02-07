@@ -119,6 +119,9 @@ const resolveTenant = async (req, res, next) => {
                 const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
                 // Search across all safe tenant schemas
                 const schemas = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE status = \'active\'');
+
+                console.log(`[Tenant] DEBUG: Resolving public token. Hash: ${tokenHash.substring(0, 10)}... Schemas: ${schemas.rows.length}`);
+
                 for (const row of schemas.rows) {
                     const schema = row.schema_name;
 
@@ -149,6 +152,10 @@ const resolveTenant = async (req, res, next) => {
                         console.log(`[Tenant] Found token in schema: ${schema} (Table: ${tableToCheck})`);
                         break;
                     }
+                }
+
+                if (!lookupSchema) {
+                    console.log(`[Tenant] DEBUG: Token resolution failed. No schema found for hash: ${tokenHash.substring(0, 10)}... (Checked ${schemas.rows.length} schemas)`);
                 }
             }
         } catch (e) {
