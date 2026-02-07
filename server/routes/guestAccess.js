@@ -149,7 +149,7 @@ router.post('/verify-dob', async (req, res) => {
         const result = await pool.query(`
             SELECT 
                 gat.*,
-                p.date_of_birth,
+                COALESCE(p.dob, p.date_of_birth) as dob_record,
                 p.encryption_metadata,
                 a.status as appointment_status,
                 a.patient_status
@@ -177,15 +177,25 @@ router.post('/verify-dob', async (req, res) => {
             return res.status(400).json({ success: false, error: 'This appointment has ended' });
         }
 
-        // Decrypt patient data to get DOB
-        const decryptedPatient = preparePatientForResponse({
-            date_of_birth: record.date_of_birth,
-            encryption_metadata: record.encryption_metadata
-        });
-
         // Normalize DOB for comparison (YYYY-MM-DD)
-        const storedDob = (decryptedPatient.date_of_birth || '').substring(0, 10);
+        // CRITICAL: Use UTC methods to avoid off-by-one errors from timezones
+        let storedDob = '';
+        const dobValue = record.dob_record;
+
+        if (dobValue) {
+            if (dobValue instanceof Date) {
+                const year = dobValue.getUTCFullYear();
+                const month = String(dobValue.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(dobValue.getUTCDate()).padStart(2, '0');
+                storedDob = `${year}-${month}-${day}`;
+            } else {
+                storedDob = String(dobValue).substring(0, 10);
+            }
+        }
+
         const inputDob = (dob || '').substring(0, 10);
+
+        console.log(`[Guest Access] DOB Check - Input: ${inputDob}, Stored: ${storedDob}`);
 
         if (storedDob !== inputDob) {
             // Increment attempt counter
@@ -282,7 +292,7 @@ router.post('/join', async (req, res) => {
         const record = result.rows[0];
 
         // Decrypt patient name
-        const decryptedPatient = preparePatientForResponse({
+        const decryptedPatient = await preparePatientForResponse({
             first_name: record.first_name,
             last_name: record.last_name,
             encryption_metadata: record.encryption_metadata
