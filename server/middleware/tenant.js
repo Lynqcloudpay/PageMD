@@ -108,7 +108,8 @@ const resolveTenant = async (req, res, next) => {
             } else if (isIntakePublic) {
                 token = req.params.token || req.path.split('/').pop();
             } else if (isGuestVisit) {
-                token = req.query.token;
+                // For guest visits, token can be in query (GET) or body (POST verify-dob/join)
+                token = req.query.token || (req.body ? req.body.token : null);
             } else {
                 token = req.body ? req.body.token : null;
             }
