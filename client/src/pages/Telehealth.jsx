@@ -626,6 +626,7 @@ const Telehealth = () => {
         current_room: null
       });
       console.log('Patient checked out (Call Ended).');
+      alert('Patient successfully checked out.');
       setShowEndCallChoices(false);
       // We don't close workspace yet so they can finish the note
     } catch (e) {
@@ -793,22 +794,7 @@ const Telehealth = () => {
         {/* Main Video Stage OR Placeholder */}
         <div className={`flex-1 flex flex-col relative transition-all duration-300`}>
 
-          {/* Header Overlay */}
-          <div className="absolute top-0 left-0 right-0 p-4 z-10 flex justify-between items-start pointer-events-none">
-            <div className="bg-gray-900/80 backdrop-blur-md text-white px-4 py-2 rounded-lg border border-white/10 shadow-lg pointer-events-auto flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-              <span className="font-mono text-lg font-medium tracking-wider">{formatTime(duration)}</span>
-              <div className="h-4 w-px bg-white/20 mx-1"></div>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4 text-gray-400" />
-                <span className="font-medium text-gray-200">{activeCall.patientName || activeCall.name}</span>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2 pointer-events-auto">
-              {/* Badges removed for cleaner UI */}
-            </div>
-          </div>
 
           {/* Daily.co Video or Call Ended Placeholder */}
           <div className="flex-1 flex items-center justify-center p-4">
