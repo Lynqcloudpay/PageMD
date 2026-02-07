@@ -338,7 +338,8 @@ const Telehealth = () => {
         const encounterStatus = (appt.encounter_status || '').toLowerCase();
         const isNoteSigned = encounterStatus === 'signed';
         const isCheckedOut = ['checked_out', 'completed'].includes(status);
-        const apptDate = appt.appointment_date; // Backend returns YYYY-MM-DD
+        const apptDate = appt.appointment_date || appt.appointmentDate;
+        if (!apptDate) return false; // Safety check
 
         // Logic: 
         // 1. If today and not checked out -> Always show
@@ -1468,8 +1469,12 @@ const Telehealth = () => {
   });
 
   const pastPending = appointments.filter(appt => {
-    return appt.appointment_date !== todayStr;
-  }).sort((a, b) => b.appointment_date.localeCompare(a.appointment_date));
+    return (appt.appointment_date || appt.appointmentDate) !== todayStr;
+  }).sort((a, b) => {
+    const dateA = a.appointment_date || a.appointmentDate || '';
+    const dateB = b.appointment_date || b.appointmentDate || '';
+    return dateB.localeCompare(dateA);
+  });
 
   const renderAppointmentGroup = (title, subtitle, apptList, iconColor = "bg-blue-50 text-blue-600") => {
     if (apptList.length === 0) return null;
@@ -1591,8 +1596,8 @@ const Telehealth = () => {
                     onClick={() => handleStartCall(appt)}
                     disabled={creatingRoom !== null}
                     className={`px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 ${['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
-                        ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10'
-                        : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800 shadow-blue-900/20'
+                      ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10'
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800 shadow-blue-900/20'
                       }`}
                   >
                     {creatingRoom === appt.id ? (
