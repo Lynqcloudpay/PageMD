@@ -1786,6 +1786,51 @@ const VisitNote = () => {
         return lines.map(line => line.trim());
     }, [noteData.assessment]);
 
+    // Ensure Plan stays in sync with Assessment (Diagnoses -> Plan Items)
+    // This fixes the issue where diagnoses disappear from Plan if no orders are added
+    useEffect(() => {
+        if (!diagnoses || diagnoses.length === 0) return;
+
+        setNoteData(prev => {
+            const currentPlan = prev.planStructured || [];
+            let planUpdated = false;
+            let newPlan = [...currentPlan];
+
+            // 1. Add missing diagnoses from Assessment to Plan
+            diagnoses.forEach(diag => {
+                // Normalize to remove leading "1. " or "1 "
+                const cleanDiag = diag.replace(/^\d+[\.\)]?\s*/, '').trim();
+
+                // key check: is this clean diagnosis in the plan?
+                // Plan items usually don't have numbers stored in the 'diagnosis' field
+                const exists = newPlan.some(item => {
+                    const cleanItemDx = item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim();
+                    return cleanItemDx.toLowerCase() === cleanDiag.toLowerCase();
+                });
+
+                if (!exists && cleanDiag) {
+                    newPlan.push({ diagnosis: cleanDiag, orders: [] });
+                    planUpdated = true;
+                }
+            });
+
+            // 2. We DO NOT remove items from Plan that are not in Assessment here automatically
+            // to prevent accidental data loss of orders if an assessment line is modified.
+            // Removal is handled by explicit user action (trash icon).
+
+            if (planUpdated) {
+                // Re-format the plan text
+                const formatted = formatPlanText(newPlan);
+                return {
+                    ...prev,
+                    planStructured: newPlan,
+                    plan: formatted
+                };
+            }
+            return prev;
+        });
+    }, [diagnoses]);
+
     // Add order to plan
     const addOrderToPlan = (diagnosis, orderText) => {
         let diagnosisToUse = diagnosis;

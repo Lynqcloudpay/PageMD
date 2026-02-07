@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePatientTabs } from '../context/PatientTabsContext';
 import { useTasks } from '../context/TaskContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, inboxAPI, intakeAPI, complianceAPI } from '../services/api';
+import { patientsAPI, messagesAPI, visitsAPI, followupsAPI, inboxAPI, intakeAPI, complianceAPI, telehealthAPI } from '../services/api';
 import PatientTabs from './PatientTabs';
 import MobileMenu from './MobileMenu';
 import SupportModal from './SupportModal';
@@ -40,6 +40,7 @@ const Layout = ({ children }) => {
     const [pendingNotesCount, setPendingNotesCount] = useState(0);
     const [pendingCancellationsCount, setPendingCancellationsCount] = useState(0);
     const [pendingIntakeCount, setPendingIntakeCount] = useState(0);
+    const [pendingTelehealthCount, setPendingTelehealthCount] = useState(0);
     const [inboxCount, setInboxCount] = useState(0);
     const [privacyAlertsCount, setPrivacyAlertsCount] = useState(0);
     const [appointmentRequestsCount, setAppointmentRequestsCount] = useState(0);
@@ -103,6 +104,17 @@ const Layout = ({ children }) => {
             }
         };
 
+        // Fetch pending telehealth count
+        const fetchPendingTelehealthCount = async () => {
+            try {
+                const response = await telehealthAPI.getStats();
+                setPendingTelehealthCount(response.data?.pendingCount || 0);
+            } catch (error) {
+                console.error('Error fetching telehealth count:', error);
+                setPendingTelehealthCount(0);
+            }
+        };
+
         // Fetch privacy alerts count
         const fetchPrivacyAlertsCount = async () => {
             try {
@@ -128,6 +140,7 @@ const Layout = ({ children }) => {
         fetchPendingCancellationsCount();
         fetchInboxCount();
         fetchPendingIntakeCount();
+        fetchPendingTelehealthCount();
         fetchPrivacyAlertsCount();
         fetchAppointmentRequestsCount();
 
@@ -138,6 +151,7 @@ const Layout = ({ children }) => {
             fetchPendingCancellationsCount();
             fetchInboxCount();
             fetchPendingIntakeCount();
+            fetchPendingTelehealthCount();
             fetchPrivacyAlertsCount();
             fetchAppointmentRequestsCount();
         }, 2000);
@@ -187,7 +201,7 @@ const Layout = ({ children }) => {
             { path: '/billing', icon: DollarSign, label: 'Billing', badge: null }
         ] : []),
         ...(user?.enabledFeatures?.telehealth === true ? [
-            { path: '/telehealth', icon: Video, label: 'Telehealth', badge: null }
+            { path: '/telehealth', icon: Video, label: 'Telehealth', badge: pendingTelehealthCount > 0 ? pendingTelehealthCount : null }
         ] : []),
         // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [

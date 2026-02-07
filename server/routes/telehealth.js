@@ -13,6 +13,41 @@ router.use(featureGuard('telehealth'));
 const DAILY_API_KEY = process.env.DAILY_API_KEY;
 const DAILY_API_URL = 'https://api.daily.co/v1';
 
+// Get telehealth stats (pending count)
+router.get('/stats', authenticate, async (req, res) => {
+    try {
+        const { date = new Date().toISOString().split('T')[0] } = req.query;
+        const userId = req.user.id;
+
+        // Scope check: Clinicians see their own, admins/staff might see all
+        let providerFilter = '';
+        const params = [date];
+        let paramCount = 1;
+
+        if (req.user.scope?.scheduleScope === 'SELF' && req.user.role === 'CLINICIAN') {
+            paramCount++;
+            providerFilter = `AND provider_id = $${paramCount}`;
+            params.push(userId);
+        }
+
+        const query = `
+            SELECT COUNT(*) 
+            FROM appointments 
+            WHERE appointment_date = $1 
+            ${providerFilter}
+            AND (visit_method = 'telehealth' OR appointment_type ILIKE '%telehealth%')
+            AND status NOT IN ('cancelled', 'no-show', 'completed', 'checked-out')
+        `;
+
+        const result = await pool.query(query, params);
+        res.json({ pendingCount: parseInt(result.rows[0].count) || 0 });
+
+    } catch (error) {
+        console.error('Error fetching telehealth stats:', error);
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
 // Create a telehealth room
 router.post('/rooms', authenticate, async (req, res) => {
     try {

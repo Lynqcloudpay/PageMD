@@ -430,6 +430,13 @@ export const eprescribeAPI = {
   }),
 };
 
+// Telehealth
+export const telehealthAPI = {
+  getStats: (params) => api.get('/telehealth/stats', { params }),
+  createRoom: (data) => api.post('/telehealth/rooms', data),
+  getRoom: (name) => api.get(`/telehealth/rooms/${name}`),
+};
+
 // Portal
 export const portalAPI = {
   login: (credentials) => api.post('/portal/auth/login', credentials),
