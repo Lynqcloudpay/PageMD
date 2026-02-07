@@ -1633,8 +1633,8 @@ const Telehealth = () => {
                         badge = { label: 'Visit Ended', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: Clock };
                       }
                     }
-                    // 3. Visit In Progress
-                    else if (['in_room', 'in-room', 'in_progress'].includes(status)) {
+                    // 3. Visit In Progress (Status OR open encounter)
+                    else if (['in_room', 'in-room', 'in_progress'].includes(status) || (appt.encounter_id && !['signed', 'cancelled'].includes(encounterStatus))) {
                       badge = { label: 'Visit In Progress', color: 'bg-violet-50 text-violet-600 border-violet-100 animate-pulse', icon: Video };
                     }
                     // 4. Patient Ready

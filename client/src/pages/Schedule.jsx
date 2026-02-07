@@ -1135,8 +1135,8 @@ const Schedule = () => {
                                     // Sort appointments within each time slot
                                     Object.keys(appointmentsByTime).forEach(time => {
                                         appointmentsByTime[time].sort((a, b) => {
-                                            const aIsActive = a.patient_status !== 'cancelled' && a.patient_status !== 'no_show';
-                                            const bIsActive = b.patient_status !== 'cancelled' && b.patient_status !== 'no_show';
+                                            const aIsActive = !['cancelled', 'no_show', 'no-show'].includes(a.patient_status);
+                                            const bIsActive = !['cancelled', 'no_show', 'no-show'].includes(b.patient_status);
                                             if (aIsActive !== bIsActive) return aIsActive ? -1 : 1;
                                             // Then by provider name for consistency
                                             const aProvider = a.providerGroup?.providerName || '';
@@ -1178,14 +1178,14 @@ const Schedule = () => {
                                         const leftOffset = `${timeColumnWidth + 2}px`;
 
                                         const color = appt.providerGroup.color;
-                                        const isCancelledOrNoShow = appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
-                                        const isActiveInClinic = appt.patient_status === 'arrived' || appt.patient_status === 'checked_in' || appt.patient_status === 'in_room';
+                                        const isCancelledOrNoShow = ['cancelled', 'no_show', 'no-show'].includes(appt.patient_status);
+                                        const isActiveInClinic = ['arrived', 'checked_in', 'checked-in', 'in_room', 'in-room'].includes(appt.patient_status);
 
                                         return (
                                             <div
                                                 key={appt.id}
                                                 className={`absolute border-l-2 rounded shadow-sm hover:shadow-md transition-all overflow-visible ${isCancelledOrNoShow
-                                                    ? 'bg-gray-100 border-gray-400 opacity-70'
+                                                    ? 'bg-gray-100 border-gray-400 opacity-75'
                                                     : isActiveInClinic
                                                         ? `${color.bg} ${color.border} ring-2 ring-blue-400 ring-opacity-60 shadow-lg`
                                                         : `${color.bg} ${color.border}`
@@ -1196,14 +1196,19 @@ const Schedule = () => {
                                                     left: leftOffset,
                                                     width: slotWidthCalc,
                                                     borderLeftColor: isCancelledOrNoShow
-                                                        ? (appt.patient_status === 'no_show' ? '#f97316' : '#ef4444')
+                                                        ? (['no_show', 'no-show'].includes(appt.patient_status) ? '#f97316' : '#ef4444')
                                                         : isActiveInClinic
                                                             ? '#3b82f6' // Blue border for active patients
                                                             : color.accent,
                                                     borderLeftWidth: isActiveInClinic ? '3px' : '2px',
                                                 }}
                                             >
-                                                <div className={`h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative ${isCancelledOrNoShow ? 'line-through' : ''}`}>
+                                                <div className="h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative">
+                                                    {/* Strikethrough Line */}
+                                                    {isCancelledOrNoShow && (
+                                                        <div className="absolute top-1/2 left-1 right-1 h-[1px] bg-red-400/80 z-20 pointer-events-none" />
+                                                    )}
+
                                                     {/* Column 1: Patient Name - Fixed width with truncation */}
                                                     <div className="flex-shrink-0 w-[120px] min-w-[120px] max-w-[120px]">
                                                         <span
