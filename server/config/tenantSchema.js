@@ -1377,6 +1377,8 @@ CREATE TABLE IF NOT EXISTS visits (
     visit_type character varying(50),
     provider_id uuid NOT NULL,
     vitals jsonb,
+    structured_note jsonb, -- Added for telehealth
+    dx text[], -- Added for telehealth
     note_draft text,
     note_signed_by uuid,
     note_signed_at timestamp without time zone,
@@ -1400,6 +1402,17 @@ CREATE TABLE IF NOT EXISTS visits (
     attestation_text text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS after_visit_summaries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    encounter_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE UNIQUE,
+    instructions TEXT,
+    follow_up TEXT,
+    return_precautions TEXT,
+    sent_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS x12_partners (

@@ -55,6 +55,7 @@ class AuditService {
             const {
                 userId = '00000000-0000-0000-0000-000000000000',
                 role = 'system',
+                actorType = (userId && userId !== '00000000-0000-0000-0000-000000000000') ? 'user' : 'system',
                 tenantId,
                 ip,
                 userAgent,
@@ -98,12 +99,12 @@ class AuditService {
                 await pool.query(
                     `INSERT INTO audit_events (
                         action, entity_type, entity_id, patient_id, encounter_id, 
-                        actor_user_id, actor_role, tenant_id, ip_address, user_agent, 
+                        actor_user_id, actor_role, actor_type, tenant_id, ip_address, user_agent, 
                         request_id, details, reason_for_access, previous_hash, current_hash
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
                     [
                         upperAction, entityType, entityId, patientId, encounterId,
-                        userId, role, tenantId, ip, userAgent, requestId,
+                        userId, role, actorType, tenantId, ip, userAgent, requestId,
                         JSON.stringify(details), reason, previousHash, currentHash
                     ]
                 );
@@ -112,12 +113,12 @@ class AuditService {
                 await pool.query(
                     `INSERT INTO audit_events (
                         action, entity_type, entity_id, patient_id, encounter_id, 
-                        actor_user_id, actor_role, tenant_id, ip_address, user_agent, 
+                        actor_user_id, actor_role, actor_type, tenant_id, ip_address, user_agent, 
                         request_id, details, reason_for_access
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
                     [
                         upperAction, entityType, entityId, patientId, encounterId,
-                        userId, role, tenantId, ip, userAgent, requestId,
+                        userId, role, actorType, tenantId, ip, userAgent, requestId,
                         JSON.stringify(details), reason
                     ]
                 );
