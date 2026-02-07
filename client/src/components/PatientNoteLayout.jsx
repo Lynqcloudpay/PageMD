@@ -3,15 +3,29 @@ import { Outlet, useParams } from 'react-router-dom';
 import PatientHeader from './PatientHeader';
 import PatientChartPanel from './PatientChartPanel';
 import EPrescribeEnhanced from './EPrescribeEnhanced';
+import MessagingModal from './MessagingModal';
+import { useAuth } from '../context/AuthContext';
+import { usePatient } from '../context/PatientContext';
 
 const PatientNoteLayout = ({ children }) => {
     const { id } = useParams();
+    const { user } = useAuth();
+    const { getPatient } = usePatient();
+    const patient = getPatient(id);
+
     const [showChart, setShowChart] = useState(false);
     const [chartTab, setChartTab] = useState('overview');
     const [showEPrescribe, setShowEPrescribe] = useState(false);
+    const [showMessaging, setShowMessaging] = useState(false);
 
     // Action Handler called by PatientHeader
     const handleAction = (tab, action) => {
+        // If the first argument is exactly 'message', it's coming from PatientHeader's onAction?.('message')
+        if (tab === 'message') {
+            setShowMessaging(true);
+            return;
+        }
+
         if (tab) {
             setChartTab(tab);
             setShowChart(true);
@@ -22,6 +36,8 @@ const PatientNoteLayout = ({ children }) => {
             // where upload functionality already exists
             setChartTab('documents');
             setShowChart(true);
+        } else if (action === 'message') {
+            setShowMessaging(true);
         }
     };
 
@@ -30,12 +46,14 @@ const PatientNoteLayout = ({ children }) => {
             <PatientHeader
                 onOpenChart={() => { setChartTab('history'); setShowChart(true); }}
                 onAction={handleAction}
+                onMessage={() => setShowMessaging(true)}
             />
 
             {children ? children : (
                 <Outlet context={{
                     openChart: (tab = 'overview') => { setChartTab(tab); setShowChart(true); },
-                    openEPrescribe: () => setShowEPrescribe(true)
+                    openEPrescribe: () => setShowEPrescribe(true),
+                    openMessaging: () => setShowMessaging(true)
                 }} />
             )}
 
@@ -52,6 +70,15 @@ const PatientNoteLayout = ({ children }) => {
                     onClose={() => setShowEPrescribe(false)}
                     patientId={id}
                     onSuccess={() => setShowEPrescribe(false)}
+                />
+            )}
+
+            {showMessaging && (
+                <MessagingModal
+                    isOpen={true}
+                    onClose={() => setShowMessaging(false)}
+                    patient={patient}
+                    currentUser={user}
                 />
             )}
         </div>
