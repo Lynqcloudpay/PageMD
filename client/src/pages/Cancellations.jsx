@@ -402,7 +402,7 @@ const Cancellations = () => {
             </div>
 
             {/* Follow-ups List */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="space-y-6">
                 {loading ? (
                     <div className="p-8 text-center text-gray-500">
                         <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
@@ -420,27 +420,31 @@ const Cancellations = () => {
                         </p>
                     </div>
                 ) : (
-                    <div className="divide-y divide-gray-100">
+                    <div className="space-y-6">
                         {groupedFollowups.map(group => (
-                            <div key={group.date} className="border-b border-gray-100 last:border-0">
+                            <div key={group.date} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                 {/* Date Header */}
                                 <div
-                                    className="px-4 py-2 bg-gray-50/50 flex items-center justify-between cursor-pointer hover:bg-gray-100/50 transition-colors"
+                                    className="px-5 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
                                     onClick={() => toggleGroup(group.date)}
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="w-3.5 h-3.5 text-gray-500" />
-                                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                                            {group.displayDate}
-                                        </span>
-                                        <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full font-bold">
-                                            {group.items.length}
-                                        </span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm text-gray-500">
+                                            <Calendar size={16} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+                                                {group.displayDate}
+                                            </h3>
+                                            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                                                {group.items.length} {group.items.length === 1 ? 'Appointment' : 'Appointments'}
+                                            </p>
+                                        </div>
                                     </div>
                                     {collapsedGroups[group.date] ? (
-                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                        <ChevronDown className="w-5 h-5 text-gray-400" />
                                     ) : (
-                                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                                        <ChevronUp className="w-5 h-5 text-gray-400" />
                                     )}
                                 </div>
 
@@ -451,10 +455,10 @@ const Cancellations = () => {
                                             <div key={followup.id} className="transition-all">
                                                 {/* Main Row */}
                                                 <div
-                                                    className={`p-3 cursor-pointer hover:bg-gray-50 ${['no_show', 'no-show'].includes(followup.appointmentStatus)
-                                                        ? 'border-l-4 border-l-orange-400'
-                                                        : 'border-l-4 border-l-red-400'
-                                                        }`}
+                                                    className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${['no_show', 'no-show'].includes(followup.appointmentStatus)
+                                                        ? 'border-l-[6px] border-l-orange-400/80'
+                                                        : 'border-l-[6px] border-l-red-400/80'
+                                                        } ${expandedId === followup.id ? 'bg-slate-50' : ''}`}
                                                     onClick={() => setExpandedId(expandedId === followup.id ? null : followup.id)}
                                                 >
                                                     <div className="flex items-center justify-between">

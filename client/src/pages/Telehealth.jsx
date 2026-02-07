@@ -5,7 +5,7 @@ import {
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
   Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
-  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, ArrowRight, Mail
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, ArrowRight, Mail, UserCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
@@ -1614,130 +1614,149 @@ const Telehealth = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  {/* Status Badge */}
-                  <div className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest border border-transparent shadow-sm ${['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
-                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                    : ['in_room', 'in-room', 'in_progress'].includes((appt.status || '').toLowerCase())
-                      ? 'bg-violet-50 text-violet-600 border-violet-100 animate-pulse'
-                      : ['checked_in', 'checked-in'].includes((appt.status || '').toLowerCase())
-                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                        : 'bg-slate-50 text-slate-400 border-slate-100'
-                    }`}>
-                    {['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
-                      ? 'Completed'
-                      : ['in_room', 'in-room', 'in_progress'].includes((appt.status || '').toLowerCase())
-                        ? 'In Progress'
-                        : ['checked_in', 'checked-in'].includes((appt.status || '').toLowerCase())
-                          ? 'Checked In'
-                          : 'Scheduled'
+                  {/* Status Badge - Dynamic Visit Status */}
+                  {(() => {
+                    const status = (appt.status || '').toLowerCase();
+                    const encounterStatus = (appt.encounter_status || '').toLowerCase();
+
+                    let badge = { label: 'Scheduled', color: 'bg-slate-50 text-slate-500 border-slate-100', icon: Calendar };
+
+                    // 1. Visit Docs Signed (Complete)
+                    if (encounterStatus === 'signed') {
+                      badge = { label: 'Docs Signed', color: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: CheckCircle };
                     }
-                  </div>
+                    // 2. Visit Ended / Pending Signature
+                    else if (['checked_out', 'completed'].includes(status)) {
+                      if (appt.encounter_id) {
+                        badge = { label: 'Pending Signature', color: 'bg-amber-50 text-amber-600 border-amber-100', icon: FileText };
+                      } else {
+                        badge = { label: 'Visit Ended', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: Clock };
+                      }
+                    }
+                    // 3. Visit In Progress
+                    else if (['in_room', 'in-room', 'in_progress'].includes(status)) {
+                      badge = { label: 'Visit In Progress', color: 'bg-violet-50 text-violet-600 border-violet-100 animate-pulse', icon: Video };
+                    }
+                    // 4. Patient Ready
+                    else if (['checked_in', 'checked-in'].includes(status)) {
+                      badge = { label: 'Patient Ready', color: 'bg-blue-50 text-blue-600 border-blue-100', icon: UserCheck };
+                    }
 
-                  <div className="relative">
-                    <Button
-                      data-dropdown-trigger="true"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveDropdown(activeDropdown === appt.id ? null : appt.id);
-                      }}
-                      disabled={creatingRoom !== null}
-                      size="sm"
-                      variant={['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) ? 'secondary' : 'primary'}
-                      className="px-5 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
-                    >
-                      {creatingRoom === appt.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        (['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) || (appt.encounter_id && appt.encounter_status !== 'signed'))
-                          ? <FileText size={14} />
-                          : <Video size={14} />
-                      )}
-                      <span>
-                        {creatingRoom === appt.id
-                          ? 'Wait...'
-                          : ['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
-                            ? 'Finish Note'
-                            : (appt.encounter_id && appt.encounter_status !== 'signed')
-                              ? 'Continue'
-                              : 'Start Call'
-                        }
-                      </span>
-                      <ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
-                    </Button>
+                    const Icon = badge.icon;
 
-                    {activeDropdown === appt.id && (
-                      <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
-                        <button
-                          onClick={() => {
-                            handleStartCall(appt, { video: true });
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                            <Video size={16} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">Join Video Call</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
-                          </div>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            handleStartCall(appt, { video: false });
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                            <FileText size={16} />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm">Resume Note</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
-                          </div>
-                        </button>
-
-                        {!['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) && (
-                          <button
-                            onClick={() => setGuestLinkModalAppt(appt)}
-                            disabled={sendingGuestLink === appt.id}
-                            className="w-full px-4 py-3 text-left hover:bg-amber-50 text-slate-700 flex items-center gap-3 transition-colors group disabled:opacity-50"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                              {sendingGuestLink === appt.id ? (
-                                <Loader2 size={16} className="animate-spin" />
-                              ) : (
-                                <Mail size={16} />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm">Send Guest Link</p>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Direct Access</p>
-                            </div>
-                          </button>
-                        )}
-                        <div className="border-t border-slate-50 mt-1 pt-1">
-                          <button
-                            onClick={() => {
-                              handleDeleteAppointment(appt);
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full px-4 py-3 text-left hover:bg-rose-50 text-rose-600 flex items-center gap-3 transition-colors group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                              <X size={16} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm">Delete Visit</p>
-                              <p className="text-[10px] text-rose-400 uppercase tracking-wider font-semibold">Permanent Removal</p>
-                            </div>
-                          </button>
-                        </div>
+                    return (
+                      <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest border shadow-sm ${badge.color}`}>
+                        <Icon size={12} className="mb-0.5" />
+                        {badge.label}
                       </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="relative">
+                  <Button
+                    data-dropdown-trigger="true"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveDropdown(activeDropdown === appt.id ? null : appt.id);
+                    }}
+                    disabled={creatingRoom !== null}
+                    size="sm"
+                    variant={['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) ? 'secondary' : 'primary'}
+                    className="px-5 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
+                  >
+                    {creatingRoom === appt.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      (['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) || (appt.encounter_id && appt.encounter_status !== 'signed'))
+                        ? <FileText size={14} />
+                        : <Video size={14} />
                     )}
-                  </div>
+                    <span>
+                      {creatingRoom === appt.id
+                        ? 'Wait...'
+                        : ['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
+                          ? 'Finish Note'
+                          : (appt.encounter_id && appt.encounter_status !== 'signed')
+                            ? 'Continue'
+                            : 'Start Call'
+                      }
+                    </span>
+                    <ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
+                  </Button>
+
+                  {activeDropdown === appt.id && (
+                    <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
+                      <button
+                        onClick={() => {
+                          handleStartCall(appt, { video: true });
+                          setActiveDropdown(null);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                          <Video size={16} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">Join Video Call</p>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          handleStartCall(appt, { video: false });
+                          setActiveDropdown(null);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                          <FileText size={16} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">Resume Note</p>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
+                        </div>
+                      </button>
+
+                      {!['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) && (
+                        <button
+                          onClick={() => setGuestLinkModalAppt(appt)}
+                          disabled={sendingGuestLink === appt.id}
+                          className="w-full px-4 py-3 text-left hover:bg-amber-50 text-slate-700 flex items-center gap-3 transition-colors group disabled:opacity-50"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                            {sendingGuestLink === appt.id ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Mail size={16} />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">Send Guest Link</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Direct Access</p>
+                          </div>
+                        </button>
+                      )}
+                      <div className="border-t border-slate-50 mt-1 pt-1">
+                        <button
+                          onClick={() => {
+                            handleDeleteAppointment(appt);
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-rose-50 text-rose-600 flex items-center gap-3 transition-colors group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                            <X size={16} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">Delete Visit</p>
+                            <p className="text-[10px] text-rose-400 uppercase tracking-wider font-semibold">Permanent Removal</p>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
