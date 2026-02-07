@@ -1186,35 +1186,43 @@ router.post('/patient-message', async (req, res) => {
         const p = patientRes.rows[0];
 
         if (p) {
-          let recipientEmail = p.email;
+          let firstName = p.first_name;
+          let lastName = p.last_name;
 
-          // Auto-decrypt if it looks like an encrypted string (no '@' and long)
+          // Parse metadata if it's a string, or use as object
+          let metadata = p.encryption_metadata;
+          if (typeof metadata === 'string') {
+            try { metadata = JSON.parse(metadata); } catch (e) { }
+          }
+
+          // Decrypt Email
           if (recipientEmail && !recipientEmail.includes('@') && recipientEmail.length > 30) {
             try {
               console.log(`[Inbasket] 🔐 Decrypting patient email for ${patientId}...`);
-
-              // Parse metadata if it's a string, or use as object
-              let metadata = p.encryption_metadata;
-              if (typeof metadata === 'string') {
-                try { metadata = JSON.parse(metadata); } catch (e) { }
-              }
-
-              // Use the service helper
               const decrypted = await encryptionService.decryptFieldFromBase64(recipientEmail, metadata || {});
-              if (decrypted) {
-                recipientEmail = decrypted;
-                console.log(`[Inbasket] 🔓 Decryption successful.`);
-              }
-            } catch (decryptErr) {
-              console.warn(`[Inbasket] ⚠️ Failed to decrypt email for patient ${patientId}:`, decryptErr.message);
-            }
+              if (decrypted) recipientEmail = decrypted;
+            } catch (err) { console.warn(`[Inbasket] ⚠️ Email decryption failed:`, err.message); }
+          }
+
+          // Decrypt Names
+          if (firstName && firstName.length > 30 && !firstName.includes(' ')) {
+            try {
+              const decrypted = await encryptionService.decryptFieldFromBase64(firstName, metadata || {});
+              if (decrypted) firstName = decrypted;
+            } catch (err) { }
+          }
+          if (lastName && lastName.length > 30 && !lastName.includes(' ')) {
+            try {
+              const decrypted = await encryptionService.decryptFieldFromBase64(lastName, metadata || {});
+              if (decrypted) lastName = decrypted;
+            } catch (err) { }
           }
 
           if (recipientEmail && recipientEmail.includes('@')) {
             const senderName = `${req.user.first_name} ${req.user.last_name}`.trim() || req.user.email;
             console.log(`[Inbasket] 📧 Sending notification to ${recipientEmail} from ${senderName}`);
 
-            await emailService.sendNewMessageNotification(recipientEmail, `${p.first_name} ${p.last_name}`, senderName);
+            await emailService.sendNewMessageNotification(recipientEmail, `${firstName} ${lastName}`, senderName);
 
             console.log(`[Inbasket] ✅ Notification email sent successfully to ${recipientEmail}`);
           } else {
