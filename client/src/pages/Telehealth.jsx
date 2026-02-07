@@ -343,20 +343,20 @@ const Telehealth = () => {
         const normalizedApptDate = typeof rawDate === 'string' ? rawDate.split('T')[0] : format(new Date(rawDate), 'yyyy-MM-dd');
 
         const encounterStatus = (appt.encounter_status || '').toLowerCase();
-        const isNoteSigned = encounterStatus === 'signed';
+        const isNoteFinished = ['signed', 'retracted'].includes(encounterStatus);
         const isCheckedOut = ['checked_out', 'completed'].includes(status);
         const hasEncounter = !!appt.encounter_id;
 
         // Logic: 
         // 1. If today and not checked out -> Always show (upcoming queue)
-        // 2. If today/past and checked out -> Show only if encounter exists and is NOT signed
-        // 3. If past -> Show only if encounter exists and is NOT signed
+        // 2. If today/past and checked out -> Show only if encounter exists and is NOT finished
+        // 3. If past -> Show only if encounter exists and is NOT finished
         if (normalizedApptDate === todayStr) {
           if (!isCheckedOut) return true;
-          return hasEncounter && !isNoteSigned;
+          return hasEncounter && !isNoteFinished;
         } else {
           // It's a past appointment - only show if there's an active note to finish
-          return hasEncounter && !isNoteSigned;
+          return hasEncounter && !isNoteFinished;
         }
       });
 
@@ -1548,14 +1548,14 @@ const Telehealth = () => {
     if (apptList.length === 0) return null;
 
     return (
-      <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-end justify-between mb-4 px-1">
           <div>
-            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-widest">{title}</h2>
-            <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mt-1">{subtitle}</p>
+            <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">{title}</h2>
+            <p className="text-[10px] text-slate-300 font-medium uppercase tracking-wider mt-0.5">{subtitle}</p>
           </div>
-          <div className="px-3 py-1 bg-slate-100 rounded-full">
-            <span className="text-[10px] font-bold text-slate-500">{apptList.length}</span>
+          <div className="px-2.5 py-0.5 bg-slate-50 border border-slate-100 rounded-full">
+            <span className="text-[10px] font-bold text-slate-400">{apptList.length}</span>
           </div>
         </div>
         <div className="grid gap-3">
@@ -1577,14 +1577,20 @@ const Telehealth = () => {
                       <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide">
                         {appt.time || appt.appointment_time}
                       </p>
-                      <span className="w-1 h-1 rounded-full bg-slate-300" />
+                      <span className="w-1 h-1 rounded-full bg-slate-200" />
                       <p className="text-[11px] text-slate-400 font-medium">
                         {appt.type || appt.appointment_type || 'Telehealth Visit'}
                       </p>
+                      {appt.patient_mrn && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-slate-200" />
+                          <p className="text-[10px] text-slate-300 font-mono tracking-tighter">#{appt.patient_mrn}</p>
+                        </>
+                      )}
                       {getApptDate(appt) !== todayStr && (
                         <>
-                          <span className="w-1 h-1 rounded-full bg-slate-300" />
-                          <p className="text-[11px] text-amber-600 font-bold uppercase">
+                          <span className="w-1 h-1 rounded-full bg-slate-200" />
+                          <p className="text-[11px] text-amber-500/80 font-bold uppercase">
                             {format(new Date(getApptDate(appt) + 'T12:00:00'), 'MMM d')}
                           </p>
                         </>
@@ -1711,10 +1717,10 @@ const Telehealth = () => {
 
   return (
     <div className="p-8 max-w-6xl mx-auto bg-slate-50/30 min-h-screen">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Telehealth</h1>
-          <p className="text-slate-400 font-medium text-xs mt-0.5">Virtual visit command center</p>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">Telehealth Command</h1>
+          <p className="text-slate-400 font-medium text-[11px] mt-0.5 uppercase tracking-widest">Virtual visit management</p>
         </div>
 
         {/* Quick Stats */}
@@ -1733,14 +1739,14 @@ const Telehealth = () => {
       </div>
 
       {/* Friendly Security Badge */}
-      <div className="mb-8 p-4 bg-white rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/30 flex items-center gap-4 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-blue-50/30 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
-        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 relative z-10 border border-blue-100/50">
-          <Shield size={22} />
+      <div className="mb-6 p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-blue-50/20 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
+        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-400 relative z-10 border border-blue-100/30">
+          <Shield size={18} />
         </div>
         <div className="relative z-10">
-          <h3 className="font-bold text-slate-700 text-sm">Secure & Private Video</h3>
-          <p className="text-xs text-slate-400 font-medium">End-to-end encryption for full peace of mind.</p>
+          <h3 className="font-bold text-slate-600 text-[11px] uppercase tracking-wider">Secure & Private Video Enabled</h3>
+          <p className="text-[10px] text-slate-400 font-medium">End-to-end encryption for full peace of mind.</p>
         </div>
       </div>
 
