@@ -1548,10 +1548,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         }
                     }}
                     onAction={(action) => {
-                        if (action === 'message') {
-                            setShowMessagingModal(true);
-                        }
+                        if (action === 'message') setShowMessagingModal(true);
                     }}
+                    onMessage={() => setShowMessagingModal(true)}
                 />
 
                 <MessagingModal

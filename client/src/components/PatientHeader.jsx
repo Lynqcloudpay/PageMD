@@ -48,7 +48,7 @@ const calculateAge = (dob) => {
     }
 };
 
-const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToday, onAction }) => {
+const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToday, onAction, onMessage }) => {
     const navigate = useNavigate();
     const { id } = useParams();
     const { can } = usePermissions();
@@ -600,7 +600,11 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             patient={patient}
                         />
                         <button
-                            onClick={() => onAction?.('message')}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onMessage) onMessage();
+                                else onAction?.('message');
+                            }}
                             className="px-4 py-2.5 text-[13px] font-bold text-blue-600 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2"
                         >
                             <MessageSquare size={16} strokeWidth={2.5} />
