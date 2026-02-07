@@ -335,7 +335,7 @@ const Telehealth = () => {
         const isTele = type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
         if (!isTele) return false;
 
-        const rawDate = appt.appointment_date || appt.appointmentDate;
+        const rawDate = appt.date || appt.appointment_date || appt.appointmentDate;
         if (!rawDate) return false;
 
         // CRITICAL: Normalize date comparison (stripping time and timezone offsets)
@@ -1464,7 +1464,7 @@ const Telehealth = () => {
 
   // Helper to get YYYY-MM-DD from any date source
   const getApptDate = (appt) => {
-    const raw = appt.appointment_date || appt.appointmentDate;
+    const raw = appt.date || appt.appointment_date || appt.appointmentDate;
     if (!raw) return '';
     return typeof raw === 'string' ? raw.split('T')[0] : format(new Date(raw), 'yyyy-MM-dd');
   };
