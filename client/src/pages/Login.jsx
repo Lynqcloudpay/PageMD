@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, LogIn, Lock, Mail } from 'lucide-react';
+import { FileText, LogIn, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import tokenManager from '../services/tokenManager';
 import { InteractiveHoverButton } from '../components/ui/InteractiveHoverButton';
@@ -64,31 +64,31 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-slate-900">
+        <div className="min-h-screen w-full relative flex items-center justify-center overflow-hidden bg-cyan-50/50">
             {/* Vivid Background with Animation */}
             <div className="absolute inset-0 w-full h-full">
                 <img
                     src={loginBg}
                     alt="Medical Background"
-                    className="w-full h-full object-cover opacity-90 scale-105 animate-float-slow"
+                    className="w-full h-full object-cover opacity-30 scale-105 animate-float-slow"
                 />
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 via-slate-900/20 to-slate-900/80 mix-blend-multiply" />
-                <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-white/40 to-cyan-50/90 mix-blend-overlay" />
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[4px]" />
             </div>
 
             {/* Glassmorphism Card */}
             <div className="relative z-10 w-full max-w-md p-8 sm:p-10 mx-4">
-                <div className="absolute inset-0 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl transform transition-all hover:scale-[1.01] duration-500" />
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-2xl border border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] transform transition-all hover:scale-[1.005] duration-500" />
 
                 <div className="relative z-20">
                     <div className="flex flex-col items-center justify-center mb-10">
                         <div className="relative mb-6 group">
-                            <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
-                            <div className="relative bg-white/90 p-4 rounded-2xl shadow-lg border border-white/50 backdrop-blur-sm transform transition-transform group-hover:scale-105 duration-300">
+                            <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
+                            <div className="relative bg-white/80 p-5 rounded-3xl shadow-xl border border-white backdrop-blur-md transform transition-transform group-hover:scale-105 duration-300">
                                 <img
                                     src="/logo.png"
                                     alt="PageMD Logo"
-                                    className="h-12 w-auto object-contain"
+                                    className="h-10 w-auto object-contain"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                     }}
@@ -96,32 +96,32 @@ const Login = () => {
                             </div>
                         </div>
 
-                        <h2 className="text-3xl font-bold text-white tracking-tight drop-shadow-md text-center">
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tight text-center">
                             Welcome Back
                         </h2>
-                        <p className="text-blue-100 text-sm mt-2 text-center font-medium opacity-90">
-                            Secure Access for Healthcare Professionals
+                        <p className="text-slate-500 text-sm mt-2 text-center font-bold uppercase tracking-widest opacity-80">
+                            Secure Access for Professionals
                         </p>
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-100 text-sm backdrop-blur-md animate-fade-in flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-sm font-bold animate-fade-in flex items-center gap-3">
+                            <AlertCircle className="w-5 h-5" />
                             {error}
                         </div>
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-blue-100 ml-1">Email Address</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-200 group-focus-within:text-white transition-colors">
-                                    <Mail className="h-5 w-5" />
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                                    <Mail className="h-4 w-4" />
                                 </div>
                                 <input
                                     type="email"
                                     required
-                                    className="block w-full pl-10 pr-3 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent focus:bg-white/20 transition-all duration-300"
+                                    className="block w-full pl-11 pr-4 py-4 bg-white/30 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white/60 transition-all duration-300 font-medium"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="doctor@pagemd.com"
@@ -130,15 +130,15 @@ const Login = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-blue-100 ml-1">Password</label>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-200 group-focus-within:text-white transition-colors">
-                                    <Lock className="h-5 w-5" />
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                                    <Lock className="h-4 w-4" />
                                 </div>
                                 <input
                                     type="password"
                                     required
-                                    className="block w-full pl-10 pr-3 py-3 bg-white/10 border border-white/10 rounded-xl text-white placeholder-blue-200/50 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent focus:bg-white/20 transition-all duration-300"
+                                    className="block w-full pl-11 pr-4 py-4 bg-white/30 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white/60 transition-all duration-300 font-medium"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
@@ -151,15 +151,15 @@ const Login = () => {
                                 text={loading ? 'Authenticating...' : 'Sign In Securely'}
                                 disabled={loading}
                                 type="submit"
-                                className="w-full border-white/30 text-white hover:text-white"
+                                className="w-full bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20"
                             />
                         </div>
                     </form>
 
                     <div className="mt-8 text-center text-sm">
-                        <p className="text-blue-200/70">
+                        <p className="text-slate-400 font-medium">
                             Forgot your password?{' '}
-                            <button className="text-white hover:text-blue-300 font-medium transition-colors underline decoration-blue-400/30 hover:decoration-blue-400">
+                            <button className="text-blue-600 hover:text-blue-700 font-black transition-colors underline decoration-blue-500/20 hover:decoration-blue-500">
                                 Contact Administrator
                             </button>
                         </p>
@@ -167,8 +167,8 @@ const Login = () => {
                 </div>
             </div>
 
-            <div className="absolute bottom-4 text-center w-full">
-                <p className="text-white/30 text-xs font-light tracking-widest uppercase">
+            <div className="absolute bottom-10 text-center w-full">
+                <p className="text-slate-300 text-[10px] font-black tracking-[0.3em] uppercase">
                     HIPAA Compliant & Secure • PageMD EMR v1.0
                 </p>
             </div>
