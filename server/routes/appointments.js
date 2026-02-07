@@ -792,7 +792,7 @@ router.post('/:id/generate-guest-link', requirePermission('schedule:view'), asyn
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
       LEFT JOIN users u ON a.provider_id = u.id
-      LEFT JOIN clinic_settings cs ON cs.id = 1
+      LEFT JOIN clinic_settings cs ON cs.clinic_id = a.clinic_id
       WHERE a.id = $1
     `, [id]);
 
