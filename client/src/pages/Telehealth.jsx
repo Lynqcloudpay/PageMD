@@ -1560,11 +1560,11 @@ const Telehealth = () => {
         </div>
         <div className="grid gap-3">
           {apptList.map(appt => (
-            <Card key={appt.id} className="p-4 hover:shadow-xl transition-all border-slate-200/60 hover:border-blue-200 group">
+            <Card key={appt.id} className="py-3 px-4 hover:shadow-lg transition-all border-slate-200/60 hover:border-blue-200 group">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-2xl ${iconColor} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
-                    <Video size={24} />
+                  <div className={`w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center transition-transform group-hover:scale-105 duration-300`}>
+                    <Video size={18} />
                   </div>
                   <div>
                     <h3
@@ -1597,10 +1597,10 @@ const Telehealth = () => {
                   <div className="relative">
                     <button
                       onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
-                      className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-all border border-slate-200/60 flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider"
+                      className="py-2 px-2.5 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-xl transition-all border border-slate-200/60 flex items-center gap-2 font-bold text-[10px] uppercase tracking-wider"
                     >
                       More
-                      <ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={12} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
                     </button>
 
                     {activeDropdown === appt.id && (
@@ -1680,16 +1680,17 @@ const Telehealth = () => {
                   <Button
                     onClick={() => handleStartCall(appt)}
                     disabled={creatingRoom !== null}
-                    className={`px-6 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 ${['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
-                      ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-slate-200/10'
-                      : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/20'
-                      }`}
+                    size="sm"
+                    variant={['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) ? 'secondary' : 'primary'}
+                    className="px-4 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm"
+                    icon={
+                      creatingRoom === appt.id
+                        ? Loader2
+                        : (['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) || (appt.encounter_id && appt.encounter_status !== 'signed'))
+                          ? FileText
+                          : Video
+                    }
                   >
-                    {creatingRoom === appt.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Video size={16} />
-                    )}
                     {creatingRoom === appt.id
                       ? 'Wait...'
                       : ['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
@@ -1710,38 +1711,36 @@ const Telehealth = () => {
 
   return (
     <div className="p-8 max-w-6xl mx-auto bg-slate-50/30 min-h-screen">
-      <div className="mb-10 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Telehealth</h1>
-          <p className="text-slate-500 font-medium mt-1 text-sm">Virtual visit command center</p>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Telehealth</h1>
+          <p className="text-slate-400 font-medium text-xs mt-0.5">Virtual visit command center</p>
         </div>
 
         {/* Quick Stats */}
-        <div className="flex gap-4">
-          <div className="px-5 py-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Pending</p>
-              <p className="text-xl font-bold text-slate-800 leading-none">{appointments.length}</p>
-            </div>
+        <div className="flex gap-3">
+          <div className="px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pending</p>
+            <p className="text-lg font-bold text-slate-700 leading-none">{appointments.length}</p>
           </div>
           <button
             onClick={fetchSchedule}
-            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all hover:border-blue-200 hover:shadow-lg"
+            className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all hover:border-blue-200"
           >
-            <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+            <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
       {/* Friendly Security Badge */}
-      <div className="mb-10 p-5 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 flex items-center gap-5 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-blue-50/50 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
-        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 relative z-10 border border-blue-100 shadow-sm">
-          <Shield size={28} />
+      <div className="mb-8 p-4 bg-white rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/30 flex items-center gap-4 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-blue-50/30 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
+        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500 relative z-10 border border-blue-100/50">
+          <Shield size={22} />
         </div>
         <div className="relative z-10">
-          <h3 className="font-bold text-slate-800 text-lg leading-tight">Secure & Private Video</h3>
-          <p className="text-sm text-slate-500 font-medium mt-1">Your consultations are protected with end-to-end encryption for full peace of mind.</p>
+          <h3 className="font-bold text-slate-700 text-sm">Secure & Private Video</h3>
+          <p className="text-xs text-slate-400 font-medium">End-to-end encryption for full peace of mind.</p>
         </div>
       </div>
 
