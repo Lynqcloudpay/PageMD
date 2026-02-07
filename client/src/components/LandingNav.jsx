@@ -39,24 +39,24 @@ const LandingNav = ({ onGetDemo }) => {
     };
 
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm py-3' : 'bg-white border-b border-gray-100 py-4'
+        <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/90 backdrop-blur-xl shadow-xl shadow-slate-200/20 py-4' : 'bg-white border-b border-slate-50 py-6'
             }`}>
-            <div className="max-w-7xl mx-auto px-6">
+            <div className="max-w-7xl mx-auto px-8">
                 <div className="flex items-center justify-between">
                     {/* Logo */}
-                    <Link to="/" className="flex items-center gap-3">
-                        <img src="/logo.png" alt="PageMD Logo" className="h-10 w-auto object-contain" />
+                    <Link to="/" className="flex items-center gap-3 group">
+                        <img src="/logo.png" alt="PageMD Logo" className="h-10 w-auto object-contain transition-transform group-hover:scale-105" />
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden md:flex items-center gap-8">
+                    <div className="hidden lg:flex items-center gap-12">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.path}
                                 to={link.path}
-                                className={`text-sm font-medium transition-colors ${isActive(link.path)
-                                    ? 'text-blue-600 font-bold'
-                                    : 'text-gray-600 hover:text-blue-600'
+                                className={`text-[11px] font-black uppercase tracking-[0.2em] transition-all ${isActive(link.path)
+                                    ? 'text-sky-500'
+                                    : 'text-slate-400 hover:text-slate-900'
                                     }`}
                             >
                                 {link.name}
@@ -65,16 +65,16 @@ const LandingNav = ({ onGetDemo }) => {
                     </div>
 
                     {/* Desktop CTA */}
-                    <div className="hidden md:flex items-center gap-3">
-                        <Link to="/login" className="px-5 py-2.5 text-gray-700 text-sm font-semibold hover:text-blue-600 transition-colors">
+                    <div className="hidden lg:flex items-center gap-6">
+                        <Link to="/login" className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-colors">
                             Sign In
                         </Link>
                         <Link
                             to="/contact"
                             onClick={handleGetDemo}
-                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-200 transition-all active:scale-95"
+                            className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-xl shadow-xl shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95"
                         >
-                            Get Demo
+                            Get Started
                         </Link>
                     </div>
 

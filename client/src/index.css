@@ -23,26 +23,37 @@
 
   /* PageMD EMR Global Color Palette */
   :root {
-    --graphite-black: #111827;
-    --deep-gray: #1F2937;
+    --graphite-black: #0F172A; /* Slate 900 */
+    --deep-gray: #1E293B;      /* Slate 800 */
+    --baby-blue: #89CFF0;      /* Baby Blue */
+    --baby-blue-light: #E0F2FE; /* Sky 100 */
+    --baby-blue-dark: #0EA5E9;  /* Sky 500 */
     --strong-azure: #3B82F6;
-    --fresh-green: #22C55E;
-    --soft-gray: #F3F4F6;
+    --fresh-green: #10B981;    /* Emerald 500 */
+    --soft-gray: #F8FAFC;      /* Slate 50 */
     --white: #FFFFFF;
 
+    /* Semantic Aliases */
+    --brand-primary: var(--baby-blue-dark);
+    --brand-accent: var(--baby-blue);
+    --bg-main: var(--white);
+    --bg-alt: var(--soft-gray);
+    --text-main: var(--graphite-black);
+    --text-muted: #64748B;     /* Slate 500 */
+
     /* Legacy support */
-    --premium-navy: #111827;
-    --premium-slate: #1F2937;
-    --premium-slate-light: #4B5563;
-    --premium-gray: #6B7280;
-    --premium-light-gray: #F3F4F6;
-    --premium-bg: #F3F4F6;
+    --premium-navy: #0F172A;
+    --premium-slate: #1E293B;
+    --premium-slate-light: #475569;
+    --premium-gray: #64748B;
+    --premium-light-gray: #F8FAFC;
+    --premium-bg: #F8FAFC;
     --premium-bg-secondary: #FFFFFF;
     --premium-white: #FFFFFF;
-    --premium-text: #1F2937;
-    --premium-text-secondary: #4B5563;
-    --premium-blue: #3B82F6;
-    --premium-blue-light: #60A5FA;
+    --premium-text: #0F172A;
+    --premium-text-secondary: #475569;
+    --premium-blue: #0EA5E9;
+    --premium-blue-light: #89CFF0;
   }
 
   /* Futuristic animations */
