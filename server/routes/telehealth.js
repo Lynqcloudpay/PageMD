@@ -61,8 +61,19 @@ router.post('/rooms', authenticate, async (req, res) => {
                     room = createResponse.data;
                 } catch (createError) {
                     console.error('Daily.co Room Creation error:', createError.response?.data || createError.message);
-                    // If it failed because it exists (race condition), that's fine
-                    if (createError.response?.status !== 400 || !createError.response?.data?.info?.includes('already exists')) {
+
+                    // If it failed because it exists (race condition), fetch it
+                    if (createError.response?.status === 400 && createError.response?.data?.info?.includes('already exists')) {
+                        try {
+                            const roomResponse = await axios.get(`${DAILY_API_URL}/rooms/${roomName}`, {
+                                headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
+                            });
+                            room = roomResponse.data;
+                        } catch (getError) {
+                            console.error('Daily.co Failed to fetch existing room:', getError.message);
+                            return res.status(500).json({ error: 'Failed to access video room' });
+                        }
+                    } else {
                         return res.status(500).json({ error: 'Failed to create video room' });
                     }
                 }
