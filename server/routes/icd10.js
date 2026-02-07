@@ -34,6 +34,7 @@ router.get('/search', authenticate, async (req, res) => {
               )
             ORDER BY 
                 (c.code = $1) DESC,
+                c.usage_count DESC,
                 -- 1. Direct Match: The most common clinical term (Essential/Primary/Unspecified/Uncomplicated)
                 (c.is_billable AND c.description ~* $5 AND c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y') DESC,
                 -- 2. Good Match: Term as whole word + Billable
@@ -123,11 +124,15 @@ router.post('/track', authenticate, async (req, res) => {
         if (!icd10_id) return res.status(400).json({ error: 'icd10_id is required' });
 
         await pool.query(`
+            -- Update user-specific usage
             INSERT INTO icd10_usage (user_id, icd10_id, use_count, last_used)
             VALUES ($1, $2, 1, CURRENT_TIMESTAMP)
             ON CONFLICT (user_id, icd10_id) DO UPDATE SET
                 use_count = icd10_usage.use_count + 1,
-                last_used = CURRENT_TIMESTAMP
+                last_used = CURRENT_TIMESTAMP;
+
+            -- Update global usage ranking
+            UPDATE icd10_codes SET usage_count = usage_count + 1 WHERE id = $2;
         `, [req.user.id, icd10_id]);
 
         res.json({ success: true });

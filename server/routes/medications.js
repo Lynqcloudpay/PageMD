@@ -30,7 +30,7 @@ router.get('/search', requireRole('clinician', 'nurse'), async (req, res) => {
     }
 
     const medications = await rxnormService.searchMedications(q.trim(), parseInt(limit));
-    
+
     // Always return an array, even if empty
     res.json(Array.isArray(medications) ? medications : []);
 
@@ -65,7 +65,7 @@ router.get('/:rxcui', requireRole('clinician', 'nurse'), async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching medication details:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch medication details',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -85,8 +85,8 @@ router.get('/interactions/check', requireRole('clinician', 'nurse'), async (req,
     }
 
     // Parse comma-separated list or array
-    const rxcuisArray = Array.isArray(rxcuis) 
-      ? rxcuis 
+    const rxcuisArray = Array.isArray(rxcuis)
+      ? rxcuis
       : rxcuis.split(',').map(r => r.trim()).filter(Boolean);
 
     if (rxcuisArray.length < 2) {
@@ -103,10 +103,27 @@ router.get('/interactions/check', requireRole('clinician', 'nurse'), async (req,
 
   } catch (error) {
     console.error('Drug interaction check error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to check drug interactions',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+/**
+ * POST /api/medications/track
+ * Track medication usage for smart ranking
+ */
+router.post('/track', requireRole('clinician', 'nurse'), async (req, res) => {
+  try {
+    const { rxcui } = req.body;
+    if (!rxcui) return res.status(400).json({ error: 'RxCUI is required' });
+
+    await rxnormService.trackMedicationUsage(rxcui);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error tracking medication usage:', error);
+    res.status(500).json({ error: 'Failed to track usage' });
   }
 });
 

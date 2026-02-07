@@ -598,6 +598,7 @@ CREATE TABLE IF NOT EXISTS medication_database (
     drug_class character varying(255),
     drug_category character varying(255),
     fda_approved boolean DEFAULT true,
+    usage_count integer DEFAULT 0,
     last_updated timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english'::regconfig, (((((((COALESCE(name, ''::character varying))::text || ' '::text) || (COALESCE(synonym, ''::character varying))::text) || ' '::text) || (COALESCE(strength, ''::character varying))::text) || ' '::text) || (COALESCE(form, ''::character varying))::text))) STORED
@@ -618,6 +619,7 @@ CREATE TABLE IF NOT EXISTS medications (
     notes text,
     clinic_id uuid,
     prescriber_id uuid,
+    usage_count integer DEFAULT 0,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
@@ -1809,6 +1811,7 @@ CREATE INDEX idx_intake_sessions_status ON intake_sessions USING btree (status);
 
 CREATE INDEX idx_interactions_prescription ON prescription_interactions USING btree (prescription_id);
 
+CREATE INDEX idx_meds_usage_rank ON medication_database USING btree (usage_count DESC);
 CREATE INDEX idx_medication_rxcui ON medication_database USING btree (rxcui) WHERE (rxcui IS NOT NULL);
 
 CREATE INDEX idx_medication_search ON medication_database USING gin (search_vector);

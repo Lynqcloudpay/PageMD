@@ -188,6 +188,12 @@ const DiagnosisSelector = ({
         onDiagnosesChange([...selectedDiagnoses, problem]);
       }
     }
+
+    // Track usage for smart ranking (only if it has a real database ID)
+    if (problem.icd10_id || (problem.id && !String(problem.id).startsWith('temp-') && !String(problem.id).startsWith('assessment-'))) {
+      codesAPI.trackUsage(problem.icd10_id || problem.id).catch(err => console.error('Error tracking ICD10 usage:', err));
+    }
+
     setSearchTerm('');
     setShowDropdown(false);
   };
@@ -208,7 +214,7 @@ const DiagnosisSelector = ({
 
     // Create a temporary problem object
     const newProblem = {
-      id: `temp-${codeDetails.code}`,
+      id: codeDetails.id || `temp-${codeDetails.code}`, // Use real ID if available for tracking
       problem_name: codeDetails.description,
       name: codeDetails.description,
       icd10_code: codeDetails.code,
@@ -219,6 +225,11 @@ const DiagnosisSelector = ({
 
     // Add to selected diagnoses
     handleAddDiagnosis(newProblem);
+
+    // Track usage
+    if (codeDetails.id) {
+      codesAPI.trackUsage(codeDetails.id).catch(err => console.error('Error tracking ICD10 usage:', err));
+    }
 
     // Clear search and close dropdown
     setSearchTerm('');

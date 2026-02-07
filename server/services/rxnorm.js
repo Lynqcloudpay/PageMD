@@ -296,12 +296,14 @@ async function searchLocalMedicationDatabase(searchTerm, limit = 20) {
     // Try full-text search if search_vector column exists
     try {
       const result = await pool.query(`
-        SELECT rxcui, name, synonym, strength, form, route, controlled_substance, schedule
+        SELECT rxcui, name, synonym, strength, form, route, controlled_substance, schedule, usage_count
         FROM medication_database
         WHERE search_vector @@ plainto_tsquery('english', $1)
            OR name ILIKE $2
            OR synonym ILIKE $2
-        ORDER BY ts_rank(search_vector, plainto_tsquery('english', $1)) DESC
+        ORDER BY 
+           usage_count DESC,
+           ts_rank(search_vector, plainto_tsquery('english', $1)) DESC
         LIMIT $3
       `, [searchTerm, `%${searchTerm}%`, limit]);
 
@@ -324,10 +326,11 @@ async function searchLocalMedicationDatabase(searchTerm, limit = 20) {
 
     // Simple LIKE query fallback
     const result = await pool.query(`
-      SELECT rxcui, name, synonym, strength, form, route, controlled_substance, schedule
+      SELECT rxcui, name, synonym, strength, form, route, controlled_substance, schedule, usage_count
       FROM medication_database
       WHERE name ILIKE $1
          OR synonym ILIKE $1
+      ORDER BY usage_count DESC, name ASC
       LIMIT $2
     `, [`%${searchTerm}%`, limit]);
 
@@ -503,12 +506,28 @@ async function checkLocalInteractions(rxcuis) {
   }
 }
 
+/**
+ * Increment medication usage count for smart ranking
+ * @param {string} rxcui - RxNorm Concept Unique Identifier
+ */
+async function trackMedicationUsage(rxcui) {
+  try {
+    if (!rxcui) return;
+    await pool.query(`
+      UPDATE medication_database SET usage_count = usage_count + 1 WHERE rxcui = $1
+    `, [rxcui]);
+  } catch (error) {
+    console.error('Error tracking medication usage:', error);
+  }
+}
+
 module.exports = {
   searchMedications,
   getMedicationDetails,
   getMedicationStructures,
   checkDrugInteractions,
-  searchLocalMedicationDatabase
+  searchLocalMedicationDatabase,
+  trackMedicationUsage
 };
 
 

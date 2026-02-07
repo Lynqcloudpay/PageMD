@@ -47,6 +47,12 @@ const CodedMedicationSearch = ({ onSelect, label = "Medication Search", placehol
 
     const handleSelect = (med) => {
         onSelect(med);
+
+        // Track usage for smart ranking
+        if (med.rxcui) {
+            medicationsAPI.trackUsage(med.rxcui).catch(err => console.error('Error tracking medication usage:', err));
+        }
+
         setQuery(''); // Optionally clear, or keep the name: setQuery(med.name);
         setResults([]);
         setShowResults(false);
