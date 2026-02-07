@@ -7,29 +7,29 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
         <Link
             to={to}
             className={cn(
-                "group relative flex items-center gap-3 px-4 py-2.5 rounded-[1.2rem] transition-all duration-300 overflow-hidden mb-0.5",
+                "group relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-[1.2rem] transition-all duration-300 overflow-hidden mb-0.5",
                 active
-                    ? "text-primary-900 bg-white shadow-sm"
-                    : "text-slate-600 hover:text-primary-700 hover:bg-white/40"
+                    ? "text-blue-600 bg-white/95 shadow-md scale-[1.02] z-20"
+                    : "text-slate-600 hover:text-blue-600 hover:bg-white/50"
             )}
         >
             {/* The "Bubble" animation from login page */}
             <div className={cn(
-                "absolute inset-0 z-0 transition-all duration-500 ease-out scale-0 origin-center rounded-full bg-primary-50 group-hover:scale-[2.5]",
-                active && "scale-[2.5] bg-white"
+                "absolute inset-0 z-0 transition-all duration-700 ease-out scale-0 origin-center rounded-full bg-blue-50/50 group-hover:scale-[3]",
+                active && "scale-[3] bg-white"
             )} />
 
             <div className="relative z-10 flex items-center w-full">
                 <Icon className={cn(
                     "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
-                    active ? "text-primary-600" : "text-slate-400 group-hover:text-primary-500"
+                    active ? "text-blue-600" : "text-slate-400 group-hover:text-blue-500"
                 )} />
 
                 {!collapsed && (
                     <>
                         <span className={cn(
-                            "ml-3 text-[14px] font-semibold transition-all duration-300 flex-1 tracking-tight",
-                            active ? "text-primary-900" : "text-slate-600 group-hover:text-primary-700"
+                            "ml-3 text-[14px] font-bold transition-all duration-300 flex-1 tracking-tight",
+                            active ? "text-blue-700" : "text-slate-600 group-hover:text-blue-600"
                         )}>
                             {label}
                         </span>
@@ -38,10 +38,10 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
                             <span className={cn(
                                 "px-2 py-0.5 text-[10px] font-bold rounded-full transition-all",
                                 active
-                                    ? "bg-primary-600 text-white"
+                                    ? "bg-blue-600 text-white"
                                     : badgeColor === 'amber'
                                         ? "bg-amber-100 text-amber-600"
-                                        : "bg-primary-100 text-primary-600"
+                                        : "bg-blue-100 text-blue-600"
                             )}>
                                 {badge}
                             </span>
@@ -52,7 +52,7 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
 
             {/* Subtle indicator for active state */}
             {active && (
-                <div className="absolute right-0 top-1/4 bottom-1/4 w-1 bg-primary-500 rounded-l-full z-20 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                <div className="absolute right-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-l-full z-20 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
             )}
         </Link>
     );

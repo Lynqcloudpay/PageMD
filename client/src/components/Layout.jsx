@@ -286,17 +286,17 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50 transition-colors">
+        <div className="flex flex-col min-h-screen bg-white transition-colors">
             {user?.isSandbox && <DemoBanner />}
             <div className="flex flex-1">
 
                 {/* Sidebar - Floating Bubble */}
                 <aside
-                    className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
+                    className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-2 py-4`}
                 >
                     <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-b from-blue-50/90 to-blue-100/90 backdrop-blur-md rounded-[2.5rem] shadow-2xl border border-white/50 relative overflow-hidden transition-all duration-500",
-                        sidebarCollapsed ? "rounded-[2rem]" : "rounded-[2.5rem]"
+                        "flex flex-col h-full bg-gradient-to-br from-blue-50/60 via-white/80 to-blue-100/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/60 relative overflow-hidden transition-all duration-500",
+                        sidebarCollapsed ? "rounded-[2.2rem]" : "rounded-[2.5rem]"
                     )}>
                         {/* Decorative background bubbles */}
                         <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
@@ -327,20 +327,20 @@ const Layout = ({ children }) => {
                             ) : (
                                 <button
                                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                    className="mx-auto p-2 transition-all hover:scale-110 active:scale-95 group flex items-center justify-center"
+                                    className="w-full transition-all hover:scale-105 active:scale-95 group flex items-center justify-center p-0"
                                     title="Expand sidebar"
                                 >
                                     <img
                                         src="/logo-icon.png"
                                         alt="PMD"
-                                        className="w-11 h-11 object-contain"
+                                        className="w-[85%] h-auto object-contain transition-transform duration-500 group-hover:rotate-3"
                                         onError={(e) => {
                                             // Fallback if image missing
                                             e.target.style.display = 'none';
                                             e.target.nextSibling.classList.remove('hidden');
                                         }}
                                     />
-                                    <div className="hidden bg-blue-600 rounded-xl w-10 h-10 flex items-center justify-center text-white font-bold">P</div>
+                                    <div className="hidden bg-blue-600 rounded-2xl w-14 h-14 flex items-center justify-center text-white text-2xl font-bold">P</div>
                                 </button>
                             )}
                         </div>
@@ -521,12 +521,12 @@ const Layout = ({ children }) => {
                 <main
                     className={cn(
                         "flex-1 transition-all duration-500 ease-in-out relative flex flex-col h-screen overflow-hidden",
-                        sidebarCollapsed ? "ml-24" : "ml-[19rem]"
+                        sidebarCollapsed ? "ml-[5.5rem]" : "ml-[18.5rem]"
                     )}
                 >
-                    <div className="flex-1 m-4 bg-white rounded-[2.5rem] shadow-2xl border border-white/50 overflow-hidden flex flex-col relative">
+                    <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden flex flex-col relative">
                         {/* Header inside the bubble */}
-                        <div className="h-12 bg-white border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-20">
+                        <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-20">
                             <div className="flex-1 overflow-hidden">
                                 <PatientTabs />
                             </div>
