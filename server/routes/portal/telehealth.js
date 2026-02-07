@@ -17,12 +17,13 @@ router.post('/rooms', authenticatePortal, async (req, res) => {
         const { appointmentId, patientName, providerName } = req.body;
 
         if (!DAILY_API_KEY) {
-            console.error('[Portal Telehealth] DAILY_API_KEY missing');
-            return res.status(500).json({ error: 'Daily.co API key not configured' });
+            console.error('[Portal Telehealth] DAILY_API_KEY missing in environment');
+            return res.status(500).json({ error: 'Config Error: Daily.co key missing' });
         }
 
-        // Create a unique room name based on appointment (deterministic)
-        const roomName = `pagemd-appt-${appointmentId}`;
+        // Create a unique room name based on appointment (deterministic & lowercase)
+        const roomName = `pagemd-appt-${appointmentId}`.toLowerCase();
+        console.log(`[Portal Telehealth] Processing room: ${roomName} for appt ${appointmentId}`);
 
         // Room expires after 2 hours
         const expiryTime = Math.floor(Date.now() / 1000) + 7200;
@@ -34,9 +35,11 @@ router.post('/rooms', authenticatePortal, async (req, res) => {
                 headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
             });
             room = roomResponse.data;
+            console.log(`[Portal Telehealth] Room exists: ${room.name}`);
         } catch (error) {
             if (error.response?.status === 404) {
                 // Create room if not exists
+                console.log(`[Portal Telehealth] Room not found, creating new: ${roomName}`);
                 try {
                     const createResponse = await axios.post(`${DAILY_API_URL}/rooms`, {
                         name: roomName,
@@ -58,27 +61,29 @@ router.post('/rooms', authenticatePortal, async (req, res) => {
                         }
                     });
                     room = createResponse.data;
+                    console.log(`[Portal Telehealth] Room created: ${room.name}`);
                 } catch (createError) {
-                    console.error('Daily.co Room Creation error:', createError.response?.data || createError.message);
+                    console.error('[Portal Telehealth] Room Creation Failed:', createError.response?.data || createError.message);
 
                     // If it failed because it exists (race condition), fetch it
                     if (createError.response?.status === 400 && createError.response?.data?.info?.includes('already exists')) {
+                        console.log(`[Portal Telehealth] Race condition detected for ${roomName}, fetching existing room...`);
                         try {
                             const roomResponse = await axios.get(`${DAILY_API_URL}/rooms/${roomName}`, {
                                 headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
                             });
                             room = roomResponse.data;
                         } catch (getError) {
-                            console.error('Daily.co Failed to fetch existing room:', getError.message);
-                            return res.status(500).json({ error: 'Failed to access video room' });
+                            console.error('[Portal Telehealth] Failed to fetch existing (race):', getError.message);
+                            return res.status(500).json({ error: 'Failed to access video room (race)' });
                         }
                     } else {
-                        return res.status(500).json({ error: 'Failed to create video room' });
+                        return res.status(500).json({ error: 'Failed to create video room', details: createError.response?.data });
                     }
                 }
             } else {
-                console.error('Daily.co Get Room error:', error.response?.data || error.message);
-                return res.status(500).json({ error: 'Failed to check video room status' });
+                console.error('[Portal Telehealth] Get Room Failed:', error.response?.data || error.message);
+                return res.status(500).json({ error: 'Failed to check video room status', details: error.response?.data });
             }
         }
 

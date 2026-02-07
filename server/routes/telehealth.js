@@ -21,9 +21,10 @@ router.post('/rooms', authenticate, async (req, res) => {
             return res.status(500).json({ error: 'Daily.co API key not configured' });
         }
 
-        // Create a unique room name based on appointment (deterministic)
+        // Create a unique room name based on appointment (deterministic and lowercase)
         // This ensures both provider and patient land in the same room
-        const roomName = `pagemd-appt-${appointmentId}`;
+        const roomName = `pagemd-appt-${appointmentId}`.toLowerCase();
+        console.log(`[Telehealth] Processing room: ${roomName}`);
 
         // Room expires after 2 hours
         const expiryTime = Math.floor(Date.now() / 1000) + 7200;
@@ -35,9 +36,11 @@ router.post('/rooms', authenticate, async (req, res) => {
                 headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
             });
             room = roomResponse.data;
+            console.log(`[Telehealth] Room exists: ${room.name}`);
         } catch (error) {
             if (error.response?.status === 404) {
                 // Create room if not exists
+                console.log(`[Telehealth] Room not found, creating new: ${roomName}`);
                 try {
                     const createResponse = await axios.post(`${DAILY_API_URL}/rooms`, {
                         name: roomName,
@@ -59,27 +62,29 @@ router.post('/rooms', authenticate, async (req, res) => {
                         }
                     });
                     room = createResponse.data;
+                    console.log(`[Telehealth] Room created: ${room.name}`);
                 } catch (createError) {
-                    console.error('Daily.co Room Creation error:', createError.response?.data || createError.message);
+                    console.error('[Telehealth] Room Creation Failed:', createError.response?.data || createError.message);
 
                     // If it failed because it exists (race condition), fetch it
                     if (createError.response?.status === 400 && createError.response?.data?.info?.includes('already exists')) {
+                        console.log(`[Telehealth] Race condition detected for ${roomName}, fetching existing room...`);
                         try {
                             const roomResponse = await axios.get(`${DAILY_API_URL}/rooms/${roomName}`, {
                                 headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
                             });
                             room = roomResponse.data;
                         } catch (getError) {
-                            console.error('Daily.co Failed to fetch existing room:', getError.message);
-                            return res.status(500).json({ error: 'Failed to access video room' });
+                            console.error('[Telehealth] Failed to fetch existing (race):', getError.message);
+                            return res.status(500).json({ error: 'Failed to access video room (race)' });
                         }
                     } else {
-                        return res.status(500).json({ error: 'Failed to create video room' });
+                        return res.status(500).json({ error: 'Failed to create video room', details: createError.response?.data });
                     }
                 }
             } else {
-                console.error('Daily.co Get Room error:', error.response?.data || error.message);
-                return res.status(500).json({ error: 'Failed to check video room status' });
+                console.error('[Telehealth] Get Room Failed:', error.response?.data || error.message);
+                return res.status(500).json({ error: 'Failed to check video room status', details: error.response?.data });
             }
         }
 
