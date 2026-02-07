@@ -95,7 +95,7 @@ const PortalForgotPassword = () => {
                                 <button
                                     type="submit"
                                     disabled={loading}
-                                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-slate-900/20 hover:shadow-xl hover:shadow-slate-900/30 transition-all transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-600/20 hover:shadow-xl hover:shadow-blue-600/30 transition-all transform active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {loading ? (
                                         <>
@@ -111,7 +111,7 @@ const PortalForgotPassword = () => {
                             <div className="text-center">
                                 <Link
                                     to="/portal/login"
-                                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors group"
+                                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-600 transition-colors group"
                                 >
                                     <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
                                     Back to Login

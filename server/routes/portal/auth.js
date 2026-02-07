@@ -227,7 +227,7 @@ router.post('/logout', async (req, res) => {
  * POST /api/portal/auth/forgot
  */
 router.post('/forgot', [
-    body('email').isEmail().normalizeEmail()
+    body('email').isEmail() // Removed .normalizeEmail()
 ], async (req, res) => {
     try {
         const { email } = req.body;
@@ -272,7 +272,7 @@ router.post('/forgot', [
  */
 router.post('/reset', [
     body('token').notEmpty(),
-    body('email').isEmail().normalizeEmail(),
+    body('email').isEmail(), // Removed .normalizeEmail() to avoid mismatch
     body('password').isLength({ min: 8 })
 ], async (req, res) => {
     try {
@@ -280,12 +280,15 @@ router.post('/reset', [
         const crypto = require('crypto');
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
+        console.log(`[Portal Reset] Attempt for email: ${email}`);
+
         const result = await pool.query(`
             SELECT id FROM patient_portal_accounts 
             WHERE email = $1 AND reset_token_hash = $2 AND reset_token_expires > CURRENT_TIMESTAMP
         `, [email, tokenHash]);
 
         if (result.rows.length === 0) {
+            console.warn(`[Portal Reset] Invalid token or expired for email: ${email}`);
             return res.status(400).json({ error: 'Invalid or expired reset token' });
         }
 
@@ -298,6 +301,7 @@ router.post('/reset', [
             WHERE id = $2
         `, [passwordHash, accountId]);
 
+        console.log(`[Portal Reset] Success for account ID: ${accountId}`);
         res.json({ success: true, message: 'Password has been reset successfully.' });
     } catch (error) {
         console.error('[Portal Auth] Reset password error:', error);
