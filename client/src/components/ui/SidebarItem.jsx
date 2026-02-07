@@ -7,29 +7,29 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
         <Link
             to={to}
             className={cn(
-                "group relative flex items-center gap-3 px-4 py-2.25 rounded-2xl transition-all duration-300 overflow-hidden mb-0.5",
+                "group relative flex items-center gap-2.5 px-3.5 py-2 rounded-[1.2rem] transition-all duration-300 overflow-hidden mb-0.5",
                 active
-                    ? "text-primary-900 bg-white/80 shadow-sm backdrop-blur-md"
-                    : "text-slate-600 hover:text-primary-700"
+                    ? "text-primary-900 bg-white shadow-sm"
+                    : "text-slate-600 hover:text-primary-700 hover:bg-white/40"
             )}
         >
             {/* The "Bubble" animation from login page */}
             <div className={cn(
-                "absolute inset-0 z-0 transition-all duration-500 ease-out scale-0 origin-center rounded-full bg-primary-100/50 group-hover:scale-[2.5]",
-                active && "scale-[2.5] bg-white/90"
+                "absolute inset-0 z-0 transition-all duration-500 ease-out scale-0 origin-center rounded-full bg-primary-50 group-hover:scale-[2.5]",
+                active && "scale-[2.5] bg-white"
             )} />
 
             <div className="relative z-10 flex items-center w-full">
                 <Icon className={cn(
-                    "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
+                    "w-[18px] h-[18px] transition-transform duration-300 group-hover:scale-110",
                     active ? "text-primary-600" : "text-slate-400 group-hover:text-primary-500"
                 )} />
 
                 {!collapsed && (
                     <>
                         <span className={cn(
-                            "ml-3 text-sm font-medium transition-all duration-300 flex-1",
-                            active ? "text-primary-900 font-bold" : "text-slate-600 group-hover:text-primary-700"
+                            "ml-2.5 text-[12.5px] font-semibold transition-all duration-300 flex-1 tracking-tight",
+                            active ? "text-primary-900" : "text-slate-600 group-hover:text-primary-700"
                         )}>
                             {label}
                         </span>

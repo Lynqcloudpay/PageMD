@@ -286,37 +286,37 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-50 transition-colors">
+        <div className="flex flex-col min-h-screen bg-white transition-colors">
             {user?.isSandbox && <DemoBanner />}
             <div className="flex flex-1">
 
                 {/* Patient Tabs + Alert Bell */}
                 <div className={cn(
-                    "fixed top-4 z-20 transition-all duration-500 flex items-center justify-between",
-                    sidebarCollapsed ? "left-28 shadow-sm" : "left-[19rem] shadow-sm",
-                    "right-4 h-12 bg-white/80 backdrop-blur-md border border-white/50 rounded-2xl px-2"
+                    "fixed top-0 z-20 transition-all duration-300 flex items-center justify-between",
+                    sidebarCollapsed ? "left-24" : "left-[18rem]",
+                    "right-0 h-12 bg-white border-b border-slate-100 px-2"
                 )}>
                     <div className="flex-1 overflow-hidden">
                         <PatientTabs />
                     </div>
-                    <div className="flex items-center gap-2 px-3 flex-shrink-0 border-l border-slate-100 ml-2">
+                    <div className="flex items-center gap-2 px-4 flex-shrink-0">
                         <AlertBell />
                     </div>
                 </div>
 
-                {/* Sidebar - Redesigned as a Soft Bubble */}
+                {/* Sidebar - Reverted to Floating Bubble Design */}
                 <aside
                     className={`${sidebarCollapsed ? 'w-24' : 'w-[18rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
                 >
                     <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-b from-blue-100/40 to-blue-200/40 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-white relative overflow-hidden transition-all duration-500",
+                        "flex flex-col h-full bg-gradient-to-b from-blue-50/90 to-blue-100/90 backdrop-blur-md rounded-[2.5rem] shadow-2xl border border-white/50 relative overflow-hidden transition-all duration-500",
                         sidebarCollapsed ? "rounded-[2rem]" : "rounded-[2.5rem]"
                     )}>
-                        {/* Decorative background gradients */}
-                        <div className="absolute -top-20 -left-20 w-64 h-64 bg-white/40 rounded-full blur-[100px] pointer-events-none animate-pulse" />
-                        <div className="absolute top-1/2 -right-20 w-48 h-48 bg-blue-400/20 rounded-full blur-[80px] pointer-events-none" />
+                        {/* Decorative background bubbles */}
+                        <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
+                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
-                        {/* Logo/Brand Area + Collapse button */}
+                        {/* Logo/Brand Area + Relocated Toggle */}
                         <div className="px-5 py-6 flex items-center justify-between relative z-10">
                             {!sidebarCollapsed ? (
                                 <>
@@ -332,7 +332,7 @@ const Layout = ({ children }) => {
                                     </Link>
                                     <button
                                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                        className="p-2.5 rounded-xl bg-white/60 hover:bg-white text-blue-600 border border-white shadow-sm transition-all hover:scale-110 active:scale-95 group ml-2"
+                                        className="p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-blue-600 transition-all group ml-2"
                                         title="Collapse sidebar"
                                     >
                                         <Menu className="w-4 h-4 transition-transform duration-500 group-hover:rotate-180" />
@@ -341,21 +341,31 @@ const Layout = ({ children }) => {
                             ) : (
                                 <button
                                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                    className="mx-auto p-3 rounded-2xl bg-white/80 hover:bg-white text-blue-600 border border-white shadow-md transition-all hover:scale-110 active:scale-95 group"
+                                    className="mx-auto p-2 transition-all hover:scale-110 active:scale-95 group flex items-center justify-center"
                                     title="Expand sidebar"
                                 >
-                                    <Menu className="w-5 h-5 transition-transform duration-500 group-hover:rotate-180" />
+                                    <img
+                                        src="/logo-icon.png"
+                                        alt="PMD"
+                                        className="w-10 h-10 object-contain"
+                                        onError={(e) => {
+                                            // Fallback if image missing
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.classList.remove('hidden');
+                                        }}
+                                    />
+                                    <Menu className="w-6 h-6 text-blue-600 hidden" />
                                 </button>
                             )}
                         </div>
 
                         {/* Navigation Section - COMPACT & NO SCROLL */}
-                        <nav className="flex-1 overflow-hidden px-3 py-0 flex flex-col relative z-10 gap-4">
+                        <nav className="flex-1 overflow-hidden px-3 py-0 flex flex-col relative z-10 gap-3">
                             {/* Primary Navigation */}
                             <div className="flex-shrink-0">
                                 {!sidebarCollapsed && (
                                     <div className="px-4 mb-2">
-                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.25em]">
+                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.2em]">
                                             Navigation
                                         </div>
                                     </div>
@@ -379,7 +389,7 @@ const Layout = ({ children }) => {
                             <div className="flex-shrink-0">
                                 {!sidebarCollapsed && (
                                     <div className="px-4 mb-2">
-                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.25em]">
+                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.2em]">
                                             Workflows
                                         </div>
                                     </div>
@@ -401,17 +411,17 @@ const Layout = ({ children }) => {
                         </nav>
 
                         {/* Bottom User Profile Section - Compact */}
-                        <div className="p-4 relative z-10 transition-all">
+                        <div className="p-4 relative z-10">
                             {user && (
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => navigate('/profile')}
                                         className={cn(
                                             "flex items-center gap-3 p-2 rounded-2xl transition-all flex-1 group",
-                                            sidebarCollapsed ? "justify-center" : "bg-white/80 shadow-sm hover:shadow-md border border-white/50"
+                                            sidebarCollapsed ? "justify-center" : "hover:bg-white/60"
                                         )}
                                     >
-                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 shadow-md transform transition-transform group-hover:scale-110">
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 shadow-md transition-transform group-hover:scale-105">
                                             {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
                                         </div>
                                         {!sidebarCollapsed && (
@@ -429,7 +439,7 @@ const Layout = ({ children }) => {
                                                     navigate('/login');
                                                 }
                                             }}
-                                            className="p-2.5 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100"
+                                            className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
                                             title="Sign Out"
                                         >
                                             <LogOut className="w-4 h-4" />
@@ -521,16 +531,14 @@ const Layout = ({ children }) => {
                     </div>
                 )}
 
-                {/* Main Content - Redesigned as a nested bubble */}
+                {/* Main Content - REVERTED TO FULL SCREEN */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-500 ease-in-out relative flex flex-col h-screen overflow-hidden",
+                        "flex-1 transition-all duration-500 ease-in-out relative flex flex-col",
                         sidebarCollapsed ? "ml-24" : "ml-[18rem]"
                     )}
                 >
-                    <div
-                        className="flex-1 mt-20 mb-4 mr-4 bg-white rounded-[2.5rem] shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)] border border-white/60 overflow-y-auto hide-scrollbar transition-all duration-500"
-                    >
+                    <div className="flex-1 mt-12 bg-white min-h-0 overflow-y-auto">
                         {children}
                     </div>
                 </main>
