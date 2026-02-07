@@ -94,7 +94,7 @@ const StatusScreen = ({ icon: Icon, iconColor, title, message, children, clinicP
 
 const GuestVisitPage = () => {
     const [searchParams] = useSearchParams();
-    const token = searchParams.get('token');
+    const token = searchParams.get('token')?.trim();
 
     const [status, setStatus] = useState('loading'); // loading, too_early, ready, verified, expired, invalid
     const [appointmentInfo, setAppointmentInfo] = useState(null);
@@ -118,6 +118,9 @@ const GuestVisitPage = () => {
                 });
 
                 const data = res.data;
+                if (data.status === 'invalid') {
+                    console.error('Token validation returned invalid status from server', data);
+                }
                 setAppointmentInfo(data);
                 setStatus(data.status);
             } catch (error) {

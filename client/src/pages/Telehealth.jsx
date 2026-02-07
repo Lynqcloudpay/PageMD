@@ -103,6 +103,80 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
   );
 };
 
+const GuestLinkModal = ({ isOpen, onClose, appt, onSend, isSending }) => {
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (appt) setEmail(appt.patientEmail || '');
+  }, [appt]);
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Send Telehealth Guest Link">
+      <div className="p-6">
+        <div className="flex items-center gap-4 mb-6 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 backdrop-blur-sm">
+          <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+            <User size={24} />
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-800">{appt?.patientName || 'Patient'}</h4>
+            <p className="text-sm text-slate-500">Telehealth Visit • {appt?.time || 'Scheduled Time'}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">
+              Send Magic Link To:
+            </label>
+            <div className="relative group">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="patient@email.com"
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-800"
+              />
+            </div>
+            <p className="mt-2 text-[11px] text-slate-400 ml-1 uppercase tracking-wider font-bold">
+              This will send a secure, one-time link for direct video access.
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="ghost"
+              onClick={onClose}
+              className="flex-1 py-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-100"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => onSend(email)}
+              disabled={isSending || !email}
+              className="flex-2 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isSending ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail size={20} />
+                  Send Guest Link
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
 const Telehealth = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -143,6 +217,7 @@ const Telehealth = () => {
   }
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [sendingGuestLink, setSendingGuestLink] = useState(null);
+  const [guestLinkModalAppt, setGuestLinkModalAppt] = useState(null);
   const [viewingPatientId, setViewingPatientId] = useState(null);
 
   // --- NEW: Patient Chart Panel State ---
@@ -400,12 +475,18 @@ const Telehealth = () => {
   }, [activeCall, fetchPatientSnapshot]);
 
   // Send Guest Access Link for patients who can't log in
-  const handleSendGuestLink = async (apptId) => {
+  const handleSendGuestLink = async (targetEmail) => {
+    if (!guestLinkModalAppt) return;
+    const apptId = guestLinkModalAppt.id;
+
     setSendingGuestLink(apptId);
     try {
-      const res = await api.post(`/appointments/${apptId}/generate-guest-link`);
+      const res = await api.post(`/appointments/${apptId}/generate-guest-link`, {
+        emailOverride: targetEmail
+      });
       if (res.data.success) {
-        alert(`Guest link sent to ${res.data.sentTo}`);
+        alert(`Guest link sent successfully to ${res.data.sentTo}`);
+        setGuestLinkModalAppt(null); // Close modal on success
       } else {
         alert(res.data.error || 'Failed to send guest link');
       }
@@ -1459,7 +1540,7 @@ const Telehealth = () => {
                           </button>
 
                           <button
-                            onClick={() => handleSendGuestLink(appt.id)}
+                            onClick={() => setGuestLinkModalAppt(appt)}
                             disabled={sendingGuestLink === appt.id}
                             className="w-full px-4 py-3 text-left hover:bg-amber-50 text-slate-700 flex items-center gap-3 transition-colors group disabled:opacity-50"
                           >
@@ -1506,6 +1587,14 @@ const Telehealth = () => {
             ))}
         </div>
       )}
+
+      <GuestLinkModal
+        isOpen={!!guestLinkModalAppt}
+        onClose={() => setGuestLinkModalAppt(null)}
+        appt={guestLinkModalAppt}
+        onSend={handleSendGuestLink}
+        isSending={sendingGuestLink !== null}
+      />
     </div>
   );
 };

@@ -79,7 +79,12 @@ ssh -i "$KEY_PATH" "$USER@$HOST" << EOF
   cd deploy
   
   echo "⚙️  Checking environment variables..."
-  cp -f .env.prod .env || true
+  if [ ! -f .env ]; then
+    echo "⚙️  Initializing .env from .env.prod (first time setup)..."
+    cp .env.prod .env
+  else
+    echo "✅ .env file exists. Preserving existing secrets."
+  fi
   
   # 2. FRONTEND HANDLING (FIX 404 ROOT CAUSE)
   if [ -f ../client/dist.tar.gz ]; then

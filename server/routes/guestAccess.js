@@ -28,10 +28,15 @@ router.get('/validate', async (req, res) => {
         const { token } = req.query;
 
         if (!token) {
+            console.log('[Guest Access] Missing token in request');
             return res.json({ status: 'invalid' });
         }
 
-        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        // Clean token to avoid copy-paste issues
+        const cleanToken = token.trim();
+        const tokenHash = crypto.createHash('sha256').update(cleanToken).digest('hex');
+
+        console.log(`[Guest Access] Validating token: ${cleanToken.substring(0, 8)}...`);
 
         // Find token record
         const result = await pool.query(`
@@ -54,6 +59,7 @@ router.get('/validate', async (req, res) => {
         `, [tokenHash]);
 
         if (result.rows.length === 0) {
+            console.log(`[Guest Access] Token not found or hash mismatch. Hash: ${tokenHash}`);
             return res.json({ status: 'invalid' });
         }
 
@@ -61,6 +67,7 @@ router.get('/validate', async (req, res) => {
 
         // Check if token was invalidated
         if (record.invalidated_at) {
+            console.log('[Guest Access] Token was invalidated at:', record.invalidated_at);
             return res.json({ status: 'invalid' });
         }
 
@@ -68,32 +75,36 @@ router.get('/validate', async (req, res) => {
         const closedStatuses = ['completed', 'checked_out', 'cancelled', 'no_show'];
         if (closedStatuses.includes(record.appointment_status) ||
             closedStatuses.includes(record.patient_status)) {
+            console.log('[Guest Access] Appointment is closed. Status:', record.appointment_status);
             return res.json({ status: 'expired' });
         }
 
         // Check DOB attempt limit
         if (record.dob_attempts >= 5) {
+            console.log('[Guest Access] Max DOB attempts exceeded');
             return res.json({ status: 'invalid' });
         }
 
         // Calculate appointment window
+        // Use expiration from DB as primary source of truth for "too late"
         const appointmentDate = new Date(record.appointment_date);
         const [hours, minutes] = (record.appointment_time || '09:00').split(':').map(Number);
         appointmentDate.setHours(hours, minutes, 0, 0);
 
         const durationMinutes = record.duration || 30;
-        const windowStart = new Date(appointmentDate.getTime() - 10 * 60 * 1000); // 10 min before
-        const windowEnd = new Date(appointmentDate.getTime() + (durationMinutes + 90) * 60 * 1000); // 90 min after
+        const windowStart = new Date(appointmentDate.getTime() - 15 * 60 * 1000); // 15 min before
 
         const now = new Date();
 
-        // Check if token expired (past appointment window)
-        if (now > windowEnd || now > new Date(record.expires_at)) {
+        // Check if token expired
+        if (now > new Date(record.expires_at)) {
+            console.log('[Guest Access] Token expired. Now:', now.toISOString(), 'Expires:', record.expires_at);
             return res.json({ status: 'expired' });
         }
 
         // Check if too early
         if (now < windowStart) {
+            console.log('[Guest Access] Too early. Window starts:', windowStart.toISOString());
             return res.json({
                 status: 'too_early',
                 appointmentTime: appointmentDate.toISOString(),

@@ -639,6 +639,21 @@ CREATE TABLE IF NOT EXISTS messages (
     CONSTRAINT messages_task_status_check CHECK (((task_status)::text = ANY ((ARRAY['open'::character varying, 'in_progress'::character varying, 'completed'::character varying])::text[])))
 );
 
+CREATE TABLE IF NOT EXISTS guest_access_tokens (
+    id SERIAL PRIMARY KEY,
+    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+    patient_id UUID NOT NULL REFERENCES patients(id),
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    dob_attempts INTEGER DEFAULT 0,
+    used_at TIMESTAMPTZ,
+    invalidated_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_guest_tokens_appointment ON guest_access_tokens(appointment_id);
+CREATE INDEX IF NOT EXISTS idx_guest_tokens_hash ON guest_access_tokens(token_hash);
+
 CREATE TABLE IF NOT EXISTS order_sets (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name character varying(255) NOT NULL,

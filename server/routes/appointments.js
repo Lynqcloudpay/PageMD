@@ -21,6 +21,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
              p.encryption_metadata as patient_encryption_metadata,
              p.id as patient_id,
              p.dob as patient_dob,
+             p.email as patient_email,
              u.first_name as provider_first_name,
              u.last_name as provider_last_name,
              u.id as provider_id,
@@ -86,6 +87,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
       const patientData = {
         first_name: row.patient_first_name,
         last_name: row.patient_last_name,
+        email: row.patient_email,
         encryption_metadata: row.patient_encryption_metadata || row.encryption_metadata
       };
       const decryptedPatient = await preparePatientForResponse(patientData);
@@ -101,6 +103,7 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         id: row.id,
         patientId: row.patient_id,
         patientName,
+        patientEmail: decryptedPatient.email,
         providerId: row.provider_id,
         providerName: `${row.provider_first_name} ${row.provider_last_name}`,
         date: row.appointment_date,
@@ -820,15 +823,19 @@ router.post('/:id/generate-guest-link', requirePermission('schedule:view'), asyn
       return res.status(400).json({ error: 'Cannot generate link for closed appointments' });
     }
 
-    // Decrypt patient data
-    const decryptedPatient = preparePatientForResponse({
+    // Support email override for one-time links
+    const { emailOverride } = req.body;
+
+    // Always decrypt patient data to get the name, regardless of email override
+    const decryptedPatient = await preparePatientForResponse({
       first_name: appt.first_name,
       last_name: appt.last_name,
       email: appt.email,
       encryption_metadata: appt.encryption_metadata
     });
 
-    const patientEmail = decryptedPatient.email;
+    const patientEmail = emailOverride || decryptedPatient.email;
+
     if (!patientEmail) {
       return res.status(400).json({ error: 'Patient does not have an email address on file' });
     }
