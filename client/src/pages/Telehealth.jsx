@@ -840,15 +840,9 @@ const Telehealth = () => {
                   </button>
                   <button
                     onClick={handleCheckoutOnly}
-                    className="px-6 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-semibold hover:bg-emerald-100 transition-colors"
+                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
                   >
-                    Mark as Finished
-                  </button>
-                  <button
-                    onClick={handleCloseWorkspace}
-                    className="px-6 py-2 bg-white border border-slate-300 rounded-lg text-slate-600 font-semibold hover:bg-slate-50 transition-colors shadow-sm"
-                  >
-                    Close Workspace
+                    Checkout Patient
                   </button>
                 </div>
               </div>
