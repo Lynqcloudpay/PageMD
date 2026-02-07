@@ -23,15 +23,6 @@ const DigitalIntake = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
     const [menuSessionId, setMenuSessionId] = useState(null);
-    const [collapsedGroups, setCollapsedGroups] = useState({});
-
-    // Toggle collapse state for a date group
-    const toggleGroup = (date) => {
-        setCollapsedGroups(prev => ({
-            ...prev,
-            [date]: !prev[date]
-        }));
-    };
 
     const handleClearLimits = async (lastName, dob) => {
         try {
@@ -99,22 +90,6 @@ const DigitalIntake = () => {
         return name.includes(searchQuery.toLowerCase());
     });
 
-    const groupedSessions = React.useMemo(() => {
-        const groups = {};
-        filteredSessions.forEach(s => {
-            const date = format(new Date(s.updated_at), 'yyyy-MM-dd');
-            if (!groups[date]) groups[date] = [];
-            groups[date].push(s);
-        });
-
-        return Object.keys(groups)
-            .sort((a, b) => b.localeCompare(a))
-            .map(date => ({
-                date,
-                displayDate: format(parseISO(date), 'EEEE, MMM d, yyyy'),
-                items: groups[date]
-            }));
-    }, [filteredSessions]);
 
     // Use clinic slug from authenticated user context for tenant-specific URL
     const clinicSlug = user?.clinicSlug || 'sandbox';
@@ -181,6 +156,7 @@ const DigitalIntake = () => {
             </div>
 
             {/* Content List */}
+            {/* Content List */}
             {loading ? (
                 <div className="flex justify-center p-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -192,155 +168,115 @@ const DigitalIntake = () => {
                     <p className="text-slate-500 text-sm">Waiting for new QR code scans...</p>
                 </div>
             ) : (
-                <div className="space-y-6">
-                    {groupedSessions.map((group, index) => (
-                        <div key={group.date} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group/card transition-all hover:shadow-md">
-                            {/* Date Header */}
-                            <div
-                                className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
-                                onClick={() => toggleGroup(group.date)}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
-                                        ? 'bg-white border border-slate-200 text-slate-400'
-                                        : 'bg-blue-600 border border-blue-600 text-white'
-                                        }`}>
-                                        <Calendar size={18} />
-                                    </div>
-                                    <div>
-                                        <h3 className={`text-sm font-semibold tracking-tight transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
-                                            ? 'text-slate-600'
-                                            : 'text-blue-900'
-                                            }`}>
-                                            {group.displayDate}
-                                        </h3>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
-                                                ? 'bg-slate-200 text-slate-600'
-                                                : 'bg-blue-100 text-blue-700'
-                                                }`}>
-                                                {group.items.length} Registration{group.items.length !== 1 ? 's' : ''}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className={`p-2 rounded-lg transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
-                                    ? 'text-slate-400 group-hover/card:bg-white'
-                                    : 'text-blue-600 bg-blue-50'
-                                    }`}>
-                                    {(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) ? (
-                                        <ChevronDown className="w-5 h-5" />
-                                    ) : (
-                                        <ChevronUp className="w-5 h-5" />
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Items */}
-                            {!(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) && (
-                                <div className="divide-y divide-slate-100">
-                                    {group.items.map((session) => (
-                                        <div key={session.id} className="px-5 py-4 hover:bg-slate-50 group transition-colors">
-                                            <div className="flex items-center justify-between gap-4">
-                                                {/* Left: Patient Info */}
-                                                <div
-                                                    className={`flex-1 min-w-0 flex items-center gap-4 ${session.patient_id ? 'cursor-pointer' : ''}`}
-                                                    onClick={() => session.patient_id && navigate(`/patient/${session.patient_id}/snapshot`)}
-                                                >
-                                                    <div className={`w-10 h-10 bg-white border border-slate-200 text-slate-600 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:border-blue-200 group-hover:text-blue-600 transition-colors ${session.patient_id ? 'group-hover:bg-blue-50' : ''}`}>
-                                                        {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="divide-y divide-slate-100">
+                        {filteredSessions
+                            .sort((a, b) => new Date(b.created_at || b.updated_at) - new Date(a.created_at || a.updated_at))
+                            .map((session) => (
+                                <div key={session.id} className="px-5 py-4 hover:bg-slate-50 group transition-colors">
+                                    <div className="flex items-center justify-between gap-4">
+                                        {/* Left: Patient Info */}
+                                        <div
+                                            className={`flex-1 min-w-0 flex items-center gap-4 ${session.patient_id ? 'cursor-pointer' : ''}`}
+                                            onClick={() => session.patient_id && navigate(`/patient/${session.patient_id}/snapshot`)}
+                                        >
+                                            <div className={`w-10 h-10 bg-white border border-slate-200 text-slate-600 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:border-blue-200 group-hover:text-blue-600 transition-colors ${session.patient_id ? 'group-hover:bg-blue-50' : ''}`}>
+                                                {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`font-semibold text-sm text-slate-800 ${session.patient_id ? 'group-hover:text-blue-700 underline decoration-blue-200 underline-offset-2' : ''} transition-colors`}>
+                                                        {session.prefill_json?.firstName} {session.prefill_json?.lastName}
                                                     </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`font-semibold text-sm text-slate-800 ${session.patient_id ? 'group-hover:text-blue-700 underline decoration-blue-200 underline-offset-2' : ''} transition-colors`}>
-                                                                {session.prefill_json?.firstName} {session.prefill_json?.lastName}
-                                                            </div>
-                                                            {session.prefill_json?.dob && (
-                                                                <span className="text-xs text-slate-400 font-mono bg-slate-100 px-1.5 rounded">
-                                                                    {session.prefill_json.dob}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-                                                            <span>Started {format(new Date(session.created_at), 'h:mm a')}</span>
-                                                            {session.prefill_json?.phone && (
-                                                                <>
-                                                                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                                                    <span>{session.prefill_json.phone}</span>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                    {session.prefill_json?.dob && (
+                                                        <span className="text-xs text-slate-400 font-mono bg-slate-100 px-1.5 rounded">
+                                                            {session.prefill_json.dob}
+                                                        </span>
+                                                    )}
                                                 </div>
-
-                                                {/* Right: Status & Actions */}
-                                                <div className="flex items-center gap-4 flex-shrink-0">
-                                                    <div className={`px-3 py-1 rounded-full text-xs font-semibold border shadow-sm ${getStatusColor(session.status)}`}>
-                                                        {session.status.replace('_', ' ')}
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2">
-                                                        {session.status === 'SUBMITTED' || session.status === 'NEEDS_EDITS' ? (
-                                                            <button
-                                                                onClick={() => setSelectedSessionId(session.id)}
-                                                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-                                                            >
-                                                                <Eye className="w-3.5 h-3.5" /> Review
-                                                            </button>
-                                                        ) : null}
-
-                                                        {/* Simple Menu Trigger (Replacing Complex Dropdown for Cleaner UI) */}
-                                                        <div className="relative">
-                                                            <button
-                                                                onClick={() => setMenuSessionId(menuSessionId === session.id ? null : session.id)}
-                                                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                                            >
-                                                                <MoreVertical className="w-4 h-4" />
-                                                            </button>
-
-                                                            {menuSessionId === session.id && (
-                                                                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fadeInShort origin-top-right">
-                                                                    <div className="fixed inset-0 z-40" onClick={() => setMenuSessionId(null)} />
-                                                                    <div className="relative z-50">
-                                                                        {session.patient_id && (
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    navigate(`/patient/${session.patient_id}/snapshot`);
-                                                                                    setMenuSessionId(null);
-                                                                                }}
-                                                                                className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                                                                            >
-                                                                                <User className="w-3.5 h-3.5" /> Open Chart
-                                                                            </button>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                handleClearLimits(session.patient_last_name || session.prefill_json?.lastName, session.patient_dob || session.prefill_json?.dob);
-                                                                                setMenuSessionId(null);
-                                                                            }}
-                                                                            className="w-full text-left px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2"
-                                                                        >
-                                                                            <ShieldOff className="w-3.5 h-3.5" /> Reset Limits
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleDeleteSession(session.id)}
-                                                                            className="w-full text-left px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2"
-                                                                        >
-                                                                            <X className="w-3.5 h-3.5" /> Delete
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                                                    <Calendar className="w-3 h-3 text-slate-400" />
+                                                    <span>{format(new Date(session.created_at || session.updated_at), 'MMM d, yyyy • h:mm a')}</span>
+                                                    {session.prefill_json?.phone && (
+                                                        <>
+                                                            <span className="w-1 h-1 rounded-full bg-slate-300 mx-1"></span>
+                                                            <Smartphone className="w-3 h-3 text-slate-400" />
+                                                            <span>{session.prefill_json.phone}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+
+                                        {/* Right: Status & Actions */}
+                                        <div className="flex items-center gap-4 flex-shrink-0">
+                                            <div className={`px-3 py-1 rounded-full text-xs font-semibold border shadow-sm flex items-center gap-1.5 ${getStatusColor(session.status)}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${session.status === 'APPROVED' ? 'bg-emerald-500' : session.status === 'SUBMITTED' ? 'bg-blue-500' : session.status === 'IN_PROGRESS' ? 'bg-amber-500' : 'bg-slate-400'}`}></div>
+                                                {session.status.replace('_', ' ')}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                {session.status === 'SUBMITTED' || session.status === 'NEEDS_EDITS' ? (
+                                                    <button
+                                                        onClick={() => setSelectedSessionId(session.id)}
+                                                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium shadow-sm hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                                                    >
+                                                        <Eye className="w-3.5 h-3.5" /> Review
+                                                    </button>
+                                                ) : null}
+
+                                                {/* Simple Menu Trigger */}
+                                                <div className="relative">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setMenuSessionId(menuSessionId === session.id ? null : session.id);
+                                                        }}
+                                                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                    >
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </button>
+
+                                                    {menuSessionId === session.id && (
+                                                        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fadeInShort origin-top-right">
+                                                            <div className="fixed inset-0 z-40" onClick={() => setMenuSessionId(null)} />
+                                                            <div className="relative z-50">
+                                                                {session.patient_id && (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            navigate(`/patient/${session.patient_id}/snapshot`);
+                                                                            setMenuSessionId(null);
+                                                                        }}
+                                                                        className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                                                    >
+                                                                        <User className="w-3.5 h-3.5" /> Open Chart
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        handleClearLimits(session.patient_last_name || session.prefill_json?.lastName, session.patient_dob || session.prefill_json?.dob);
+                                                                        setMenuSessionId(null);
+                                                                    }}
+                                                                    className="w-full text-left px-3 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                                                >
+                                                                    <ShieldOff className="w-3.5 h-3.5" /> Reset Limits
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteSession(session.id)}
+                                                                    className="w-full text-left px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2"
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" /> Delete
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    ))}
+                            ))}
+                    </div>
                 </div>
             )}
 
