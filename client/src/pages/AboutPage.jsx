@@ -28,10 +28,10 @@ const AboutPage = () => {
     }, []);
 
     const timeline = [
-        { year: "2022", event: "The Spark", desc: "Frustrated by legacy EMRs, Dr. Rodriguez begins drafting the first clinical logic engine." },
+        { year: "2022", event: "The Spark", desc: "Frustrated by legacy EMRs, our founder begins drafting the first clinical logic engine." },
         { year: "2023", event: "Foundations", desc: "PageMD v1 launches for private pilot, focusing on Zero-Clutter documentation." },
         { year: "2024", event: "Expansion", desc: "Predictive Logic is introduced, cutting charting time by an average of 40%." },
-        { year: "2025", event: "The Future", desc: "PageMD becomes the industry standard for intuitive, physician-led intelligence." }
+        { year: "2025", event: "The Future", desc: "PageMD becomes the industry standard for intuitive intelligence, made by physicians for physicians." }
     ];
 
     const values = [
@@ -49,16 +49,16 @@ const AboutPage = () => {
                 <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-[800px] h-[800px] bg-sky-50 rounded-full blur-[120px] opacity-60 pointer-events-none"></div>
 
                 <div className="max-w-6xl mx-auto text-center relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-700 rounded-full text-[11px] font-black tracking-[0.2em] uppercase mb-10 border border-sky-100/50">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-full text-[10px] font-semibold tracking-wider uppercase mb-8 border border-sky-100/40">
                         <History className="w-3.5 h-3.5" />
                         Our Authority
                     </div>
-                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 leading-[0.9] mb-8 tracking-tighter">
-                        Built by a <br />
-                        <span className="text-sky-500">physician explorer.</span>
+                    <h1 className="text-3xl md:text-5xl lg:text-6xl font-semibold text-slate-800 leading-[1.1] mb-6 tracking-tight">
+                        Made by a physician, <br />
+                        <span className="text-sky-500">for physicians.</span>
                     </h1>
-                    <p className="text-xl text-slate-500 max-w-2xl mx-auto font-medium leading-relaxed">
-                        PageMD wasn't built in a boardroom. It was built between patient visits, on late-night shifts, and from the deep frustration of a practicing cardiologist.
+                    <p className="text-base md:text-lg text-slate-500 max-w-xl mx-auto font-normal leading-relaxed">
+                        PageMD wasn't built in a boardroom by engineers. It was built in the trenches of clinical practice, born from the deep frustration of a physician who knew there was a better way.
                     </p>
                 </div>
             </section>
@@ -71,8 +71,8 @@ const AboutPage = () => {
                             <div className="aspect-[4/5] bg-slate-100 rounded-[3rem] overflow-hidden shadow-2xl relative group">
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                 <div className="absolute bottom-10 left-10 text-white opacity-0 group-hover:opacity-100 transition-all translate-y-4 group-hover:translate-y-0">
-                                    <p className="text-sm font-black uppercase tracking-[0.2em] mb-2">Dr. MJ Rodriguez</p>
-                                    <p className="text-xs font-medium text-slate-300">Founder & CEO, Cardilogist</p>
+                                    <p className="text-sm font-black uppercase tracking-[0.2em] mb-2">Physician Explorer</p>
+                                    <p className="text-xs font-medium text-slate-300">Founding Physician</p>
                                 </div>
                                 <div className="absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-xs uppercase tracking-[0.4em]">Portrait Placeholder</div>
                             </div>
@@ -81,19 +81,21 @@ const AboutPage = () => {
                         </div>
 
                         <div>
-                            <h2 className="text-4xl font-black text-slate-900 mb-8 tracking-tight">"The modern EMR is a data trap."</h2>
-                            <p className="text-lg text-slate-600 mb-8 leading-relaxed font-medium">
-                                As a physician, I spent more time clicking than listening. The tools meant to help us were actually driving us to burnout. I realized that the problem wasn't a lack of features—it was a lack of clinical empathy in software design.
-                            </p>
-                            <p className="text-lg text-slate-600 mb-10 leading-relaxed font-medium">
-                                PageMD is my response to that struggle. It's a platform that anticipates your needs, respects your time, and stays out of the way so you can focus on the human in front of you.
-                            </p>
+                            <div>
+                                <h2 className="text-3xl font-semibold text-slate-800 mb-6 tracking-tight">The burden of the screen.</h2>
+                                <p className="text-base text-slate-600 mb-6 leading-relaxed font-normal">
+                                    As a practicing physician, I watched our profession shift from patient-centered care to data-entry-centered compliance. Legacy EMRs were designed for billing machines, not clinical minds. They increased our cognitive load and stole our time.
+                                </p>
+                                <p className="text-base text-slate-600 mb-8 leading-relaxed font-normal">
+                                    I realized the problem wasn't a lack of features—it was a lack of clinical empathy. PageMD is my response. It’s a platform built to get out of the way, allowing physicians to do what we were trained for: healing.
+                                </p>
 
-                            <div className="inline-flex items-center gap-4 p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-                                <Activity className="w-10 h-10 text-sky-500" />
-                                <div>
-                                    <p className="text-sm font-black text-slate-900 uppercase tracking-widest">MJ Rodriguez, MD</p>
-                                    <p className="text-xs text-slate-500 font-medium tracking-tight">Founder of PageMD</p>
+                                <div className="inline-flex items-center gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <Activity className="w-8 h-8 text-sky-500" />
+                                    <div>
+                                        <p className="text-[13px] font-bold text-slate-800 uppercase tracking-widest leading-none mb-1">Made by a Physician</p>
+                                        <p className="text-[11px] text-slate-500 font-medium tracking-tight">Founder of PageMD</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -105,7 +107,7 @@ const AboutPage = () => {
             <section className="py-24 lg:py-32 bg-slate-50/50 border-y border-slate-100 overflow-hidden px-6">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-20">
-                        <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">How we got here.</h2>
+                        <h2 className="text-4xl font-semibold text-slate-800 mb-4 tracking-tight">How we got here.</h2>
                     </div>
 
                     <div className="relative">
@@ -115,11 +117,38 @@ const AboutPage = () => {
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 relative z-10">
                             {timeline.map((item, i) => (
                                 <div key={i} className="group">
-                                    <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-8 text-sky-500 font-black text-xs transition-all group-hover:scale-110 group-hover:border-sky-200 shadow-sky-100 group-hover:shadow-xl">
+                                    <div className="w-20 h-20 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-8 text-sky-500 font-semibold text-xs transition-all group-hover:scale-110 group-hover:border-sky-200 shadow-sky-100 group-hover:shadow-xl">
                                         {item.year}
                                     </div>
-                                    <h4 className="text-xl font-black text-slate-900 mb-3">{item.event}</h4>
-                                    <p className="text-sm text-slate-500 font-medium leading-relaxed">{item.desc}</p>
+                                    <h4 className="text-xl font-semibold text-slate-900 mb-3">{item.event}</h4>
+                                    <p className="text-sm text-slate-500 font-normal leading-relaxed">{item.desc}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* The Standard Section */}
+            <section className="py-24 lg:py-32 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid lg:grid-cols-3 gap-16">
+                        <div className="lg:col-span-1">
+                            <h3 className="text-2xl font-semibold text-slate-800 mb-6 tracking-tight">Setting a <br /><span className="text-sky-500">new standard.</span></h3>
+                            <p className="text-sm text-slate-500 leading-relaxed font-normal">
+                                We believe technology should behave like a highly skilled medical assistant—anticipating your next move before you even make it.
+                            </p>
+                        </div>
+                        <div className="lg:col-span-2 grid md:grid-cols-2 gap-x-12 gap-y-16">
+                            {[
+                                { title: "Clinical Intuition", desc: "Our engine is trained on physician workflows, not just billing rules. It understands how you think about a differential diagnosis." },
+                                { title: "Zero Data Friction", desc: "Every click is an expense. We've eliminated over 60% of the redundant steps found in legacy systems." },
+                                { title: "Universal Design", desc: "Whether you're in primary care or a high-volume clinical specialty, the platform adapts to your clinical language." },
+                                { title: "Human Scale", desc: "At the end of the day, medicine is human. Our UI is designed to keep your eyes on the patient, not the screen." }
+                            ].map((item, i) => (
+                                <div key={i}>
+                                    <h4 className="text-base font-semibold text-slate-800 mb-3">{item.title}</h4>
+                                    <p className="text-[13px] text-slate-500 leading-relaxed font-normal">{item.desc}</p>
                                 </div>
                             ))}
                         </div>
@@ -128,17 +157,16 @@ const AboutPage = () => {
             </section>
 
             {/* Core Values */}
-            <section className="py-24 lg:py-32 px-6 bg-white">
+            <section className="py-24 lg:py-32 px-6 bg-slate-50/30 border-t border-slate-100">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid md:grid-cols-3 gap-8">
                         {values.map((v, i) => (
-                            <div key={i} className="p-10 rounded-[2.5rem] bg-white border border-slate-50 hover:border-slate-100 hover:shadow-2xl hover:shadow-slate-200/50 transition-all group overflow-hidden relative">
-                                <div className={`absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-40 h-40 bg-${v.accent}-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-                                <div className={`w-14 h-14 rounded-2xl bg-${v.accent}-50 text-${v.accent}-500 flex items-center justify-center mb-8 border border-${v.accent}-100/50 relative z-10`}>
-                                    <v.icon className="w-7 h-7" />
+                            <div key={i} className="p-8 rounded-2xl bg-white border border-slate-100 transition-all group overflow-hidden relative shadow-sm">
+                                <div className={`w-12 h-12 rounded-xl bg-slate-50 text-sky-500 flex items-center justify-center mb-6 border border-slate-100/40 relative z-10`}>
+                                    <v.icon className="w-6 h-6" />
                                 </div>
-                                <h4 className="text-2xl font-black text-slate-900 mb-4 relative z-10">{v.title}</h4>
-                                <p className="text-slate-500 font-medium leading-relaxed relative z-10">{v.desc}</p>
+                                <h4 className="text-lg font-semibold text-slate-800 mb-3 relative z-10">{v.title}</h4>
+                                <p className="text-sm text-slate-500 font-normal leading-relaxed relative z-10">{v.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -146,15 +174,15 @@ const AboutPage = () => {
             </section>
 
             {/* CTA */}
-            <section className="py-32 lg:py-48 bg-white px-6 border-t border-slate-100">
-                <div className="max-w-3xl mx-auto text-center">
-                    <h2 className="text-5xl font-black text-slate-900 mb-12 leading-[1.1] tracking-tighter">Join the <span className="text-sky-500">mission</span> to fix medicine.</h2>
-                    <div className="flex flex-col sm:flex-row justify-center gap-6">
-                        <Link to="/contact" className="px-12 py-6 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl shadow-2xl shadow-slate-200 transition-all hover:-translate-y-1 text-xl flex items-center justify-center gap-4">
+            <section className="py-24 lg:py-32 bg-white px-6 border-t border-slate-100">
+                <div className="max-w-3xl mx-auto text-center relative z-10">
+                    <h2 className="text-3xl md:text-5xl font-semibold text-slate-800 mb-10 leading-tight tracking-tight">Join the <span className="text-sky-500">mission</span> to fix medicine.</h2>
+                    <div className="flex flex-col sm:flex-row justify-center gap-4">
+                        <Link to="/contact" className="px-10 py-5 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-2xl shadow-lg shadow-slate-200/50 transition-all hover:-translate-y-0.5 text-sm flex items-center justify-center gap-3">
                             Work with Us
-                            <ArrowRight className="w-6 h-6" />
+                            <ArrowRight className="w-4 h-4" />
                         </Link>
-                        <Link to="/" className="px-12 py-6 bg-white hover:bg-slate-50 text-slate-900 font-bold rounded-2xl border border-slate-200 shadow-sm transition-all hover:-translate-y-1 text-xl flex items-center justify-center">
+                        <Link to="/" className="px-10 py-5 bg-white hover:bg-slate-50 text-slate-800 font-medium rounded-2xl border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5 text-sm flex items-center justify-center">
                             Explore PageMD
                         </Link>
                     </div>
@@ -166,12 +194,15 @@ const AboutPage = () => {
                     <Link to="/" className="flex items-center gap-3 grayscale opacity-40 hover:opacity-100 transition-opacity">
                         <img src="/logo.png" alt="PageMD" className="h-10" />
                     </Link>
-                    <div className="flex gap-12">
-                        <Link to="/privacy" className="hover:text-sky-500 transition-colors">Privacy</Link>
-                        <Link to="/terms" className="hover:text-sky-500 transition-colors">Terms</Link>
-                        <Link to="/security" className="hover:text-sky-500 transition-colors">Security</Link>
+                    <div className="flex flex-col items-center md:items-end gap-2">
+                        <div className="flex gap-12">
+                            <Link to="/privacy" className="hover:text-sky-500 transition-colors">Privacy</Link>
+                            <Link to="/terms" className="hover:text-sky-500 transition-colors">Terms</Link>
+                            <Link to="/security" className="hover:text-sky-500 transition-colors">Security</Link>
+                        </div>
+                        <div className="text-slate-200 mt-4">© {currentYear} PageMD Inc. All rights reserved.</div>
+                        <div className="text-[8px] font-semibold text-slate-300 uppercase tracking-widest mt-1">Made by a Physician, for Physicians</div>
                     </div>
-                    <div className="text-slate-200">© {currentYear} PageMD Inc.</div>
                 </div>
             </footer>
         </div>
