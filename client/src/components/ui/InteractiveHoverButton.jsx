@@ -8,24 +8,23 @@ const InteractiveHoverButton = React.forwardRef(({ text = "Button", className, .
             ref={ref}
             type={props.type || "button"}
             className={cn(
-                "group relative w-full cursor-pointer overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-4 text-center font-bold shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]",
+                "group relative w-full cursor-pointer overflow-hidden rounded-2xl border border-white/20 bg-blue-600 p-4 text-center font-bold shadow-lg transition-all duration-300 hover:shadow-2xl hover:scale-[1.01] active:scale-[0.99] hover:bg-blue-700",
                 className,
             )}
             {...props}
         >
-            <span className="inline-block transition-all duration-500 group-hover:translate-x-12 group-hover:opacity-0 text-white drop-shadow-sm">
-                {text}
-            </span>
-            <div className="absolute inset-0 z-10 flex items-center justify-center gap-3 text-white opacity-0 translate-x-[-1.5rem] transition-all duration-500 group-hover:translate-x-0 group-hover:opacity-100">
-                <span className="drop-shadow-sm">{text}</span>
-                <ArrowRight className="w-5 h-5 drop-shadow-sm animate-pulse-subtle" />
+            <div className="relative z-10 flex items-center justify-center gap-0 group-hover:gap-3 transition-all duration-300">
+                <span className="text-white drop-shadow-sm">
+                    {text}
+                </span>
+                <ArrowRight className="w-0 h-5 text-white opacity-0 group-hover:w-5 group-hover:opacity-100 transition-all duration-300" />
             </div>
 
-            {/* Premium Shimmer/Glow Inner Effect */}
-            <div className="absolute inset-0 translate-y-full bg-gradient-to-t from-white/20 via-white/5 to-transparent transition-transform duration-500 group-hover:translate-y-0" />
+            {/* Liquid Shimmer Effect */}
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-1000 ease-in-out pointer-events-none" />
 
-            {/* Magnetic Glow Spot */}
-            <div className="absolute -left-[10%] -top-[10%] h-4 w-4 scale-0 rounded-full bg-white/40 blur-2xl transition-all duration-700 group-hover:left-[50%] group-hover:top-[50%] group-hover:scale-[20] group-hover:opacity-0" />
+            {/* Subtle Glow Overlay */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/5 transition-opacity duration-300 pointer-events-none" />
         </button>
     );
 });

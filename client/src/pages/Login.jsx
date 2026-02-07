@@ -80,11 +80,11 @@ const Login = () => {
             <div className="relative z-10 w-full max-w-md p-8 sm:p-10 mx-4">
                 <div className="absolute inset-0 bg-white/40 backdrop-blur-2xl border border-white shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] rounded-[3rem] transform transition-all hover:scale-[1.005] duration-500" />
 
-                <div className="relative z-20">
+                <div className="relative z-20 pt-6">
                     <div className="flex flex-col items-center justify-center mb-10">
-                        <div className="relative mb-12 group">
+                        <div className="relative mb-8 group mt-8">
                             <div className="absolute inset-0 bg-blue-500 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
-                            <div className="relative transform transition-transform group-hover:scale-105 duration-300">
+                            <div className="relative transform transition-transform group-hover:scale-105 duration-500">
                                 <img
                                     src="/logo.png"
                                     alt="PageMD Logo"
@@ -96,12 +96,14 @@ const Login = () => {
                             </div>
                         </div>
 
-                        <h2 className="text-3xl font-bold text-slate-800 tracking-tight text-center">
-                            Welcome Back
-                        </h2>
-                        <p className="text-slate-400 text-[10px] sm:text-xs mt-2 text-center font-black uppercase tracking-[0.2em] opacity-80">
-                            Secure Access for Professionals
-                        </p>
+                        <div className="mt-4 text-center">
+                            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
+                                Welcome Back
+                            </h2>
+                            <p className="text-slate-400 text-[10px] sm:text-xs mt-2 font-black uppercase tracking-[0.2em] opacity-80">
+                                Secure Access for Professionals
+                            </p>
+                        </div>
                     </div>
 
                     {error && (
