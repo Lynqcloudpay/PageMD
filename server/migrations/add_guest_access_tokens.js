@@ -12,7 +12,7 @@ async function up() {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS guest_access_tokens (
             id SERIAL PRIMARY KEY,
-            appointment_id INTEGER NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+            appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
             patient_id INTEGER NOT NULL REFERENCES patients(id),
             token_hash VARCHAR(64) NOT NULL UNIQUE,
             expires_at TIMESTAMPTZ NOT NULL,
