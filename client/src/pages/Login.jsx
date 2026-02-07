@@ -83,12 +83,12 @@ const Login = () => {
                 <div className="relative z-20">
                     <div className="flex flex-col items-center justify-center mb-10">
                         <div className="relative mb-6 group">
-                            <div className="absolute inset-0 bg-blue-500 rounded-full blur-2xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
-                            <div className="relative bg-white/80 p-5 rounded-3xl shadow-xl border border-white backdrop-blur-md transform transition-transform group-hover:scale-105 duration-300">
+                            <div className="absolute inset-0 bg-blue-500 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
+                            <div className="relative transform transition-transform group-hover:scale-105 duration-300">
                                 <img
                                     src="/logo.png"
                                     alt="PageMD Logo"
-                                    className="h-10 w-auto object-contain"
+                                    className="h-16 w-auto object-contain"
                                     onError={(e) => {
                                         e.target.style.display = 'none';
                                     }}
