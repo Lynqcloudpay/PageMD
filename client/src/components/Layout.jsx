@@ -292,46 +292,55 @@ const Layout = ({ children }) => {
 
                 {/* Sidebar - Floating Bubble */}
                 <aside
-                    className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-700 ease-in-out px-2 py-4`}
+                    className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-2 py-4`}
                 >
                     <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-br from-blue-100/70 via-white/90 to-blue-200/70 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-700",
+                        "flex flex-col h-full bg-gradient-to-br from-blue-200/80 via-white/40 to-blue-400/80 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-500",
                         sidebarCollapsed ? "rounded-[2.2rem]" : "rounded-[2.5rem]"
                     )}>
                         {/* Decorative background bubbles */}
                         <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
                         <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
-                        {/* Logo/Brand Area - Fixed Position Icon */}
-                        <div className="px-3 py-5 flex items-center relative z-10">
-                            <Link to="/dashboard" className="flex items-center group overflow-hidden flex-1">
-                                <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-105">
-                                    <img
-                                        src={sidebarCollapsed ? "/logo-icon.png" : "/logo.png"}
-                                        alt="Logo"
-                                        className={cn(
-                                            "object-contain transition-all duration-500",
-                                            sidebarCollapsed ? "h-9 w-9" : "h-9 w-auto max-w-[140px]"
-                                        )}
-                                        onError={(e) => { e.target.style.display = 'none'; }}
-                                    />
-                                </div>
-                                <div className={cn(
-                                    "ml-1 transition-all duration-500 flex items-center",
-                                    sidebarCollapsed ? "opacity-0 invisible -translate-x-4" : "opacity-100 visible translate-x-0"
-                                )}>
-                                    {/* The text part of the logo is already inside logo.png, 
-                                        but if there were separate text I would put it here. 
-                                        Matching SidebarItem animation logic for consistency. */}
-                                </div>
-                            </Link>
-                            {!sidebarCollapsed && (
+                        {/* Logo/Brand Area + Relocated Toggle */}
+                        <div className="px-5 py-5 flex items-center justify-between relative z-10">
+                            {!sidebarCollapsed ? (
+                                <>
+                                    <Link to="/dashboard" className="flex items-center group">
+                                        <div className="p-1 transition-all group-hover:scale-105 duration-300">
+                                            <img
+                                                src="/logo.png"
+                                                alt="PageMD Logo"
+                                                className="h-9 w-auto object-contain max-w-[150px]"
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                            />
+                                        </div>
+                                    </Link>
+                                    <button
+                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                        className="p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-blue-600 transition-all group ml-1"
+                                        title="Collapse sidebar"
+                                    >
+                                        <Menu className="w-4 h-4 transition-transform duration-500 group-hover:rotate-180" />
+                                    </button>
+                                </>
+                            ) : (
                                 <button
                                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                    className="p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-blue-600 transition-all group mr-2"
-                                    title="Collapse sidebar"
+                                    className="w-full transition-all hover:scale-105 active:scale-95 group flex items-center justify-center p-0"
+                                    title="Expand sidebar"
                                 >
-                                    <Menu className="w-4 h-4 transition-transform duration-500 group-hover:rotate-180" />
+                                    <img
+                                        src="/logo-icon.png"
+                                        alt="PMD"
+                                        className="w-[85%] h-auto object-contain transition-transform duration-500 group-hover:rotate-3"
+                                        onError={(e) => {
+                                            // Fallback if image missing
+                                            e.target.style.display = 'none';
+                                            e.target.nextSibling.classList.remove('hidden');
+                                        }}
+                                    />
+                                    <div className="hidden bg-blue-600 rounded-2xl w-14 h-14 flex items-center justify-center text-white text-2xl font-bold">P</div>
                                 </button>
                             )}
                         </div>
