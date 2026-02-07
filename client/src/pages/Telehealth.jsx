@@ -1601,16 +1601,35 @@ const Telehealth = () => {
 
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <button
+                    <Button
                       onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
-                      className="py-2 px-2.5 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-xl transition-all border border-slate-200/60 flex items-center gap-2 font-bold text-[10px] uppercase tracking-wider"
+                      disabled={creatingRoom !== null}
+                      size="sm"
+                      variant={['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) ? 'secondary' : 'primary'}
+                      className="px-5 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm flex items-center gap-2"
                     >
-                      More
-                      <ChevronDown size={12} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
-                    </button>
+                      {creatingRoom === appt.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        (['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) || (appt.encounter_id && appt.encounter_status !== 'signed'))
+                          ? <FileText size={14} />
+                          : <Video size={14} />
+                      )}
+                      <span>
+                        {creatingRoom === appt.id
+                          ? 'Wait...'
+                          : ['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
+                            ? 'Finish Note'
+                            : (appt.encounter_id && appt.encounter_status !== 'signed')
+                              ? 'Continue'
+                              : 'Start Call'
+                        }
+                      </span>
+                      <ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
+                    </Button>
 
                     {activeDropdown === appt.id && (
-                      <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
                         <button
                           onClick={() => {
                             handleStartCall(appt, { video: true });
@@ -1682,30 +1701,6 @@ const Telehealth = () => {
                       </div>
                     )}
                   </div>
-
-                  <Button
-                    onClick={() => handleStartCall(appt)}
-                    disabled={creatingRoom !== null}
-                    size="sm"
-                    variant={['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) ? 'secondary' : 'primary'}
-                    className="px-4 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm"
-                    icon={
-                      creatingRoom === appt.id
-                        ? Loader2
-                        : (['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) || (appt.encounter_id && appt.encounter_status !== 'signed'))
-                          ? FileText
-                          : Video
-                    }
-                  >
-                    {creatingRoom === appt.id
-                      ? 'Wait...'
-                      : ['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
-                        ? 'Finish Note'
-                        : (appt.encounter_id && appt.encounter_status !== 'signed')
-                          ? 'Continue'
-                          : 'Start Call'
-                    }
-                  </Button>
                 </div>
               </div>
             </Card>
