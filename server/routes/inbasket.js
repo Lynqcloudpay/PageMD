@@ -557,10 +557,12 @@ router.get('/', async (req, res) => {
 
 // GET /stats - Counters for sidebar
 router.get('/stats', async (req, res) => {
+  console.log('[DEBUG] GET /api/inbox/stats called');
   try {
     const tenantId = req.clinic?.id || null;
     const schema = req.clinic?.schema_name || 'public';
     const client = req.dbClient || pool;
+    console.log(`[DEBUG] Syncing inbox for tenant: ${tenantId}`);
 
     await syncInboxItems(tenantId, schema, req.dbClient);
 
@@ -581,7 +583,7 @@ router.get('/stats', async (req, res) => {
 
     res.json(counts.rows[0]);
   } catch (error) {
-    console.error('Error fetching stats:', error.message, error.stack);
+    console.error('[ERROR] Error fetching stats:', error.message, error.stack);
     res.status(500).json({ error: 'Failed to fetch inbasket statistics', details: error.message });
   }
 });

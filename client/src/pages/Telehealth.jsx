@@ -403,7 +403,7 @@ const Telehealth = () => {
   const handleSendGuestLink = async (apptId) => {
     setSendingGuestLink(apptId);
     try {
-      const res = await axios.post(`/api/appointments/${apptId}/generate-guest-link`);
+      const res = await api.post(`/api/appointments/${apptId}/generate-guest-link`);
       if (res.data.success) {
         alert(`Guest link sent to ${res.data.sentTo}`);
       } else {
