@@ -305,23 +305,44 @@ router.post('/join', async (req, res) => {
             return res.status(500).json({ success: false, error: 'Video service not configured' });
         }
 
-        const roomName = `pagemd-appt-${record.appointment_id}`;
-        const expiryTime = Math.floor(Date.now() / 1000) + 7200; // 2 hours
+        const roomName = `pagemd-appt-${record.appointment_id}`.toLowerCase();
+        const expiryTime = Math.floor(Date.now() / 1000) + 7200; // 2 hours from now
 
-        // Ensure room exists
+        // Ensure room exists (matching provider logic in telehealth.js)
+        let room;
         try {
-            await axios.get(`${DAILY_API_URL}/rooms/${roomName}`, {
+            const roomResponse = await axios.get(`${DAILY_API_URL}/rooms/${roomName}`, {
                 headers: { 'Authorization': `Bearer ${DAILY_API_KEY}` }
             });
+            room = roomResponse.data;
         } catch (error) {
             if (error.response?.status === 404) {
-                // Room doesn't exist yet - provider hasn't started
-                return res.status(400).json({
-                    success: false,
-                    error: 'The video room is not ready yet. Please wait for your provider to start the session.'
-                });
+                // Create room if it doesn't exist (allow patient to be first one in)
+                try {
+                    const createResponse = await axios.post(`${DAILY_API_URL}/rooms`, {
+                        name: roomName,
+                        privacy: 'private',
+                        properties: {
+                            exp: expiryTime,
+                            enable_chat: true,
+                            enable_screenshare: true,
+                            enable_prejoin_ui: false,
+                            max_participants: 10
+                        }
+                    }, {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${DAILY_API_KEY}`
+                        }
+                    });
+                    room = createResponse.data;
+                } catch (createError) {
+                    console.error('[Guest Access] Room Creation Failed:', createError.response?.data || createError.message);
+                    return res.status(500).json({ success: false, error: 'Failed to initialize video room' });
+                }
+            } else {
+                throw error;
             }
-            throw error;
         }
 
         // Generate patient token (not owner)
@@ -343,7 +364,7 @@ router.post('/join', async (req, res) => {
 
         res.json({
             success: true,
-            roomUrl: `https://pagemd.daily.co/${roomName}?t=${tokenData.token}`,
+            roomUrl: `${room.url}?t=${tokenData.token}`,
             patientName
         });
 
