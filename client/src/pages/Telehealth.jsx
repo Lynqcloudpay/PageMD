@@ -5,7 +5,7 @@ import {
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
   Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
-  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, ArrowRight, Mail, UserCheck
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, Mail, UserCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
@@ -205,9 +205,7 @@ const Telehealth = () => {
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
   const [roomUrl, setRoomUrl] = useState(null);
-  const [creatingRoom, setCreatingRoom] = useState(null);
-  const [showEndCallChoices, setShowEndCallChoices] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [creatingRoom, setCreatingRoom] = useState(null); const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
   const [activeEncounter, setActiveEncounter] = useState(null);
@@ -679,7 +677,6 @@ const Telehealth = () => {
   const handleEndCall = useCallback(() => {
     setRoomUrl(null);
     setCreatingRoom(null);
-    setShowEndCallChoices(true);
     // Don't clear activeCall/Encounter/Note
   }, []);
 
@@ -711,7 +708,6 @@ const Telehealth = () => {
         ]
       } : null);
 
-      setShowEndCallChoices(false);
       // We don't close workspace yet so they can finish the note
     } catch (e) {
       console.error('Checkout failed:', e);
@@ -1501,50 +1497,7 @@ const Telehealth = () => {
           }}
         />
 
-        {/* --- POST-CALL DECISION MODAL --- */}
-        <Modal
-          isOpen={showEndCallChoices}
-          onClose={() => setShowEndCallChoices(false)}
-          title="Call Session Ended"
-        >
-          <div className="space-y-6 py-2">
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white shrink-0">
-                <PhoneOff className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <h4 className="font-bold text-blue-900">What's next?</h4>
-                <p className="text-sm text-blue-700 leading-snug">The video call has finished. Would you like to check the patient out now or keep the session active to rejoin later?</p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                onClick={handleCheckoutOnly}
-                className="w-full flex items-center justify-between p-4 bg-white border-2 border-slate-100 hover:border-blue-600 hover:bg-blue-50 rounded-2xl transition-all group"
-              >
-                <div className="text-left">
-                  <span className="block font-bold text-slate-800 group-hover:text-blue-700">Finish Visit & Checkout</span>
-                  <span className="text-[11px] text-slate-500 group-hover:text-blue-600">Marks patient as 'Out' and clears portal notifications.</span>
-                </div>
-                <ArrowRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500" />
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowEndCallChoices(false);
-                }}
-                className="w-full flex items-center justify-between p-4 bg-white border-2 border-slate-100 hover:border-slate-300 rounded-2xl transition-all group"
-              >
-                <div className="text-left">
-                  <span className="block font-bold text-slate-800">Visit Not Finished</span>
-                  <span className="text-[11px] text-slate-500">Keep appointment active. You can still document or rejoin later.</span>
-                </div>
-                <ArrowRight className="w-5 h-5 text-slate-300" />
-              </button>
-            </div>
-          </div>
-        </Modal>
       </div>
     );
   }
