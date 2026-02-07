@@ -26,7 +26,7 @@ router.post('/provision', async (req, res) => {
         if (leadId) {
             try {
                 const leadRes = await pool.controlPool.query(
-                    'SELECT id, uuid FROM sales_inquiries WHERE uuid = $1 OR id::text = $1',
+                    'SELECT id, uuid FROM sales_inquiries WHERE uuid::text = $1 OR id::text = $1',
                     [leadId]
                 );
 

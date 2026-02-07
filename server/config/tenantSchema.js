@@ -1406,7 +1406,7 @@ CREATE TABLE IF NOT EXISTS visits (
 
 CREATE TABLE IF NOT EXISTS after_visit_summaries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    encounter_id UUID NOT NULL REFERENCES visits(id) ON DELETE CASCADE UNIQUE,
+    encounter_id UUID NOT NULL,
     instructions TEXT,
     follow_up TEXT,
     return_precautions TEXT,
@@ -2284,6 +2284,12 @@ ALTER TABLE ONLY guest_access_tokens
 
 ALTER TABLE ONLY guest_access_tokens
     ADD CONSTRAINT guest_access_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id);
+
+ALTER TABLE ONLY after_visit_summaries
+    ADD CONSTRAINT after_visit_summaries_encounter_id_fkey FOREIGN KEY (encounter_id) REFERENCES visits(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY after_visit_summaries
+    ADD CONSTRAINT after_visit_summaries_encounter_id_key UNIQUE (encounter_id);
 
 ALTER TABLE audit_events ALTER COLUMN actor_user_id DROP NOT NULL;
 
