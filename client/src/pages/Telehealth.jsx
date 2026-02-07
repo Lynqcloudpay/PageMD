@@ -345,16 +345,18 @@ const Telehealth = () => {
         const encounterStatus = (appt.encounter_status || '').toLowerCase();
         const isNoteSigned = encounterStatus === 'signed';
         const isCheckedOut = ['checked_out', 'completed'].includes(status);
+        const hasEncounter = !!appt.encounter_id;
 
         // Logic: 
-        // 1. If today and not checked out -> Always show
-        // 2. If today and checked out -> Show only if note is NOT signed
-        // 3. If past -> Show only if note is NOT signed
+        // 1. If today and not checked out -> Always show (upcoming queue)
+        // 2. If today/past and checked out -> Show only if encounter exists and is NOT signed
+        // 3. If past -> Show only if encounter exists and is NOT signed
         if (normalizedApptDate === todayStr) {
-          return !isCheckedOut || !isNoteSigned;
+          if (!isCheckedOut) return true;
+          return hasEncounter && !isNoteSigned;
         } else {
-          // It's a past appointment
-          return !isNoteSigned;
+          // It's a past appointment - only show if there's an active note to finish
+          return hasEncounter && !isNoteSigned;
         }
       });
 
@@ -702,6 +704,44 @@ const Telehealth = () => {
       alert('Failed to rejoin call.');
     } finally {
       setCreatingRoom(null);
+    }
+  };
+
+  const handleDeleteAppointment = async (appt) => {
+    if (!appt?.id) return;
+
+    const confirmMessage = appt.encounter_id
+      ? 'Are you sure you want to delete this appointment and its associated draft note? This action cannot be undone.'
+      : 'Are you sure you want to delete this appointment? This action cannot be undone.';
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setLoading(true);
+      // 1. Delete Appointment
+      await appointmentsAPI.delete(appt.id);
+
+      // 2. Delete Note if exists and unsigned
+      if (appt.encounter_id && appt.encounter_status !== 'signed') {
+        try {
+          await visitsAPI.delete(appt.encounter_id);
+        } catch (vErr) {
+          console.warn('Note deletion failed or already gone:', vErr);
+        }
+      }
+
+      // 3. Clear from workspace if it's the active call
+      if (activeCall?.id === appt.id) {
+        handleCloseWorkspace();
+      }
+
+      // 4. Refresh list
+      await fetchSchedule();
+    } catch (err) {
+      console.error('Delete failed:', err);
+      alert('Failed to delete appointment. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1511,11 +1551,11 @@ const Telehealth = () => {
       <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-end justify-between mb-4 px-1">
           <div>
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">{title}</h2>
-            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1">{subtitle}</p>
+            <h2 className="text-sm font-bold text-slate-700 uppercase tracking-widest">{title}</h2>
+            <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider mt-1">{subtitle}</p>
           </div>
           <div className="px-3 py-1 bg-slate-100 rounded-full">
-            <span className="text-[10px] font-black text-slate-500">{apptList.length}</span>
+            <span className="text-[10px] font-bold text-slate-500">{apptList.length}</span>
           </div>
         </div>
         <div className="grid gap-3">
@@ -1529,12 +1569,12 @@ const Telehealth = () => {
                   <div>
                     <h3
                       onClick={() => navigate(`/patient/${appt.patient_id || appt.patientId}/snapshot`)}
-                      className="font-black text-slate-800 hover:text-blue-600 cursor-pointer transition-colors text-sm"
+                      className="font-bold text-slate-700 hover:text-blue-600 cursor-pointer transition-colors text-sm"
                     >
                       {appt.patientName || appt.name}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">
+                      <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide">
                         {appt.time || appt.appointment_time}
                       </p>
                       <span className="w-1 h-1 rounded-full bg-slate-300" />
@@ -1544,7 +1584,7 @@ const Telehealth = () => {
                       {getApptDate(appt) !== todayStr && (
                         <>
                           <span className="w-1 h-1 rounded-full bg-slate-300" />
-                          <p className="text-[11px] text-amber-600 font-black uppercase">
+                          <p className="text-[11px] text-amber-600 font-bold uppercase">
                             {format(new Date(getApptDate(appt) + 'T12:00:00'), 'MMM d')}
                           </p>
                         </>
@@ -1616,6 +1656,23 @@ const Telehealth = () => {
                             </div>
                           </button>
                         )}
+                        <div className="border-t border-slate-50 mt-1 pt-1">
+                          <button
+                            onClick={() => {
+                              handleDeleteAppointment(appt);
+                              setActiveDropdown(null);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-rose-50 text-rose-600 flex items-center gap-3 transition-colors group"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                              <X size={16} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-sm">Delete Visit</p>
+                              <p className="text-[10px] text-rose-400 uppercase tracking-wider font-semibold">Permanent Removal</p>
+                            </div>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1623,9 +1680,9 @@ const Telehealth = () => {
                   <Button
                     onClick={() => handleStartCall(appt)}
                     disabled={creatingRoom !== null}
-                    className={`px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 ${['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
-                      ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10'
-                      : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800 shadow-blue-900/20'
+                    className={`px-6 py-2.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 ${['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
+                      ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 shadow-slate-200/10'
+                      : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 shadow-blue-500/20'
                       }`}
                   >
                     {creatingRoom === appt.id ? (
@@ -1655,15 +1712,17 @@ const Telehealth = () => {
     <div className="p-8 max-w-6xl mx-auto bg-slate-50/30 min-h-screen">
       <div className="mb-10 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Telehealth</h1>
-          <p className="text-slate-500 font-medium mt-1">Virtual visit command center</p>
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Telehealth</h1>
+          <p className="text-slate-500 font-medium mt-1 text-sm">Virtual visit command center</p>
         </div>
 
         {/* Quick Stats */}
         <div className="flex gap-4">
-          <div className="px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Pending</p>
-            <p className="text-xl font-black text-slate-900 leading-none">{appointments.length}</p>
+          <div className="px-5 py-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Pending</p>
+              <p className="text-xl font-bold text-slate-800 leading-none">{appointments.length}</p>
+            </div>
           </div>
           <button
             onClick={fetchSchedule}
@@ -1677,12 +1736,12 @@ const Telehealth = () => {
       {/* Friendly Security Badge */}
       <div className="mb-10 p-5 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 flex items-center gap-5 relative overflow-hidden group">
         <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-blue-50/50 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
-        <div className="w-14 h-14 rounded-2xl bg-blue-500 flex items-center justify-center text-white relative z-10 shadow-lg shadow-blue-500/20">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 relative z-10 border border-blue-100 shadow-sm">
           <Shield size={28} />
         </div>
         <div className="relative z-10">
-          <h3 className="font-black text-slate-900 text-lg">Secure & Private Video</h3>
-          <p className="text-sm text-slate-500 font-medium">Your consultations are protected with end-to-end encryption for full peace of mind.</p>
+          <h3 className="font-bold text-slate-800 text-lg leading-tight">Secure & Private Video</h3>
+          <p className="text-sm text-slate-500 font-medium mt-1">Your consultations are protected with end-to-end encryption for full peace of mind.</p>
         </div>
       </div>
 
@@ -1701,9 +1760,9 @@ const Telehealth = () => {
         </div>
       ) : (
         <div className="pb-20">
-          {renderAppointmentGroup("Today's Queue", "Scheduled virtual visits", todayScheduled, "bg-blue-600 text-white shadow-lg shadow-blue-500/20")}
-          {renderAppointmentGroup("Completed Visits", "Patient checked out - Note pending", todayFinished, "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20")}
-          {renderAppointmentGroup("Prior Pending Notes", "Unfinished clinical documentation", pastPending, "bg-slate-800 text-white")}
+          {renderAppointmentGroup("Today's Queue", "Scheduled virtual visits", todayScheduled, "bg-blue-100 text-blue-600")}
+          {renderAppointmentGroup("Completed Visits", "Patient checked out - Note pending", todayFinished, "bg-emerald-100 text-emerald-600")}
+          {renderAppointmentGroup("Prior Pending Notes", "Unfinished clinical documentation", pastPending, "bg-slate-100 text-slate-500")}
         </div>
       )}
 
