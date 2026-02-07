@@ -309,16 +309,46 @@ const Telehealth = () => {
   // Fetch appointments
   const fetchSchedule = useCallback(async () => {
     try {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const response = await appointmentsAPI.get({ date: today });
-      const telehealthAppts = (response.data || []).filter(appt => {
-        // Filter out completed/cancelled appointments
-        const status = (appt.status || '').toLowerCase();
-        if (['checked_out', 'completed', 'cancelled', 'no_show', 'no-show'].includes(status)) return false;
+      setLoading(true);
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
 
+      // Fetch appointments from last 30 days to catch any pending notes
+      const pastIdx = new Date();
+      pastIdx.setDate(pastIdx.getDate() - 30);
+      const startStr = format(pastIdx, 'yyyy-MM-dd');
+
+      const response = await appointmentsAPI.get({
+        startDate: startStr,
+        endDate: todayStr,
+        providerId: currentUser.id
+      });
+
+      const telehealthAppts = (response.data || []).filter(appt => {
+        // Filter out cancelled appointments
+        const status = (appt.status || '').toLowerCase();
+        if (['cancelled', 'no_show', 'no-show'].includes(status)) return false;
+
+        // Telehealth type filter
         const type = (appt.type || appt.appointment_type || '').toLowerCase();
         const visitMethod = (appt.visit_method || '').toLowerCase();
-        return type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
+        const isTele = type.includes('telehealth') || type.includes('video') || type.includes('virtual') || visitMethod === 'telehealth';
+        if (!isTele) return false;
+
+        const encounterStatus = (appt.encounter_status || '').toLowerCase();
+        const isNoteSigned = encounterStatus === 'signed';
+        const isCheckedOut = ['checked_out', 'completed'].includes(status);
+        const apptDate = appt.appointment_date; // Backend returns YYYY-MM-DD
+
+        // Logic: 
+        // 1. If today and not checked out -> Always show
+        // 2. If today and checked out -> Show only if note is NOT signed
+        // 3. If past -> Show only if note is NOT signed
+        if (apptDate === todayStr) {
+          return !isCheckedOut || !isNoteSigned;
+        } else {
+          return !isNoteSigned;
+        }
       });
 
       setAppointments(telehealthAppts);
@@ -1423,102 +1453,118 @@ const Telehealth = () => {
   }
 
   // --- WAITING ROOM / SCHEDULE VIEW ---
-  return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">Telehealth</h1>
-        <p className="text-slate-500 mt-1">Today's virtual appointments</p>
-      </div>
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-      {/* Security Badge */}
-      <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-100 flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center text-white">
-          <Shield size={20} />
-        </div>
-        <div>
-          <h3 className="font-semibold text-green-900">Secure Video Platform</h3>
-          <p className="text-sm text-green-700">Powered by Daily.co with end-to-end encryption</p>
-        </div>
-      </div>
+  const todayScheduled = appointments.filter(appt => {
+    const isToday = appt.appointment_date === todayStr;
+    const isCheckedOut = ['checked_out', 'completed'].includes((appt.status || '').toLowerCase());
+    return isToday && !isCheckedOut;
+  });
 
-      {loading ? (
-        <div className="text-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-slate-500">Loading appointments...</p>
+  const todayFinished = appointments.filter(appt => {
+    const isToday = appt.appointment_date === todayStr;
+    const isCheckedOut = ['checked_out', 'completed'].includes((appt.status || '').toLowerCase());
+    return isToday && isCheckedOut;
+  });
+
+  const pastPending = appointments.filter(appt => {
+    return appt.appointment_date !== todayStr;
+  }).sort((a, b) => b.appointment_date.localeCompare(a.appointment_date));
+
+  const renderAppointmentGroup = (title, subtitle, apptList, iconColor = "bg-blue-50 text-blue-600") => {
+    if (apptList.length === 0) return null;
+
+    return (
+      <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-end justify-between mb-4 px-1">
+          <div>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">{title}</h2>
+            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1">{subtitle}</p>
+          </div>
+          <div className="px-3 py-1 bg-slate-100 rounded-full">
+            <span className="text-[10px] font-black text-slate-500">{apptList.length}</span>
+          </div>
         </div>
-      ) : appointments.length === 0 ? (
-        <Card className="text-center py-16">
-          <Video className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-slate-700 mb-2">No Telehealth Visits Today</h3>
-          <p className="text-slate-500">No virtual appointments are scheduled for today.</p>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {appointments
-            .filter(appt => appt.patient_status !== 'checked_out' && appt.status !== 'completed')
-            .map(appt => (
-              <Card key={appt.id} className="p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-                      <Video size={28} />
-                    </div>
-                    <div>
-                      <h3
-                        onClick={() => navigate(`/patient/${appt.patient_id || appt.patientId}/snapshot`)}
-                        className="font-bold text-slate-800 hover:text-blue-600 cursor-pointer transition-colors"
-                      >
-                        {appt.patientName || appt.name}
-                      </h3>
-                      <p className="text-sm text-slate-500">
-                        {appt.time || appt.appointment_time} • {appt.type || appt.appointment_type || 'Telehealth Visit'}
+        <div className="grid gap-3">
+          {apptList.map(appt => (
+            <Card key={appt.id} className="p-4 hover:shadow-xl transition-all border-slate-200/60 hover:border-blue-200 group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-2xl ${iconColor} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
+                    <Video size={24} />
+                  </div>
+                  <div>
+                    <h3
+                      onClick={() => navigate(`/patient/${appt.patient_id || appt.patientId}/snapshot`)}
+                      className="font-black text-slate-800 hover:text-blue-600 cursor-pointer transition-colors text-sm"
+                    >
+                      {appt.patientName || appt.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">
+                        {appt.time || appt.appointment_time}
                       </p>
+                      <span className="w-1 h-1 rounded-full bg-slate-300" />
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {appt.type || appt.appointment_type || 'Telehealth Visit'}
+                      </p>
+                      {appt.appointment_date !== todayStr && (
+                        <>
+                          <span className="w-1 h-1 rounded-full bg-slate-300" />
+                          <p className="text-[11px] text-amber-600 font-black uppercase">
+                            {format(new Date(appt.appointment_date + 'T12:00:00'), 'MMM d')}
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      <button
-                        onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
-                        className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all border border-slate-200 flex items-center gap-2 font-semibold"
-                      >
-                        Actions
-                        <ChevronDown size={18} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
-                      </button>
+                </div>
 
-                      {activeDropdown === appt.id && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                          <button
-                            onClick={() => {
-                              handleStartCall(appt, { video: true });
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                              <Video size={16} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm">Join Video Call</p>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
-                            </div>
-                          </button>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
+                      className="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-all border border-slate-200/60 flex items-center gap-2 font-bold text-[11px] uppercase tracking-wider"
+                    >
+                      More
+                      <ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === appt.id ? 'rotate-180' : ''}`} />
+                    </button>
 
-                          <button
-                            onClick={() => {
-                              handleStartCall(appt, { video: false });
-                              setActiveDropdown(null);
-                            }}
-                            className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                              <FileText size={16} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm">Resume Note</p>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
-                            </div>
-                          </button>
+                    {activeDropdown === appt.id && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+                        <button
+                          onClick={() => {
+                            handleStartCall(appt, { video: true });
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            <Video size={16} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">Join Video Call</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
+                          </div>
+                        </button>
 
+                        <button
+                          onClick={() => {
+                            handleStartCall(appt, { video: false });
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                            <FileText size={16} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm">Resume Note</p>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
+                          </div>
+                        </button>
+
+                        {!['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) && (
                           <button
                             onClick={() => setGuestLinkModalAppt(appt)}
                             disabled={sendingGuestLink === appt.id}
@@ -1533,38 +1579,98 @@ const Telehealth = () => {
                             </div>
                             <div>
                               <p className="font-bold text-sm">Send Guest Link</p>
-                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Patient Can't Log In</p>
+                              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Direct Access</p>
                             </div>
                           </button>
-
-
-                        </div>
-                      )}
-                    </div>
-
-                    <Button
-                      onClick={() => handleStartCall(appt)}
-                      disabled={creatingRoom !== null}
-                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg flex items-center gap-2"
-                    >
-                      {creatingRoom === appt.id ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                      ) : (
-                        <Video size={18} />
-                      )}
-                      {creatingRoom === appt.id
-                        ? 'Connecting...'
-                        : (appt.encounter_id && appt.encounter_status !== 'signed')
-                          ? 'Continue Call'
-                          : (appt.status === 'in_progress' || appt.status === 'in-progress' || appt.status === 'arrived')
-                            ? 'Resume Visit'
-                            : 'Start Call'
-                      }
-                    </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
+
+                  <Button
+                    onClick={() => handleStartCall(appt)}
+                    disabled={creatingRoom !== null}
+                    className={`px-6 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 ${['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
+                        ? 'bg-slate-800 hover:bg-slate-900 text-white shadow-slate-900/10'
+                        : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800 shadow-blue-900/20'
+                      }`}
+                  >
+                    {creatingRoom === appt.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Video size={16} />
+                    )}
+                    {creatingRoom === appt.id
+                      ? 'Wait...'
+                      : ['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
+                        ? 'Finish Note'
+                        : (appt.encounter_id && appt.encounter_status !== 'signed')
+                          ? 'Continue'
+                          : 'Start Call'
+                    }
+                  </Button>
                 </div>
-              </Card>
-            ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-8 max-w-6xl mx-auto bg-slate-50/30 min-h-screen">
+      <div className="mb-10 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Telehealth</h1>
+          <p className="text-slate-500 font-medium mt-1">Virtual visit command center</p>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="flex gap-4">
+          <div className="px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Pending</p>
+            <p className="text-xl font-black text-slate-900 leading-none">{appointments.length}</p>
+          </div>
+          <button
+            onClick={fetchSchedule}
+            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all hover:border-blue-200 hover:shadow-lg"
+          >
+            <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      {/* Security Badge */}
+      <div className="mb-10 p-5 bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 flex items-center gap-5 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-emerald-50/50 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
+        <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center text-white relative z-10 shadow-lg shadow-emerald-500/20">
+          <Shield size={28} />
+        </div>
+        <div className="relative z-10">
+          <h3 className="font-black text-slate-900 text-lg">Military-Grade Security</h3>
+          <p className="text-sm text-slate-500 font-medium">Video streams are encrypted via Daily.co for full HIPAA compliance.</p>
+        </div>
+      </div>
+
+      {loading && appointments.length === 0 ? (
+        <div className="text-center py-24 bg-white rounded-3xl border border-slate-100">
+          <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-4" />
+          <p className="text-slate-400 font-bold uppercase tracking-widest text-[11px]">Syncing Schedule...</p>
+        </div>
+      ) : appointments.length === 0 ? (
+        <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200">
+          <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mx-auto mb-6">
+            <Video size={40} />
+          </div>
+          <h3 className="text-xl font-black text-slate-800 mb-2">Queue is Empty</h3>
+          <p className="text-slate-500 font-medium">No pending virtual appointments or notes.</p>
+        </div>
+      ) : (
+        <div className="pb-20">
+          {renderAppointmentGroup("Today's Queue", "Scheduled virtual visits", todayScheduled, "bg-blue-600 text-white shadow-lg shadow-blue-500/20")}
+          {renderAppointmentGroup("Completed Visits", "Patient checked out - Note pending", todayFinished, "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20")}
+          {renderAppointmentGroup("Prior Pending Notes", "Unfinished clinical documentation", pastPending, "bg-slate-800 text-white")}
         </div>
       )}
 
