@@ -101,7 +101,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                 disabled={saving || isTerminalState}
                 className={`text-[8px] transition-all cursor-pointer ${color} ${saving || isTerminalState ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-                {isActive && <span className="text-[7px] mr-0.5">✓</span>}
+                {isActive && <span className="text-[7px] mr-0.5">×</span>}
                 <span className={isActive ? 'underline underline-offset-1' : ''}>
                     {label}
                 </span>

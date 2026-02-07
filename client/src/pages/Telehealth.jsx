@@ -531,7 +531,6 @@ const Telehealth = () => {
       }
     } catch (err) {
       console.error('Failed to send guest link:', err);
-      const message = err.response?.data?.error || 'Failed to send guest link';
       alert(message);
     } finally {
       setSendingGuestLink(null);
@@ -539,7 +538,22 @@ const Telehealth = () => {
     }
   };
 
-  const handleStartCall = async (appt, options = { video: true }) => {
+  // Click outside listener for dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (activeDropdown && !event.target.closest('button[data-dropdown-trigger="true"]')) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [activeDropdown]);
+
+  // Daily.co video call logic
+  const handleStartCall = async (appt, options = {}) => {
     if (creatingRoom || isSubmitting) return;
     setCreatingRoom(appt.id);
 
@@ -1599,10 +1613,33 @@ const Telehealth = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-4">
+                  {/* Status Badge */}
+                  <div className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest border border-transparent shadow-sm ${['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                    : ['in_room', 'in-room', 'in_progress'].includes((appt.status || '').toLowerCase())
+                      ? 'bg-violet-50 text-violet-600 border-violet-100 animate-pulse'
+                      : ['checked_in', 'checked-in'].includes((appt.status || '').toLowerCase())
+                        ? 'bg-blue-50 text-blue-600 border-blue-100'
+                        : 'bg-slate-50 text-slate-400 border-slate-100'
+                    }`}>
+                    {['checked_out', 'completed'].includes((appt.status || '').toLowerCase())
+                      ? 'Completed'
+                      : ['in_room', 'in-room', 'in_progress'].includes((appt.status || '').toLowerCase())
+                        ? 'In Progress'
+                        : ['checked_in', 'checked-in'].includes((appt.status || '').toLowerCase())
+                          ? 'Checked In'
+                          : 'Scheduled'
+                    }
+                  </div>
+
                   <div className="relative">
                     <Button
-                      onClick={() => setActiveDropdown(activeDropdown === appt.id ? null : appt.id)}
+                      data-dropdown-trigger="true"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDropdown(activeDropdown === appt.id ? null : appt.id);
+                      }}
                       disabled={creatingRoom !== null}
                       size="sm"
                       variant={['checked_out', 'completed'].includes((appt.status || '').toLowerCase()) ? 'secondary' : 'primary'}
