@@ -15,6 +15,7 @@ const router = express.Router();
 const DAILY_API_KEY = process.env.DAILY_API_KEY;
 const DAILY_API_URL = 'https://api.daily.co/v1';
 const axios = require('axios');
+const { isSandboxMode } = require('../services/simulationInterceptor');
 
 /**
  * GET /api/visit/guest/validate
@@ -311,6 +312,15 @@ router.post('/join', async (req, res) => {
         const patientName = `${decryptedPatient.first_name || ''} ${decryptedPatient.last_name || ''}`.trim() || 'Patient';
 
         // Generate Daily.co room access
+        if (isSandboxMode()) {
+            return res.json({
+                success: true,
+                roomUrl: `https://pagemdemr.com/telehealth/mock/${record.appointment_id}?role=guest`,
+                patientName,
+                isSimulated: true
+            });
+        }
+
         if (!DAILY_API_KEY) {
             console.error('[Guest Access] DAILY_API_KEY missing');
             return res.status(500).json({ success: false, error: 'Video service not configured' });

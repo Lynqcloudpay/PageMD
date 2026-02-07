@@ -1,6 +1,6 @@
-const axios = require('axios');
 const express = require('express');
 const { authenticatePortal } = require('../../middleware/portalAuth');
+const { isSandboxMode } = require('../../services/simulationInterceptor');
 
 const router = express.Router();
 
@@ -15,6 +15,16 @@ const DAILY_API_URL = 'https://api.daily.co/v1';
 router.post('/rooms', authenticatePortal, async (req, res) => {
     try {
         const { appointmentId, patientName, providerName } = req.body;
+
+        if (isSandboxMode()) {
+            console.log(`[Portal Telehealth] Sandbox detected for appt ${appointmentId}. Returning mock.`);
+            return res.json({
+                success: true,
+                roomUrl: `https://pagemdemr.com/telehealth/mock/${appointmentId}?role=patient`,
+                roomName: `mock-room-${appointmentId}`,
+                isSimulated: true
+            });
+        }
 
         if (!DAILY_API_KEY) {
             console.error('[Portal Telehealth] DAILY_API_KEY missing in environment');

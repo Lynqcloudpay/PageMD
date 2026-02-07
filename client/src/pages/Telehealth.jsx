@@ -19,7 +19,7 @@ import { OrderModal } from '../components/ActionModals';
 import { icd10API } from '../services/api';
 
 // Daily.co Video Component
-const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
+const DailyVideoCall = ({ roomUrl, userName, onLeave, isSandbox }) => {
   const frameRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const callFrameRef = useRef(null);
@@ -96,9 +96,26 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
       )}
 
       {/* Connection Status Overlay */}
+      {isSandbox && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4">
+          <div className="bg-blue-600/90 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse" />
+            <span className="text-xs font-black tracking-widest uppercase">Simulated Video Call</span>
+            <div className="w-1 h-1 bg-white/30 rounded-full" />
+            <span className="text-[10px] opacity-80">Sandbox Mode Only</span>
+          </div>
+        </div>
+      )}
 
+      <div ref={frameRef} className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden" />
 
-      <div ref={frameRef} className="w-full h-full bg-slate-100 rounded-2xl" />
+      {isSandbox && (
+        <div className="absolute inset-0 pointer-events-none border-4 border-blue-500/20 rounded-2xl z-50">
+          <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none rotate-[-45deg] scale-150">
+            <span className="text-9xl font-black text-white">SIMULATED</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -909,6 +926,7 @@ const Telehealth = () => {
                   roomUrl={roomUrl}
                   userName={providerName}
                   onLeave={handleEndCall}
+                  isSandbox={user?.isSandbox}
                 />
               </div>
             ) : (

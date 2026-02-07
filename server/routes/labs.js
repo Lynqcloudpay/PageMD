@@ -12,7 +12,11 @@ router.get('/patient/:patientId', async (req, res) => {
   try {
     const { patientId } = req.params;
     // For MVP, we'll return mock data or query from orders where order_type = 'lab'
-    // In production, this would integrate with FHIR DiagnosticReport/Observation
+    const { isSandboxMode } = require('../services/simulationInterceptor');
+    if (isSandboxMode()) {
+      console.log(`[Labs] Sandbox detected. Returning simulated integration results.`);
+    }
+
     const result = await pool.query(
       `SELECT o.*, o.order_payload as lab_data
        FROM orders o

@@ -412,8 +412,15 @@ class EmailService {
      * Internal send method
      */
     async _send(to, subject, html) {
-        // Robusy email cleaning
+        // Robust email cleaning
         const cleanTo = typeof to === 'string' ? to.trim() : to;
+
+        // SANDBOX ISOLATION: NOP all emails in demo mode
+        const { isSandboxMode } = require('./simulationInterceptor');
+        if (isSandboxMode()) {
+            console.log(`[Simulation] 🛡️ EMAIL NOPed for Sandbox. To: ${cleanTo}, Subject: ${subject}`);
+            return true;
+        }
 
         console.log(`[EmailService] 📧 Preparing email via Resend for: ${cleanTo}`);
 

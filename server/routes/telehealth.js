@@ -1,7 +1,7 @@
-const axios = require('axios');
 const express = require('express');
 const { authenticate } = require('../middleware/auth');
 const featureGuard = require('../middleware/featureGuard');
+const { simulate, isSandboxMode } = require('../services/simulationInterceptor');
 
 const router = express.Router();
 router.use(authenticate);
@@ -15,6 +15,16 @@ const DAILY_API_URL = 'https://api.daily.co/v1';
 router.post('/rooms', authenticate, async (req, res) => {
     try {
         const { appointmentId, patientName, providerName, encounterId } = req.body;
+
+        if (isSandboxMode()) {
+            console.log(`[Telehealth] Sandbox detected for appointment ${appointmentId}. Returning mock room.`);
+            return res.json({
+                success: true,
+                roomUrl: `https://pagemdemr.com/telehealth/mock/${appointmentId}?role=provider`,
+                roomName: `mock-room-${appointmentId}`,
+                isSimulated: true
+            });
+        }
 
         if (!DAILY_API_KEY) {
             console.error('[Telehealth] DAILY_API_KEY missing');

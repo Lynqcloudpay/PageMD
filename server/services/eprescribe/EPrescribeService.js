@@ -183,6 +183,12 @@ class EPrescribeService {
    * @returns {Promise<Array>}
    */
   async searchPharmacies(query, location) {
+    const simulated = simulate('EPrescribe', 'searchPharmacies', [
+      { id: 'sim-ph-1', name: 'Sandbox Pharmacy #1', address: '123 Demo St', city: 'Miami', state: 'FL', zip: '33131', phone: '555-0101' },
+      { id: 'sim-ph-2', name: 'Sandbox Pharmacy #2', address: '456 Test Ave', city: 'Miami', state: 'FL', zip: '33132', phone: '555-0102' }
+    ]);
+    if (simulated) return simulated;
+
     if (this.isDoseSpotEnabled()) {
       return await this.dosespotService.searchPharmacies(query, location);
     }
@@ -197,6 +203,12 @@ class EPrescribeService {
    * @returns {Promise<Array>}
    */
   async searchMedications(query) {
+    const simulated = simulate('EPrescribe', 'searchMedications', [
+      { rxnormId: '12345', name: 'Amoxicillin 500mg Capsule', dosage: '500mg', route: 'Oral' },
+      { rxnormId: '67890', name: 'Lisinopril 10mg Tablet', dosage: '10mg', route: 'Oral' }
+    ]);
+    if (simulated) return simulated;
+
     if (this.isDoseSpotEnabled()) {
       return await this.dosespotService.searchMedications(query);
     }
