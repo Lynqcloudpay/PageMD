@@ -26,14 +26,16 @@ const PortalInviteModal = ({ isOpen, onClose, patient, inviteData }) => {
         >
             <div className="space-y-6">
                 {/* Status Header */}
-                <div className="flex items-center gap-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                    <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-200">
-                        <CheckCircle className="w-6 h-6" />
+                <div className={`flex items-center gap-4 p-4 rounded-xl border ${inviteData?.emailFailed ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg ${inviteData?.emailFailed ? 'bg-amber-500 shadow-amber-200' : 'bg-emerald-500 shadow-emerald-200'}`}>
+                        {inviteData?.emailFailed ? <ArrowRight className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
                     </div>
                     <div>
-                        <h4 className="text-lg font-bold text-emerald-900">Success!</h4>
-                        <p className="text-sm text-emerald-700">
-                            The invitation for <span className="font-semibold">{patient.first_name} {patient.last_name}</span> has been created.
+                        <h4 className={`text-lg font-bold ${inviteData?.emailFailed ? 'text-amber-900' : 'text-emerald-900'}`}>
+                            {inviteData?.emailFailed ? 'Link Generated' : 'Success!'}
+                        </h4>
+                        <p className={`text-sm ${inviteData?.emailFailed ? 'text-amber-700' : 'text-emerald-700'}`}>
+                            {inviteData?.message || `The invitation for ${patient.first_name} has been created.`}
                         </p>
                     </div>
                 </div>
@@ -51,14 +53,23 @@ const PortalInviteModal = ({ isOpen, onClose, patient, inviteData }) => {
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-sm text-slate-500 font-medium">Status</span>
-                            <div className="flex items-center gap-1.5 text-blue-600 font-bold text-sm">
-                                <ShieldCheck className="w-4 h-4" />
-                                Queued for Delivery
-                            </div>
+                            {inviteData?.emailFailed ? (
+                                <div className="flex items-center gap-1.5 text-rose-600 font-bold text-sm">
+                                    <Clock className="w-4 h-4" />
+                                    Failed to Send
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 text-blue-600 font-bold text-sm">
+                                    <ShieldCheck className="w-4 h-4" />
+                                    Queued for Delivery
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <p className="text-[11px] text-slate-400 italic">
-                        In a production system, this email is sent instantly via our secure HIPAA-compliant email service (Resend).
+                    <p className={`text-[11px] italic ${inviteData?.emailFailed ? 'text-rose-500 font-semibold' : 'text-slate-400'}`}>
+                        {inviteData?.emailFailed
+                            ? 'Email service reported failure (Resend API). Please check your configuration.'
+                            : 'Securely sent via Resend (HIPAA Compliant).'}
                     </p>
                 </div>
 

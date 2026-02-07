@@ -523,16 +523,37 @@ router.post('/:id/portal-invite', requirePermission('patients:edit_demographics'
       const patientResult = await pool.query('SELECT first_name, last_name FROM patients WHERE id = $1', [id]);
       const patientName = patientResult.rows[0] ? `${patientResult.rows[0].first_name} ${patientResult.rows[0].last_name}` : 'Valued Patient';
 
-      await emailService.sendPortalInvite(email, patientName, inviteLink);
+      const emailSent = await emailService.sendPortalInvite(email, patientName, inviteLink);
+
+      if (!emailSent) {
+        console.error('[Portal Invite] Email service returned false (failed to send)');
+        // Return success but with failure flag so user can still get the link
+        return res.json({
+          success: true,
+          inviteLink,
+          expiresAt,
+          message: 'Invitation generated, but email failed to send. Please share the link manually.',
+          emailFailed: true
+        });
+      }
     } catch (emailErr) {
-      console.warn('[Portal Invite] Failed to send email:', emailErr.message);
+      console.error('[Portal Invite] Unexpected error sending email:', emailErr);
+      // Even on error, we generated the token, so let's allow manual sharing
+      return res.json({
+        success: true,
+        inviteLink,
+        expiresAt,
+        message: 'Invitation generated, but email system encountered an error.',
+        emailFailed: true
+      });
     }
 
     res.json({
       success: true,
       inviteLink,
       expiresAt,
-      message: 'Invitation generated and sent successfully.'
+      message: 'Invitation generated and sent successfully.',
+      emailFailed: false
     });
 
   } catch (error) {
