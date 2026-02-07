@@ -240,7 +240,7 @@ const GuestVisitPage = () => {
             >
                 <div className="space-y-4">
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm text-slate-600 italic">
-                        "Your care is our priority. If you have follow-up questions, please reach out via the patient portal or call our office."
+                        "Your care is our priority. You may re-join this session if it was ended by mistake, provided your doctor is still available. Once the physician finalizes the visit, this link will expire and you should call our office directly for further assistance."
                     </div>
                     {/* Only show re-join if we think it's still alive (not from server status) */}
                     {roomUrl === null && appointmentInfo?.status !== 'completed' && (
