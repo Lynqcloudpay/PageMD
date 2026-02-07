@@ -559,7 +559,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     return (
         <div className={`fixed inset-0 z-[100] flex ${side === 'left' ? 'justify-start' : 'justify-end'} ${backdrop ? '' : 'pointer-events-none'}`}>
             {backdrop && (
-                <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-sm transition-opacity" onClick={onClose} />
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={onClose} />
             )}
 
             <div className={`relative w-full max-w-[900px] bg-white h-full shadow-2xl flex flex-col md:flex-row overflow-hidden transform duration-300 ${backdrop ? '' : 'pointer-events-auto shadow-xl border-r border-gray-200'} ${side === 'left' ? 'animate-in slide-in-from-left' : 'animate-slide-in-right'}`}>

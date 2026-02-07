@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     Eye, X, Lock, Activity, FlaskConical, FileImage,
     Heart, Waves, Stethoscope, FileText, RefreshCw, AlertCircle, Clock, CheckCircle
@@ -1069,8 +1070,8 @@ const ChartReviewModal = ({
         );
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-[60]" onClick={onClose}>
+    const modalContent = (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[2000] p-4" onClick={onClose}>
             <div className="bg-slate-50 rounded-[2rem] shadow-2xl w-full max-w-[1240px] h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 {/* Clean Professional Header */}
                 <div className="px-8 py-5 bg-white border-b border-slate-100 flex items-center justify-between flex-shrink-0 relative">
@@ -1151,6 +1152,8 @@ const ChartReviewModal = ({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.getElementById('modal-root') || document.body);
 };
 
 export default ChartReviewModal;

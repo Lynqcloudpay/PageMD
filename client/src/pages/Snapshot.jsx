@@ -3181,7 +3181,7 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
             <User className="w-10 h-10 relative z-20 text-primary-300 opacity-80" strokeWidth={1.5} />
             {/* Health Maintenance Edit Modal */}
             {showHMEditModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
                         <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                             <h3 className="font-black text-sm text-slate-800 uppercase tracking-widest">

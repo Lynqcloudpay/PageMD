@@ -441,7 +441,7 @@ const Layout = ({ children }) => {
                 {/* Patient Search Modal */}
                 {showSearch && (
                     <div
-                        className="fixed inset-0 bg-deep-gray/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20 animate-fade-in"
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-start justify-center pt-20 animate-fade-in"
                         onClick={() => setShowSearch(false)}
                     >
                         <div
@@ -527,7 +527,7 @@ const Layout = ({ children }) => {
                 >
                     <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_15px_40px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col relative">
                         {/* Header inside the bubble */}
-                        <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-20">
+                        <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative">
                             <div className="flex-1 overflow-hidden">
                                 <PatientTabs />
                             </div>
@@ -537,7 +537,7 @@ const Layout = ({ children }) => {
                         </div>
 
                         {/* Page Content */}
-                        <div className="flex-1 overflow-y-auto min-h-0 relative z-10 h-full">
+                        <div className="flex-1 overflow-y-auto min-h-0 relative h-full">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={location.pathname}

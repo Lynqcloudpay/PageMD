@@ -1030,7 +1030,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                 {/* Navigation & Progress */}
                 {/* Policy Viewing Modal */}
                 {viewingPolicy && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-fadeIn">
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-fadeIn">
                         <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-slideUp">
                             <div className="p-8 border-b border-blue-50 flex justify-between items-center shrink-0 bg-blue-50/30">
                                 <div>

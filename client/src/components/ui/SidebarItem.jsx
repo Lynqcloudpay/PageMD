@@ -52,7 +52,7 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
 
             {/* Subtle indicator for active state */}
             {active && (
-                <div className="absolute right-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-l-full z-20 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-r-full z-20 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
             )}
         </Link>
     );
