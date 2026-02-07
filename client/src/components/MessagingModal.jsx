@@ -8,6 +8,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
     const [body, setBody] = useState('');
     const [subject, setSubject] = useState(`Message from ${currentUser?.first_name || 'your provider'}`);
     const [priority, setPriority] = useState('normal'); // 'normal', 'urgent'
+    const [notifyPatient, setNotifyPatient] = useState(false); // Default to false (save cost/spam)
     const [sending, setSending] = useState(false);
 
     if (!patient) return null;
@@ -29,7 +30,8 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                 patientId: patient.id,
                 subject: subject || 'Message',
                 body: body,
-                priority: priority
+                priority: priority,
+                notifyPatient: notifyPatient
             });
             showSuccess('Secure message sent to patient portal');
             setBody('');
@@ -110,8 +112,8 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                                     type="button"
                                     onClick={() => setPriority('normal')}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${priority === 'normal'
-                                            ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                                         }`}
                                 >
                                     Normal
@@ -120,8 +122,8 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                                     type="button"
                                     onClick={() => setPriority('urgent')}
                                     className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${priority === 'urgent'
-                                            ? 'bg-red-50 border-red-200 text-red-700'
-                                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                                        ? 'bg-red-50 border-red-200 text-red-700'
+                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                                         }`}
                                 >
                                     Urgent
@@ -131,10 +133,31 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                     </div>
                 </div>
 
+                {/* Notification Options */}
+                <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <div className="relative flex items-center">
+                        <input
+                            type="checkbox"
+                            role="checkbox"
+                            checked={notifyPatient}
+                            onChange={(e) => setNotifyPatient(e.target.checked)}
+                            className="w-5 h-5 text-blue-600 bg-white border-slate-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                        />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-slate-700">Send Email Notification</p>
+                        <p className="text-[10px] text-slate-500">Uncheck to send message silently to portal only.</p>
+                    </div>
+                </div>
+
                 {/* Privacy Note */}
-                <div className="flex items-start gap-2.5 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[11px] text-slate-500 italic">
-                    <Clock size={16} className="text-slate-400 shrink-0 mt-0.5" />
-                    <span>The patient will receive a notification email and can view this message by logging into the secure HIPAA-compliant patient portal.</span>
+                <div className="flex items-start gap-2.5 px-4 py-3 bg-blue-50/50 border border-blue-100 rounded-xl text-[11px] text-blue-600/80 italic">
+                    <Clock size={16} className="text-blue-400 shrink-0 mt-0.5" />
+                    <span>
+                        {notifyPatient
+                            ? "Patient will receive an email notification and can view this message in the secure portal."
+                            : "Patient will NOT receive an email. They will see this message next time they log in."}
+                    </span>
                 </div>
 
                 {/* Actions */}
@@ -150,8 +173,8 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                         onClick={handleSend}
                         disabled={sending || !patient.email || !body.trim()}
                         className={`flex-2 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-sm transition-all flex items-center justify-center gap-2 shadow-lg ${sending || !patient.email || !body.trim()
-                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20 active:scale-95'
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-500/20 active:scale-95'
                             }`}
                     >
                         {sending ? (
