@@ -787,12 +787,12 @@ router.post('/:id/generate-guest-link', requirePermission('schedule:view'), asyn
         p.encryption_metadata,
         u.first_name as provider_first_name,
         u.last_name as provider_last_name,
-        cs.phone as clinic_phone,
-        cs.name as clinic_name
+        c.phone as clinic_phone,
+        c.display_name as clinic_name
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
       LEFT JOIN users u ON a.provider_id = u.id
-      LEFT JOIN clinic_settings cs ON cs.clinic_id = a.clinic_id
+      LEFT JOIN clinics c ON c.id = a.clinic_id
       WHERE a.id = $1
     `, [id]);
 

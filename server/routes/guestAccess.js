@@ -44,12 +44,12 @@ router.get('/validate', async (req, res) => {
                 a.patient_status,
                 u.first_name as provider_first_name,
                 u.last_name as provider_last_name,
-                cs.phone as clinic_phone,
-                cs.name as clinic_name
+                c.phone as clinic_phone,
+                c.display_name as clinic_name
             FROM guest_access_tokens gat
             JOIN appointments a ON gat.appointment_id = a.id
             LEFT JOIN users u ON a.provider_id = u.id
-            LEFT JOIN clinic_settings cs ON cs.clinic_id = a.clinic_id
+            LEFT JOIN clinics c ON c.id = a.clinic_id
             WHERE gat.token_hash = $1
         `, [tokenHash]);
 
