@@ -110,19 +110,19 @@ class EmailService {
     /**
      * Send New Message Notification
      */
-    async sendNewMessageNotification(email, patientName) {
-        const subject = `New Secure Message in your Patient Portal`;
+    async sendNewMessageNotification(email, patientName, senderName) {
+        const subject = `New Secure Message from ${senderName || 'your provider'}`;
         const portalUrl = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/portal` : 'https://pagemdemr.com/portal';
 
         const html = `
             <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 20px;">
                 <div style="text-align: center; margin-bottom: 30px;">
                     <h2 style="color: #2563eb; margin-bottom: 10px;">New Secure Message</h2>
-                    <div style="width: 50px; h-px; background-color: #2563eb; margin: 10px auto;"></div>
+                    <div style="width: 50px; height: 2px; background-color: #2563eb; margin: 10px auto;"></div>
                 </div>
                 
                 <p style="font-size: 16px; line-height: 1.6;">Hello ${patientName || 'Patient'},</p>
-                <p style="font-size: 16px; line-height: 1.6;">You have received a new secure message from your healthcare provider in the Patient Portal.</p>
+                <p style="font-size: 16px; line-height: 1.6;">You have received a new secure message from <strong>${senderName || 'your healthcare provider'}</strong> in the Patient Portal.</p>
                 
                 <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; border-left: 4px solid #3b82f6; margin: 30px 0;">
                     <p style="font-size: 14px; color: #475569; margin: 0;">For your security and privacy, you must log in to the portal to view the content of this message and reply.</p>

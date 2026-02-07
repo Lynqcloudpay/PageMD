@@ -853,7 +853,8 @@ router.post('/:id/notes', async (req, res) => {
           const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', [item.patient_id]);
           const p = patientRes.rows[0];
           if (p && p.email) {
-            emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`);
+            const senderName = `${req.user.first_name} ${req.user.last_name}`.trim() || req.user.email;
+            emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`, senderName);
           }
         } catch (emailErr) {
           console.warn('Failed to send portal message notification email:', emailErr);
@@ -1176,7 +1177,8 @@ router.post('/patient-message', async (req, res) => {
       const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', [patientId]);
       const p = patientRes.rows[0];
       if (p && p.email) {
-        emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`);
+        const senderName = `${req.user.first_name} ${req.user.last_name}`.trim() || req.user.email;
+        emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`, senderName);
       }
     } catch (emailErr) {
       console.warn('Failed to send portal message notification email:', emailErr);
