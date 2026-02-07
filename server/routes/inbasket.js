@@ -1182,23 +1182,31 @@ router.post('/patient-message', async (req, res) => {
         const patientQueryParams = [patientId];
         console.log(`[Inbasket] 📧 Fetching patient details for email notification (ID: ${patientId})`);
 
-        const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', patientQueryParams);
+        const patientRes = await client.query('SELECT first_name, last_name, email, encryption_metadata FROM patients WHERE id = $1', patientQueryParams);
         const p = patientRes.rows[0];
 
         if (p) {
           let recipientEmail = p.email;
 
-          // Auto-decrypt if it looks like an encrypted string (no '@' and high entropy)
-          if (recipientEmail && !recipientEmail.includes('@') && recipientEmail.length > 50) {
+          // Auto-decrypt if it looks like an encrypted string (no '@' and long)
+          if (recipientEmail && !recipientEmail.includes('@') && recipientEmail.length > 30) {
             try {
-              console.log(`[Inbasket] 🔐 Decrypting patient email...`);
-              // Attempt to decrypt using the service
-              // Note: We need to check if it's stored as simple encrypted string or with metadata
-              // For now, assume simple string or try both
-              recipientEmail = await encryptionService.decryptField(recipientEmail);
+              console.log(`[Inbasket] 🔐 Decrypting patient email for ${patientId}...`);
+
+              // Parse metadata if it's a string, or use as object
+              let metadata = p.encryption_metadata;
+              if (typeof metadata === 'string') {
+                try { metadata = JSON.parse(metadata); } catch (e) { }
+              }
+
+              // Use the service helper
+              const decrypted = await encryptionService.decryptFieldFromBase64(recipientEmail, metadata || {});
+              if (decrypted) {
+                recipientEmail = decrypted;
+                console.log(`[Inbasket] 🔓 Decryption successful.`);
+              }
             } catch (decryptErr) {
               console.warn(`[Inbasket] ⚠️ Failed to decrypt email for patient ${patientId}:`, decryptErr.message);
-              // Fallback: It might be a regular string that just looks weird, or decryption failed
             }
           }
 
