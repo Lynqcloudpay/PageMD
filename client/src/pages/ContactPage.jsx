@@ -1,20 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import {
-    Mail,
-    Phone,
-    MapPin,
-    Send,
-    Clock,
-    MessageSquare,
-    CheckCircle,
-    Loader2,
-    ArrowRight,
-    Zap,
-    Shield,
-    Activity,
-    ChevronRight
-} from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Clock, MessageSquare, CheckCircle, Loader2 } from 'lucide-react';
 import LandingNav from '../components/LandingNav';
 
 const ContactPage = () => {
@@ -36,7 +22,7 @@ const ContactPage = () => {
         referral_token: ''
     });
 
-    // Pre-fill from URL params
+    // Pre-fill from URL params (e.g., from pricing page)
     useEffect(() => {
         const plan = searchParams.get('plan');
         const interest = searchParams.get('interest');
@@ -73,10 +59,6 @@ const ContactPage = () => {
         };
 
         populateForm();
-
-        document.title = "Contact Us | Request Access | PageMD";
-        const meta = document.querySelector('meta[name="description"]');
-        if (meta) meta.setAttribute("content", "Get in touch with the PageMD team. Schedule a demo or request sandbox access to experience the intuitive angle.");
     }, [searchParams]);
 
     const handleSubmit = async (e) => {
@@ -111,195 +93,235 @@ const ContactPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50/50">
+        <div className="min-h-screen bg-white">
             <LandingNav />
 
-            {/* Premium Hero */}
-            <section className="relative pt-32 pb-16 lg:pt-48 lg:pb-24 px-6 bg-white overflow-hidden">
-                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-[800px] h-[800px] bg-sky-50 rounded-full blur-[120px] opacity-60 pointer-events-none"></div>
-
-                <div className="max-w-6xl mx-auto text-center relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-700 rounded-full text-[11px] font-black tracking-[0.2em] uppercase mb-10 border border-sky-100/50">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Direct Access
-                    </div>
-                    <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 leading-[0.9] mb-8 tracking-tighter">
-                        Let's talk <br />
-                        <span className="text-sky-500">intelligence.</span>
+            {/* Hero */}
+            <section className="pt-28 pb-16 px-6 bg-gradient-to-b from-gray-50 to-white">
+                <div className="max-w-4xl mx-auto text-center">
+                    <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+                        Let's Talk About Your Practice
                     </h1>
-                    <p className="text-xl text-slate-500 max-w-2xl mx-auto font-medium leading-relaxed">
-                        Ready to see how PageMD fits your workflow? Our team is standing by to assist.
+                    <p className="text-xl text-gray-600 leading-relaxed">
+                        Schedule a demo, ask questions, or get help choosing the right plan.
+                        Our team is here to help you succeed.
                     </p>
                 </div>
             </section>
 
-            {/* Contact Form & Cards */}
-            <section className="py-24 lg:py-32 px-6">
-                <div className="max-w-7xl mx-auto">
-                    <div className="grid lg:grid-cols-12 gap-16 items-start">
-
-                        {/* Information Side */}
-                        <div className="lg:col-span-5 space-y-12">
-                            <div>
-                                <h2 className="text-3xl font-black text-slate-900 mb-8 tracking-tight">Prefer a direct line?</h2>
-                                <div className="space-y-6">
-                                    <div className="flex gap-6 items-center p-6 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all">
-                                        <div className="w-14 h-14 rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center shrink-0 border border-sky-100/50">
-                                            <Mail className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email Us</p>
-                                            <a href="mailto:hello@pagemdemr.com" className="text-lg font-bold text-slate-900 hover:text-sky-500 transition-colors">hello@pagemdemr.com</a>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-6 items-center p-6 bg-white border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all">
-                                        <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0 border border-blue-100/50">
-                                            <Clock className="w-7 h-7" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Response Time</p>
-                                            <p className="text-lg font-bold text-slate-900 uppercase">Within 4 business hours</p>
-                                        </div>
-                                    </div>
-                                </div>
+            {/* Contact Options */}
+            <section className="py-12 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid md:grid-cols-3 gap-6 mb-16">
+                        <div className="bg-gray-50 rounded-xl p-6 text-center">
+                            <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                                <MessageSquare className="w-6 h-6 text-blue-600" />
                             </div>
-
-                            <div className="p-10 bg-slate-900 rounded-[2.5rem] text-white relative overflow-hidden shadow-2xl">
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-sky-500 rounded-full blur-[80px] opacity-20 pointer-events-none"></div>
-                                <h3 className="text-2xl font-black mb-6 relative z-10">Why PageMD?</h3>
-                                <ul className="space-y-6 relative z-10">
-                                    {[
-                                        { title: "Zero Lock-in", desc: "Month-to-month clinical freedom." },
-                                        { title: "HIPAA Elite", desc: "Beyond compliance, absolute privacy." },
-                                        { title: "Physician-Led", desc: "Designed for the exam room flow." }
-                                    ].map((item, i) => (
-                                        <li key={i} className="flex gap-5 items-start">
-                                            <CheckCircle className="w-6 h-6 text-sky-400 shrink-0 mt-1" />
-                                            <div>
-                                                <p className="font-black text-sm uppercase tracking-widest text-sky-400 mb-1">{item.title}</p>
-                                                <p className="text-slate-400 font-medium text-sm">{item.desc}</p>
-                                            </div>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Schedule a Demo</h3>
+                            <p className="text-sm text-gray-600 mb-4">See PageMD in action with a personalized walkthrough.</p>
+                            <span className="text-sm text-blue-600 font-medium">30-minute session</span>
                         </div>
+                        <div className="bg-gray-50 rounded-xl p-6 text-center">
+                            <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                                <Mail className="w-6 h-6 text-emerald-600" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Email Us</h3>
+                            <p className="text-sm text-gray-600 mb-4">Questions? Send us a message anytime.</p>
+                            <a href="mailto:hello@pagemdemr.com" className="text-sm text-blue-600 font-medium">hello@pagemdemr.com</a>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-6 text-center">
+                            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mx-auto mb-4">
+                                <Clock className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">Response Time</h3>
+                            <p className="text-sm text-gray-600 mb-4">We respond to all inquiries promptly.</p>
+                            <span className="text-sm text-blue-600 font-medium">Within 1 business day</span>
+                        </div>
+                    </div>
 
-                        {/* Form Side */}
-                        <div className="lg:col-span-7 bg-white p-10 lg:p-16 rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden">
+                    {/* Contact Form */}
+                    <div className="grid lg:grid-cols-2 gap-16">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Get in Touch</h2>
+
                             {submitted ? (
-                                <div className="text-center py-20">
-                                    <div className="w-24 h-24 bg-sky-50 text-sky-500 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
-                                        <CheckCircle className="w-12 h-12" />
-                                    </div>
-                                    <h2 className="text-4xl font-black text-slate-900 mb-4">Message Sent.</h2>
-                                    <p className="text-slate-500 font-medium mb-10">Our clinical solutions team will reach out shortly.</p>
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-8 text-center">
+                                    <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+                                    <h3 className="text-xl font-bold text-gray-900 mb-2">Thank You!</h3>
+                                    <p className="text-gray-600 mb-4">
+                                        Your inquiry has been received. Our sales team will contact you within 1 business day.
+                                    </p>
                                     <button
-                                        onClick={() => setSubmitted(false)}
-                                        className="text-sky-500 font-black text-sm uppercase tracking-widest hover:text-slate-900 transition-colors"
+                                        onClick={() => { setSubmitted(false); setFormData({ name: '', email: '', phone: '', practice: '', providers: '', message: '', interest: 'demo' }); }}
+                                        className="text-blue-600 font-medium hover:underline"
                                     >
                                         Submit another inquiry
                                     </button>
                                 </div>
                             ) : (
-                                <form onSubmit={handleSubmit} className="space-y-8">
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Full Name</label>
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Your Name *</label>
                                             <input
-                                                type="text" required value={formData.name}
+                                                type="text"
+                                                required
+                                                value={formData.name}
                                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                className="w-full px-8 py-5 bg-slate-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-slate-900 font-bold"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                 placeholder="Dr. Jane Smith"
                                             />
                                         </div>
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Work Email</label>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                                             <input
-                                                type="email" required value={formData.email}
+                                                type="email"
+                                                required
+                                                value={formData.email}
                                                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                className="w-full px-8 py-5 bg-slate-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-slate-900 font-bold"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                 placeholder="jane@practice.com"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="grid md:grid-cols-2 gap-8">
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Practice Name</label>
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                                             <input
-                                                type="text" value={formData.practice}
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                placeholder="(555) 123-4567"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Practice Name</label>
+                                            <input
+                                                type="text"
+                                                value={formData.practice}
                                                 onChange={(e) => setFormData({ ...formData, practice: e.target.value })}
-                                                className="w-full px-8 py-5 bg-slate-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-slate-900 font-bold"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                 placeholder="Smith Family Medicine"
                                             />
                                         </div>
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">I'm Interested In</label>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Number of Providers</label>
+                                            <select
+                                                value={formData.providers}
+                                                onChange={(e) => setFormData({ ...formData, providers: e.target.value })}
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            >
+                                                <option value="">Select...</option>
+                                                <option value="1">1 (Solo Practice)</option>
+                                                <option value="2-5">2-5 Providers</option>
+                                                <option value="6-10">6-10 Providers</option>
+                                                <option value="11+">11+ Providers</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">I'm interested in...</label>
                                             <select
                                                 value={formData.interest}
                                                 onChange={(e) => setFormData({ ...formData, interest: e.target.value })}
-                                                className="w-full px-8 py-5 bg-slate-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-slate-900 font-bold appearance-none cursor-pointer"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                             >
                                                 <option value="demo">Scheduling a Demo</option>
                                                 <option value="sandbox">Sandbox Access</option>
                                                 <option value="pricing">Pricing Information</option>
-                                                <option value="other">Other Inquiry</option>
+                                                <option value="enterprise">Enterprise Solutions</option>
+                                                <option value="other">Other</option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Message</label>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
                                         <textarea
-                                            rows={4} value={formData.message}
+                                            rows={4}
+                                            value={formData.message}
                                             onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                                            className="w-full px-8 py-5 bg-slate-50 border border-transparent rounded-[1.5rem] focus:bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all outline-none text-slate-900 font-bold resize-none"
-                                            placeholder="How can we help you today?"
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                                            placeholder="Tell us about your practice and what you're looking for..."
                                         />
                                     </div>
 
                                     {error && (
-                                        <div className="px-6 py-4 bg-red-50 text-red-700 rounded-2xl text-sm font-bold border border-red-100 animate-shake">
+                                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                                             {error}
                                         </div>
                                     )}
 
                                     <button
-                                        type="submit" disabled={isSubmitting}
-                                        className="w-full py-6 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-700 text-white font-black uppercase tracking-[0.2em] rounded-[1.5rem] shadow-2xl shadow-slate-200 transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-4 text-sm"
+                                        type="submit"
+                                        disabled={isSubmitting}
+                                        className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                                     >
                                         {isSubmitting ? (
                                             <>
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                SUBMITTING...
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Submitting...
                                             </>
                                         ) : (
                                             <>
                                                 Send Message
-                                                <Send className="w-5 h-5" />
+                                                <Send className="w-4 h-4" />
                                             </>
                                         )}
                                     </button>
                                 </form>
                             )}
                         </div>
+
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Why Choose PageMD?</h2>
+                            <div className="space-y-6">
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="font-semibold text-gray-900 mb-2">Built by a Physician</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        PageMD was designed by a practicing physician who understands the daily
+                                        frustrations of bloated, complicated EMR systems. Every feature is built
+                                        for real clinical workflows.
+                                    </p>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="font-semibold text-gray-900 mb-2">No Long-Term Contracts</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        We earn your business every month. No multi-year lock-ins, no early
+                                        termination fees. Stay because you want to, not because you have to.
+                                    </p>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="font-semibold text-gray-900 mb-2">White-Glove Onboarding</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        Our team handles data migration, staff training, and go-live support.
+                                        We're with you every step of the way.
+                                    </p>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-6">
+                                    <h3 className="font-semibold text-gray-900 mb-2">Responsive Support</h3>
+                                    <p className="text-gray-600 text-sm">
+                                        When you need help, you get a real person who understands healthcare.
+                                        No ticket queues, no overseas call centers.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <footer className="py-20 px-6 bg-white border-t border-slate-100">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-12 font-black text-[10px] uppercase tracking-[0.4em] text-slate-400">
-                    <Link to="/" className="flex items-center gap-3 grayscale opacity-40 hover:opacity-100 transition-opacity">
-                        <img src="/logo.png" alt="PageMD" className="h-10" />
-                    </Link>
-                    <div className="flex gap-12">
-                        <Link to="/privacy" className="hover:text-sky-500 transition-colors">Privacy</Link>
-                        <Link to="/terms" className="hover:text-sky-500 transition-colors">Terms</Link>
-                        <Link to="/security" className="hover:text-sky-500 transition-colors">Security</Link>
+            {/* Footer */}
+            <footer className="py-8 px-6 bg-gray-900 mt-20">
+                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <img src="/logo.png" alt="PageMD" className="h-8 w-auto brightness-0 invert" />
                     </div>
-                    <div className="text-slate-200">© {currentYear} PageMD Inc.</div>
+                    <div className="text-sm text-gray-500">© {currentYear} PageMD. All rights reserved.</div>
                 </div>
             </footer>
         </div>

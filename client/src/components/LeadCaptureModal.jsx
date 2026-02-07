@@ -365,15 +365,15 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                 </button>
 
                 <div className="mb-10 text-center">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-50 text-sky-700 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4 border border-sky-100/50">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold tracking-widest uppercase mb-4 border border-emerald-100">
                         <Zap className="w-3 h-3 fill-current" />
                         Secure Access
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3 tracking-tighter">
-                        Experience PageMD <span className="text-sky-500">Now</span>
+                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3 tracking-tight">
+                        Experience PageMD <span className="text-blue-600">Now</span>
                     </h2>
                     <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                        Enter your professional details to access your private clinical sandbox.
+                        Enter your professional details to access your private sandbox.
                     </p>
                 </div>
 
@@ -433,7 +433,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
 
                     <button
                         type="submit" disabled={isSubmitting}
-                        className="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-[0.2em] rounded-2xl shadow-2xl shadow-slate-200 transition-all hover:-translate-y-1 active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-4 text-sm mt-4"
+                        className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-3 text-lg mt-4"
                     >
                         {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Get Started <ArrowRight className="w-5 h-5" /></>}
                     </button>
