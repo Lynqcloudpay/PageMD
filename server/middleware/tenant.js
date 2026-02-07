@@ -92,12 +92,13 @@ const resolveTenant = async (req, res, next) => {
         }
     }
 
-    // D. Recognition by Portal Token (for Invitations/Registration)
+    // D. Recognition by Portal Token (for Invitations/Registration/Guest Access)
     const isPortalInviteVerify = req.path.includes('/portal/auth/invite/');
     const isPortalRegister = req.path === '/portal/auth/register' || req.path === '/api/portal/auth/register';
     const isIntakePublic = req.path.includes('/intake/public/');
+    const isGuestVisit = req.path.includes('/visit/guest');
 
-    if (!slug && !lookupSchema && (isPortalInviteVerify || isPortalRegister || isIntakePublic)) {
+    if (!slug && !lookupSchema && (isPortalInviteVerify || isPortalRegister || isIntakePublic || isGuestVisit)) {
         try {
             const crypto = require('crypto');
             let token = null;
@@ -106,27 +107,41 @@ const resolveTenant = async (req, res, next) => {
                 token = req.path.split('/').pop();
             } else if (isIntakePublic) {
                 token = req.params.token || req.path.split('/').pop();
+            } else if (isGuestVisit) {
+                token = req.query.token;
             } else {
                 token = req.body ? req.body.token : null;
             }
 
             if (token) {
+                // Ensure token is clean (trim whitespace)
+                token = token.trim();
                 const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
                 // Search across all safe tenant schemas
                 const schemas = await pool.controlPool.query('SELECT schema_name FROM clinics WHERE status = \'active\'');
                 for (const row of schemas.rows) {
                     const schema = row.schema_name;
 
-                    // Search in patient_portal_invites OR intake_sessions (new universal intake)
-                    const tableToCheck = isIntakePublic ? 'intake_sessions' : 'patient_portal_invites';
+                    // Search in appropriate table based on request type
+                    let tableToCheck = 'patient_portal_invites';
+                    let colToCheck = 'token_hash';
+
+                    if (isIntakePublic) {
+                        tableToCheck = 'intake_sessions';
+                        colToCheck = 'resume_code_hash';
+                    } else if (isGuestVisit) {
+                        tableToCheck = 'guest_access_tokens';
+                        colToCheck = 'token_hash';
+                    }
+
                     const check = await pool.controlPool.query(
-                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${isIntakePublic ? 'resume_code_hash' : 'token_hash'} = $1 AND expires_at > CURRENT_TIMESTAMP`,
+                        `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck} = $1 AND expires_at > CURRENT_TIMESTAMP`,
                         [tokenHash]
                     );
 
                     if (check.rows.length > 0) {
                         lookupSchema = schema;
-                        console.log(`[Tenant] Found intake/portal token in schema: ${schema}`);
+                        console.log(`[Tenant] Found token in schema: ${schema} (Table: ${tableToCheck})`);
                         break;
                     }
                 }
