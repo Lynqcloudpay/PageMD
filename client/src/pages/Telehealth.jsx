@@ -541,7 +541,10 @@ const Telehealth = () => {
   // Click outside listener for dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (activeDropdown && !event.target.closest('button[data-dropdown-trigger="true"]')) {
+      const isTrigger = event.target.closest('button[data-dropdown-trigger="true"]');
+      const isMenu = event.target.closest('[data-dropdown-menu="true"]');
+
+      if (activeDropdown && !isTrigger && !isMenu) {
         setActiveDropdown(null);
       }
     };
@@ -1682,7 +1685,10 @@ const Telehealth = () => {
                   </Button>
 
                   {activeDropdown === appt.id && (
-                    <div className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300">
+                    <div
+                      data-dropdown-menu="true"
+                      className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300"
+                    >
                       <button
                         onClick={() => {
                           handleStartCall(appt, { video: true });
