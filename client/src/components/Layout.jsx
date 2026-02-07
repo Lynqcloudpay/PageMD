@@ -295,7 +295,7 @@ const Layout = ({ children }) => {
                     className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-2 py-4`}
                 >
                     <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-br from-blue-50/60 via-white/80 to-blue-100/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/60 relative overflow-hidden transition-all duration-500",
+                        "flex flex-col h-full bg-gradient-to-br from-blue-100/70 via-white/90 to-blue-200/70 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-500",
                         sidebarCollapsed ? "rounded-[2.2rem]" : "rounded-[2.5rem]"
                     )}>
                         {/* Decorative background bubbles */}
@@ -521,10 +521,10 @@ const Layout = ({ children }) => {
                 <main
                     className={cn(
                         "flex-1 transition-all duration-500 ease-in-out relative flex flex-col h-screen overflow-hidden",
-                        sidebarCollapsed ? "ml-[5.5rem]" : "ml-[18.5rem]"
+                        sidebarCollapsed ? "ml-[6.5rem]" : "ml-[19.5rem]"
                     )}
                 >
-                    <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-100 overflow-hidden flex flex-col relative">
+                    <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_15px_40px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col relative">
                         {/* Header inside the bubble */}
                         <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-20">
                             <div className="flex-1 overflow-hidden">
