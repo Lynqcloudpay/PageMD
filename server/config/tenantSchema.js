@@ -2272,6 +2272,8 @@ ALTER TABLE ONLY guest_access_tokens
 ALTER TABLE ONLY guest_access_tokens
     ADD CONSTRAINT guest_access_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id);
 
+ALTER TABLE audit_events ALTER COLUMN actor_user_id DROP NOT NULL;
+
 `;
 
 module.exports = tenantSchemaSQL;

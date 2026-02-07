@@ -53,8 +53,8 @@ class AuditService {
             } = event;
 
             const {
-                userId,
-                role,
+                userId = '00000000-0000-0000-0000-000000000000',
+                role = 'system',
                 tenantId,
                 ip,
                 userAgent,
