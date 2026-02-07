@@ -574,7 +574,21 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                             <div className="flex-1 min-w-0">
                                 <h2 className="font-bold text-gray-900 truncate tracking-tight">{patient?.first_name} {patient?.last_name}</h2>
                                 <p className="text-xs text-gray-500 font-medium">
-                                    {patient?.dob ? `${new Date(patient.dob).toLocaleDateString()} (${new Date().getFullYear() - new Date(patient.dob).getFullYear()}yo)` : 'DOB: N/A'}
+                                    {patient?.dob ? (() => {
+                                        const date = new Date(patient.dob);
+                                        const year = date.getUTCFullYear();
+                                        const month = date.getUTCMonth() + 1;
+                                        const day = date.getUTCDate();
+
+                                        const today = new Date();
+                                        let age = today.getFullYear() - year;
+                                        const mDiff = (today.getMonth() + 1) - month;
+                                        if (mDiff < 0 || (mDiff === 0 && today.getDate() < day)) {
+                                            age--;
+                                        }
+
+                                        return `${month}/${day}/${year} (${age}yo)`;
+                                    })() : 'DOB: N/A'}
                                 </p>
                             </div>
                         </div>
@@ -957,7 +971,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                                         </span>
                                                                         <span className="text-xs text-gray-500">• {note.visit_type || 'Office Visit'}</span>
                                                                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${(note.status || '').toLowerCase().trim() === 'retracted' ? 'bg-red-50 text-red-700' :
-                                                                                note.locked || note.note_signed_at ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                                                                            note.locked || note.note_signed_at ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
                                                                             }`}>
                                                                             {(note.status || '').toLowerCase().trim() === 'retracted' ? 'Retracted' :
                                                                                 note.locked || note.note_signed_at ? 'Signed' : 'Draft'}
