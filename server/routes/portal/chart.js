@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../../db');
 const { authenticatePortal, requirePortalPermission } = require('../../middleware/portalAuth');
+const patientEncryptionService = require('../../services/patientEncryptionService');
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.get('/me', async (req, res) => {
     try {
         const result = await pool.query(`
             SELECT id, first_name, last_name, dob, sex, phone, email, 
-                   address_line1, address_line2, city, state, zip
+                   address_line1, address_line2, city, state, zip, encryption_metadata
             FROM patients
             WHERE id = $1
         `, [req.portalAccount.patient_id]);
@@ -24,7 +25,8 @@ router.get('/me', async (req, res) => {
             return res.status(404).json({ error: 'Patient data not found' });
         }
 
-        res.json(result.rows[0]);
+        const decrypted = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
+        res.json(decrypted);
     } catch (error) {
         console.error('[Portal Chart] Error fetching me:', error);
         res.status(500).json({ error: 'Failed to fetch patient data' });
@@ -202,7 +204,7 @@ router.get('/staff', async (req, res) => {
 router.get('/patient-profile', async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT id, first_name, last_name, mrn, dob, sex, primary_care_provider
+            SELECT id, first_name, last_name, mrn, dob, sex, primary_care_provider, encryption_metadata
             FROM patients
             WHERE id = $1
         `, [req.portalAccount.patient_id]);
@@ -211,7 +213,8 @@ router.get('/patient-profile', async (req, res) => {
             return res.status(404).json({ error: 'Patient not found' });
         }
 
-        res.json(result.rows[0]);
+        const decrypted = await patientEncryptionService.decryptPatientPHI(result.rows[0]);
+        res.json(decrypted);
     } catch (error) {
         console.error('[Portal Chart] Error fetching patient profile:', error);
         res.status(500).json({ error: 'Failed to fetch patient profile' });
