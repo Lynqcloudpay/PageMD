@@ -1175,17 +1175,31 @@ router.post('/patient-message', async (req, res) => {
 
     // Trigger Email Notification (non-blocking)
     // Trigger Email Notification (non-blocking, only if requested)
+    // Trigger Email Notification (non-blocking, only if requested)
     if (req.body.notifyPatient) {
       try {
-        const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', [patientId]);
+        const patientQueryParams = [patientId];
+        console.log(`[Inbasket] 📧 Fetching patient details for email notification (ID: ${patientId})`);
+
+        const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', patientQueryParams);
         const p = patientRes.rows[0];
-        if (p && p.email) {
+
+        if (p && p.email && p.email.includes('@')) {
           const senderName = `${req.user.first_name} ${req.user.last_name}`.trim() || req.user.email;
-          emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`, senderName);
+          console.log(`[Inbasket] 📧 Sending notification to ${p.email} from ${senderName}`);
+
+          // CRITICAL: Await the email service to ensure it completes or throws before response
+          await emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`, senderName);
+
+          console.log(`[Inbasket] ✅ Notification email sent successfully to ${p.email}`);
+        } else {
+          console.warn(`[Inbasket] ⚠️ Skipping email: Patient ${patientId} has no valid email (Found: ${p ? p.email : 'null'})`);
         }
       } catch (emailErr) {
-        console.warn('Failed to send portal message notification email:', emailErr);
+        console.error('[Inbasket] ❌ Failed to send portal message notification email:', emailErr);
       }
+    } else {
+      console.log('[Inbasket] 🔕 Email notification skipped (notifyPatient = false/undefined)');
     }
 
     res.json({ success: true, item: fullItem.rows[0], threadId });
