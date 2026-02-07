@@ -663,7 +663,18 @@ const Telehealth = () => {
         current_room: null
       });
       console.log('Patient checked out (Call Ended).');
-      alert('Patient successfully checked out.');
+
+      // Update local state so UI reflects checkout status
+      setActiveCall(prev => prev ? {
+        ...prev,
+        status: 'completed',
+        patient_status: 'checked_out',
+        status_history: [
+          ...(prev.status_history || []),
+          { status: 'checked_out', timestamp: now.toISOString(), changed_by: 'Telehealth Provider' }
+        ]
+      } : null);
+
       setShowEndCallChoices(false);
       // We don't close workspace yet so they can finish the note
     } catch (e) {
@@ -863,9 +874,13 @@ const Telehealth = () => {
                   </button>
                   <button
                     onClick={handleCheckoutOnly}
-                    className="px-6 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                    disabled={activeCall?.patient_status === 'checked_out'}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-colors shadow-sm ${activeCall?.patient_status === 'checked_out'
+                      ? 'bg-slate-100 text-slate-500 cursor-default border border-slate-200'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      }`}
                   >
-                    Checkout Patient
+                    {activeCall?.patient_status === 'checked_out' ? 'Patient Checked Out' : 'Checkout Patient'}
                   </button>
                 </div>
               </div>
