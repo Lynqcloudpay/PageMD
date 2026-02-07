@@ -1204,15 +1204,11 @@ const Schedule = () => {
                                                 }}
                                             >
                                                 <div className="h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative">
-                                                    {/* Strikethrough Line */}
-                                                    {isCancelledOrNoShow && (
-                                                        <div className="absolute top-1/2 left-1 right-1 h-[1px] bg-red-400/80 z-20 pointer-events-none" />
-                                                    )}
 
                                                     {/* Column 1: Patient Name - Fixed width with truncation */}
                                                     <div className="flex-shrink-0 w-[120px] min-w-[120px] max-w-[120px]">
                                                         <span
-                                                            className={`font-semibold text-[9px] leading-tight ${isCancelledOrNoShow ? 'text-gray-500' : color.text} hover:underline cursor-pointer truncate block w-full`}
+                                                            className={`font-semibold text-[9px] leading-tight ${isCancelledOrNoShow ? 'text-gray-400 line-through decoration-gray-400' : color.text} hover:underline cursor-pointer truncate block w-full`}
                                                             onClick={(e) => handlePatientNameClick(e, appt)}
                                                             title={appt.patientName}
                                                         >
@@ -1223,9 +1219,9 @@ const Schedule = () => {
                                                     {/* Column 2: Appointment Type + Duration - Fixed width */}
                                                     <div className="flex-shrink-0 w-[85px] min-w-[85px] max-w-[85px]">
                                                         <div className="flex items-center gap-0.5">
-                                                            <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-500' : 'text-gray-700'} truncate`}>{appt.type}</span>
+                                                            <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-400 line-through decoration-gray-400' : 'text-gray-700'} truncate`}>{appt.type}</span>
                                                             <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-400' : 'text-gray-400'}`}>-</span>
-                                                            <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-500' : 'text-gray-700'} whitespace-nowrap`}>{appt.duration}m</span>
+                                                            <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-400 line-through decoration-gray-400' : 'text-gray-700'} whitespace-nowrap`}>{appt.duration}m</span>
                                                         </div>
                                                     </div>
 

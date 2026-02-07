@@ -1623,19 +1623,15 @@ const Telehealth = () => {
 
                     // 1. Visit Docs Signed (Complete)
                     if (encounterStatus === 'signed') {
-                      badge = { label: 'Docs Signed', color: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: CheckCircle };
+                      badge = { label: 'Completed', color: 'bg-emerald-50 text-emerald-600 border-emerald-100', icon: CheckCircle };
                     }
-                    // 2. Visit Ended / Pending Signature
-                    else if (['checked_out', 'completed'].includes(status)) {
-                      if (appt.encounter_id) {
-                        badge = { label: 'Pending Signature', color: 'bg-amber-50 text-amber-600 border-amber-100', icon: FileText };
-                      } else {
-                        badge = { label: 'Visit Ended', color: 'bg-slate-100 text-slate-600 border-slate-200', icon: Clock };
-                      }
+                    // 2. Pending Note (Visit done/in progress but note not signed)
+                    else if (appt.encounter_id && !['signed', 'cancelled'].includes(encounterStatus)) {
+                      badge = { label: 'Pending Note', color: 'bg-amber-50 text-amber-600 border-amber-100', icon: FileText };
                     }
-                    // 3. Visit In Progress (Status OR open encounter)
-                    else if (['in_room', 'in-room', 'in_progress'].includes(status) || (appt.encounter_id && !['signed', 'cancelled'].includes(encounterStatus))) {
-                      badge = { label: 'Visit In Progress', color: 'bg-violet-50 text-violet-600 border-violet-100 animate-pulse', icon: Video };
+                    // 3. Visit In Progress (Video active, no note started yet)
+                    else if (['in_room', 'in-room', 'in_progress'].includes(status)) {
+                      badge = { label: 'In Progress', color: 'bg-violet-50 text-violet-600 border-violet-100 animate-pulse', icon: Video };
                     }
                     // 4. Patient Ready
                     else if (['checked_in', 'checked-in'].includes(status)) {
