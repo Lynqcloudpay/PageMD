@@ -1,6 +1,6 @@
 {
   "name": "paper-emr",
-  "version": "1.0.1",
+  "version": "1.3.0",
   "description": "PageMD - Simple Paper-Style EMR MVP for Clinic",
   "main": "server/index.js",
   "scripts": {
