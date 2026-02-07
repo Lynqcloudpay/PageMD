@@ -847,13 +847,9 @@ router.post('/:id/generate-guest-link', requirePermission('schedule:view'), asyn
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    // Calculate expiry: appointment time + duration + 90 minutes
-    const appointmentDate = new Date(appt.appointment_date);
-    const [hours, minutes] = (appt.appointment_time || '09:00').split(':').map(Number);
-    appointmentDate.setHours(hours, minutes, 0, 0);
-
-    const durationMinutes = appt.duration || 30;
-    const expiresAt = new Date(appointmentDate.getTime() + (durationMinutes + 90) * 60 * 1000);
+    // Calculate expiry: 24 hours from link generation
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
     // Invalidate any existing tokens for this appointment
     await pool.query(`
