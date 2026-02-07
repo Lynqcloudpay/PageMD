@@ -23,10 +23,13 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
              p.dob as patient_dob,
              u.first_name as provider_first_name,
              u.last_name as provider_last_name,
-             u.id as provider_id
+             u.id as provider_id,
+             v.id as encounter_id,
+             v.status as encounter_status
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
       JOIN users u ON a.provider_id = u.id
+      LEFT JOIN visits v ON a.id = v.appointment_id
       WHERE 1=1
     `;
 
@@ -116,7 +119,9 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
         checkout_time: row.checkout_time ?? null,
         cancellation_reason: row.cancellation_reason ?? null,
         patient_dob: row.patient_dob,
-        visit_method: row.visit_method || 'office'
+        visit_method: row.visit_method || 'office',
+        encounter_id: row.encounter_id,
+        encounter_status: row.encounter_status
       };
     }));
 

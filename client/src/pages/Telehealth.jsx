@@ -403,7 +403,7 @@ const Telehealth = () => {
   const handleSendGuestLink = async (apptId) => {
     setSendingGuestLink(apptId);
     try {
-      const res = await api.post(`/api/appointments/${apptId}/generate-guest-link`);
+      const res = await api.post(`/appointments/${apptId}/generate-guest-link`);
       if (res.data.success) {
         alert(`Guest link sent to ${res.data.sentTo}`);
       } else {
@@ -1493,9 +1493,11 @@ const Telehealth = () => {
                       )}
                       {creatingRoom === appt.id
                         ? 'Connecting...'
-                        : (appt.status === 'in_progress' || appt.status === 'arrived')
-                          ? 'Resume Visit'
-                          : 'Start Call'
+                        : (appt.encounter_id && appt.encounter_status !== 'signed')
+                          ? 'Continue Call'
+                          : (appt.status === 'in_progress' || appt.status === 'in-progress' || appt.status === 'arrived')
+                            ? 'Resume Visit'
+                            : 'Start Call'
                       }
                     </Button>
                   </div>
