@@ -4,7 +4,6 @@ const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { enrichWithPatientNames, getPatientDisplayName } = require('../services/patientNameUtils');
 const emailService = require('../services/emailService');
 const encryptionService = require('../services/encryptionService');
-const { getIO } = require('../socket');
 
 const router = express.Router();
 router.use(authenticate);
