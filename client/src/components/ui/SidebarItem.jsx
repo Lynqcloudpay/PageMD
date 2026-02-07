@@ -7,7 +7,7 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
         <Link
             to={to}
             className={cn(
-                "group relative flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 overflow-hidden mb-1",
+                "group relative flex items-center gap-3 px-4 py-2.25 rounded-2xl transition-all duration-300 overflow-hidden mb-0.5",
                 active
                     ? "text-primary-900 bg-white/80 shadow-sm backdrop-blur-md"
                     : "text-slate-600 hover:text-primary-700"

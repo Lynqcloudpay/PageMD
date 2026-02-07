@@ -286,70 +286,81 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-white transition-colors">
+        <div className="flex flex-col min-h-screen bg-slate-50 transition-colors">
             {user?.isSandbox && <DemoBanner />}
             <div className="flex flex-1">
 
                 {/* Patient Tabs + Alert Bell */}
-                <div className="fixed top-0 left-72 right-0 z-20 bg-white border-b border-deep-gray/10 shadow-sm flex items-center justify-between" style={{ height: '48px' }}>
+                <div className={cn(
+                    "fixed top-4 z-20 transition-all duration-500 flex items-center justify-between",
+                    sidebarCollapsed ? "left-28 shadow-sm" : "left-[19rem] shadow-sm",
+                    "right-4 h-12 bg-white/80 backdrop-blur-md border border-white/50 rounded-2xl px-2"
+                )}>
                     <div className="flex-1 overflow-hidden">
                         <PatientTabs />
                     </div>
-                    <div className="flex items-center gap-2 px-4 flex-shrink-0">
+                    <div className="flex items-center gap-2 px-3 flex-shrink-0 border-l border-slate-100 ml-2">
                         <AlertBell />
                     </div>
                 </div>
 
                 {/* Sidebar - Redesigned as a Soft Bubble */}
                 <aside
-                    className={`${sidebarCollapsed ? 'w-24' : 'w-72'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
+                    className={`${sidebarCollapsed ? 'w-24' : 'w-[18rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-3 py-4`}
                 >
                     <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-b from-blue-50/90 to-blue-100/90 backdrop-blur-md rounded-[2.5rem] shadow-2xl border border-white/50 relative overflow-hidden transition-all duration-500",
+                        "flex flex-col h-full bg-gradient-to-b from-blue-100/40 to-blue-200/40 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-white relative overflow-hidden transition-all duration-500",
                         sidebarCollapsed ? "rounded-[2rem]" : "rounded-[2.5rem]"
                     )}>
-                        {/* Decorative background bubbles */}
-                        <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+                        {/* Decorative background gradients */}
+                        <div className="absolute -top-20 -left-20 w-64 h-64 bg-white/40 rounded-full blur-[100px] pointer-events-none animate-pulse" />
+                        <div className="absolute top-1/2 -right-20 w-48 h-48 bg-blue-400/20 rounded-full blur-[80px] pointer-events-none" />
 
-                        {/* Logo/Brand Area */}
-                        <div className="h-24 px-6 flex items-center justify-between relative z-10">
-                            {!sidebarCollapsed && (
-                                <Link to="/dashboard" className="flex items-center space-x-3 group">
-                                    <div className="p-2 bg-white/80 rounded-2xl shadow-sm border border-white/50 transition-transform group-hover:scale-105 duration-300">
-                                        <img
-                                            src="/logo.png"
-                                            alt="PageMD Logo"
-                                            className="h-8 w-auto object-contain max-w-[150px]"
-                                            onError={(e) => { e.target.style.display = 'none'; }}
-                                        />
-                                    </div>
-                                </Link>
-                            )}
-                            {sidebarCollapsed && (
-                                <div className="mx-auto p-2 bg-white/80 rounded-xl shadow-sm">
-                                    <img
-                                        src="/logo.png"
-                                        alt="PageMD"
-                                        className="h-6 w-auto object-contain"
-                                        onError={(e) => { e.target.style.display = 'none'; }}
-                                    />
-                                </div>
+                        {/* Logo/Brand Area + Collapse button */}
+                        <div className="px-5 py-6 flex items-center justify-between relative z-10">
+                            {!sidebarCollapsed ? (
+                                <>
+                                    <Link to="/dashboard" className="flex items-center group">
+                                        <div className="p-1 transition-all group-hover:scale-105 duration-300">
+                                            <img
+                                                src="/logo.png"
+                                                alt="PageMD Logo"
+                                                className="h-8 w-auto object-contain max-w-[140px]"
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                            />
+                                        </div>
+                                    </Link>
+                                    <button
+                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                        className="p-2.5 rounded-xl bg-white/60 hover:bg-white text-blue-600 border border-white shadow-sm transition-all hover:scale-110 active:scale-95 group ml-2"
+                                        title="Collapse sidebar"
+                                    >
+                                        <Menu className="w-4 h-4 transition-transform duration-500 group-hover:rotate-180" />
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                    className="mx-auto p-3 rounded-2xl bg-white/80 hover:bg-white text-blue-600 border border-white shadow-md transition-all hover:scale-110 active:scale-95 group"
+                                    title="Expand sidebar"
+                                >
+                                    <Menu className="w-5 h-5 transition-transform duration-500 group-hover:rotate-180" />
+                                </button>
                             )}
                         </div>
 
-                        {/* Navigation Section */}
-                        <nav className="flex-1 overflow-y-auto hide-scrollbar px-3 py-2 flex flex-col relative z-10">
+                        {/* Navigation Section - COMPACT & NO SCROLL */}
+                        <nav className="flex-1 overflow-hidden px-3 py-0 flex flex-col relative z-10 gap-4">
                             {/* Primary Navigation */}
-                            <div className="mb-6">
+                            <div className="flex-shrink-0">
                                 {!sidebarCollapsed && (
-                                    <div className="px-4 mb-3">
-                                        <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-[0.2em]">
-                                            Main Menu
+                                    <div className="px-4 mb-2">
+                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.25em]">
+                                            Navigation
                                         </div>
                                     </div>
                                 )}
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                     {navigationSection.map((item) => (
                                         <SidebarItem
                                             key={item.path}
@@ -365,15 +376,15 @@ const Layout = ({ children }) => {
                             </div>
 
                             {/* Workflow Section */}
-                            <div>
+                            <div className="flex-shrink-0">
                                 {!sidebarCollapsed && (
-                                    <div className="px-4 mb-3">
-                                        <div className="text-[10px] font-bold text-blue-900/40 uppercase tracking-[0.2em]">
+                                    <div className="px-4 mb-2">
+                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.25em]">
                                             Workflows
                                         </div>
                                     </div>
                                 )}
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                     {workflowSection.map((item) => (
                                         <SidebarItem
                                             key={item.path}
@@ -389,21 +400,10 @@ const Layout = ({ children }) => {
                             </div>
                         </nav>
 
-                        {/* Collapse Toggle - Floating effect */}
-                        <div className="px-4 pb-4">
-                            <button
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                className="w-full h-10 flex items-center justify-center rounded-2xl bg-white/50 hover:bg-white/80 text-blue-600 border border-white/50 shadow-sm transition-all hover:scale-[1.02] active:scale-95 group"
-                            >
-                                <Menu className={cn("w-4 h-4 transition-transform duration-500", sidebarCollapsed ? "rotate-180" : "")} />
-                                {!sidebarCollapsed && <span className="ml-2 text-xs font-bold">Collapse</span>}
-                            </button>
-                        </div>
-
-                        {/* Bottom User Profile Section */}
-                        <div className="p-4 bg-white/40 backdrop-blur-sm border-t border-white/20">
+                        {/* Bottom User Profile Section - Compact */}
+                        <div className="p-4 relative z-10 transition-all">
                             {user && (
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => navigate('/profile')}
                                         className={cn(
@@ -416,8 +416,8 @@ const Layout = ({ children }) => {
                                         </div>
                                         {!sidebarCollapsed && (
                                             <div className="text-left flex-1 min-w-0">
-                                                <div className="text-[13px] font-bold text-slate-800 leading-tight truncate">{user.firstName} {user.lastName}</div>
-                                                <div className="text-[10px] text-slate-500 font-medium truncate uppercase tracking-wider">{user.role_name || user.role || 'User'}</div>
+                                                <div className="text-[12px] font-bold text-slate-800 leading-tight truncate">{user.firstName} {user.lastName}</div>
+                                                <div className="text-[9px] text-slate-400 font-bold truncate uppercase tracking-tighter">{user.role_name || user.role || 'User'}</div>
                                             </div>
                                         )}
                                     </button>
@@ -521,9 +521,16 @@ const Layout = ({ children }) => {
                     </div>
                 )}
 
-                {/* Main Content */}
-                <main className={`flex-1 ${sidebarCollapsed ? 'ml-20' : 'ml-72'} transition-all duration-300 relative`} style={{ marginTop: '48px' }}>
-                    <div className="h-full bg-white">
+                {/* Main Content - Redesigned as a nested bubble */}
+                <main
+                    className={cn(
+                        "flex-1 transition-all duration-500 ease-in-out relative flex flex-col h-screen overflow-hidden",
+                        sidebarCollapsed ? "ml-24" : "ml-[18rem]"
+                    )}
+                >
+                    <div
+                        className="flex-1 mt-20 mb-4 mr-4 bg-white rounded-[2.5rem] shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)] border border-white/60 overflow-y-auto hide-scrollbar transition-all duration-500"
+                    >
                         {children}
                     </div>
                 </main>
