@@ -3,6 +3,8 @@ const pool = require('../db');
 const { authenticate, requireRole, logAudit } = require('../middleware/auth');
 const { enrichWithPatientNames, getPatientDisplayName } = require('../services/patientNameUtils');
 const emailService = require('../services/emailService');
+const encryptionService = require('../services/encryptionService');
+const { getIO } = require('../socket');
 
 const router = express.Router();
 router.use(authenticate);
@@ -1184,16 +1186,33 @@ router.post('/patient-message', async (req, res) => {
         const patientRes = await client.query('SELECT first_name, last_name, email FROM patients WHERE id = $1', patientQueryParams);
         const p = patientRes.rows[0];
 
-        if (p && p.email && p.email.includes('@')) {
-          const senderName = `${req.user.first_name} ${req.user.last_name}`.trim() || req.user.email;
-          console.log(`[Inbasket] 📧 Sending notification to ${p.email} from ${senderName}`);
+        if (p) {
+          let recipientEmail = p.email;
 
-          // CRITICAL: Await the email service to ensure it completes or throws before response
-          await emailService.sendNewMessageNotification(p.email, `${p.first_name} ${p.last_name}`, senderName);
+          // Auto-decrypt if it looks like an encrypted string (no '@' and high entropy)
+          if (recipientEmail && !recipientEmail.includes('@') && recipientEmail.length > 50) {
+            try {
+              console.log(`[Inbasket] 🔐 Decrypting patient email...`);
+              // Attempt to decrypt using the service
+              // Note: We need to check if it's stored as simple encrypted string or with metadata
+              // For now, assume simple string or try both
+              recipientEmail = await encryptionService.decryptField(recipientEmail);
+            } catch (decryptErr) {
+              console.warn(`[Inbasket] ⚠️ Failed to decrypt email for patient ${patientId}:`, decryptErr.message);
+              // Fallback: It might be a regular string that just looks weird, or decryption failed
+            }
+          }
 
-          console.log(`[Inbasket] ✅ Notification email sent successfully to ${p.email}`);
-        } else {
-          console.warn(`[Inbasket] ⚠️ Skipping email: Patient ${patientId} has no valid email (Found: ${p ? p.email : 'null'})`);
+          if (recipientEmail && recipientEmail.includes('@')) {
+            const senderName = `${req.user.first_name} ${req.user.last_name}`.trim() || req.user.email;
+            console.log(`[Inbasket] 📧 Sending notification to ${recipientEmail} from ${senderName}`);
+
+            await emailService.sendNewMessageNotification(recipientEmail, `${p.first_name} ${p.last_name}`, senderName);
+
+            console.log(`[Inbasket] ✅ Notification email sent successfully to ${recipientEmail}`);
+          } else {
+            console.warn(`[Inbasket] ⚠️ Skipping email: Patient ${patientId} has no valid email (Raw: ${p.email?.substring(0, 10)}...)`);
+          }
         }
       } catch (emailErr) {
         console.error('[Inbasket] ❌ Failed to send portal message notification email:', emailErr);
