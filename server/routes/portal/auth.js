@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../../db');
 const passwordService = require('../../services/passwordService');
 const emailService = require('../../services/emailService');
+const patientEncryptionService = require('../../services/patientEncryptionService');
 const { body, validationResult } = require('express-validator');
 const { authLimiter } = require('../../middleware/security');
 
@@ -29,7 +30,7 @@ router.post('/login', [
 
         // Note: req.clinic and search_path are already set by resolveTenant
         const result = await pool.query(`
-            SELECT a.*, p.first_name, p.last_name
+            SELECT a.*, p.first_name, p.last_name, p.encryption_metadata
             FROM patient_portal_accounts a
             JOIN patients p ON a.patient_id = p.id
             WHERE a.email = $1
@@ -73,12 +74,14 @@ router.post('/login', [
             { expiresIn: '12h' }
         );
 
+        const decryptedPatient = await patientEncryptionService.decryptPatientPHI(account);
+
         res.json({
             token,
             patient: {
                 id: account.patient_id,
-                firstName: account.first_name,
-                lastName: account.last_name,
+                firstName: decryptedPatient.first_name,
+                lastName: decryptedPatient.last_name,
                 email: account.email
             },
             clinic: {
@@ -141,7 +144,7 @@ router.post('/apple', async (req, res) => {
         } else {
             // No Apple link exists, try to find account by email
             const emailResult = await pool.query(`
-                SELECT a.*, p.first_name, p.last_name
+                SELECT a.*, p.first_name, p.last_name, p.encryption_metadata
                 FROM patient_portal_accounts a
                 JOIN patients p ON a.patient_id = p.id
                 WHERE LOWER(a.email) = LOWER($1)
@@ -188,12 +191,14 @@ router.post('/apple', async (req, res) => {
             { expiresIn: '12h' }
         );
 
+        const decryptedPatient = await patientEncryptionService.decryptPatientPHI(account);
+
         res.json({
             token,
             patient: {
                 id: account.patient_id,
-                firstName: account.first_name,
-                lastName: account.last_name,
+                firstName: decryptedPatient.first_name,
+                lastName: decryptedPatient.last_name,
                 email: account.email
             },
             clinic: {
@@ -310,7 +315,7 @@ router.get('/invite/:token', async (req, res) => {
         const tokenHash = require('crypto').createHash('sha256').update(token).digest('hex');
 
         const result = await pool.query(`
-            SELECT i.*, p.first_name, p.last_name
+            SELECT i.*, p.first_name, p.last_name, p.encryption_metadata
             FROM patient_portal_invites i
             JOIN patients p ON i.patient_id = p.id
             WHERE i.token_hash = $1 AND i.used_at IS NULL AND i.expires_at > CURRENT_TIMESTAMP
@@ -321,9 +326,11 @@ router.get('/invite/:token', async (req, res) => {
         }
 
         const invite = result.rows[0];
+        const decryptedPatient = await patientEncryptionService.decryptPatientPHI(invite);
+
         res.json({
             email: invite.email,
-            patientName: `${invite.first_name} ${invite.last_name}`
+            patientName: `${decryptedPatient.first_name} ${decryptedPatient.last_name}`
         });
     } catch (error) {
         console.error('[Portal Auth] Invite verification error:', error);

@@ -156,6 +156,10 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
                                             <span className="text-xs text-gray-500">Language</span>
                                             <span className="text-sm font-bold text-gray-900">{data.preferredLanguage || 'English'}</span>
                                         </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-xs text-gray-500">Email</span>
+                                            <span className="text-sm font-bold text-gray-900 truncate ml-4 text-right" title={data.email || prefill.email}>{data.email || prefill.email || 'N/A'}</span>
+                                        </div>
                                         <div className="pt-2 border-t border-gray-200">
                                             <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Address</div>
                                             <div className="text-xs font-bold text-gray-800">

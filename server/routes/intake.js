@@ -632,7 +632,7 @@ router.get('/session/:id/duplicates', authenticate, async (req, res) => {
  */
 router.post('/public/start', async (req, res) => {
     try {
-        const { firstName, lastName, dob, phone } = req.body;
+        const { firstName, lastName, dob, phone, email } = req.body;
         if (!firstName || !lastName || !dob || !phone) {
             return res.status(400).json({ error: 'Missing required start fields' });
         }
@@ -656,7 +656,7 @@ router.post('/public/start', async (req, res) => {
             req.clinic.id,
             '', // resume_code_hash
             expiresAt,
-            { firstName, lastName, dob, phone },
+            { firstName, lastName, dob, phone, email },
             firstName,
             lastName,
             lastNameNorm,

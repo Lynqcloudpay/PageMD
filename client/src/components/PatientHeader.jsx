@@ -557,30 +557,17 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Portal Management</p>
                                         </div>
                                         <button
-                                            onClick={async () => {
+                                            onClick={() => {
                                                 setIsPortalMenuOpen(false);
-                                                if (!patient.email) {
-                                                    alert('An email address is required to invite a patient to the portal.');
-                                                    return;
-                                                }
-                                                try {
-                                                    const response = await api.post(`/patients/${patient.id}/portal-invite`, {
-                                                        email: patient.email
-                                                    });
-                                                    if (response.data.success) {
-                                                        setInviteData(response.data);
-                                                        setIsInviteModalOpen(true);
-                                                    }
-                                                } catch (err) {
-                                                    alert(err.response?.data?.error || 'Failed to send invitation');
-                                                }
+                                                setInviteData(null);
+                                                setIsInviteModalOpen(true);
                                             }}
                                             className="w-full px-4 py-3 text-left text-[11px] font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors"
                                         >
                                             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
                                                 <Users size={14} />
                                             </div>
-                                            Generate Invite Link
+                                            Invite to Patient Portal
                                         </button>
 
                                         <button

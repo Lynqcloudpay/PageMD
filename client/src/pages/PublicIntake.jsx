@@ -29,7 +29,8 @@ const PublicIntake = () => {
         firstName: '',
         lastName: '',
         dob: '',
-        phone: ''
+        phone: '',
+        email: ''
     });
 
     // Continue Form State (Replacement for Resume)
@@ -57,6 +58,7 @@ const PublicIntake = () => {
                 last_name: "Last Name",
                 dob: "Date of Birth",
                 phone: "Phone Number",
+                email: "Email Address",
                 get_started: "Get Started",
                 creating_session: "Creating session...",
                 continue_btn: "Continue",
@@ -86,6 +88,7 @@ const PublicIntake = () => {
                 last_name: "Apellido",
                 dob: "Fecha de Nacimiento",
                 phone: "Número de Teléfono",
+                email: "Correo Electrónico",
                 get_started: "Comenzar",
                 creating_session: "Creando sesión...",
                 continue_btn: "Continuar",
@@ -138,7 +141,8 @@ const PublicIntake = () => {
                 firstName: startForm.firstName,
                 lastName: startForm.lastName,
                 dob: startForm.dob,
-                phone: startForm.phone
+                phone: startForm.phone,
+                email: startForm.email
             });
             setView('session'); // Immediately proceed
             showSuccess('Registration started!');
@@ -341,6 +345,10 @@ const PublicIntake = () => {
                             <div>
                                 <label className="block text-xs font-bold text-blue-400 uppercase mb-2">{t('phone')}</label>
                                 <input required type="tel" placeholder="(555) 000-0000" value={startForm.phone} onChange={e => setStartForm({ ...startForm, phone: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-blue-400 uppercase mb-2">{t('email')}</label>
+                                <input required type="email" placeholder="john@example.com" value={startForm.email} onChange={e => setStartForm({ ...startForm, email: e.target.value })} className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" />
                             </div>
                         </div>
                         <button
@@ -597,6 +605,11 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                 <label className="block text-xs font-bold text-blue-400 uppercase mb-2">{language === 'es' ? 'Idioma' : 'Language'}</label>
                                 <input type="text" placeholder={language === 'es' ? 'Ej: Español' : 'e.g. English'} value={formData.preferredLanguage || ''} onChange={e => setFormData({ ...formData, preferredLanguage: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-blue-400 uppercase mb-2">{t('email')}</label>
+                            <input type="email" placeholder="john@example.com" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
                         </div>
 
                         <div className="space-y-4 pt-4 border-t border-blue-50">

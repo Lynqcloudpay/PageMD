@@ -520,8 +520,14 @@ router.post('/:id/portal-invite', requirePermission('patients:edit_demographics'
     const inviteLink = `${portalUrl}/register?token=${token}&clinic=${req.clinic.slug}`;
 
     try {
-      const patientResult = await pool.query('SELECT first_name, last_name FROM patients WHERE id = $1', [id]);
-      const patientName = patientResult.rows[0] ? `${patientResult.rows[0].first_name} ${patientResult.rows[0].last_name}` : 'Valued Patient';
+      const patientResult = await pool.query('SELECT first_name, last_name, encryption_metadata FROM patients WHERE id = $1', [id]);
+      const rawPatient = patientResult.rows[0];
+      let patientName = 'Valued Patient';
+
+      if (rawPatient) {
+        const decryptedPatient = await patientEncryptionService.decryptPatientPHI(rawPatient);
+        patientName = `${decryptedPatient.first_name} ${decryptedPatient.last_name}`;
+      }
 
       const emailSent = await emailService.sendPortalInvite(email, patientName, inviteLink);
 
