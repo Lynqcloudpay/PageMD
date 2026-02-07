@@ -412,13 +412,21 @@ class EmailService {
      * Internal send method
      */
     async _send(to, subject, html) {
-        console.log(`[EmailService] 📧 Preparing email via Resend for: ${to}`);
+        // Robusy email cleaning
+        const cleanTo = typeof to === 'string' ? to.trim() : to;
+
+        console.log(`[EmailService] 📧 Preparing email via Resend for: ${cleanTo}`);
+
+        if (!cleanTo || (typeof cleanTo === 'string' && !cleanTo.includes('@'))) {
+            console.error(`[EmailService] ❌ Invalid email address: ${cleanTo}`);
+            return false;
+        }
 
         if (this.enabled && this.resend) {
             try {
                 const { data, error } = await this.resend.emails.send({
                     from: `"PageMD" <${this.from}>`,
-                    to: [to],
+                    to: [cleanTo],
                     subject: subject,
                     html: html,
                     headers: {
