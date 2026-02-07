@@ -25,12 +25,20 @@ const USE_CACHE = process.env.RXNORM_USE_CACHE !== 'false'; // Default to true
  * @param {number} maxResults - Maximum number of results to return
  * @returns {Promise<Array>} Array of medication objects
  */
-async function searchMedications(searchTerm, maxResults = 25) {
+async function searchMedications(searchTerm, maxResults = 25, userId = null) {
   try {
     const searchLower = searchTerm.toLowerCase().trim();
+
+    // 1. Try local database first (Hierarchical Ranking: Personal > Tenant)
+    const localResults = await searchLocalMedicationDatabase(searchTerm, maxResults, userId);
+    if (localResults && localResults.length > 0) {
+      console.log(`Local search hit for: ${searchTerm} (${localResults.length} results)`);
+      return localResults;
+    }
+
     let results = [];
 
-    // 1. Try OpenFDA API first (Free, robust, fuzzy matching)
+    // 2. Try OpenFDA API second (Free, robust, fuzzy matching)
     try {
       console.log(`Searching OpenFDA for: ${searchTerm}`);
       const openFdaResponse = await axios.get('https://api.fda.gov/drug/drugsfda.json', {
@@ -275,16 +283,20 @@ function parseMedicationName(name) {
 // ============================================
 
 /**
- * Search local medication database cache
+ * Search local medication database cache with Hierarchical Ranking
+ * 1. Personal Usage (Doctor specific)
+ * 2. Tenant Usage (Clinic specific)
  */
-async function searchLocalMedicationDatabase(searchTerm, limit = 20) {
+async function searchLocalMedicationDatabase(searchTerm, limit = 20, userId = null) {
   try {
-    // First check if table exists
+    // Determine schema prefix (if any)
+    const schemaPrefix = ''; // pool.query handles search_path for tenants
+
+    // First check if table exists (safety check)
     const tableCheck = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'medication_database'
+        WHERE table_name = 'medication_database'
       );
     `);
 
@@ -296,16 +308,21 @@ async function searchLocalMedicationDatabase(searchTerm, limit = 20) {
     // Try full-text search if search_vector column exists
     try {
       const result = await pool.query(`
-        SELECT rxcui, name, synonym, strength, form, route, controlled_substance, schedule, usage_count
-        FROM medication_database
+        SELECT 
+           m.rxcui, m.name, m.synonym, m.strength, m.form, m.route, m.controlled_substance, m.schedule, 
+           m.usage_count as tenant_usage,
+           COALESCE(u.use_count, 0) as personal_usage
+        FROM medication_database m
+        LEFT JOIN public.medication_usage u ON m.rxcui = u.rxcui AND u.user_id = $4
         WHERE search_vector @@ plainto_tsquery('english', $1)
            OR name ILIKE $2
            OR synonym ILIKE $2
         ORDER BY 
-           usage_count DESC,
+           COALESCE(u.use_count, 0) DESC, -- 1. Personal Usage (Provider Scope)
+           m.usage_count DESC,             -- 2. Tenant Usage (Clinic Scope)
            ts_rank(search_vector, plainto_tsquery('english', $1)) DESC
         LIMIT $3
-      `, [searchTerm, `%${searchTerm}%`, limit]);
+      `, [searchTerm, `%${searchTerm}%`, limit, userId]);
 
       if (result.rows.length > 0) {
         return result.rows.map(row => ({
@@ -326,13 +343,20 @@ async function searchLocalMedicationDatabase(searchTerm, limit = 20) {
 
     // Simple LIKE query fallback
     const result = await pool.query(`
-      SELECT rxcui, name, synonym, strength, form, route, controlled_substance, schedule, usage_count
-      FROM medication_database
+      SELECT 
+         m.rxcui, m.name, m.synonym, m.strength, m.form, m.route, m.controlled_substance, m.schedule, 
+         m.usage_count as tenant_usage,
+         COALESCE(u.use_count, 0) as personal_usage
+      FROM medication_database m
+      LEFT JOIN public.medication_usage u ON m.rxcui = u.rxcui AND u.user_id = $3
       WHERE name ILIKE $1
          OR synonym ILIKE $1
-      ORDER BY usage_count DESC, name ASC
+      ORDER BY 
+         COALESCE(u.use_count, 0) DESC, 
+         m.usage_count DESC, 
+         name ASC
       LIMIT $2
-    `, [`%${searchTerm}%`, limit]);
+    `, [`%${searchTerm}%`, limit, userId]);
 
     if (result.rows.length > 0) {
       return result.rows.map(row => ({
@@ -507,15 +531,29 @@ async function checkLocalInteractions(rxcuis) {
 }
 
 /**
- * Increment medication usage count for smart ranking
+ * Increment medication usage count for smart ranking (Personal + Tenant Scope)
  * @param {string} rxcui - RxNorm Concept Unique Identifier
+ * @param {string} userId - User ID for personal ranking
  */
-async function trackMedicationUsage(rxcui) {
+async function trackMedicationUsage(rxcui, userId = null) {
   try {
     if (!rxcui) return;
+
+    // 1. Update Tenant-Wide usage (Scoped to current schema)
     await pool.query(`
       UPDATE medication_database SET usage_count = usage_count + 1 WHERE rxcui = $1
     `, [rxcui]);
+
+    // 2. Update Personal Usage (Scoped to public.medication_usage)
+    if (userId) {
+      await pool.query(`
+        INSERT INTO public.medication_usage (user_id, rxcui, use_count, last_used)
+        VALUES ($1, $2, 1, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id, rxcui) DO UPDATE SET
+          use_count = public.medication_usage.use_count + 1,
+          last_used = CURRENT_TIMESTAMP
+      `, [userId, rxcui]);
+    }
   } catch (error) {
     console.error('Error tracking medication usage:', error);
   }

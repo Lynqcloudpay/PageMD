@@ -29,7 +29,7 @@ router.get('/search', requireRole('clinician', 'nurse'), async (req, res) => {
       return res.json([]);
     }
 
-    const medications = await rxnormService.searchMedications(q.trim(), parseInt(limit));
+    const medications = await rxnormService.searchMedications(q.trim(), parseInt(limit), req.user.id);
 
     // Always return an array, even if empty
     res.json(Array.isArray(medications) ? medications : []);
@@ -119,7 +119,7 @@ router.post('/track', requireRole('clinician', 'nurse'), async (req, res) => {
     const { rxcui } = req.body;
     if (!rxcui) return res.status(400).json({ error: 'RxCUI is required' });
 
-    await rxnormService.trackMedicationUsage(rxcui);
+    await rxnormService.trackMedicationUsage(rxcui, req.user.id);
     res.json({ success: true });
   } catch (error) {
     console.error('Error tracking medication usage:', error);

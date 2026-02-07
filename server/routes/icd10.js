@@ -34,7 +34,8 @@ router.get('/search', authenticate, async (req, res) => {
               )
             ORDER BY 
                 (c.code = $1) DESC,
-                c.usage_count DESC,
+                COALESCE(u.use_count, 0) DESC, -- User Specific Usage (Personal Ranking)
+                c.usage_count DESC, -- Global/Platform Usage Ranking
                 -- 1. Direct Match: The most common clinical term (Essential/Primary/Unspecified/Uncomplicated)
                 (c.is_billable AND c.description ~* $5 AND c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y') DESC,
                 -- 2. Good Match: Term as whole word + Billable
