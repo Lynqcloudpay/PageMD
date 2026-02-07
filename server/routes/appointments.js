@@ -869,6 +869,11 @@ router.post('/:id/generate-guest-link', requirePermission('schedule:view'), asyn
     const guestLink = `${baseUrl}/visit/guest?token=${token}`;
 
     // Format appointment time for email
+    // Combine date and time
+    const appointmentDate = new Date(appt.appointment_date);
+    const [hours, minutes] = (appt.appointment_time || '09:00').split(':').map(Number);
+    appointmentDate.setHours(hours, minutes, 0, 0);
+
     const appointmentTimeFormatted = appointmentDate.toLocaleString('en-US', {
       weekday: 'long',
       month: 'long',

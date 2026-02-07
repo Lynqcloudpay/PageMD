@@ -564,9 +564,9 @@ router.get('/claims', requirePermission('billing:view'), async (req, res) => {
             FROM visits v
             JOIN patients p ON v.patient_id = p.id
             JOIN billing b ON v.id = b.encounter
-            LEFT JOIN claims c ON v.id = c.visit_id
+            ${tableExistsResult.rows[0].exists ? 'LEFT JOIN claims c ON v.id = c.visit_id' : ''}
             WHERE b.activity = true 
-            AND c.id IS NULL
+            ${tableExistsResult.rows[0].exists ? 'AND c.id IS NULL' : ''}
         `;
 
       const unbilledParams = [];
