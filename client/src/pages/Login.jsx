@@ -82,7 +82,7 @@ const Login = () => {
 
                 <div className="relative z-20">
                     <div className="flex flex-col items-center justify-center mb-10">
-                        <div className="relative mb-6 group">
+                        <div className="relative mb-12 group">
                             <div className="absolute inset-0 bg-blue-500 rounded-full blur-3xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
                             <div className="relative transform transition-transform group-hover:scale-105 duration-300">
                                 <img
@@ -96,10 +96,10 @@ const Login = () => {
                             </div>
                         </div>
 
-                        <h2 className="text-3xl font-black text-slate-900 tracking-tight text-center">
+                        <h2 className="text-3xl font-bold text-slate-800 tracking-tight text-center">
                             Welcome Back
                         </h2>
-                        <p className="text-slate-500 text-sm mt-2 text-center font-bold uppercase tracking-widest opacity-80">
+                        <p className="text-slate-400 text-[10px] sm:text-xs mt-2 text-center font-black uppercase tracking-[0.2em] opacity-80">
                             Secure Access for Professionals
                         </p>
                     </div>
@@ -172,7 +172,7 @@ const Login = () => {
                     HIPAA Compliant & Secure • PageMD EMR v1.0
                 </p>
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -8,19 +8,24 @@ const InteractiveHoverButton = React.forwardRef(({ text = "Button", className, .
             ref={ref}
             type={props.type || "button"}
             className={cn(
-                "group relative w-full cursor-pointer overflow-hidden rounded-full border border-white/20 bg-white/10 p-3 text-center font-semibold shadow-lg backdrop-blur-sm transition-all hover:shadow-xl hover:bg-white/20 hover:border-white/40",
+                "group relative w-full cursor-pointer overflow-hidden rounded-2xl border border-white/20 bg-white/10 p-4 text-center font-bold shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]",
                 className,
             )}
             {...props}
         >
-            <span className="inline-block translate-x-1 transition-all duration-300 group-hover:translate-x-12 group-hover:opacity-0 text-white drop-shadow-sm">
+            <span className="inline-block transition-all duration-500 group-hover:translate-x-12 group-hover:opacity-0 text-white drop-shadow-sm">
                 {text}
             </span>
-            <div className="absolute top-0 z-10 flex h-full w-full translate-x-12 items-center justify-center gap-2 text-white opacity-0 transition-all duration-300 group-hover:-translate-x-1 group-hover:opacity-100">
+            <div className="absolute inset-0 z-10 flex items-center justify-center gap-3 text-white opacity-0 translate-x-[-1.5rem] transition-all duration-500 group-hover:translate-x-0 group-hover:opacity-100">
                 <span className="drop-shadow-sm">{text}</span>
-                <ArrowRight className="w-5 h-5 drop-shadow-sm" />
+                <ArrowRight className="w-5 h-5 drop-shadow-sm animate-pulse-subtle" />
             </div>
-            <div className="absolute left-[20%] top-[40%] h-2 w-2 scale-[1] rounded-lg bg-primary-500 transition-all duration-300 group-hover:left-[0%] group-hover:top-[0%] group-hover:h-full group-hover:w-full group-hover:scale-[1.8] group-hover:bg-primary-600 mix-blend-overlay"></div>
+
+            {/* Premium Shimmer/Glow Inner Effect */}
+            <div className="absolute inset-0 translate-y-full bg-gradient-to-t from-white/20 via-white/5 to-transparent transition-transform duration-500 group-hover:translate-y-0" />
+
+            {/* Magnetic Glow Spot */}
+            <div className="absolute -left-[10%] -top-[10%] h-4 w-4 scale-0 rounded-full bg-white/40 blur-2xl transition-all duration-700 group-hover:left-[50%] group-hover:top-[50%] group-hover:scale-[20] group-hover:opacity-0" />
         </button>
     );
 });
