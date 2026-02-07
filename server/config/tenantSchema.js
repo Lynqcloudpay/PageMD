@@ -641,15 +641,15 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE TABLE IF NOT EXISTS guest_access_tokens (
     id SERIAL PRIMARY KEY,
-    appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
-    patient_id UUID NOT NULL REFERENCES patients(id),
+    appointment_id UUID NOT NULL,
+    patient_id UUID NOT NULL,
     token_hash VARCHAR(64) NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
     dob_attempts INTEGER DEFAULT 0,
     used_at TIMESTAMPTZ,
     invalidated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    created_by UUID REFERENCES users(id)
+    created_by UUID
 );
 CREATE INDEX IF NOT EXISTS idx_guest_tokens_appointment ON guest_access_tokens(appointment_id);
 CREATE INDEX IF NOT EXISTS idx_guest_tokens_hash ON guest_access_tokens(token_hash);
@@ -2262,6 +2262,15 @@ ALTER TABLE ONLY visits
 
 ALTER TABLE ONLY visits
     ADD CONSTRAINT visits_provider_id_fkey FOREIGN KEY (provider_id) REFERENCES users(id);
+
+ALTER TABLE ONLY guest_access_tokens
+    ADD CONSTRAINT guest_access_tokens_appointment_id_fkey FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY guest_access_tokens
+    ADD CONSTRAINT guest_access_tokens_patient_id_fkey FOREIGN KEY (patient_id) REFERENCES patients(id);
+
+ALTER TABLE ONLY guest_access_tokens
+    ADD CONSTRAINT guest_access_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id);
 
 `;
 
