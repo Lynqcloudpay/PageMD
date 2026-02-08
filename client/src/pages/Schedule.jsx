@@ -165,7 +165,8 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
         return (
             <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                    e.stopPropagation();
                     if (!saving && statusKey !== status && !isTerminalState) {
                         handleNoShowOrCancelled(statusKey);
                     }
@@ -877,7 +878,6 @@ const Schedule = () => {
         }
 
         // Frontend validation: Check if slot is already full (max 2)
-        // Exception: If BOTH appointments are cancelled/no-show, treat slot as empty (0/2)
         const selectedDate = newAppt.date || format(currentDate, 'yyyy-MM-dd');
         const selectedTime = newAppt.time;
         const appointmentsAtSelectedSlot = modalAppointments.filter(appt => {
@@ -886,16 +886,14 @@ const Schedule = () => {
             return apptTime === selectedTime;
         });
 
-        // Check if both are cancelled/no-show
-        const allCancelled = appointmentsAtSelectedSlot.length === 2 &&
-            appointmentsAtSelectedSlot.every(appt =>
-                appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status)
-            );
+        // Count only ACTIVE appointments (not cancelled or no-show)
+        const activeCount = appointmentsAtSelectedSlot.filter(appt =>
+            appt.patient_status !== 'cancelled' && !['no_show', 'no-show'].includes(appt.patient_status)
+        ).length;
 
-        // If both are cancelled, allow booking (treat as empty)
-        // Otherwise, if 2 or more appointments exist, block booking
-        if (!allCancelled && appointmentsAtSelectedSlot.length >= 2) {
-            alert('This time slot is already full. Maximum 2 appointments allowed per time slot. Please select a different time.');
+        // If 2 or more active appointments exist, block booking
+        if (activeCount >= 2) {
+            alert('This time slot is already full. Maximum 2 active appointments allowed per time slot. Please select a different time.');
             return;
         }
 
