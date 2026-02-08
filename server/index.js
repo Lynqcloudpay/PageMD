@@ -412,8 +412,17 @@ if (require.main === module) {
     console.log(`📡 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
 
     // Start background services
-    require('./scripts/migrate-referral-tokens')(); // Run migration for new columns
-    require('./scripts/migrate-overbooking-cap')(); // Run overbooking cap migration
+    (async () => {
+      try {
+        console.log('🚀 Starting startup migrations...');
+        await require('./scripts/migrate-referral-tokens')();
+        await require('./scripts/migrate-overbooking-cap')();
+        await require('./scripts/fix-audit-schema')();
+        console.log('✨ All startup migrations completed successfully.');
+      } catch (err) {
+        console.error('❌ Migration failed during startup:', err);
+      }
+    })();
     flagService.startMaintenance(3600000); // 1 hour
 
     // Sandbox Cleanup: Run every 10 minutes
