@@ -175,8 +175,8 @@ const RoomBtn = memo(({
 const NoShowCancelledBtn = memo(({ statusKey, label, currentStatus, handleNoShowOrCancelled, saving, isTerminalState, canUpdateStatus }) => {
     const isActive = currentStatus === statusKey;
     const color = isActive
-        ? (statusKey === 'no_show' ? 'text-orange-700 font-bold' : 'text-red-700 font-bold')
-        : (statusKey === 'no_show' ? 'text-orange-500 hover:text-orange-600' : 'text-red-500 hover:text-red-600');
+        ? (statusKey === 'no_show' ? 'text-orange-600 font-bold bg-orange-50 px-1 rounded' : 'text-red-700 font-bold bg-red-50 px-1 rounded')
+        : (statusKey === 'no_show' ? 'text-orange-400 hover:text-orange-600' : 'text-red-400 hover:text-red-600');
 
     const isDisabled = saving || isTerminalState || !canUpdateStatus;
 
@@ -394,12 +394,13 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 setCheckoutTime(now);
             }
 
-            if (newStatus === 'no_show' || newStatus === 'cancelled') {
+            if (newStatus === 'no_show' || newStatus === 'no-show' || newStatus === 'cancelled') {
                 if (!checkoutTime) {
                     updateData.checkout_time = now.toISOString();
                     setCheckoutTime(now);
                 }
                 updateData.current_room = null;
+                updateData.status = newStatus === 'no-show' ? 'no_show' : newStatus;
                 setRoom('');
             }
 
@@ -433,8 +434,8 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     };
 
     const handleNoShowOrCancelled = (newStatus) => {
-        if (newStatus === 'no_show') {
-            handleStatusChange(newStatus, null, null, null);
+        if (newStatus === 'no_show' || newStatus === 'no-show') {
+            handleStatusChange('no_show', null, null, null);
         } else {
             setPendingStatus(newStatus);
             setShowReasonModal(true);
@@ -447,9 +448,9 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         }
     };
 
-    const getStatusOrder = (s) => ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'].indexOf(s);
+    const getStatusOrder = (s) => ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'no-show', 'cancelled', 'completed'].indexOf(s);
     const currentOrder = getStatusOrder(status);
-    const isTerminalState = status === 'checked_out' || status === 'completed' || status === 'no_show' || status === 'cancelled';
+    const isTerminalState = status === 'checked_out' || status === 'completed' || status === 'no_show' || status === 'no-show' || status === 'cancelled';
 
     // Derived Room Data for RoomBtn
     let displayRoom = room;
