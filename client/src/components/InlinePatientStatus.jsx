@@ -389,117 +389,62 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             setRoomInput(room || '');
         };
 
-        const handleRoomSubmit = () => {
-            if (roomInput.trim() !== room) {
-                handleStatusChange('in_room', roomSubStatus || 'with_nurse', roomInput.trim());
+        const handleRoomSubmit = async () => {
+            const trimmed = roomInput.trim();
+            if (trimmed !== (room || '')) {
+                setSaving(true);
+                try {
+                    await handleStatusChange('in_room', roomSubStatus || 'with_nurse', trimmed);
+                } catch (err) {
+                    console.error('Failed to update room:', err);
+                } finally {
+                    setSaving(false);
+                    setShowRoomInput(false);
+                }
             } else {
                 setShowRoomInput(false);
             }
         };
 
-        const handleCircleToggle = (newSubStatus) => {
-            handleStatusChange('in_room', newSubStatus, room);
+        const handleCircleToggle = async (e) => {
+            e.stopPropagation();
+            if (saving || !isActive || !room) return;
+            const newSub = roomSubStatus === 'with_nurse' ? 'ready_for_provider' : 'with_nurse';
+            setSaving(true);
+            try {
+                await handleStatusChange('in_room', newSub, room);
+            } catch (err) {
+                console.error('Failed to toggle sub-status:', err);
+            } finally {
+                setSaving(false);
+            }
         };
 
         return (
-            <div className="flex items-center gap-1 w-[140px]">
-                {/* Circle indicator - show before "Room" text when in room */}
-                <span className="w-[8px] flex-shrink-0 flex items-center justify-center">
-                    {isActive && room && (
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                // Toggle between the two states
-                                const newStatus = roomSubStatus === 'with_nurse'
-                                    ? 'ready_for_provider'
-                                    : 'with_nurse';
-                                handleCircleToggle(newStatus);
-                            }}
-                            disabled={saving}
-                            className={`w-2 h-2 rounded-full transition-all ${roomSubStatus === 'ready_for_provider'
-                                ? 'bg-amber-500 cursor-pointer hover:bg-amber-600'
-                                : 'border border-violet-500 bg-violet-50 cursor-pointer hover:bg-violet-100'
-                                } ${saving ? 'opacity-50' : ''}`}
-                            title={
-                                roomSubStatus === 'ready_for_provider'
-                                    ? `Ready for Provider${readyTime > 0 ? ` - ${formatCompactTime(readyTime)}` : ''} - Click to switch to Nurse`
-                                    : `With Nurse/MA${nurseTime > 0 ? ` - ${formatCompactTime(nurseTime)}` : ''} - Click to switch to Ready`
-                            }
-                        />
-                    )}
-                </span>
-
-                {showRoomInput ? (
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={roomInput}
-                        onChange={(e) => setRoomInput(e.target.value)}
-                        onBlur={handleRoomSubmit}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleRoomSubmit();
-                            if (e.key === 'Escape') {
-                                setRoomInput(room || '');
-                                setShowRoomInput(false);
-                            }
-                        }}
-                        className="w-[50px] text-[9px] px-1.5 py-0.5 border-2 border-violet-400 bg-violet-50 text-violet-900 rounded-lg focus:ring-0 outline-none font-bold shadow-sm"
-                        placeholder="Room #"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                ) : (
+            <div className="flex items-center gap-1.5 shrink-0">
+                {/* Status Indicator Circle (Toggle between Nurse and Provider) */}
+                {isActive && room && (
                     <button
                         type="button"
-                        onClick={handleRoomClick}
-                        disabled={saving || isTerminalState || !canUpdateStatus}
-                        title={!canUpdateStatus ? 'You do not have permission to update appointment status' : 'Click to set/change room'}
-                        className={`text-[9px] transition-all flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shadow-sm ${isActive
-                            ? (roomSubStatus === 'ready_for_provider'
-                                ? 'bg-amber-100 border-amber-300 text-amber-800 font-bold ring-2 ring-amber-100 animate-pulse'
-                                : 'bg-violet-100 border-violet-300 text-violet-800 font-bold')
-                            : isPast ? 'bg-violet-50 border-violet-100 text-violet-500' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-500'
-                            } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} min-w-[65px] justify-center`}
-                    >
-                        <span className="inline-flex items-center min-w-[8px]">
-                            {isPast && <span className="text-[8px]">✓</span>}
-                        </span>
-                        <span className={`${isActive ? 'underline underline-offset-2' : ''} flex-shrink-0`}>
-                            {displayRoom ? `ROOM ${displayRoom}` : 'ROOM'}
-                        </span>
-                    </button>
+                        onClick={handleCircleToggle}
+                        disabled={saving}
+                        className={`w-3 h-3 rounded-full transition-all border-2 shrink-0 ${roomSubStatus === 'ready_for_provider'
+                                ? 'bg-amber-400 border-amber-500 shadow-sm animate-pulse'
+                                : 'bg-violet-400 border-violet-500 shadow-sm'
+                            } ${saving ? 'opacity-50' : 'hover:scale-110 active:scale-95 cursor-pointer'}`}
+                        title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Yellow) - Click to revert to Nurse' : 'With Nurse (Purple) - Click to signal Ready for Provider'}
+                    />
                 )}
 
-                {/* Show timings separately - always reserve space for both timings */}
-                <span className="text-[8px] opacity-70 flex items-center gap-0.5 w-[65px] text-left">
-                    {hasRoomTime ? (
-                        <>
-                            {nurseTime > 0 && (
-                                <span className="text-violet-700 whitespace-nowrap" title="Total time with Nurse/MA">
-                                    ○{formatCompactTime(nurseTime)}
-                                </span>
-                            )}
-                            {readyTime > 0 && (
-                                <span className="text-amber-700 whitespace-nowrap" title="Total time ready for Provider">
-                                    ●{formatCompactTime(readyTime)}
-                                </span>
-                            )}
-                        </>
-                    ) : (
-                        <span className="invisible whitespace-nowrap">○:00 ●:00</span>
-                    )}
-                </span>
-
-                {/* Room input - shows when clicking Room button */}
-                {showRoomInput && (
-                    <div className="flex items-center gap-1 ml-0.5">
+                {showRoomInput ? (
+                    <div className="flex items-center bg-violet-50 border-2 border-violet-400 rounded-lg shadow-sm px-1.5 py-0.5 shrink-0">
+                        <span className="text-[10px] font-bold text-violet-900 mr-1.5 uppercase tracking-tighter">ROOM</span>
                         <input
+                            ref={inputRef}
                             type="text"
                             value={roomInput}
                             onChange={(e) => setRoomInput(e.target.value)}
-                            placeholder="#"
-                            className="w-10 px-1 py-0.5 text-[9px] border border-violet-300 rounded focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                            autoFocus
+                            onBlur={handleRoomSubmit}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') handleRoomSubmit();
                                 if (e.key === 'Escape') {
@@ -507,21 +452,47 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                                     setShowRoomInput(false);
                                 }
                             }}
+                            className="w-[28px] text-[10px] bg-transparent text-violet-900 focus:ring-0 outline-none font-bold placeholder-violet-300"
+                            placeholder="#"
                             onClick={(e) => e.stopPropagation()}
                         />
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleRoomSubmit();
-                            }}
-                            className="text-[9px] text-violet-600 hover:text-violet-800 px-1"
-                            title="Save"
-                        >
-                            ✓
-                        </button>
                     </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={handleRoomClick}
+                        disabled={saving || isTerminalState || !canUpdateStatus}
+                        className={`text-[9px] transition-all flex items-center gap-1 px-2.5 py-0.5 rounded-lg border shadow-sm shrink-0 ${isActive
+                                ? (roomSubStatus === 'ready_for_provider'
+                                    ? 'bg-amber-100 border-amber-300 text-amber-800 font-black ring-2 ring-amber-100'
+                                    : 'bg-violet-100 border-violet-300 text-violet-800 font-black')
+                                : isPast ? 'bg-violet-50 border-violet-100 text-violet-500' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-500'
+                            } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-400'}`}
+                    >
+                        {isPast && <span className="text-[9px] font-bold mr-0.5">✓</span>}
+                        <span className="uppercase tracking-tight">
+                            ROOM {displayRoom || ''}
+                        </span>
+                    </button>
                 )}
+
+                {/* Timings Display */}
+                <span className="text-[8px] opacity-80 flex items-center gap-1.5 shrink-0 ml-1">
+                    {hasRoomTime ? (
+                        <>
+                            {nurseTime > 0 && (
+                                <span className="text-violet-700 font-bold flex items-center gap-0.5" title="Time with Nurse">
+                                    <span className="text-[6px]">○</span>{formatCompactTime(nurseTime)}
+                                </span>
+                            )}
+                            {readyTime > 0 && (
+                                <span className="text-amber-700 font-bold flex items-center gap-0.5" title="Ready for Provider">
+                                    <span className="text-[6px]">●</span>{formatCompactTime(readyTime)}
+                                </span>
+                            )}
+                        </>
+                    ) : null}
+                </span>
             </div>
         );
     };
