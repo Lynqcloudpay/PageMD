@@ -12,7 +12,7 @@ import AddPatientModal from '../components/AddPatientModal';
 import InlinePatientStatus from '../components/InlinePatientStatus';
 
 // Visit Type Dropdown Component
-const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow }) => {
+const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow, value, onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -34,8 +34,8 @@ const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const currentType = appt.type || 'Follow-up';
-    const isTelehealth = appt.visitMethod === 'telehealth' || currentType === 'Telehealth Visit';
+    const currentType = value || appt?.type || 'Follow-up';
+    const isTelehealth = value === 'Telehealth Visit' || appt?.visitMethod === 'telehealth' || appt?.type === 'Telehealth Visit';
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -60,15 +60,20 @@ const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow }) => {
                             key={t.label}
                             onClick={async (e) => {
                                 e.stopPropagation();
-                                try {
-                                    await appointmentsAPI.update(appt.id, {
-                                        type: t.label,
-                                        visitMethod: t.method
-                                    });
-                                    if (onUpdate) onUpdate();
+                                if (onChange) {
+                                    onChange(t.label);
                                     setIsOpen(false);
-                                } catch (err) {
-                                    console.error('Failed to update visit type:', err);
+                                } else if (appt) {
+                                    try {
+                                        await appointmentsAPI.update(appt.id, {
+                                            type: t.label,
+                                            visitMethod: t.method
+                                        });
+                                        if (onUpdate) onUpdate();
+                                        setIsOpen(false);
+                                    } catch (err) {
+                                        console.error('Failed to update visit type:', err);
+                                    }
                                 }
                             }}
                             className={`w-full text-left px-3 py-1.5 text-[9px] font-semibold hover:bg-slate-50 transition-colors ${t.label === 'Telehealth Visit' ? 'text-emerald-600' : 'text-slate-600'
