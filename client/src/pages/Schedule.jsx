@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Clock, User, Search, X, Calendar, Users, ChevronDown, Filter, FilterX } from 'lucide-react';
 import { format, addDays } from 'date-fns';
@@ -190,10 +191,10 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                 <NoShowCancelledBtn statusKey="cancelled" label="Cancelled" />
             </div>
 
-            {/* Cancellation Reason Modal - only for cancelled status */}
-            {showReasonModal && pendingStatus === 'cancelled' && (
+            {/* Cancellation Reason Modal - Portaled to bypass stacking contexts */}
+            {showReasonModal && pendingStatus === 'cancelled' && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-md z-[10000] flex items-center justify-center animate-in fade-in duration-200"
                     onClick={(e) => {
                         e.stopPropagation();
                         setShowReasonModal(false);
@@ -202,26 +203,26 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                     }}
                 >
                     <div
-                        className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4"
+                        className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-100"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-xl">
-                            <h2 className="text-xl font-bold text-white">
+                        <div className="bg-gradient-to-r from-red-500 to-red-600 px-8 py-6">
+                            <h2 className="text-xl font-bold text-white tracking-tight">
                                 Cancel Appointment
                             </h2>
                         </div>
 
-                        <div className="p-6">
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="p-8">
+                            <div className="mb-6">
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
                                     Cancellation Reason <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     value={reasonInput}
                                     onChange={(e) => setReasonInput(e.target.value)}
-                                    placeholder="Enter reason for cancellation..."
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm resize-none"
-                                    rows={3}
+                                    placeholder="Please provide a reason for cancellation..."
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-red-100 focus:border-red-400 text-sm resize-none transition-all"
+                                    rows={4}
                                     autoFocus
                                 />
                             </div>
@@ -234,7 +235,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                                         setReasonInput('');
                                         setPendingStatus(null);
                                     }}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                    className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
                                 >
                                     Cancel
                                 </button>
@@ -242,14 +243,15 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                                     type="button"
                                     onClick={handleReasonSubmit}
                                     disabled={!reasonInput.trim() || saving}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="px-8 py-3 text-sm font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 shadow-lg shadow-red-100 transition-all disabled:opacity-50 disabled:scale-95 active:scale-95"
                                 >
                                     {saving ? 'Saving...' : 'Confirm'}
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );
@@ -384,65 +386,71 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
             role === 'clinician';
     });
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-100" onClick={(e) => e.stopPropagation()}>
-                <div className="bg-indigo-50/50 border-b border-indigo-100 px-6 py-5">
-                    <h2 className="text-lg font-semibold text-indigo-900">Change Provider</h2>
+    return createPortal(
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[10001] p-4 animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-indigo-50/50 border-b border-indigo-100 px-8 py-6">
+                    <h2 className="text-xl font-bold text-indigo-900 tracking-tight">Change Provider</h2>
                     <p className="text-indigo-400 text-[10px] uppercase font-bold tracking-widest mt-1">Reassign Appointment</p>
                 </div>
 
-                <div className="p-6">
-                    <div className="mb-5">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                <div className="p-8">
+                    <div className="mb-6">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                             Current Provider
                         </label>
-                        <div className="px-4 py-3 bg-slate-50/50 rounded-xl text-sm text-slate-600 border border-slate-100 font-medium italic">
+                        <div className="px-5 py-4 bg-slate-50/80 rounded-2xl text-sm text-slate-600 border border-slate-100 font-medium italic">
                             {currentProviderName || 'No provider assigned'}
                         </div>
                     </div>
 
-                    <div className="mb-6">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                    <div className="mb-8">
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                             Select New Provider
                         </label>
-                        <select
-                            value={selectedProviderId}
-                            onChange={(e) => setSelectedProviderId(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 text-sm bg-slate-50/50 text-slate-700 transition-all font-medium"
-                        >
-                            <option value="">Select a provider...</option>
-                            {providerOptions.map(provider => (
-                                <option key={provider.id} value={provider.id}>
-                                    {provider.name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="relative group">
+                            <select
+                                value={selectedProviderId}
+                                onChange={(e) => setSelectedProviderId(e.target.value)}
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 text-sm appearance-none text-slate-700 transition-all font-bold"
+                            >
+                                <option value="">Select a provider...</option>
+                                {providerOptions.map(provider => (
+                                    <option key={provider.id} value={provider.id}>
+                                        {provider.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <ChevronDown className="w-4 h-4" />
+                            </div>
+                        </div>
                         {providerOptions.length === 0 && (
-                            <p className="text-[10px] text-rose-400 mt-2 font-medium">No available providers found</p>
+                            <p className="text-[10px] text-rose-500 mt-3 font-bold uppercase tracking-wider bg-rose-50 px-3 py-2 rounded-lg border border-rose-100">No available providers found</p>
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex justify-end gap-3">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-600 bg-slate-50/50 rounded-xl hover:bg-slate-100 transition-all active:scale-95"
+                            className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
                         >
                             Cancel
                         </button>
                         <button
                             type="button"
                             onClick={handleSave}
-                            disabled={saving || !selectedProviderId || selectedProviderId === appointment.providerId}
-                            className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-100 active:scale-95"
+                            disabled={saving || !selectedProviderId || selectedProviderId === appointment?.providerId}
+                            className="px-8 py-3 text-sm font-bold bg-indigo-500 text-white rounded-xl shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-50 disabled:scale-95"
                         >
-                            {saving ? 'Saving...' : 'Confirm Change'}
+                            {saving ? 'Saving...' : 'Reassign'}
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
@@ -1031,8 +1039,8 @@ const Schedule = () => {
 
     return (
         <div className="h-screen flex flex-col bg-[#F8FAFC]">
-            {/* Soft Modern Header */}
-            <div className="flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-100">
+            {/* Soft Modern Header - Elevated Z-Index to clear grid and sidebar */}
+            <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-100 relative z-[40]">
                 <div className="max-w-[1700px] mx-auto px-8 py-5">
                     <div className="flex items-center justify-between">
                         {/* Left: Title and Date Navigation */}
@@ -1513,37 +1521,43 @@ const Schedule = () => {
                 </div>
             </div>
 
-            {/* New Appointment Modal */}
-            {showModal && (
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-100">
-                        <div className="bg-indigo-50/50 border-b border-indigo-100 px-8 py-6">
-                            <h2 className="text-xl font-semibold text-indigo-900">
+            {/* New Appointment Modal - Portaled for maximum priority focus */}
+            {showModal && createPortal(
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[10001] p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+                        <div className="bg-indigo-50/50 border-b border-indigo-100 px-8 py-6 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-indigo-900 tracking-tight">
                                 {clickedTimeSlot ? `Book at ${clickedTimeSlot}` : 'New Appointment'}
                             </h2>
+                            <button
+                                onClick={() => { setShowModal(false); setClickedTimeSlot(null); setPatientSearch(''); setPendingFollowupId(null); }}
+                                className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-indigo-500 transition-all border border-transparent hover:border-slate-100"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
 
-                        <div className="p-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="p-6">
+                            <div className="grid grid-cols-2 gap-6">
                                 {/* Left Column - Patient & Details */}
-                                <div className="space-y-3">
+                                <div className="space-y-4">
                                     {/* Patient Search */}
                                     <div ref={patientSearchRef} className="relative">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <label className="text-xs font-semibold text-slate-700">Patient</label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Patient</label>
                                             <button
                                                 type="button"
                                                 onClick={() => { setShowModal(false); setShowAddPatientModal(true); }}
-                                                className="text-[10px] text-blue-600 hover:text-blue-700 font-medium"
+                                                className="text-[10px] text-blue-600 hover:text-blue-700 font-bold uppercase tracking-wider"
                                             >
                                                 + New Patient
                                             </button>
                                         </div>
-                                        <div className="relative">
-                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                        <div className="relative group">
+                                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                             <input
                                                 type="text"
-                                                className="w-full pl-8 pr-8 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                className="w-full pl-10 pr-10 py-3 text-sm bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-300 transition-all placeholder:text-slate-400"
                                                 placeholder="Search by name or MRN..."
                                                 value={patientSearch}
                                                 onChange={(e) => {
@@ -1556,19 +1570,19 @@ const Schedule = () => {
                                                 <button
                                                     type="button"
                                                     onClick={() => { setPatientSearch(''); setNewAppt({ ...newAppt, patientId: '', patient: '' }); setShowPatientDropdown(false); }}
-                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
                                                 >
-                                                    <X className="w-3.5 h-3.5" />
+                                                    <X className="w-4 h-4" />
                                                 </button>
                                             )}
                                         </div>
                                         {showPatientDropdown && patientSearchResults.length > 0 && (
-                                            <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-32 overflow-y-auto">
+                                            <div className="absolute z-[10002] w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl max-h-48 overflow-y-auto ring-1 ring-black/5 animate-in slide-in-from-top-2">
                                                 {patientSearchResults.map(patient => (
                                                     <button
                                                         key={patient.id}
                                                         type="button"
-                                                        className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors text-sm"
+                                                        className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors text-sm border-b border-slate-50 last:border-0"
                                                         onClick={() => {
                                                             const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
                                                             setPatientSearch(patientName + (patient.mrn ? ` (${patient.mrn})` : ''));
@@ -1576,218 +1590,176 @@ const Schedule = () => {
                                                             setShowPatientDropdown(false);
                                                         }}
                                                     >
-                                                        <div className="font-medium text-slate-900">{patient.first_name} {patient.last_name}</div>
-                                                        {patient.mrn && <div className="text-xs text-slate-500">MRN: {patient.mrn}</div>}
+                                                        <div className="font-bold text-slate-900">{patient.first_name} {patient.last_name}</div>
+                                                        {patient.mrn && <div className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">MRN: {patient.mrn}</div>}
                                                     </button>
                                                 ))}
                                             </div>
                                         )}
                                         {newAppt.patientId && (
-                                            <div className="mt-1 text-xs text-slate-600 bg-blue-50 p-2 rounded-lg">
-                                                ✓ <span className="font-semibold text-blue-700">{newAppt.patient}</span>
+                                            <div className="mt-2 text-[10px] text-blue-600 bg-blue-50/50 px-3 py-2 rounded-lg font-bold uppercase tracking-wider border border-blue-100">
+                                                ✓ <span className="">{newAppt.patient}</span>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Provider & Date Row */}
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-xs font-semibold text-slate-500 mb-2 block uppercase tracking-wider">Provider</label>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Provider</label>
                                             <select
-                                                className="w-full py-3 px-4 text-sm border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all bg-slate-50/50"
+                                                className="w-full py-3 px-4 text-sm bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all appearance-none font-medium text-slate-700"
                                                 value={newAppt.providerId}
                                                 onChange={(e) => setNewAppt({ ...newAppt, providerId: e.target.value })}
                                             >
                                                 <option value="">Select Provider</option>
-                                                {(providers || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                {providers.map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name || `${p.first_name} ${p.last_name}`}</option>
+                                                ))}
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="text-xs font-semibold text-slate-700 mb-1 block">Date</label>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Date</label>
                                             <input
                                                 type="date"
-                                                className="w-full py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                value={newAppt.date || format(currentDate, 'yyyy-MM-dd')}
+                                                className="w-full py-3 px-4 text-sm bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all font-medium text-slate-700"
+                                                value={newAppt.date}
                                                 onChange={(e) => setNewAppt({ ...newAppt, date: e.target.value })}
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Duration & Type Row */}
-                                    <div className="grid grid-cols-2 gap-2">
+                                    {/* Visit Type & Method Row */}
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-xs font-semibold text-slate-700 mb-1 block">Duration</label>
-                                            <select
-                                                className="w-full py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                value={newAppt.duration}
-                                                onChange={(e) => setNewAppt({ ...newAppt, duration: Number(e.target.value) })}
-                                            >
-                                                <option value={15}>15 min</option>
-                                                <option value={30}>30 min</option>
-                                                <option value={45}>45 min</option>
-                                                <option value={60}>60 min</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-semibold text-slate-700 mb-1 block">Type</label>
-                                            <select
-                                                className="w-full py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Visit Type</label>
+                                            <VisitTypeDropdown
                                                 value={newAppt.type}
-                                                onChange={(e) => {
-                                                    const newType = e.target.value;
-                                                    const updates = { type: newType };
-                                                    if (newType === 'Telehealth Visit') {
-                                                        updates.visitMethod = 'telehealth';
-                                                    }
-                                                    setNewAppt({ ...newAppt, ...updates });
-                                                }}
-                                            >
-                                                <option value="Follow-up">Follow-up</option>
-                                                <option value="New Patient">New Patient</option>
-                                                <option value="Sick Visit">Sick Visit</option>
-                                                <option value="Physical">Physical</option>
-                                                <option value="Telehealth Visit">Telehealth Visit</option>
-                                                <option value="Consultation">Consultation</option>
-                                            </select>
+                                                onChange={(type) => setNewAppt({ ...newAppt, type })}
+                                            />
                                         </div>
-                                    </div>
-
-                                    {/* Visit Method Toggle */}
-                                    <div className="mb-4">
-                                        <label className="text-xs font-semibold text-slate-500 mb-2 block uppercase tracking-wider">Visit Method</label>
-                                        <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-2xl w-fit">
-                                            <button
-                                                type="button"
-                                                onClick={() => setNewAppt({ ...newAppt, visitMethod: 'office' })}
-                                                className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${newAppt.visitMethod === 'office' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                In-Office
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setNewAppt({ ...newAppt, visitMethod: 'telehealth' })}
-                                                className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${newAppt.visitMethod === 'telehealth' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                Telehealth
-                                            </button>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Visit Method</label>
+                                            <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                                                <button
+                                                    onClick={() => setNewAppt({ ...newAppt, visitMethod: 'office' })}
+                                                    className={`flex-1 py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${newAppt.visitMethod === 'office'
+                                                        ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100/50'
+                                                        : 'text-slate-400 hover:text-slate-600'
+                                                        }`}
+                                                >
+                                                    Office
+                                                </button>
+                                                <button
+                                                    onClick={() => setNewAppt({ ...newAppt, visitMethod: 'telehealth' })}
+                                                    className={`flex-1 py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${newAppt.visitMethod === 'telehealth'
+                                                        ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100/50'
+                                                        : 'text-slate-400 hover:text-slate-600'
+                                                        }`}
+                                                >
+                                                    Telehealth
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Right Column - Time Slot Picker */}
-                                <div>
-
+                                {/* Right Column - Mini Scheduler */}
+                                <div className="space-y-4">
                                     {/* Mini Scheduler - Visual Time Slot Picker */}
-                                    <div>
-                                        <div className="flex items-center justify-between mb-3">
-                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Time Slot</label>
+                                    <div className="h-full flex flex-col">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Time Slot</label>
                                             {newAppt.time && (
-                                                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold uppercase tracking-tight">
+                                                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-bold uppercase tracking-widest border border-indigo-100/50">
                                                     {newAppt.time}
                                                 </span>
                                             )}
                                         </div>
 
-                                        {!newAppt.providerId ? (
-                                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center text-amber-700 text-sm">
-                                                Please select a provider first to see availability
-                                            </div>
-                                        ) : loadingModalAppts ? (
-                                            <div className="bg-slate-50 rounded-xl p-4 text-center text-slate-500 text-sm">
-                                                Loading schedule...
-                                            </div>
-                                        ) : (
-                                            <div className="bg-slate-50 rounded-xl p-3">
-                                                <div className="grid grid-cols-6 gap-1">
-                                                    {timeSlots.map(slot => {
-                                                        // Check how many appointments are at this exact time slot
-                                                        const slotMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
-
-                                                        // Count only ACTIVE appointments (not cancelled or no-show)
-                                                        const appointmentsAtSlot = modalAppointments.filter(appt => {
-                                                            if (!appt.time) return false;
-                                                            const apptTime = appt.time.substring(0, 5);
-                                                            return apptTime === slot;
-                                                        });
-
-                                                        // Filter out cancelled/no-show appointments from the count
-                                                        const activeAppointments = appointmentsAtSlot.filter(appt => {
-                                                            const status = (appt.patient_status || '').toLowerCase();
-                                                            return status !== 'cancelled' && !['no_show', 'no-show'].includes(status);
-                                                        });
-
-                                                        const bookingCount = activeAppointments.length;
-                                                        const isFullyBooked = bookingCount >= 2; // Max 2 ACTIVE patients per slot
-                                                        const hasOneBooking = bookingCount === 1;
-                                                        const isSelected = newAppt.time === slot;
-
-                                                        // Get patient names for tooltip (include cancelled status)
-                                                        const bookedPatients = appointmentsAtSlot.map(a => {
-                                                            const statusSuffix = a.patient_status === 'cancelled' ? ' (Cancelled)' :
-                                                                ['no_show', 'no-show'].includes(a.patient_status) ? ' (No Show)' : '';
-                                                            return a.patientName + statusSuffix;
-                                                        }).join(', ');
-
-                                                        return (
-                                                            <button
-                                                                key={slot}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    if (!isFullyBooked) {
-                                                                        setNewAppt({ ...newAppt, time: slot });
-                                                                    }
-                                                                }}
-                                                                disabled={isFullyBooked}
-                                                                className={`
-                                                            py-2 px-1 text-[10px] font-bold rounded-lg transition-all relative
-                                                            ${isSelected
-                                                                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-100'
-                                                                        : isFullyBooked
-                                                                            ? 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-100'
-                                                                            : hasOneBooking
-                                                                                ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100'
-                                                                                : 'bg-white text-slate-400 hover:bg-indigo-50 hover:text-indigo-500 border border-slate-100 hover:border-indigo-100'
-                                                                    }
-                                                        `}
-                                                                title={isFullyBooked
-                                                                    ? `FULL: ${bookedPatients}`
-                                                                    : hasOneBooking
-                                                                        ? `1/2 booked: ${bookedPatients}`
-                                                                        : 'Available'}
-                                                            >
-                                                                {slot}
-                                                                {bookingCount > 0 && (
-                                                                    <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 text-[8px] rounded-full flex items-center justify-center font-bold ${isFullyBooked ? 'bg-slate-300 text-white' : 'bg-amber-400 text-white'
-                                                                        }`}>
-                                                                        {bookingCount}
-                                                                    </span>
-                                                                )}
-                                                            </button>
-                                                        );
-                                                    })}
+                                        <div className="flex-1 min-h-0 bg-slate-50/50 rounded-[2rem] p-4 border border-slate-100 flex flex-col">
+                                            {!newAppt.providerId ? (
+                                                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
+                                                    <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
+                                                        <Users className="w-6 h-6 text-amber-500" />
+                                                    </div>
+                                                    <p className="text-sm font-medium text-amber-900/60 leading-relaxed">
+                                                        Select a provider first to see their real-time availability.
+                                                    </p>
                                                 </div>
-
-                                                {/* Legend */}
-                                                <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-slate-200 text-[10px] text-slate-500">
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="w-2.5 h-2.5 bg-white border border-slate-200 rounded"></span>
-                                                        Open
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="w-2.5 h-2.5 bg-amber-100 border border-amber-300 rounded"></span>
-                                                        1/2
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="w-2.5 h-2.5 bg-red-200 rounded"></span>
-                                                        Full
-                                                    </span>
-                                                    <span className="flex items-center gap-1.5">
-                                                        <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
-                                                        Selected
-                                                    </span>
+                                            ) : loadingModalAppts ? (
+                                                <div className="flex-1 flex flex-col items-center justify-center space-y-3">
+                                                    <div className="w-8 h-8 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
+                                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Scanning Schedule...</p>
                                                 </div>
-                                            </div>
-                                        )}
+                                            ) : (
+                                                <div className="overflow-y-auto pr-2 custom-scrollbar">
+                                                    <div className="grid grid-cols-6 gap-1.5">
+                                                        {timeSlots.map(slot => {
+                                                            const appointmentsAtSlot = modalAppointments.filter(appt => {
+                                                                if (!appt.time) return false;
+                                                                const apptTime = appt.time.substring(0, 5);
+                                                                return apptTime === slot;
+                                                            });
+
+                                                            const activeAppointments = appointmentsAtSlot.filter(appt => {
+                                                                const status = (appt.patient_status || '').toLowerCase();
+                                                                return status !== 'cancelled' && !['no_show', 'no-show'].includes(status);
+                                                            });
+
+                                                            const bookingCount = activeAppointments.length;
+                                                            const isFullyBooked = bookingCount >= 2;
+                                                            const hasOneBooking = bookingCount === 1;
+                                                            const isSelected = newAppt.time === slot;
+
+                                                            const bookedPatients = appointmentsAtSlot.map(a => {
+                                                                const statusSuffix = a.patient_status === 'cancelled' ? ' (Cancelled)' :
+                                                                    ['no_show', 'no-show'].includes(a.patient_status) ? ' (No Show)' : '';
+                                                                return `${a.patient_name || 'Patient'}${statusSuffix}`;
+                                                            });
+
+                                                            return (
+                                                                <button
+                                                                    key={slot}
+                                                                    onClick={() => !isFullyBooked && setNewAppt({ ...newAppt, time: slot })}
+                                                                    className={`
+                                                                        group relative h-10 rounded-lg flex items-center justify-center transition-all
+                                                                        ${isFullyBooked ? 'bg-red-50 cursor-not-allowed' :
+                                                                            isSelected ? 'bg-indigo-500 text-white shadow-lg ring-2 ring-indigo-200' :
+                                                                                hasOneBooking ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' :
+                                                                                    'bg-white hover:bg-slate-50 border border-slate-100 text-slate-600'}
+                                                                    `}
+                                                                    title={bookedPatients.length > 0 ? `Booked: ${bookedPatients.join(', ')}` : 'Available'}
+                                                                >
+                                                                    <span className="text-[10px] font-bold">{slot}</span>
+                                                                    {bookingCount > 0 && !isSelected && (
+                                                                        <div className="absolute top-1 right-1 flex gap-0.5">
+                                                                            {[...Array(bookingCount)].map((_, i) => (
+                                                                                <div key={i} className={`w-1 h-1 rounded-full ${isFullyBooked ? 'bg-red-400' : 'bg-amber-400'}`} />
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap gap-4 px-2 py-3 border-t border-slate-100">
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                            <div className="w-2 h-2 bg-white border border-slate-200 rounded-sm" /> Available
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                            <div className="w-2 h-2 bg-amber-100 rounded-sm" /> 1/2 Filled
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                            <div className="w-2 h-2 bg-red-100 rounded-sm" /> Full
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                            <div className="w-2 h-2 bg-indigo-500 rounded-full" /> Selected
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1796,19 +1768,20 @@ const Schedule = () => {
                         <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-3">
                             <button
                                 onClick={() => { setShowModal(false); setClickedTimeSlot(null); setPatientSearch(''); setPendingFollowupId(null); }}
-                                className="px-6 py-2.5 text-sm text-slate-400 hover:text-slate-600 font-semibold rounded-xl hover:bg-slate-100/50 transition-all active:scale-95"
+                                className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl transition-all"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleAddAppointment}
-                                className="px-8 py-2.5 text-sm bg-indigo-500 text-white font-bold rounded-xl shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95"
+                                className="px-10 py-3 text-sm font-bold bg-indigo-500 text-white rounded-xl shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
                             >
                                 Book Appointment
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Add Patient Modal */}
