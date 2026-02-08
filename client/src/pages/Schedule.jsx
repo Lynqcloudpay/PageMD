@@ -224,49 +224,49 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
     });
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 rounded-t-xl">
-                    <h2 className="text-xl font-bold text-white">Change Provider</h2>
-                    <p className="text-blue-100 text-sm mt-1">Assign patient to a different provider</p>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 animate-fade-in" onClick={onClose}>
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-100" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-indigo-50/50 border-b border-indigo-100 px-6 py-5">
+                    <h2 className="text-lg font-semibold text-indigo-900">Change Provider</h2>
+                    <p className="text-indigo-400 text-[10px] uppercase font-bold tracking-widest mt-1">Reassign Appointment</p>
                 </div>
 
                 <div className="p-6">
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="mb-5">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
                             Current Provider
                         </label>
-                        <div className="px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-600">
+                        <div className="px-4 py-3 bg-slate-50/50 rounded-xl text-sm text-slate-600 border border-slate-100 font-medium italic">
                             {currentProviderName || 'No provider assigned'}
                         </div>
                     </div>
 
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Select New Provider <span className="text-red-500">*</span>
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                            Select New Provider
                         </label>
                         <select
                             value={selectedProviderId}
                             onChange={(e) => setSelectedProviderId(e.target.value)}
-                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            className="w-full px-4 py-3 border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 text-sm bg-slate-50/50 text-slate-700 transition-all font-medium"
                         >
                             <option value="">Select a provider...</option>
                             {providerOptions.map(provider => (
                                 <option key={provider.id} value={provider.id}>
-                                    {provider.name} ({provider.role_name || provider.role || 'Provider'})
+                                    {provider.name}
                                 </option>
                             ))}
                         </select>
                         {providerOptions.length === 0 && (
-                            <p className="text-xs text-gray-500 mt-1">No physicians/NP/PA available</p>
+                            <p className="text-[10px] text-rose-400 mt-2 font-medium">No available providers found</p>
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-3">
+                    <div className="flex justify-end gap-3 pt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            className="px-6 py-2.5 text-sm font-semibold text-slate-400 hover:text-slate-600 bg-slate-50/50 rounded-xl hover:bg-slate-100 transition-all active:scale-95"
                         >
                             Cancel
                         </button>
@@ -274,9 +274,9 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
                             type="button"
                             onClick={handleSave}
                             disabled={saving || !selectedProviderId || selectedProviderId === appointment.providerId}
-                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-6 py-2.5 text-sm font-bold text-white bg-indigo-500 rounded-xl hover:bg-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-100 active:scale-95"
                         >
-                            {saving ? 'Saving...' : 'Change Provider'}
+                            {saving ? 'Saving...' : 'Confirm Change'}
                         </button>
                     </div>
                 </div>
@@ -312,7 +312,7 @@ const ProviderSelector = ({ appointment, providers, currentProviderName, onProvi
                     e.stopPropagation();
                     setShowModal(true);
                 }}
-                className="text-[8px] text-gray-600 hover:text-gray-800 cursor-pointer transition-colors truncate block w-full text-left"
+                className="text-[9px] font-medium text-slate-400 hover:text-indigo-500 cursor-pointer transition-colors truncate block w-full text-left"
                 title={currentProviderName || 'Provider'}
             >
                 {displayName}
@@ -579,14 +579,14 @@ const Schedule = () => {
         }
 
         const colors = [
-            { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900', accent: '#3b82f6', light: 'bg-blue-100' },
-            { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', accent: '#10b981', light: 'bg-emerald-100' },
-            { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-900', accent: '#8b5cf6', light: 'bg-violet-100' },
-            { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900', accent: '#f59e0b', light: 'bg-amber-100' },
-            { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-900', accent: '#f43f5e', light: 'bg-rose-100' },
-            { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-900', accent: '#06b6d4', light: 'bg-cyan-100' },
-            { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-900', accent: '#6366f1', light: 'bg-indigo-100' },
-            { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-900', accent: '#14b8a6', light: 'bg-teal-100' },
+            { bg: 'bg-indigo-50/50', border: 'border-indigo-100', text: 'text-indigo-700', accent: '#818cf8', light: 'bg-indigo-50' },
+            { bg: 'bg-teal-50/50', border: 'border-teal-100', text: 'text-teal-700', accent: '#2dd4bf', light: 'bg-teal-50' },
+            { bg: 'bg-violet-50/50', border: 'border-violet-100', text: 'text-violet-700', accent: '#a78bfa', light: 'bg-violet-50' },
+            { bg: 'bg-amber-50/50', border: 'border-amber-100', text: 'text-amber-700', accent: '#fbbf24', light: 'bg-amber-50' },
+            { bg: 'bg-rose-50/50', border: 'border-rose-100', text: 'text-rose-700', accent: '#fb7185', light: 'bg-rose-50' },
+            { bg: 'bg-sky-50/50', border: 'border-sky-100', text: 'text-sky-700', accent: '#38bdf8', light: 'bg-sky-50' },
+            { bg: 'bg-soft-plum/50', border: 'border-plum-100', text: 'text-plum-700', accent: '#dda0dd', light: 'bg-plum-50' },
+            { bg: 'bg-slate-50/50', border: 'border-slate-100', text: 'text-slate-700', accent: '#94a3b8', light: 'bg-slate-50' },
         ];
 
         return colors[Math.abs(hash) % colors.length];
@@ -833,51 +833,42 @@ const Schedule = () => {
     };
 
     return (
-        <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
-            {/* Modern Header */}
-            <div className="flex-shrink-0 bg-white border-b border-slate-200 shadow-sm">
-                <div className="max-w-[1600px] mx-auto px-6 py-4">
+        <div className="h-screen flex flex-col bg-[#F8FAFC]">
+            {/* Soft Modern Header */}
+            <div className="flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-100">
+                <div className="max-w-[1700px] mx-auto px-8 py-5">
                     <div className="flex items-center justify-between">
                         {/* Left: Title and Date Navigation */}
-                        <div className="flex items-center gap-8">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                                    <Calendar className="w-5 h-5 text-white" />
+                        <div className="flex items-center gap-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-100/50">
+                                    <Calendar className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h1 className="text-xl font-bold text-slate-900">Schedule</h1>
-                                    <p className="text-xs text-slate-500">Manage appointments</p>
+                                    <h1 className="text-2xl font-semibold text-slate-700 tracking-tight">Schedule</h1>
+                                    <p className="text-[11px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Clinic Overview</p>
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-2xl p-1.5 shadow-sm">
                                     <button
-                                        className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-sm"
+                                        className="p-2.5 hover:bg-white text-slate-400 hover:text-indigo-500 rounded-xl transition-all hover:shadow-sm active:scale-95"
                                         onClick={() => setCurrentDate(addDays(currentDate, -1))}
                                     >
-                                        <ChevronLeft className="w-5 h-5 text-slate-600" />
+                                        <ChevronLeft className="w-5 h-5" />
                                     </button>
                                     <div className="relative group">
-                                        <div className="w-[350px] px-4 py-2 font-semibold text-slate-900 group-hover:bg-white rounded-lg transition-all text-center cursor-pointer select-none flex items-center justify-center gap-2 whitespace-nowrap">
+                                        <div className="w-[380px] px-6 py-2.5 font-medium text-slate-600 group-hover:bg-white rounded-xl transition-all text-center cursor-pointer select-none flex items-center justify-center gap-3 whitespace-nowrap text-lg">
                                             {format(currentDate, 'EEEE, MMMM d, yyyy')}
-                                            <ChevronDown className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <ChevronDown className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                         <input
                                             type="date"
                                             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-20"
                                             style={{ display: 'block' }}
                                             value={format(currentDate, 'yyyy-MM-dd')}
-                                            onClick={(e) => {
-                                                // Explicitly try to open the picker on click for better browser support
-                                                try {
-                                                    if (e.target.showPicker) {
-                                                        e.target.showPicker();
-                                                    }
-                                                } catch (err) {
-                                                    // Fallback or ignore if not supported
-                                                }
-                                            }}
+                                            onClick={(e) => { e.target.showPicker && e.target.showPicker(); }}
                                             onChange={(e) => {
                                                 if (e.target.value) {
                                                     const [y, m, d] = e.target.value.split('-').map(Number);
@@ -887,19 +878,18 @@ const Schedule = () => {
                                         />
                                     </div>
                                     <button
-                                        className="p-2 hover:bg-white rounded-lg transition-all hover:shadow-sm"
+                                        className="p-2.5 hover:bg-white text-slate-400 hover:text-indigo-500 rounded-xl transition-all hover:shadow-sm active:scale-95"
                                         onClick={() => setCurrentDate(addDays(currentDate, 1))}
                                     >
-                                        <ChevronRight className="w-5 h-5 text-slate-600" />
+                                        <ChevronRight className="w-5 h-5" />
                                     </button>
                                 </div>
                                 <button
-                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all shadow-sm ${format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                                        ? 'bg-blue-600 text-white border border-blue-700 hover:bg-blue-700'
-                                        : 'text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:border-slate-400'
+                                    className={`px-6 py-2.5 text-sm font-medium rounded-xl transition-all shadow-sm active:scale-95 ${format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                                        ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                        : 'text-slate-500 bg-white border border-slate-100 hover:bg-slate-50'
                                         }`}
                                     onClick={() => setCurrentDate(new Date())}
-                                    title="Go to today's date"
                                 >
                                     Today
                                 </button>
@@ -912,15 +902,15 @@ const Schedule = () => {
                                 <div className="relative" ref={providerMenuRef}>
                                     <button
                                         onClick={() => setShowProviderMenu(!showProviderMenu)}
-                                        className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 rounded-xl px-3 py-2.5 transition-colors border border-transparent hover:border-slate-300"
+                                        className="flex items-center gap-3 bg-white hover:bg-slate-50 rounded-2xl px-5 py-3 transition-all border border-slate-100 shadow-sm active:scale-95"
                                     >
-                                        <Users className="w-4 h-4 text-slate-500" />
-                                        <span className="text-sm font-medium text-slate-700">
+                                        <Users className="w-4 h-4 text-slate-400" />
+                                        <span className="text-sm font-medium text-slate-600">
                                             {selectedProviderIds.length === 0
                                                 ? 'All Providers'
                                                 : `${selectedProviderIds.length} Provider${selectedProviderIds.length === 1 ? '' : 's'}`}
                                         </span>
-                                        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`w-4 h-4 text-slate-300 transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
                                     </button>
 
                                     {showProviderMenu && (
@@ -972,7 +962,7 @@ const Schedule = () => {
                                     setNewAppt(prev => ({ ...prev, date: format(currentDate, 'yyyy-MM-dd') }));
                                     setShowModal(true);
                                 }}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all hover:-translate-y-0.5"
+                                className="flex items-center gap-3 px-6 py-3 bg-indigo-500 text-white rounded-2xl font-semibold shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95 hover:-translate-y-0.5"
                             >
                                 <Plus className="w-5 h-5" />
                                 <span>New Appointment</span>
@@ -982,17 +972,17 @@ const Schedule = () => {
                 </div>
             </div>
 
-            {/* Calendar Grid - eCW Style */}
-            <div className="flex-1 overflow-hidden bg-gray-50">
-                <div className="h-full bg-white border-t border-gray-200 overflow-hidden flex flex-col">
-                    {/* Toolbar */}
-                    <div className="flex-shrink-0 px-4 py-2 bg-gray-50 border-b border-gray-300 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+            {/* Premium Grid Container */}
+            <div className="flex-1 px-8 pb-8 overflow-hidden bg-[#F8FAFC]">
+                <div className="h-full bg-white rounded-3xl border border-slate-100 overflow-hidden flex flex-col shadow-sm">
+                    {/* Clean Toolbar */}
+                    <div className="flex-shrink-0 px-6 py-4 bg-slate-50/30 border-b border-slate-50 flex items-center justify-between">
+                        <div className="flex items-center gap-6">
                             <button
                                 onClick={() => setShowCancelledAppointments(!showCancelledAppointments)}
-                                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border transition-colors ${showCancelledAppointments
-                                    ? 'bg-white border-gray-400 text-gray-700 hover:bg-gray-50'
-                                    : 'bg-white border-gray-300 text-gray-600 hover:border-gray-400'
+                                className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition-all ${showCancelledAppointments
+                                    ? 'bg-white border border-slate-200 text-slate-500 shadow-sm'
+                                    : 'bg-indigo-50/50 border border-indigo-100/50 text-indigo-500'
                                     }`}
                             >
                                 {showCancelledAppointments ? (
@@ -1007,58 +997,56 @@ const Schedule = () => {
                                     </>
                                 )}
                             </button>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2 text-xs text-gray-600">
-                                <span className="font-semibold">Status:</span>
-                                <span className="text-blue-600">Arrived</span>
-                                <span>→</span>
-                                <span className="text-green-600">Checked In</span>
-                                <span>→</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-purple-600">Room</span>
-                                    <span className="w-2.5 h-2.5 rounded-full border-2 border-violet-500 bg-violet-50" title="With Nurse" />
-                                    <span className="text-[9px] text-violet-600 font-medium">Nurse</span>
-                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" title="Ready for Provider" />
-                                    <span className="text-[9px] text-amber-600 font-medium">Provider</span>
+
+                            <div className="h-4 w-[1px] bg-slate-200"></div>
+
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 text-[10px] uppercase font-bold tracking-widest text-slate-400">
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-indigo-400"></span> Arrived</span>
+                                    <span className="text-slate-200">/</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Checked In</span>
+                                    <span className="text-slate-200">/</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400"></span> Room</span>
+                                    <span className="text-slate-200">/</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400"></span> Out</span>
                                 </div>
-                                <span>→</span>
-                                <span className="text-red-600">Out</span>
                             </div>
-                            {/* Provider Color Legend */}
-                            {Object.keys(appointmentsByProvider).length > 0 && (
-                                <div className="flex items-center gap-3 text-xs">
-                                    <span className="font-semibold text-gray-600">Providers:</span>
+                        </div>
+
+                        {/* Provider Legend */}
+                        {Object.keys(appointmentsByProvider).length > 0 && (
+                            <div className="flex items-center gap-4">
+                                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Providers</span>
+                                <div className="flex items-center gap-2">
                                     {Object.values(appointmentsByProvider).map((providerGroup) => (
-                                        <div key={providerGroup.providerId || 'unknown'} className="flex items-center gap-1.5">
+                                        <div key={providerGroup.providerId || 'unknown'} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
                                             <div
-                                                className={`w-3 h-3 rounded border-2 ${providerGroup.color.bg} ${providerGroup.color.border}`}
-                                                style={{
-                                                    borderLeftWidth: '3px',
-                                                    borderLeftColor: providerGroup.color.accent
-                                                }}
+                                                className={`w-2 h-2 rounded-full`}
+                                                style={{ backgroundColor: providerGroup.color.accent }}
                                             />
-                                            <span className="text-gray-700 font-medium">{providerGroup.providerName}</span>
+                                            <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[100px]">{providerGroup.providerName}</span>
                                         </div>
                                     ))}
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Schedule Grid */}
                     <div className="flex-1 overflow-auto" ref={scrollContainerRef}>
                         <div className="min-w-full inline-block">
                             {/* Single Column Header */}
-                            <div className="sticky top-0 z-10 bg-white border-b-2 border-gray-300">
+                            <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-100">
                                 <div className="flex">
-                                    <div className="w-24 flex-shrink-0 border-r-2 border-gray-300 bg-gray-50"></div>
-                                    <div className="flex-1 border-r border-gray-200 bg-gray-50 px-3 py-2">
-                                        <div className="font-semibold text-sm text-gray-800">
-                                            All Providers
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                            {appointments.length} appointment{appointments.length !== 1 ? 's' : ''} total
+                                    <div className="w-24 flex-shrink-0 border-r border-slate-100 bg-slate-50/30"></div>
+                                    <div className="flex-1 px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="font-semibold text-sm text-slate-700">
+                                                Provider Schedule
+                                            </div>
+                                            <div className="px-2 py-0.5 bg-slate-100 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                {appointments.length} Total
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1078,26 +1066,33 @@ const Schedule = () => {
                                     return (
                                         <div
                                             key={time}
-                                            className={`flex border-b border-gray-200 ${isHour ? 'bg-white' : 'bg-gray-50/50'}`}
+                                            className={`flex border-b border-slate-50 ${isHour ? 'bg-white' : 'bg-slate-50/20'}`}
                                             style={{ minHeight: `${slotHeight}px`, height: `${slotHeight}px` }}
                                         >
                                             {/* Time Column */}
-                                            <div className="w-24 flex-shrink-0 border-r-2 border-gray-300 bg-white flex items-center justify-end pr-3">
-                                                {isHour && (
-                                                    <span className="text-sm font-semibold text-gray-700">
+                                            <div className="w-24 flex-shrink-0 border-r border-slate-50 bg-white flex items-center justify-end pr-4">
+                                                {isHour ? (
+                                                    <span className="text-xs font-bold text-slate-400 uppercase tracking-tighter">
                                                         {displayHour} {ampm}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-200">
+                                                        :30
                                                     </span>
                                                 )}
                                             </div>
 
                                             {/* Single Provider Column */}
                                             <div
-                                                className="flex-1 border-r border-gray-200 relative cursor-pointer hover:bg-blue-50/30 transition-colors"
+                                                className="flex-1 relative cursor-pointer hover:bg-indigo-50/20 transition-all group"
                                                 onClick={() => handleTimeSlotClick(time)}
                                             >
                                                 {/* Empty slot indicator on hover */}
-                                                <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-                                                    <span className="text-xs text-blue-600 font-medium">+ Add</span>
+                                                <div className="absolute inset-x-2 top-1.5 bottom-1.5 rounded-xl border-2 border-dashed border-indigo-100 bg-indigo-50/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none transform scale-95 group-hover:scale-100">
+                                                    <div className="flex items-center gap-2 text-indigo-500">
+                                                        <Plus className="w-4 h-4" />
+                                                        <span className="text-xs font-semibold">Book at {time}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1184,10 +1179,10 @@ const Schedule = () => {
                                         return (
                                             <div
                                                 key={appt.id}
-                                                className={`absolute border-l-2 rounded shadow-sm hover:shadow-md transition-all overflow-visible ${isCancelledOrNoShow
-                                                    ? 'bg-gray-100 border-gray-400 opacity-75'
+                                                className={`absolute border-l-4 rounded-xl shadow-sm hover:shadow-md transition-all overflow-visible ${isCancelledOrNoShow
+                                                    ? 'bg-slate-50 border-slate-300 opacity-60'
                                                     : isActiveInClinic
-                                                        ? `${color.bg} ${color.border} ring-2 ring-blue-400 ring-opacity-60 shadow-lg`
+                                                        ? `${color.bg} ${color.border} ring-2 ring-indigo-100 shadow-sm`
                                                         : `${color.bg} ${color.border}`
                                                     }`}
                                                 style={{
@@ -1196,19 +1191,18 @@ const Schedule = () => {
                                                     left: leftOffset,
                                                     width: slotWidthCalc,
                                                     borderLeftColor: isCancelledOrNoShow
-                                                        ? (['no_show', 'no-show'].includes(appt.patient_status) ? '#f97316' : '#ef4444')
+                                                        ? (['no_show', 'no-show'].includes(appt.patient_status) ? '#cbd5e1' : '#f1f5f9')
                                                         : isActiveInClinic
-                                                            ? '#3b82f6' // Blue border for active patients
+                                                            ? '#818cf8' // Soft Indigo for active
                                                             : color.accent,
-                                                    borderLeftWidth: isActiveInClinic ? '3px' : '2px',
                                                 }}
                                             >
                                                 <div className="h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative">
 
                                                     {/* Column 1: Patient Name - Fixed width with truncation */}
-                                                    <div className="flex-shrink-0 w-[120px] min-w-[120px] max-w-[120px]">
+                                                    <div className="flex-shrink-0 w-[140px] min-w-[140px] max-w-[140px]">
                                                         <span
-                                                            className={`font-semibold text-[9px] leading-tight ${isCancelledOrNoShow ? 'text-gray-400 line-through decoration-gray-400' : color.text} hover:underline cursor-pointer truncate block w-full`}
+                                                            className={`font-medium text-[10px] leading-tight ${isCancelledOrNoShow ? 'text-slate-400 line-through' : 'text-slate-700'} hover:underline cursor-pointer truncate block w-full`}
                                                             onClick={(e) => handlePatientNameClick(e, appt)}
                                                             title={appt.patientName}
                                                         >
@@ -1266,11 +1260,11 @@ const Schedule = () => {
 
             {/* New Appointment Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3">
-                            <h2 className="text-lg font-bold text-white">
-                                {clickedTimeSlot ? `New Appointment at ${clickedTimeSlot}` : 'New Appointment'}
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4 animate-fade-in">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-100">
+                        <div className="bg-indigo-50/50 border-b border-indigo-100 px-8 py-6">
+                            <h2 className="text-xl font-semibold text-indigo-900">
+                                {clickedTimeSlot ? `Book at ${clickedTimeSlot}` : 'New Appointment'}
                             </h2>
                         </div>
 
@@ -1343,13 +1337,13 @@ const Schedule = () => {
                                     {/* Provider & Date Row */}
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="text-xs font-semibold text-slate-700 mb-1 block">Provider</label>
+                                            <label className="text-xs font-semibold text-slate-500 mb-2 block uppercase tracking-wider">Provider</label>
                                             <select
-                                                className="w-full py-2 px-3 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                className="w-full py-3 px-4 text-sm border border-slate-100 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all bg-slate-50/50"
                                                 value={newAppt.providerId}
                                                 onChange={(e) => setNewAppt({ ...newAppt, providerId: e.target.value })}
                                             >
-                                                <option value="">Select</option>
+                                                <option value="">Select Provider</option>
                                                 {(providers || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                             </select>
                                         </div>
@@ -1405,19 +1399,19 @@ const Schedule = () => {
 
                                     {/* Visit Method Toggle */}
                                     <div className="mb-4">
-                                        <label className="text-xs font-semibold text-slate-700 mb-2 block">Visit Method</label>
-                                        <div className="flex bg-slate-100 p-1 rounded-xl w-fit">
+                                        <label className="text-xs font-semibold text-slate-500 mb-2 block uppercase tracking-wider">Visit Method</label>
+                                        <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-2xl w-fit">
                                             <button
                                                 type="button"
                                                 onClick={() => setNewAppt({ ...newAppt, visitMethod: 'office' })}
-                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${newAppt.visitMethod === 'office' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${newAppt.visitMethod === 'office' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                                             >
-                                                Office
+                                                In-Office
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setNewAppt({ ...newAppt, visitMethod: 'telehealth' })}
-                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${newAppt.visitMethod === 'telehealth' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all ${newAppt.visitMethod === 'telehealth' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                                             >
                                                 Telehealth
                                             </button>
@@ -1430,11 +1424,11 @@ const Schedule = () => {
 
                                     {/* Mini Scheduler - Visual Time Slot Picker */}
                                     <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="text-sm font-semibold text-slate-700">Select Time Slot</label>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Time Slot</label>
                                             {newAppt.time && (
-                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg font-medium">
-                                                    Selected: {newAppt.time}
+                                                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full font-bold uppercase tracking-tight">
+                                                    {newAppt.time}
                                                 </span>
                                             )}
                                         </div>
@@ -1493,14 +1487,14 @@ const Schedule = () => {
                                                                 }}
                                                                 disabled={isFullyBooked}
                                                                 className={`
-                                                            py-1.5 px-0.5 text-[10px] font-medium rounded transition-all relative
+                                                            py-2 px-1 text-[10px] font-bold rounded-lg transition-all relative
                                                             ${isSelected
-                                                                        ? 'bg-blue-600 text-white ring-2 ring-blue-300'
+                                                                        ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-100'
                                                                         : isFullyBooked
-                                                                            ? 'bg-red-200 text-red-500 cursor-not-allowed'
+                                                                            ? 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-100'
                                                                             : hasOneBooking
-                                                                                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-300'
-                                                                                : 'bg-white text-slate-700 hover:bg-green-100 hover:text-green-700 border border-slate-200 hover:border-green-300'
+                                                                                ? 'bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100'
+                                                                                : 'bg-white text-slate-400 hover:bg-indigo-50 hover:text-indigo-500 border border-slate-100 hover:border-indigo-100'
                                                                     }
                                                         `}
                                                                 title={isFullyBooked
@@ -1511,7 +1505,7 @@ const Schedule = () => {
                                                             >
                                                                 {slot}
                                                                 {bookingCount > 0 && (
-                                                                    <span className={`absolute -top-1 -right-1 w-3 h-3 text-[8px] rounded-full flex items-center justify-center font-bold ${isFullyBooked ? 'bg-red-500 text-white' : 'bg-amber-500 text-white'
+                                                                    <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 text-[8px] rounded-full flex items-center justify-center font-bold ${isFullyBooked ? 'bg-slate-300 text-white' : 'bg-amber-400 text-white'
                                                                         }`}>
                                                                         {bookingCount}
                                                                     </span>
@@ -1535,8 +1529,8 @@ const Schedule = () => {
                                                         <span className="w-2.5 h-2.5 bg-red-200 rounded"></span>
                                                         Full
                                                     </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="w-2.5 h-2.5 bg-blue-600 rounded"></span>
+                                                    <span className="flex items-center gap-1.5">
+                                                        <span className="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span>
                                                         Selected
                                                     </span>
                                                 </div>
@@ -1547,17 +1541,16 @@ const Schedule = () => {
                             </div>
                         </div>
 
-                        {/* Footer */}
-                        <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+                        <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-3">
                             <button
                                 onClick={() => { setShowModal(false); setClickedTimeSlot(null); setPatientSearch(''); setPendingFollowupId(null); }}
-                                className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 font-medium rounded-lg hover:bg-slate-100 transition-all"
+                                className="px-6 py-2.5 text-sm text-slate-400 hover:text-slate-600 font-semibold rounded-xl hover:bg-slate-100/50 transition-all active:scale-95"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleAddAppointment}
-                                className="px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium rounded-lg shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all"
+                                className="px-8 py-2.5 text-sm bg-indigo-500 text-white font-bold rounded-xl shadow-xl shadow-indigo-100 hover:bg-indigo-600 transition-all active:scale-95"
                             >
                                 Book Appointment
                             </button>
