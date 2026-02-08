@@ -892,7 +892,8 @@ const Schedule = () => {
         }
 
         // Frontend validation: Overbooking cap removed per user request
-
+        const selectedDate = newAppt.date || format(currentDate, 'yyyy-MM-dd');
+        const selectedTime = newAppt.time;
 
         try {
             await appointmentsAPI.create({
