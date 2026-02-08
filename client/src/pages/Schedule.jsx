@@ -1338,8 +1338,8 @@ const Schedule = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Column 3: Provider Name - Expanded room */}
-                                                    <div className="flex-shrink-0 w-[115px] min-w-[115px] max-w-[115px] flex items-center overflow-visible">
+                                                    {/* Column 3: Provider Name - Expanded room with leading gap */}
+                                                    <div className="flex-shrink-0 w-[115px] min-w-[115px] max-w-[115px] flex items-center overflow-visible pl-3">
                                                         <ProviderSelector
                                                             appointment={appt}
                                                             providers={providers}

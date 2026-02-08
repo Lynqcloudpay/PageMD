@@ -26,9 +26,9 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
     const showTime = (isPast || isActive) && (time > 0);
 
     const colors = {
-        arrived: isActive ? 'text-blue-700 font-semibold bg-blue-50/50 px-1.5 py-0 rounded border border-blue-100 shadow-sm' : isPast ? 'text-blue-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
+        arrived: isActive ? 'text-indigo-700 font-semibold bg-indigo-50/50 px-1.5 py-0 rounded border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
         checked_in: isActive ? 'text-teal-700 font-semibold bg-teal-50/50 px-1.5 py-0 rounded border border-teal-100 shadow-sm' : isPast ? 'text-teal-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
-        checked_out: isActive ? 'text-slate-700 font-semibold bg-slate-50/50 px-1.5 py-0 rounded border border-slate-200 shadow-sm' : isPast ? 'text-slate-500 font-medium' : 'text-slate-300 hover:text-slate-400 font-medium'
+        checked_out: isActive ? 'text-rose-600 font-semibold bg-rose-50 px-1.5 py-0 rounded border border-rose-100 shadow-sm' : isPast ? 'text-rose-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium'
     };
 
     const isDisabled = saving || isTerminalState || !canUpdateStatus;
@@ -101,16 +101,16 @@ const RoomBtn = memo(({
                     onClick={handleCircleToggle}
                     disabled={saving}
                     className={`w-2 h-2 rounded-full transition-all border shadow-sm shrink-0 ${roomSubStatus === 'ready_for_provider'
-                            ? 'bg-cyan-400 border-cyan-500'
-                            : 'bg-indigo-400 border-indigo-500'
+                            ? 'bg-amber-400 border-amber-500'
+                            : 'bg-violet-400 border-violet-500'
                         } ${saving ? 'opacity-50' : 'hover:scale-125 active:scale-90 cursor-pointer'}`}
-                    title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Cyan) - Click to revert to Nurse' : 'With Nurse (Indigo) - Click to signal Ready for Provider'}
+                    title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Yellow) - Click to revert to Nurse' : 'With Nurse (Purple) - Click to signal Ready for Provider'}
                 />
             )}
 
             {showRoomInput ? (
-                <div className="flex items-center bg-white border border-indigo-200 rounded shadow-sm px-1.5 py-0 shrink-0 h-[20px]">
-                    <span className="text-[7px] font-medium text-indigo-400 mr-1 uppercase leading-none">ROOM</span>
+                <div className="flex items-center bg-white border border-violet-200 rounded shadow-sm px-1.5 py-0 shrink-0 h-[20px]">
+                    <span className="text-[7px] font-medium text-violet-400 mr-1 uppercase leading-none">ROOM</span>
                     <input
                         ref={inputRef}
                         type="text"
@@ -126,7 +126,7 @@ const RoomBtn = memo(({
                                 setShowRoomInput(false);
                             }
                         }}
-                        className="w-[30px] text-[10px] bg-transparent text-indigo-700 focus:ring-0 outline-none font-semibold leading-none p-0 border-none cursor-text"
+                        className="w-[30px] text-[10px] bg-transparent text-violet-700 focus:ring-0 outline-none font-semibold leading-none p-0 border-none cursor-text"
                         placeholder="#"
                         onClick={(e) => e.stopPropagation()}
                     />
@@ -138,11 +138,11 @@ const RoomBtn = memo(({
                     disabled={saving || isTerminalState || !canUpdateStatus}
                     className={`text-[9px] transition-all flex items-center justify-center px-1.5 py-0 rounded border shadow-sm shrink-0 h-[20px] min-w-[60px] ${isActive
                             ? (roomSubStatus === 'ready_for_provider'
-                                ? 'bg-cyan-50 border-cyan-200 text-cyan-700 font-semibold'
-                                : 'bg-indigo-50 border-indigo-200 text-indigo-700 font-semibold')
-                            : (status === 'checked_out' || status === 'completed') ? 'bg-slate-50 border-slate-100 text-slate-300 font-medium'
+                                ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
+                                : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
+                            : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
                                 : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
-                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-indigo-300'}`}
+                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'}`}
                 >
                     {isTerminalState && status !== 'in_room' && <span className="text-[9px] font-bold mr-1">✓</span>}
                     <span className="uppercase tracking-tight whitespace-nowrap leading-none flex-1 text-center font-bold">
@@ -156,12 +156,12 @@ const RoomBtn = memo(({
                 {showTimers && (
                     <>
                         {nurseTime > 0 && (
-                            <span className="text-indigo-700/70 font-semibold flex items-center gap-0.5" title="Time with Nurse">
+                            <span className="text-violet-700/70 font-semibold flex items-center gap-0.5" title="Time with Nurse">
                                 <span className="text-[6px]">○</span>{formatCompactTime(nurseTime)}
                             </span>
                         )}
                         {readyTime > 0 && (
-                            <span className="text-cyan-700/70 font-semibold flex items-center gap-0.5" title="Ready for Provider">
+                            <span className="text-amber-700/70 font-semibold flex items-center gap-0.5" title="Ready for Provider">
                                 <span className="text-[6px]">●</span>{formatCompactTime(readyTime)}
                             </span>
                         )}
@@ -175,8 +175,8 @@ const RoomBtn = memo(({
 const NoShowCancelledBtn = memo(({ statusKey, label, currentStatus, handleNoShowOrCancelled, saving, isTerminalState, canUpdateStatus }) => {
     const isActive = currentStatus === statusKey;
     const color = isActive
-        ? (statusKey === 'no_show' ? 'text-slate-700 font-bold' : 'text-slate-800 font-bold')
-        : (statusKey === 'no_show' ? 'text-slate-400 hover:text-slate-500' : 'text-slate-400 hover:text-slate-500');
+        ? (statusKey === 'no_show' ? 'text-orange-700 font-bold' : 'text-red-700 font-bold')
+        : (statusKey === 'no_show' ? 'text-orange-500 hover:text-orange-600' : 'text-red-500 hover:text-red-600');
 
     const isDisabled = saving || isTerminalState || !canUpdateStatus;
 
@@ -222,7 +222,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     // UI State
     const [showRoomInput, setShowRoomInput] = useState(false);
     const [roomInput, setRoomInput] = useState(appointment?.current_room || '');
-    const inputRef = useRef(null);
+    inputRef = useRef(null);
     const isEditingRef = useRef(false);
 
     // Modal State
@@ -512,7 +512,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 </div>
 
                 {showCancelledBadge && (status === 'no_show' || status === 'cancelled') && (
-                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ml-3 flex-shrink-0 ${status === 'no_show' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-700'
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ml-3 flex-shrink-0 ${status === 'no_show' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
                         }`}>
                         {status === 'no_show' ? 'NO SHOW' : 'CANCELLED'}
                     </span>
@@ -538,7 +538,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             {showReasonModal && pendingStatus === 'cancelled' && (
                 <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center" onClick={() => setShowReasonModal(false)}>
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-                        <div className="bg-gradient-to-r from-slate-500 to-slate-600 px-6 py-4 rounded-t-xl">
+                        <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-xl">
                             <h2 className="text-xl font-bold text-white">Cancel Appointment</h2>
                         </div>
                         <div className="p-6">
@@ -548,13 +548,13 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                                     value={reasonInput}
                                     onChange={(e) => setReasonInput(e.target.value)}
                                     placeholder="Enter reason..."
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 text-sm resize-none"
+                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm resize-none"
                                     rows={3} autoFocus
                                 />
                             </div>
                             <div className="flex items-center justify-end gap-3">
                                 <button type="button" onClick={() => setShowReasonModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">Cancel</button>
-                                <button type="button" onClick={handleReasonSubmit} disabled={!reasonInput.trim() || saving} className="px-4 py-2 text-sm font-medium text-white bg-slate-600 rounded-lg disabled:opacity-50">
+                                <button type="button" onClick={handleReasonSubmit} disabled={!reasonInput.trim() || saving} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg disabled:opacity-50">
                                     {saving ? 'Saving...' : 'Confirm'}
                                 </button>
                             </div>
