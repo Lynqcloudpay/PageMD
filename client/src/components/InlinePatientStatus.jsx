@@ -290,9 +290,9 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         const showTime = (isPast || isActive) && time > 0;
 
         const colors = {
-            arrived: isActive ? 'text-blue-700 font-bold' : isPast ? 'text-blue-500' : 'text-gray-400 hover:text-gray-600',
-            checked_in: isActive ? 'text-emerald-700 font-bold' : isPast ? 'text-emerald-500' : 'text-gray-400 hover:text-gray-600',
-            checked_out: isActive ? 'text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-300' : isPast ? 'text-red-500' : 'text-gray-400 hover:text-gray-600'
+            arrived: isActive ? 'text-indigo-700 font-bold bg-indigo-50/50 px-2 py-0.5 rounded-lg border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500' : 'text-slate-400 hover:text-slate-600',
+            checked_in: isActive ? 'text-teal-700 font-bold bg-teal-50/50 px-2 py-0.5 rounded-lg border border-teal-100 shadow-sm' : isPast ? 'text-teal-500' : 'text-slate-400 hover:text-slate-600',
+            checked_out: isActive ? 'text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200 shadow-sm' : isPast ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'
         };
 
         const isDisabled = saving || isTerminalState || !canUpdateStatus;
@@ -307,15 +307,14 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 }}
                 disabled={isDisabled}
                 title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
-                className={`text-[9px] transition-all whitespace-nowrap ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                className={`text-[9px] transition-all whitespace-nowrap px-1.5 py-0.5 rounded-lg ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-                {isPast && <span className="text-[8px] mr-0.5">✓</span>}
-                {isActive && statusKey === 'checked_out' && <span className="text-[8px] mr-0.5">✓</span>}
+                {isPast && <span className="text-[8px] mr-1">✓</span>}
                 <span className={isActive ? 'underline underline-offset-2' : ''}>
                     {label}
                 </span>
                 {showTime && (
-                    <span className="text-[8px] opacity-70 ml-1">
+                    <span className={`text-[8px] font-bold ml-1.5 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
                         {formatCompactTime(time)}
                     </span>
                 )}
@@ -367,18 +366,22 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             ? (roomSubStatus === 'ready_for_provider' ? 'text-amber-700 font-bold' : 'text-violet-700 font-bold')
             : isPast ? 'text-violet-500' : 'text-gray-300 hover:text-gray-500';
 
-        const handleRoomClick = (e) => {
+        const handleRoomClick = async (e) => {
             e.stopPropagation();
             if (isTerminalState || !canUpdateStatus) return;
 
             // If not in room, first set status to in_room (with_nurse default)
             if (status !== 'in_room') {
-                handleStatusChange('in_room', 'with_nurse', room || '');
+                await handleStatusChange('in_room', 'with_nurse', room || '');
             }
 
-            // Then show input to edit room
-            setShowRoomInput(true);
-            setRoomInput(room || '');
+            // Always ask for room number if it's currently empty
+            const currentR = room || '';
+            const newRoomVal = window.prompt("Enter Room Number:", currentR);
+
+            if (newRoomVal !== null && newRoomVal.trim() !== currentR) {
+                handleStatusChange('in_room', roomSubStatus || 'with_nurse', newRoomVal.trim());
+            }
         };
 
         const handleRoomSubmit = () => {
@@ -426,14 +429,19 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                     type="button"
                     onClick={handleRoomClick}
                     disabled={saving || isTerminalState || !canUpdateStatus}
-                    title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
-                    className={`text-[9px] transition-all flex items-center gap-0.5 ${color} ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} w-[60px] justify-start`}
+                    title={!canUpdateStatus ? 'You do not have permission to update appointment status' : 'Click to set/change room'}
+                    className={`text-[9px] transition-all flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shadow-sm ${isActive
+                            ? (roomSubStatus === 'ready_for_provider'
+                                ? 'bg-amber-100 border-amber-300 text-amber-800 font-bold ring-2 ring-amber-100 animate-pulse'
+                                : 'bg-violet-100 border-violet-300 text-violet-800 font-bold')
+                            : isPast ? 'bg-violet-50 border-violet-100 text-violet-500' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-500'
+                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} min-w-[65px] justify-center`}
                 >
                     <span className="inline-flex items-center min-w-[8px]">
                         {isPast && <span className="text-[8px]">✓</span>}
                     </span>
                     <span className={`${isActive ? 'underline underline-offset-2' : ''} flex-shrink-0`}>
-                        Room{displayRoom ? ` ${displayRoom}` : ''}
+                        {displayRoom ? `ROOM ${displayRoom}` : 'ROOM'}
                     </span>
                 </button>
 
@@ -527,14 +535,41 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     return (
         <>
             <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                {/* Visit Type Toggle (Green for Telehealth) */}
+                <div className="flex items-center mr-4 pr-4 border-r border-slate-100">
+                    <button
+                        onClick={async () => {
+                            if (saving || isTerminalState) return;
+                            const newMethod = appointment.visitMethod === 'telehealth' ? 'office' : 'telehealth';
+                            const newType = newMethod === 'telehealth' ? 'Telehealth Visit' : 'Follow-up';
+                            setSaving(true);
+                            try {
+                                await appointmentsAPI.update(appointment.id, { visitMethod: newMethod, type: newType });
+                                if (onStatusUpdate) onStatusUpdate({ ...appointment, visitMethod: newMethod, type: newType });
+                            } catch (err) {
+                                console.error('Failed to toggle visit method:', err);
+                            } finally {
+                                setSaving(false);
+                            }
+                        }}
+                        disabled={saving || isTerminalState}
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${appointment.visitMethod === 'telehealth'
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm'
+                                : 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm'
+                            } ${saving || isTerminalState ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105 active:scale-95'}`}
+                    >
+                        {appointment.visitMethod === 'telehealth' ? 'TELEHEALTH' : 'OFFICE VISIT'}
+                    </button>
+                </div>
+
                 {/* Status flow - consistent sizing */}
                 <div className="flex items-center gap-2">
                     <StatusBtn statusKey="arrived" label="Arrived" />
-                    <span className="text-gray-300 text-[8px]">→</span>
+                    <span className="text-slate-300 text-[8px] font-bold">→</span>
                     <StatusBtn statusKey="checked_in" label="Checked In" />
-                    <span className="text-gray-300 text-[8px]">→</span>
+                    <span className="text-slate-300 text-[8px] font-bold">→</span>
                     <RoomBtn />
-                    <span className="text-gray-300 text-[8px]">→</span>
+                    <span className="text-slate-300 text-[8px] font-bold">→</span>
                     <StatusBtn statusKey="checked_out" label="Out" />
                 </div>
 

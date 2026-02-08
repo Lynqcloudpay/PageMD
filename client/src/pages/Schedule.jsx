@@ -1006,7 +1006,7 @@ const Schedule = () => {
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Checked In</span>
                                     <span className="text-slate-200">/</span>
-                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400"></span> Room</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 font-bold ring-2 ring-amber-100 flex items-center justify-center"></span> Room</span>
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400"></span> Out</span>
                                 </div>
@@ -1018,15 +1018,33 @@ const Schedule = () => {
                             <div className="flex items-center gap-4">
                                 <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Providers</span>
                                 <div className="flex items-center gap-2">
-                                    {Object.values(appointmentsByProvider).map((providerGroup) => (
-                                        <div key={providerGroup.providerId || 'unknown'} className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
-                                            <div
-                                                className={`w-2 h-2 rounded-full`}
-                                                style={{ backgroundColor: providerGroup.color.accent }}
-                                            />
-                                            <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[100px]">{providerGroup.providerName}</span>
-                                        </div>
-                                    ))}
+                                    {Object.values(appointmentsByProvider).map((providerGroup) => {
+                                        const isSelected = selectedProviderIds.includes(providerGroup.providerId);
+                                        return (
+                                            <button
+                                                key={providerGroup.providerId || 'unknown'}
+                                                onClick={() => {
+                                                    if (isSelected && selectedProviderIds.length === 1) {
+                                                        setSelectedProviderIds([]);
+                                                    } else {
+                                                        setSelectedProviderIds([providerGroup.providerId]);
+                                                    }
+                                                }}
+                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95 shadow-sm ${isSelected
+                                                        ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100'
+                                                        : 'bg-white border-slate-100 hover:border-slate-200'
+                                                    }`}
+                                            >
+                                                <div
+                                                    className={`w-2 h-2 rounded-full ${isSelected ? 'animate-pulse' : ''}`}
+                                                    style={{ backgroundColor: providerGroup.color.accent }}
+                                                />
+                                                <span className={`text-[10px] font-bold uppercase tracking-tight ${isSelected ? 'text-amber-700' : 'text-slate-500'}`}>
+                                                    {providerGroup.providerName}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
@@ -1088,12 +1106,37 @@ const Schedule = () => {
                                                 onClick={() => handleTimeSlotClick(time)}
                                             >
                                                 {/* Empty slot indicator on hover */}
-                                                <div className="absolute inset-x-2 top-1.5 bottom-1.5 rounded-xl border-2 border-dashed border-indigo-100 bg-indigo-50/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none transform scale-95 group-hover:scale-100">
-                                                    <div className="flex items-center gap-2 text-indigo-500">
-                                                        <Plus className="w-4 h-4" />
-                                                        <span className="text-xs font-semibold">Book at {time}</span>
-                                                    </div>
-                                                </div>
+                                                {(() => {
+                                                    const apptTime = time.substring(0, 5);
+                                                    let existingCount = 0;
+                                                    Object.values(appointmentsByProvider).forEach(group => {
+                                                        existingCount += group.appointments.filter(a =>
+                                                            a.time?.substring(0, 5) === apptTime &&
+                                                            !['cancelled', 'no_show', 'no-show'].includes(a.patient_status)
+                                                        ).length;
+                                                    });
+
+                                                    if (existingCount >= 2) return null;
+
+                                                    const compactCardHeight = 24;
+                                                    const verticalGap = 1;
+                                                    const isPartial = existingCount === 1;
+
+                                                    return (
+                                                        <div
+                                                            className={`absolute inset-x-2 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none transform scale-95 group-hover:scale-100 shadow-sm`}
+                                                            style={{
+                                                                top: isPartial ? `${compactCardHeight + verticalGap + 4}px` : '6px',
+                                                                height: `${compactCardHeight}px`
+                                                            }}
+                                                        >
+                                                            <div className="flex items-center gap-2 text-indigo-500">
+                                                                <Plus className="w-3.5 h-3.5" />
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider">Book at {time}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     );
@@ -1211,11 +1254,28 @@ const Schedule = () => {
                                                     </div>
 
                                                     {/* Column 2: Appointment Type + Duration - Fixed width */}
-                                                    <div className="flex-shrink-0 w-[85px] min-w-[85px] max-w-[85px]">
-                                                        <div className="flex items-center gap-0.5">
-                                                            <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-400 line-through decoration-gray-400' : 'text-gray-700'} truncate`}>{appt.type}</span>
-                                                            <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-400' : 'text-gray-400'}`}>-</span>
-                                                            <span className={`text-[8px] ${isCancelledOrNoShow ? 'text-gray-400 line-through decoration-gray-400' : 'text-gray-700'} whitespace-nowrap`}>{appt.duration}m</span>
+                                                    <div className="flex-shrink-0 w-[100px] min-w-[100px] max-w-[100px]">
+                                                        <div className="flex items-center gap-1">
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    const newType = appt.type === 'Telehealth Visit' ? 'Follow-up' : 'Telehealth Visit';
+                                                                    const newMethod = newType === 'Telehealth Visit' ? 'telehealth' : 'office';
+                                                                    try {
+                                                                        await appointmentsAPI.update(appt.id, { type: newType, visitMethod: newMethod });
+                                                                        refreshAppointments();
+                                                                    } catch (err) {
+                                                                        console.error('Failed to toggle visit type:', err);
+                                                                    }
+                                                                }}
+                                                                className={`text-[8px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 ${appt.type === 'Telehealth Visit' || appt.visitMethod === 'telehealth'
+                                                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'
+                                                                    : 'bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm'
+                                                                    } ${isCancelledOrNoShow ? 'opacity-50 grayscale line-through' : ''}`}
+                                                            >
+                                                                {appt.type === 'Telehealth Visit' ? 'Tele' : appt.type}
+                                                            </button>
+                                                            <span className={`text-[8px] font-bold ${isCancelledOrNoShow ? 'text-slate-300' : 'text-slate-400'}`}>{appt.duration}m</span>
                                                         </div>
                                                     </div>
 
