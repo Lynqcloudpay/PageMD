@@ -322,7 +322,7 @@ const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, se
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 p-3 bg-white border border-slate-100 rounded-xl shadow-2xl z-[100] min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full right-0 mt-2 p-3 bg-white border border-slate-100 rounded-xl shadow-2xl z-[100] min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Choose Color</div>
                     <div className="grid grid-cols-5 gap-2">
                         {palette.map((color, idx) => (
