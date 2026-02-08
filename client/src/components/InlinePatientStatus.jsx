@@ -428,8 +428,8 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         type="button"
                         onClick={handleCircleToggle}
                         disabled={saving}
-                        className={`w-3 h-3 rounded-full transition-all border-2 shrink-0 ${roomSubStatus === 'ready_for_provider'
-                                ? 'bg-amber-400 border-amber-500 shadow-sm animate-pulse'
+                        className={`w-3 h-3 rounded-full transition-all border shrink-0 ${roomSubStatus === 'ready_for_provider'
+                                ? 'bg-amber-400 border-amber-500 shadow-sm'
                                 : 'bg-violet-400 border-violet-500 shadow-sm'
                             } ${saving ? 'opacity-50' : 'hover:scale-110 active:scale-95 cursor-pointer'}`}
                         title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Yellow) - Click to revert to Nurse' : 'With Nurse (Purple) - Click to signal Ready for Provider'}
@@ -438,7 +438,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
                 {showRoomInput ? (
                     <div className="flex items-center bg-violet-50 border-2 border-violet-400 rounded-lg shadow-sm px-1.5 py-0.5 shrink-0">
-                        <span className="text-[10px] font-bold text-violet-900 mr-1.5 uppercase tracking-tighter">ROOM</span>
+                        <span className="text-[10px] font-bold text-violet-900 mr-1 uppercase tracking-tighter">ROOM</span>
                         <input
                             ref={inputRef}
                             type="text"
@@ -452,7 +452,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                                     setShowRoomInput(false);
                                 }
                             }}
-                            className="w-[28px] text-[10px] bg-transparent text-violet-900 focus:ring-0 outline-none font-bold placeholder-violet-300"
+                            className="w-[24px] text-[10px] bg-transparent text-violet-900 focus:ring-0 outline-none font-bold placeholder-violet-300"
                             placeholder="#"
                             onClick={(e) => e.stopPropagation()}
                         />
@@ -462,15 +462,15 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         type="button"
                         onClick={handleRoomClick}
                         disabled={saving || isTerminalState || !canUpdateStatus}
-                        className={`text-[9px] transition-all flex items-center gap-1 px-2.5 py-0.5 rounded-lg border shadow-sm shrink-0 ${isActive
+                        className={`text-[9px] transition-all flex items-center gap-1 px-2 py-0.5 rounded-lg border shadow-sm shrink-0 ${isActive
                                 ? (roomSubStatus === 'ready_for_provider'
-                                    ? 'bg-amber-100 border-amber-300 text-amber-800 font-black ring-2 ring-amber-100'
+                                    ? 'bg-amber-100 border-amber-300 text-amber-800 font-black'
                                     : 'bg-violet-100 border-violet-300 text-violet-800 font-black')
                                 : isPast ? 'bg-violet-50 border-violet-100 text-violet-500' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-500'
-                            } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-400'}`}
+                            } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-400'} min-w-fit`}
                     >
                         {isPast && <span className="text-[9px] font-bold mr-0.5">✓</span>}
-                        <span className="uppercase tracking-tight">
+                        <span className="uppercase tracking-tight whitespace-nowrap">
                             ROOM {displayRoom || ''}
                         </span>
                     </button>
