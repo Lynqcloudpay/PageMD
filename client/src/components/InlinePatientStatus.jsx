@@ -26,9 +26,9 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
     const showTime = (isPast || isActive) && (time > 0);
 
     const colors = {
-        arrived: isActive ? 'text-indigo-700 font-semibold bg-indigo-50/50 px-2 py-0.5 rounded-md border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
-        checked_in: isActive ? 'text-teal-700 font-semibold bg-teal-50/50 px-2 py-0.5 rounded-md border border-teal-100 shadow-sm' : isPast ? 'text-teal-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
-        checked_out: isActive ? 'text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 shadow-sm' : isPast ? 'text-rose-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium'
+        arrived: isActive ? 'text-indigo-700 font-semibold bg-indigo-50/50 px-1 py-0 rounded border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
+        checked_in: isActive ? 'text-teal-700 font-semibold bg-teal-50/50 px-1 py-0 rounded border border-teal-100 shadow-sm' : isPast ? 'text-teal-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
+        checked_out: isActive ? 'text-rose-600 font-semibold bg-rose-50 px-1 py-0 rounded border border-rose-100 shadow-sm' : isPast ? 'text-rose-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium'
     };
 
     const isDisabled = saving || isTerminalState || !canUpdateStatus;
@@ -44,14 +44,14 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
             }}
             disabled={isDisabled}
             title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
-            className={`text-[9px] transition-all whitespace-nowrap px-1.5 py-0.5 rounded-md h-[20px] flex items-center justify-center min-w-[55px] ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`text-[9px] transition-all whitespace-nowrap px-1 py-0 rounded h-[18px] flex items-center justify-center min-w-[50px] ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
             {isPast && <span className="text-[8px] mr-1">✓</span>}
             <span className={isActive ? 'underline underline-offset-2' : ''}>
                 {label}
             </span>
             {showTime && (
-                <span className={`text-[8px] font-semibold ml-1.5 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                <span className={`text-[8px] font-semibold ml-1 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
                     {formatCompactTime(time)}
                 </span>
             )}
@@ -93,7 +93,7 @@ const RoomBtn = memo(({
     const showTimers = hasRoomTime || (status === 'in_room' && (nurseTime > 0 || readyTime > 0));
 
     return (
-        <div className="flex items-center gap-1.5 shrink-0 px-1 py-0.5 rounded-lg">
+        <div className="flex items-center gap-1 shrink-0 px-1 py-0">
             {/* Status Indicator Circle - SMALLER (w-2) */}
             {isActive && room && (
                 <button
@@ -109,8 +109,8 @@ const RoomBtn = memo(({
             )}
 
             {showRoomInput ? (
-                <div className="flex items-center bg-white border border-violet-200 rounded-md shadow-sm px-1.5 py-0.5 shrink-0">
-                    <span className="text-[9px] font-medium text-violet-400 mr-1 uppercase leading-none">ROOM</span>
+                <div className="flex items-center bg-white border border-violet-200 rounded shadow-sm px-1 py-0 shrink-0 h-[18px]">
+                    <span className="text-[7px] font-medium text-violet-400 mr-1 uppercase leading-none">ROOM</span>
                     <input
                         ref={inputRef}
                         type="text"
@@ -126,7 +126,7 @@ const RoomBtn = memo(({
                                 setShowRoomInput(false);
                             }
                         }}
-                        className="w-[32px] text-[10px] bg-transparent text-violet-700 focus:ring-0 outline-none font-semibold leading-none p-0 border-none cursor-text"
+                        className="w-[28px] text-[10px] bg-transparent text-violet-700 focus:ring-0 outline-none font-semibold leading-none p-0 border-none cursor-text"
                         placeholder="#"
                         onClick={(e) => e.stopPropagation()}
                     />
@@ -136,7 +136,7 @@ const RoomBtn = memo(({
                     type="button"
                     onClick={handleRoomClick}
                     disabled={saving || isTerminalState || !canUpdateStatus}
-                    className={`text-[9px] transition-all flex items-center justify-center px-1.5 py-0.5 rounded-md border shadow-sm shrink-0 h-[20px] min-w-[65px] ${isActive
+                    className={`text-[9px] transition-all flex items-center justify-center px-1 py-0 rounded border shadow-sm shrink-0 h-[18px] min-w-[55px] ${isActive
                             ? (roomSubStatus === 'ready_for_provider'
                                 ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
                                 : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
@@ -145,24 +145,24 @@ const RoomBtn = memo(({
                         } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'}`}
                 >
                     {isTerminalState && status !== 'in_room' && <span className="text-[9px] font-bold mr-0.5">✓</span>}
-                    <span className="uppercase tracking-tight whitespace-nowrap leading-none flex-1 text-center">
+                    <span className="uppercase tracking-tight whitespace-nowrap leading-none flex-1 text-center scale-90">
                         {displayRoom ? `RM ${displayRoom}` : 'ROOM'}
                     </span>
                 </button>
             )}
 
             {/* Timings Display - Start running immediately */}
-            <span className="text-[8px] opacity-80 flex items-center gap-1.5 shrink-0 ml-0.5">
+            <span className="text-[8px] opacity-80 flex items-center gap-1 shrink-0 ml-0.5">
                 {showTimers && (
                     <>
                         {nurseTime > 0 && (
                             <span className="text-violet-700 font-semibold flex items-center gap-0.5" title="Time with Nurse">
-                                <span className="text-[6px]">○</span>{formatCompactTime(nurseTime)}
+                                <span className="text-[5px]">○</span>{formatCompactTime(nurseTime)}
                             </span>
                         )}
                         {readyTime > 0 && (
                             <span className="text-amber-700 font-semibold flex items-center gap-0.5" title="Ready for Provider">
-                                <span className="text-[6px]">●</span>{formatCompactTime(readyTime)}
+                                <span className="text-[5px]">●</span>{formatCompactTime(readyTime)}
                             </span>
                         )}
                     </>
@@ -193,7 +193,7 @@ const NoShowCancelledBtn = memo(({ statusKey, label, currentStatus, handleNoShow
             title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
             className={`text-[9px] transition-all cursor-pointer ${color} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-            {isActive && <span className="text-[8px] mr-0.5">✓</span>}
+            {isActive && <span className="text-[8px] mr-1">✓</span>}
             <span className={isActive ? 'underline underline-offset-2' : ''}>
                 {label}
             </span>
@@ -470,7 +470,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     return (
         <>
             <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                     <StatusBtn
                         statusKey="arrived" label="Arrived"
                         currentStatus={status} currentOrder={currentOrder}
@@ -479,7 +479,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
                         formatCompactTime={formatCompactTime}
                     />
-                    <span className="text-slate-300 text-[10px] opacity-40">•</span>
+                    <span className="text-slate-200 text-[8px] mx-0.5">•</span>
                     <StatusBtn
                         statusKey="checked_in" label="Checked In"
                         currentStatus={status} currentOrder={currentOrder}
@@ -488,7 +488,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
                         formatCompactTime={formatCompactTime}
                     />
-                    <span className="text-slate-300 text-[10px] opacity-40">•</span>
+                    <span className="text-slate-200 text-[8px] mx-0.5">•</span>
                     <RoomBtn
                         status={status} roomSubStatus={roomSubStatus} room={room}
                         roomInput={roomInput} setRoomInput={setRoomInput}
@@ -500,7 +500,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         formatCompactTime={formatCompactTime}
                         displayRoom={displayRoom} hasRoomTime={hasRoomTime} nurseTime={nurseTime} readyTime={readyTime}
                     />
-                    <span className="text-slate-300 text-[10px] opacity-40">•</span>
+                    <span className="text-slate-200 text-[8px] mx-0.5">•</span>
                     <StatusBtn
                         statusKey="checked_out" label="Out"
                         currentStatus={status} currentOrder={currentOrder}
@@ -512,14 +512,14 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 </div>
 
                 {showCancelledBadge && (status === 'no_show' || status === 'cancelled') && (
-                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ml-3 flex-shrink-0 ${status === 'no_show' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                    <span className={`text-[8px] px-1.5 py-0 rounded font-semibold whitespace-nowrap ml-2 flex-shrink-0 ${status === 'no_show' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
                         }`}>
                         {status === 'no_show' ? 'NO SHOW' : 'CANCELLED'}
                     </span>
                 )}
 
                 {showNoShowCancelled && !isTerminalState && (
-                    <div className="ml-4 flex items-center gap-3 border-l border-gray-200 pl-4">
+                    <div className="ml-3 flex items-center gap-2 border-l border-gray-100 pl-3">
                         <NoShowCancelledBtn
                             statusKey="no_show" label="No Show"
                             currentStatus={status} handleNoShowOrCancelled={handleNoShowOrCancelled}

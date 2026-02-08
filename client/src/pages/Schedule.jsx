@@ -651,19 +651,20 @@ const Schedule = () => {
         }
 
         const colors = [
-            { bg: 'bg-indigo-50/50', border: 'border-indigo-100', text: 'text-indigo-700', accent: '#818cf8', light: 'bg-indigo-50' },
-            { bg: 'bg-teal-50/50', border: 'border-teal-100', text: 'text-teal-700', accent: '#2dd4bf', light: 'bg-teal-50' },
-            { bg: 'bg-violet-50/50', border: 'border-violet-100', text: 'text-violet-700', accent: '#a78bfa', light: 'bg-violet-50' },
-            { bg: 'bg-amber-50/50', border: 'border-amber-100', text: 'text-amber-700', accent: '#fbbf24', light: 'bg-amber-50' },
-            { bg: 'bg-rose-50/50', border: 'border-rose-100', text: 'text-rose-700', accent: '#fb7185', light: 'bg-rose-50' },
-            { bg: 'bg-sky-50/50', border: 'border-sky-100', text: 'text-sky-700', accent: '#38bdf8', light: 'bg-sky-50' },
-            { bg: 'bg-soft-plum/50', border: 'border-plum-100', text: 'text-plum-700', accent: '#dda0dd', light: 'bg-plum-50' },
-            { bg: 'bg-slate-50/50', border: 'border-slate-100', text: 'text-slate-700', accent: '#94a3b8', light: 'bg-slate-50' },
+            { bg: 'bg-indigo-50/40', border: 'border-indigo-100', text: 'text-indigo-700', accent: '#818cf8', light: 'bg-indigo-50' },
+            { bg: 'bg-teal-50/40', border: 'border-teal-100', text: 'text-teal-700', accent: '#2dd4bf', light: 'bg-teal-50' },
+            { bg: 'bg-rose-50/40', border: 'border-rose-100', text: 'text-rose-700', accent: '#fb7185', light: 'bg-rose-50' },
+            { bg: 'bg-amber-50/40', border: 'border-amber-100', text: 'text-amber-700', accent: '#f59e0b', light: 'bg-amber-50' },
+            { bg: 'bg-emerald-50/40', border: 'border-emerald-100', text: 'text-emerald-700', accent: '#10b981', light: 'bg-emerald-50' },
+            { bg: 'bg-sky-50/40', border: 'border-sky-100', text: 'text-sky-700', accent: '#0ea5e9', light: 'bg-sky-50' },
+            { bg: 'bg-orange-50/40', border: 'border-orange-100', text: 'text-orange-700', accent: '#f97316', light: 'bg-orange-50' },
+            { bg: 'bg-cyan-50/40', border: 'border-cyan-100', text: 'text-cyan-700', accent: '#06b6d4', light: 'bg-cyan-50' },
+            { bg: 'bg-fuchsia-50/40', border: 'border-fuchsia-100', text: 'text-fuchsia-700', accent: '#d946ef', light: 'bg-fuchsia-50' },
+            { bg: 'bg-blue-50/40', border: 'border-blue-100', text: 'text-blue-700', accent: '#3b82f6', light: 'bg-blue-50' },
         ];
 
         return colors[Math.abs(hash) % colors.length];
     };
-
     // Group appointments by provider - Filter based on multi-selection
     const activeProviderIds = new Set((providers || []).map(p => p.id));
 
@@ -1296,10 +1297,10 @@ const Schedule = () => {
                                         return (
                                             <div
                                                 key={appt.id}
-                                                className={`absolute border-l-4 rounded-xl shadow-sm hover:shadow-md transition-all overflow-visible ${isCancelledOrNoShow
+                                                className={`absolute border-l-[3px] rounded-lg shadow-sm hover:shadow-md transition-all overflow-visible ${isCancelledOrNoShow
                                                     ? 'bg-slate-50 border-slate-300 opacity-60'
                                                     : isActiveInClinic
-                                                        ? `${color.bg} ${color.border} ring-2 ring-indigo-100 shadow-sm`
+                                                        ? `${color.bg} ${color.border} ring-1 ring-indigo-400/30 shadow-indigo-100/20`
                                                         : `${color.bg} ${color.border}`
                                                     }`}
                                                 style={{
@@ -1309,9 +1310,7 @@ const Schedule = () => {
                                                     width: slotWidthCalc,
                                                     borderLeftColor: isCancelledOrNoShow
                                                         ? (['no_show', 'no-show'].includes(appt.patient_status) ? '#cbd5e1' : '#f1f5f9')
-                                                        : isActiveInClinic
-                                                            ? '#818cf8' // Soft Indigo for active
-                                                            : color.accent,
+                                                        : color.accent,
                                                 }}
                                             >
                                                 <div className="h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative">
