@@ -254,6 +254,83 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
 };
 
 // Provider Change Modal Component
+const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, setSelectedProviderIds, palette, onUpdateColor }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsOpen(false);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all shadow-sm ${isSelected
+                ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100'
+                : 'bg-white border-slate-100 hover:border-slate-200'
+                }`}>
+                <button
+                    onClick={() => {
+                        if (isSelected && selectedProviderIds.length === 1) {
+                            setSelectedProviderIds([]);
+                        } else {
+                            setSelectedProviderIds([providerGroup.providerId]);
+                        }
+                    }}
+                    className="flex items-center gap-2 group cursor-pointer"
+                >
+                    <div
+                        className={`w-2.5 h-2.5 rounded-full ${isSelected ? 'animate-pulse' : ''} transition-colors`}
+                        style={{ backgroundColor: providerGroup.color.accent }}
+                    />
+                    <span className={`text-[10px] font-bold uppercase tracking-tight ${isSelected ? 'text-amber-700' : 'text-slate-500'}`}>
+                        {providerGroup.providerName}
+                    </span>
+                </button>
+
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsOpen(!isOpen);
+                    }}
+                    className={`p-0.5 rounded hover:bg-slate-100 transition-colors ${isOpen ? 'bg-slate-100' : ''}`}
+                >
+                    <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+            </div>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-2 p-3 bg-white border border-slate-100 rounded-xl shadow-2xl z-[100] min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Choose Color</div>
+                    <div className="grid grid-cols-5 gap-2">
+                        {palette.map((color, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => {
+                                    onUpdateColor(idx);
+                                    setIsOpen(false);
+                                }}
+                                className="w-6 h-6 rounded-full border border-slate-100 hover:scale-110 transition-transform shadow-sm relative group"
+                                style={{ backgroundColor: color.accent }}
+                                title={color.name}
+                            >
+                                {providerGroup.color.accent === color.accent && (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentProviderName, onProviderChange }) => {
     const [selectedProviderId, setSelectedProviderId] = useState(appointment?.providerId || '');
     const [saving, setSaving] = useState(false);
@@ -448,6 +525,36 @@ const Schedule = () => {
     const [showModal, setShowModal] = useState(false);
     const [showAddPatientModal, setShowAddPatientModal] = useState(false);
     const [clickedTimeSlot, setClickedTimeSlot] = useState(null);
+
+    // Color Palette
+    const PROVIDER_PALETTE = [
+        { name: 'Indigo', bg: 'bg-indigo-50/40', border: 'border-indigo-200', text: 'text-indigo-700', accent: '#6366f1', light: 'bg-indigo-50' },
+        { name: 'Teal', bg: 'bg-teal-50/40', border: 'border-teal-200', text: 'text-teal-700', accent: '#0d9488', light: 'bg-teal-50' },
+        { name: 'Sky', bg: 'bg-sky-50/40', border: 'border-sky-200', text: 'text-sky-700', accent: '#0ea5e9', light: 'bg-sky-50' },
+        { name: 'Slate', bg: 'bg-slate-100/40', border: 'border-slate-300', text: 'text-slate-700', accent: '#334155', light: 'bg-slate-100' },
+        { name: 'Cobalt', bg: 'bg-blue-100/30', border: 'border-blue-200', text: 'text-blue-800', accent: '#1e40af', light: 'bg-blue-100' },
+        { name: 'Emerald', bg: 'bg-emerald-50/40', border: 'border-emerald-200', text: 'text-emerald-700', accent: '#059669', light: 'bg-emerald-50' },
+        { name: 'Cyan', bg: 'bg-cyan-50/40', border: 'border-cyan-200', text: 'text-cyan-700', accent: '#0891b2', light: 'bg-cyan-50' },
+        { name: 'Blue', bg: 'bg-blue-50/50', border: 'border-blue-200', text: 'text-blue-700', accent: '#2563eb', light: 'bg-blue-50' },
+        { name: 'Zinc', bg: 'bg-zinc-100/40', border: 'border-zinc-300', text: 'text-zinc-700', accent: '#52525b', light: 'bg-zinc-100' },
+        { name: 'Deep Indigo', bg: 'bg-indigo-100/30', border: 'border-indigo-200', text: 'text-indigo-800', accent: '#3730a3', light: 'bg-indigo-100' },
+    ];
+
+    const [providerColorOverrides, setProviderColorOverrides] = useState(() => {
+        const saved = localStorage.getItem('schedule_providerColorOverrides');
+        return saved ? JSON.parse(saved) : {};
+    });
+
+    useEffect(() => {
+        localStorage.setItem('schedule_providerColorOverrides', JSON.stringify(providerColorOverrides));
+    }, [providerColorOverrides]);
+
+    const updateProviderColor = (providerId, colorIndex) => {
+        setProviderColorOverrides(prev => ({
+            ...prev,
+            [providerId]: colorIndex
+        }));
+    };
     const [newAppt, setNewAppt] = useState({
         patientId: '',
         patient: '',
@@ -644,26 +751,18 @@ const Schedule = () => {
     const getProviderColor = (providerId, providerName) => {
         if (!providerId) return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', accent: '#64748b', light: 'bg-slate-100' };
 
+        // Check for override
+        if (providerColorOverrides[providerId] !== undefined) {
+            return PROVIDER_PALETTE[providerColorOverrides[providerId]];
+        }
+
         let hash = 0;
         const str = providerId + (providerName || '');
         for (let i = 0; i < str.length; i++) {
             hash = str.charCodeAt(i) + ((hash << 5) - hash);
         }
 
-        const colors = [
-            { bg: 'bg-indigo-50/40', border: 'border-indigo-200', text: 'text-indigo-700', accent: '#6366f1', light: 'bg-indigo-50' }, // Vivid Indigo
-            { bg: 'bg-teal-50/40', border: 'border-teal-200', text: 'text-teal-700', accent: '#0d9488', light: 'bg-teal-50' },   // Electric Teal
-            { bg: 'bg-sky-50/40', border: 'border-sky-200', text: 'text-sky-700', accent: '#0ea5e9', light: 'bg-sky-50' },     // Frost Blue
-            { bg: 'bg-slate-100/40', border: 'border-slate-300', text: 'text-slate-700', accent: '#334155', light: 'bg-slate-100' }, // Charcoal Slate
-            { bg: 'bg-blue-100/30', border: 'border-blue-200', text: 'text-blue-800', accent: '#1e40af', light: 'bg-blue-100' },   // Midnight Cobalt
-            { bg: 'bg-emerald-50/40', border: 'border-emerald-200', text: 'text-emerald-700', accent: '#059669', light: 'bg-emerald-50' }, // Glacier Mint
-            { bg: 'bg-cyan-50/40', border: 'border-cyan-200', text: 'text-cyan-700', accent: '#0891b2', light: 'bg-cyan-50' },     // Bright Cyan
-            { bg: 'bg-blue-50/50', border: 'border-blue-200', text: 'text-blue-700', accent: '#2563eb', light: 'bg-blue-50' },     // Royal Blue
-            { bg: 'bg-zinc-100/40', border: 'border-zinc-300', text: 'text-zinc-700', accent: '#52525b', light: 'bg-zinc-100' },   // Steel Gray
-            { bg: 'bg-indigo-100/30', border: 'border-indigo-200', text: 'text-indigo-800', accent: '#3730a3', light: 'bg-indigo-100' }, // Deep Indigo
-        ];
-
-        return colors[Math.abs(hash) % colors.length];
+        return PROVIDER_PALETTE[Math.abs(hash) % PROVIDER_PALETTE.length];
     };
     // Group appointments by provider - Filter based on multi-selection
     const activeProviderIds = new Set((providers || []).map(p => p.id));
@@ -1096,28 +1195,15 @@ const Schedule = () => {
                                     {Object.values(appointmentsByProvider).map((providerGroup) => {
                                         const isSelected = selectedProviderIds.includes(providerGroup.providerId);
                                         return (
-                                            <button
+                                            <ProviderLegendItem
                                                 key={providerGroup.providerId || 'unknown'}
-                                                onClick={() => {
-                                                    if (isSelected && selectedProviderIds.length === 1) {
-                                                        setSelectedProviderIds([]);
-                                                    } else {
-                                                        setSelectedProviderIds([providerGroup.providerId]);
-                                                    }
-                                                }}
-                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95 shadow-sm ${isSelected
-                                                    ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100'
-                                                    : 'bg-white border-slate-100 hover:border-slate-200'
-                                                    }`}
-                                            >
-                                                <div
-                                                    className={`w-2 h-2 rounded-full ${isSelected ? 'animate-pulse' : ''}`}
-                                                    style={{ backgroundColor: providerGroup.color.accent }}
-                                                />
-                                                <span className={`text-[10px] font-bold uppercase tracking-tight ${isSelected ? 'text-amber-700' : 'text-slate-500'}`}>
-                                                    {providerGroup.providerName}
-                                                </span>
-                                            </button>
+                                                providerGroup={providerGroup}
+                                                isSelected={isSelected}
+                                                selectedProviderIds={selectedProviderIds}
+                                                setSelectedProviderIds={setSelectedProviderIds}
+                                                palette={PROVIDER_PALETTE}
+                                                onUpdateColor={(colorIndex) => updateProviderColor(providerGroup.providerId, colorIndex)}
+                                            />
                                         );
                                     })}
                                 </div>

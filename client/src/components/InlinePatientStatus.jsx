@@ -101,8 +101,8 @@ const RoomBtn = memo(({
                     onClick={handleCircleToggle}
                     disabled={saving}
                     className={`w-2 h-2 rounded-full transition-all border shadow-sm shrink-0 ${roomSubStatus === 'ready_for_provider'
-                            ? 'bg-amber-400 border-amber-500'
-                            : 'bg-violet-400 border-violet-500'
+                        ? 'bg-amber-400 border-amber-500'
+                        : 'bg-violet-400 border-violet-500'
                         } ${saving ? 'opacity-50' : 'hover:scale-125 active:scale-90 cursor-pointer'}`}
                     title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Yellow) - Click to revert to Nurse' : 'With Nurse (Purple) - Click to signal Ready for Provider'}
                 />
@@ -137,11 +137,11 @@ const RoomBtn = memo(({
                     onClick={handleRoomClick}
                     disabled={saving || isTerminalState || !canUpdateStatus}
                     className={`text-[9px] transition-all flex items-center justify-center px-1.5 py-0 rounded border shadow-sm shrink-0 h-[20px] min-w-[60px] ${isActive
-                            ? (roomSubStatus === 'ready_for_provider'
-                                ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
-                                : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
-                            : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
-                                : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+                        ? (roomSubStatus === 'ready_for_provider'
+                            ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
+                            : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
+                        : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
+                            : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
                         } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'}`}
                 >
                     {isTerminalState && status !== 'in_room' && <span className="text-[9px] font-bold mr-1">✓</span>}
@@ -222,7 +222,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     // UI State
     const [showRoomInput, setShowRoomInput] = useState(false);
     const [roomInput, setRoomInput] = useState(appointment?.current_room || '');
-    inputRef = useRef(null);
+    const inputRef = useRef(null);
     const isEditingRef = useRef(false);
 
     // Modal State
