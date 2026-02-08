@@ -887,9 +887,11 @@ const Schedule = () => {
         });
 
         // Count only ACTIVE appointments (not cancelled or no-show)
-        const activeCount = appointmentsAtSelectedSlot.filter(appt =>
-            appt.patient_status !== 'cancelled' && !['no_show', 'no-show'].includes(appt.patient_status)
-        ).length;
+        // Case-insensitive check to be safe
+        const activeCount = appointmentsAtSelectedSlot.filter(appt => {
+            const status = (appt.patient_status || '').toLowerCase();
+            return status !== 'cancelled' && !['no_show', 'no-show'].includes(status);
+        }).length;
 
         // If 2 or more active appointments exist, block booking
         if (activeCount >= 2) {
@@ -1173,7 +1175,13 @@ const Schedule = () => {
                     <div className="flex-shrink-0 px-6 py-4 bg-slate-50/30 border-b border-slate-50 flex items-center justify-between">
                         <div className="flex items-center gap-6">
                             <button
-                                onClick={() => setShowCancelledAppointments(!showCancelledAppointments)}
+                                onClick={() => {
+                                    const nextValue = !showCancelledAppointments;
+                                    setShowCancelledAppointments(nextValue);
+                                    if (nextValue) {
+                                        setDismissedAppointmentIds(new Set()); // Restore dismissed appointments when showing cancelled
+                                    }
+                                }}
                                 className={`flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider px-4 py-2 rounded-xl transition-all ${showCancelledAppointments
                                     ? 'bg-white border border-slate-200 text-slate-500 shadow-sm'
                                     : 'bg-indigo-50/50 border border-indigo-100/50 text-indigo-500'
