@@ -44,8 +44,8 @@ const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow }) => {
                     if (!isCancelledOrNoShow) setIsOpen(!isOpen);
                 }}
                 className={`text-[8px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 border shadow-sm flex items-center gap-1 ${isTelehealth
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                        : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                    : 'bg-indigo-50 text-indigo-600 border-indigo-100'
                     } ${isCancelledOrNoShow ? 'opacity-50 grayscale line-through cursor-not-allowed' : 'cursor-pointer'}`}
             >
                 {isTelehealth ? 'Telehealth' : currentType}
@@ -1078,7 +1078,7 @@ const Schedule = () => {
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Checked In</span>
                                     <span className="text-slate-200">/</span>
-                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400"></span> Room Nurse</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400"></span> Room</span>
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Provider</span>
                                     <span className="text-slate-200">/</span>
