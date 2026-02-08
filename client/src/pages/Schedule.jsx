@@ -384,10 +384,10 @@ const ProviderSelector = ({ appointment, providers, currentProviderName, onProvi
                     e.stopPropagation();
                     setShowModal(true);
                 }}
-                className="text-[8px] px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 border border-slate-200 bg-white text-slate-500 shadow-sm flex items-center gap-1 shrink-0 truncate max-w-full"
+                className="text-[8px] px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider transition-all hover:bg-slate-50 border border-slate-200 bg-white text-slate-500 shadow-sm flex items-center gap-1 shrink-0 w-full"
                 title={currentProviderName || 'Provider'}
             >
-                <span className="truncate">{displayName}</span>
+                <span className="truncate flex-1 text-left">{displayName}</span>
                 <ChevronDown className="w-2.5 h-2.5 opacity-40 shrink-0" />
             </button>
 
@@ -1341,7 +1341,7 @@ const Schedule = () => {
                                                     </div>
 
                                                     {/* Column 3: Provider Name/Initials - Fixed width */}
-                                                    <div className="flex-shrink-0 w-[60px] min-w-[60px] max-w-[60px] flex items-center">
+                                                    <div className="flex-shrink-0 w-[85px] min-w-[85px] max-w-[85px] flex items-center overflow-visible">
                                                         <ProviderSelector
                                                             appointment={appt}
                                                             providers={providers}
