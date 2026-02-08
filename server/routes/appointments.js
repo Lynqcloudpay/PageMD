@@ -254,30 +254,8 @@ router.post('/', requirePermission('schedule:edit'), idempotency, async (req, re
     // Use current user as provider if not specified
     const finalProviderId = providerId || req.user.id;
 
-    // Check for existing appointments at the same time slot (max 2 per slot)
-    const existingAppts = await pool.query(
-      `SELECT patient_status
-       FROM appointments
-       WHERE provider_id = $1
-         AND appointment_date = $2
-         AND appointment_time = $3`,
-      [finalProviderId, date, time]
-    );
+    // Overbooking cap removed per user request
 
-    // Count only active appointments (exclude cancelled/no-show)
-    const activeApptsCount = existingAppts.rows.filter(row => {
-      const status = (row.patient_status || '').toLowerCase();
-      // Use includes for broader check (e.g. no-show vs no_show)
-      return status !== 'cancelled' && !status.includes('no_show') && !status.includes('no-show');
-    }).length;
-
-    // If 2 or more active appointments exist, block booking
-    if (activeApptsCount >= 2) {
-      return res.status(400).json({
-        error: 'Time slot is full. Maximum 2 active appointments allowed per time slot.',
-        existingCount: activeApptsCount
-      });
-    }
 
     const result = await pool.query(
       `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by, clinic_id, visit_method)

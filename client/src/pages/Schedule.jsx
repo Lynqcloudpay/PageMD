@@ -891,27 +891,8 @@ const Schedule = () => {
             return;
         }
 
-        // Frontend validation: Check if slot is already full (max 2)
-        const selectedDate = newAppt.date || format(currentDate, 'yyyy-MM-dd');
-        const selectedTime = newAppt.time;
-        const appointmentsAtSelectedSlot = modalAppointments.filter(appt => {
-            if (!appt.time) return false;
-            const apptTime = appt.time.substring(0, 5);
-            return apptTime === selectedTime;
-        });
+        // Frontend validation: Overbooking cap removed per user request
 
-        // Count only ACTIVE appointments (not cancelled or no-show)
-        // Case-insensitive check to be safe
-        const activeCount = appointmentsAtSelectedSlot.filter(appt => {
-            const status = (appt.patient_status || '').toLowerCase();
-            return status !== 'cancelled' && !['no_show', 'no-show'].includes(status);
-        }).length;
-
-        // If 2 or more active appointments exist, block booking
-        if (activeCount >= 2) {
-            alert('This time slot is already full. Maximum 2 active appointments allowed per time slot. Please select a different time.');
-            return;
-        }
 
         try {
             await appointmentsAPI.create({
@@ -1322,17 +1303,14 @@ const Schedule = () => {
                                                         ).length;
                                                     });
 
-                                                    if (existingCount >= 2) return null;
-
                                                     const compactCardHeight = 24;
                                                     const verticalGap = 1;
-                                                    const isPartial = existingCount === 1;
 
                                                     return (
                                                         <div
                                                             className={`absolute inset-x-2 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none transform scale-95 group-hover:scale-100 shadow-sm`}
                                                             style={{
-                                                                top: isPartial ? `${compactCardHeight + verticalGap + 4}px` : '6px',
+                                                                top: `${existingCount * (compactCardHeight + verticalGap) + 4}px`,
                                                                 height: `${compactCardHeight}px`
                                                             }}
                                                         >
