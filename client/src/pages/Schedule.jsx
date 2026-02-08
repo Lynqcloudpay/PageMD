@@ -1110,7 +1110,7 @@ const Schedule = () => {
                                     </button>
 
                                     {showProviderMenu && (
-                                        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50 max-h-[400px] overflow-y-auto">
+                                        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-[100] max-h-[400px] overflow-y-auto ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
                                             <div className="px-2 py-1.5 mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                                 Select Providers to View
                                             </div>
