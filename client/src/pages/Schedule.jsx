@@ -268,10 +268,36 @@ const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, se
 
     return (
         <div className="relative" ref={dropdownRef}>
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all shadow-sm ${isSelected
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all shadow-sm ${isSelected
                 ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100'
                 : 'bg-white border-slate-100 hover:border-slate-200'
                 }`}>
+                {/* Color and Chevron Cluster */}
+                <div className="flex items-center gap-0.5">
+                    <button
+                        onClick={() => {
+                            if (isSelected && selectedProviderIds.length === 1) {
+                                setSelectedProviderIds([]);
+                            } else {
+                                setSelectedProviderIds([providerGroup.providerId]);
+                            }
+                        }}
+                        className={`w-3 h-3 rounded-full ${isSelected ? 'animate-pulse' : ''} transition-colors cursor-pointer border border-black/5 flex-shrink-0`}
+                        style={{ backgroundColor: providerGroup.color.accent }}
+                        title={`Toggle ${providerGroup.providerName}`}
+                    />
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsOpen(!isOpen);
+                        }}
+                        className={`p-0.5 rounded-full hover:bg-slate-100 transition-colors ${isOpen ? 'bg-slate-100 text-indigo-500' : 'text-slate-400'}`}
+                        title="Change Color"
+                    >
+                        <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                </div>
+
                 <button
                     onClick={() => {
                         if (isSelected && selectedProviderIds.length === 1) {
@@ -280,25 +306,9 @@ const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, se
                             setSelectedProviderIds([providerGroup.providerId]);
                         }
                     }}
-                    className="flex items-center gap-2 group cursor-pointer"
+                    className={`text-[10px] font-bold uppercase tracking-tight truncate max-w-[80px] ${isSelected ? 'text-amber-700' : 'text-slate-500'} cursor-pointer`}
                 >
-                    <div
-                        className={`w-2.5 h-2.5 rounded-full ${isSelected ? 'animate-pulse' : ''} transition-colors`}
-                        style={{ backgroundColor: providerGroup.color.accent }}
-                    />
-                    <span className={`text-[10px] font-bold uppercase tracking-tight ${isSelected ? 'text-amber-700' : 'text-slate-500'}`}>
-                        {providerGroup.providerName}
-                    </span>
-                </button>
-
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsOpen(!isOpen);
-                    }}
-                    className={`p-0.5 rounded hover:bg-slate-100 transition-colors ${isOpen ? 'bg-slate-100' : ''}`}
-                >
-                    <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    {providerGroup.providerName}
                 </button>
             </div>
 
@@ -528,6 +538,7 @@ const Schedule = () => {
 
     // Color Palette
     const PROVIDER_PALETTE = [
+        // Cold Spectrum
         { name: 'Indigo', bg: 'bg-indigo-50/40', border: 'border-indigo-200', text: 'text-indigo-700', accent: '#6366f1', light: 'bg-indigo-50' },
         { name: 'Teal', bg: 'bg-teal-50/40', border: 'border-teal-200', text: 'text-teal-700', accent: '#0d9488', light: 'bg-teal-50' },
         { name: 'Sky', bg: 'bg-sky-50/40', border: 'border-sky-200', text: 'text-sky-700', accent: '#0ea5e9', light: 'bg-sky-50' },
@@ -538,6 +549,17 @@ const Schedule = () => {
         { name: 'Blue', bg: 'bg-blue-50/50', border: 'border-blue-200', text: 'text-blue-700', accent: '#2563eb', light: 'bg-blue-50' },
         { name: 'Zinc', bg: 'bg-zinc-100/40', border: 'border-zinc-300', text: 'text-zinc-700', accent: '#52525b', light: 'bg-zinc-100' },
         { name: 'Deep Indigo', bg: 'bg-indigo-100/30', border: 'border-indigo-200', text: 'text-indigo-800', accent: '#3730a3', light: 'bg-indigo-100' },
+        // Warm Spectrum
+        { name: 'Rose', bg: 'bg-rose-50/40', border: 'border-rose-200', text: 'text-rose-700', accent: '#f43f5e', light: 'bg-rose-50' },
+        { name: 'Amber', bg: 'bg-amber-50/40', border: 'border-amber-200', text: 'text-amber-700', accent: '#f59e0b', light: 'bg-amber-50' },
+        { name: 'Orange', bg: 'bg-orange-50/40', border: 'border-orange-200', text: 'text-orange-700', accent: '#f97316', light: 'bg-orange-50' },
+        { name: 'Red', bg: 'bg-red-50/40', border: 'border-red-200', text: 'text-red-700', accent: '#ef4444', light: 'bg-red-50' },
+        { name: 'Yellow', bg: 'bg-yellow-50/40', border: 'border-yellow-200', text: 'text-yellow-700', accent: '#eab308', light: 'bg-yellow-50' },
+        { name: 'Pink', bg: 'bg-pink-50/40', border: 'border-pink-200', text: 'text-pink-700', accent: '#ec4899', light: 'bg-pink-50' },
+        { name: 'Fuchsia', bg: 'bg-fuchsia-50/40', border: 'border-fuchsia-200', text: 'text-fuchsia-700', accent: '#d946ef', light: 'bg-fuchsia-50' },
+        { name: 'Purple', bg: 'bg-purple-50/40', border: 'border-purple-200', text: 'text-purple-700', accent: '#a855f7', light: 'bg-purple-50' },
+        { name: 'Violet', bg: 'bg-violet-50/40', border: 'border-violet-200', text: 'text-violet-700', accent: '#8b5cf6', light: 'bg-violet-50' },
+        { name: 'Stone', bg: 'bg-stone-100/40', border: 'border-stone-300', text: 'text-stone-700', accent: '#78716c', light: 'bg-stone-100' },
     ];
 
     const [providerColorOverrides, setProviderColorOverrides] = useState(() => {
