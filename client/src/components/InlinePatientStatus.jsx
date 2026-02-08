@@ -9,7 +9,6 @@ import { appointmentsAPI, patientFlagsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useNotification } from './NotificationProvider';
-import { ChevronDown } from 'lucide-react';
 
 // --- SUB-COMPONENTS (Defined outside to prevent remounting) ---
 
@@ -24,7 +23,7 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
     if (isActive && currentStatusTime > 0 && !isCheckedOut) {
         time += currentStatusTime;
     }
-    const showTime = (isPast || isActive) && time > 0;
+    const showTime = (isPast || isActive) && (time > 0);
 
     const colors = {
         arrived: isActive ? 'text-indigo-700 font-semibold bg-indigo-50/50 px-2 py-0.5 rounded-md border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
@@ -45,7 +44,7 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
             }}
             disabled={isDisabled}
             title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
-            className={`text-[9px] transition-all whitespace-nowrap px-1.5 py-0.5 rounded-md ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`text-[9px] transition-all whitespace-nowrap px-1.5 py-0.5 rounded-md h-[20px] flex items-center justify-center min-w-[55px] ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
             {isPast && <span className="text-[8px] mr-1">✓</span>}
             <span className={isActive ? 'underline underline-offset-2' : ''}>
@@ -76,7 +75,6 @@ const RoomBtn = memo(({
 
         isEditingRef.current = true;
         setShowRoomInput(true);
-        // setRoomInput(room || ''); // Already handled or handled by prop sync
     };
 
     const handleRoomSubmit = async () => {
@@ -91,18 +89,21 @@ const RoomBtn = memo(({
         }
     };
 
+    // Show timer if we have recorded time OR if we are currently in room (to show immediate start)
+    const showTimers = hasRoomTime || (status === 'in_room' && (nurseTime > 0 || readyTime > 0));
+
     return (
-        <div className="flex items-center gap-1 shrink-0">
-            {/* Status Indicator Circle */}
+        <div className="flex items-center gap-1.5 shrink-0 px-1 py-0.5 rounded-lg">
+            {/* Status Indicator Circle - SMALLER (w-2) */}
             {isActive && room && (
                 <button
                     type="button"
                     onClick={handleCircleToggle}
                     disabled={saving}
-                    className={`w-3 h-3 rounded-full transition-all border shrink-0 ${roomSubStatus === 'ready_for_provider'
-                        ? 'bg-amber-400 border-amber-500 shadow-sm'
-                        : 'bg-violet-400 border-violet-500 shadow-sm'
-                        } ${saving ? 'opacity-50' : 'hover:scale-110 active:scale-95 cursor-pointer'}`}
+                    className={`w-2 h-2 rounded-full transition-all border shadow-sm shrink-0 ${roomSubStatus === 'ready_for_provider'
+                            ? 'bg-amber-400 border-amber-500'
+                            : 'bg-violet-400 border-violet-500'
+                        } ${saving ? 'opacity-50' : 'hover:scale-125 active:scale-90 cursor-pointer'}`}
                     title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Yellow) - Click to revert to Nurse' : 'With Nurse (Purple) - Click to signal Ready for Provider'}
                 />
             )}
@@ -135,24 +136,24 @@ const RoomBtn = memo(({
                     type="button"
                     onClick={handleRoomClick}
                     disabled={saving || isTerminalState || !canUpdateStatus}
-                    className={`text-[9px] transition-all flex items-center px-2 py-0.5 rounded-md border shadow-sm shrink-0 ${isActive
-                        ? (roomSubStatus === 'ready_for_provider'
-                            ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
-                            : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
-                        : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
-                            : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
-                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'} min-w-fit`}
+                    className={`text-[9px] transition-all flex items-center justify-center px-1.5 py-0.5 rounded-md border shadow-sm shrink-0 h-[20px] min-w-[65px] ${isActive
+                            ? (roomSubStatus === 'ready_for_provider'
+                                ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
+                                : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
+                            : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
+                                : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'}`}
                 >
                     {isTerminalState && status !== 'in_room' && <span className="text-[9px] font-bold mr-0.5">✓</span>}
-                    <span className="uppercase tracking-tight whitespace-nowrap leading-none">
-                        ROOM {displayRoom || ''}
+                    <span className="uppercase tracking-tight whitespace-nowrap leading-none flex-1 text-center">
+                        {displayRoom ? `RM ${displayRoom}` : 'ROOM'}
                     </span>
                 </button>
             )}
 
-            {/* Timings Display */}
+            {/* Timings Display - Start running immediately */}
             <span className="text-[8px] opacity-80 flex items-center gap-1.5 shrink-0 ml-0.5">
-                {hasRoomTime && (
+                {showTimers && (
                     <>
                         {nurseTime > 0 && (
                             <span className="text-violet-700 font-semibold flex items-center gap-0.5" title="Time with Nurse">
@@ -263,7 +264,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
             const times = {};
             const now = new Date();
-            const isCheckedOut = status === 'checked_out' && checkoutTime;
+            const isCheckedOut = (status === 'checked_out' || status === 'completed') && checkoutTime;
 
             for (let i = 0; i < history.length; i++) {
                 const entry = history[i];
@@ -275,7 +276,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 let endTime;
                 if (nextEntry) {
                     endTime = new Date(nextEntry.timestamp);
-                } else if (entry.status === 'checked_out') {
+                } else if (entry.status === 'checked_out' || entry.status === 'completed') {
                     endTime = checkoutTime ? new Date(checkoutTime) : startTime;
                 } else if (entry.status === status && !isCheckedOut) {
                     endTime = now;
@@ -294,7 +295,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 const checkoutDate = new Date(checkoutTime);
                 const totalVisitTime = Math.floor((checkoutDate - arrivalDate) / 1000);
                 times['checked_out'] = Math.max(0, totalVisitTime);
-            } else if (arrivalTime && status === 'checked_out') {
+            } else if (arrivalTime && (status === 'checked_out' || status === 'completed')) {
                 const arrivalDate = new Date(arrivalTime);
                 const totalVisitTime = Math.floor((now - arrivalDate) / 1000);
                 times['checked_out'] = Math.max(0, totalVisitTime);
@@ -306,7 +307,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
             // Timer
             const currentEntry = history.slice().reverse().find(entry => entry.status === status);
-            if (currentEntry && status !== 'checked_out') {
+            if (currentEntry && status !== 'checked_out' && status !== 'completed') {
                 const statusStartTime = new Date(currentEntry.timestamp);
                 const updateTimer = () => {
                     setCurrentStatusTime(Math.floor((new Date() - statusStartTime) / 1000));
@@ -448,7 +449,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
     const getStatusOrder = (s) => ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'].indexOf(s);
     const currentOrder = getStatusOrder(status);
-    const isTerminalState = status === 'checked_out' || status === 'no_show' || status === 'cancelled';
+    const isTerminalState = status === 'checked_out' || status === 'completed' || status === 'no_show' || status === 'cancelled';
 
     // Derived Room Data for RoomBtn
     let displayRoom = room;
@@ -469,7 +470,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     return (
         <>
             <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                     <StatusBtn
                         statusKey="arrived" label="Arrived"
                         currentStatus={status} currentOrder={currentOrder}
@@ -478,7 +479,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
                         formatCompactTime={formatCompactTime}
                     />
-                    <span className="text-slate-200 text-[8px]">→</span>
+                    <span className="text-slate-300 text-[10px] opacity-40">•</span>
                     <StatusBtn
                         statusKey="checked_in" label="Checked In"
                         currentStatus={status} currentOrder={currentOrder}
@@ -487,7 +488,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
                         formatCompactTime={formatCompactTime}
                     />
-                    <span className="text-slate-200 text-[8px]">→</span>
+                    <span className="text-slate-300 text-[10px] opacity-40">•</span>
                     <RoomBtn
                         status={status} roomSubStatus={roomSubStatus} room={room}
                         roomInput={roomInput} setRoomInput={setRoomInput}
@@ -499,7 +500,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         formatCompactTime={formatCompactTime}
                         displayRoom={displayRoom} hasRoomTime={hasRoomTime} nurseTime={nurseTime} readyTime={readyTime}
                     />
-                    <span className="text-slate-200 text-[8px]">→</span>
+                    <span className="text-slate-300 text-[10px] opacity-40">•</span>
                     <StatusBtn
                         statusKey="checked_out" label="Out"
                         currentStatus={status} currentOrder={currentOrder}
