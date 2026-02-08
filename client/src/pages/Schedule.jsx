@@ -384,10 +384,11 @@ const ProviderSelector = ({ appointment, providers, currentProviderName, onProvi
                     e.stopPropagation();
                     setShowModal(true);
                 }}
-                className="text-[9px] font-medium text-slate-400 hover:text-indigo-500 cursor-pointer transition-colors truncate block w-full text-left"
+                className="text-[8px] px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 border border-slate-200 bg-white text-slate-500 shadow-sm flex items-center gap-1 shrink-0 truncate max-w-full"
                 title={currentProviderName || 'Provider'}
             >
-                {displayName}
+                <span className="truncate">{displayName}</span>
+                <ChevronDown className="w-2.5 h-2.5 opacity-40 shrink-0" />
             </button>
 
             <ProviderChangeModal

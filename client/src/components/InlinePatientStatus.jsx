@@ -30,6 +30,9 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     const [roomInput, setRoomInput] = useState(room || '');
     const inputRef = useRef(null);
 
+    // Track editing state with a ref to prevent polling from overwriting the input
+    const isEditingRef = useRef(false);
+
     // Auto-focus room input when it appears
     useEffect(() => {
         if (showRoomInput && inputRef.current) {
@@ -48,11 +51,16 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             setStatus(appointment.patient_status || 'scheduled');
             setRoomSubStatus(appointment.room_sub_status || null);
             setRoom(appointment.current_room || '');
-            setRoomInput(appointment.current_room || '');
+
+            // CRITICAL: Only update roomInput if the user isn't currently in the middle of typing
+            if (!isEditingRef.current && !showRoomInput) {
+                setRoomInput(appointment.current_room || '');
+            }
+
             setArrivalTime(appointment.arrival_time ? new Date(appointment.arrival_time) : null);
             setCheckoutTime(appointment.checkout_time ? new Date(appointment.checkout_time) : null);
         }
-    }, [appointment]);
+    }, [appointment]); // REMOVED showRoomInput from deps to avoid re-triggering while editing
 
     // Calculate status times
     useEffect(() => {
@@ -299,9 +307,9 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         const showTime = (isPast || isActive) && time > 0;
 
         const colors = {
-            arrived: isActive ? 'text-indigo-700 font-bold bg-indigo-50/50 px-2 py-0.5 rounded-lg border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500' : 'text-slate-400 hover:text-slate-600',
-            checked_in: isActive ? 'text-teal-700 font-bold bg-teal-50/50 px-2 py-0.5 rounded-lg border border-teal-100 shadow-sm' : isPast ? 'text-teal-500' : 'text-slate-400 hover:text-slate-600',
-            checked_out: isActive ? 'text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200 shadow-sm' : isPast ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'
+            arrived: isActive ? 'text-indigo-700 font-semibold bg-indigo-50/50 px-2 py-0.5 rounded-md border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
+            checked_in: isActive ? 'text-teal-700 font-semibold bg-teal-50/50 px-2 py-0.5 rounded-md border border-teal-100 shadow-sm' : isPast ? 'text-teal-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
+            checked_out: isActive ? 'text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 shadow-sm' : isPast ? 'text-rose-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium'
         };
 
         const isDisabled = saving || isTerminalState || !canUpdateStatus;
@@ -323,7 +331,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                     {label}
                 </span>
                 {showTime && (
-                    <span className={`text-[8px] font-bold ml-1.5 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                    <span className={`text-[8px] font-semibold ml-1.5 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
                         {formatCompactTime(time)}
                     </span>
                 )}
@@ -379,14 +387,15 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             e.stopPropagation();
             if (isTerminalState || !canUpdateStatus) return;
 
-            // Just show the input, don't trigger status change yet
-            // This prevents re-renders that kill the input focus
+            isEditingRef.current = true;
             setShowRoomInput(true);
             setRoomInput(room || '');
         };
 
         const handleRoomSubmit = async () => {
             const trimmed = roomInput.trim();
+            isEditingRef.current = false;
+
             if (trimmed !== (room || '')) {
                 setSaving(true);
                 try {
@@ -433,8 +442,8 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 )}
 
                 {showRoomInput ? (
-                    <div className="flex items-center bg-white border border-violet-200 rounded-md shadow-sm px-1.5 py-0.5 shrink-0">
-                        <span className="text-[9px] font-semibold text-violet-400 mr-1 uppercase">ROOM</span>
+                    <div className="flex items-center bg-white border border-violet-200 rounded-md shadow-sm px-1 py-0.5 shrink-0">
+                        <span className="text-[9px] font-medium text-violet-400 mr-1 uppercase leading-none">ROOM</span>
                         <input
                             ref={inputRef}
                             type="text"
@@ -448,7 +457,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                                     setShowRoomInput(false);
                                 }
                             }}
-                            className="w-[20px] text-[10px] bg-transparent text-violet-700 focus:ring-0 outline-none font-bold"
+                            className="w-[18px] text-[10px] bg-transparent text-violet-700 focus:ring-0 outline-none font-semibold leading-none p-0 border-none"
                             placeholder="#"
                             onClick={(e) => e.stopPropagation()}
                         />
@@ -458,15 +467,15 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         type="button"
                         onClick={handleRoomClick}
                         disabled={saving || isTerminalState || !canUpdateStatus}
-                        className={`text-[9px] transition-all flex items-center gap-1 px-2 py-0.5 rounded-md border shadow-sm shrink-0 ${isActive
-                                ? (roomSubStatus === 'ready_for_provider'
-                                    ? 'bg-amber-50 border-amber-200 text-amber-700 font-bold'
-                                    : 'bg-violet-50 border-violet-200 text-violet-700 font-bold')
-                                : isPast ? 'bg-violet-50 border-violet-100 text-violet-400' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+                        className={`text-[9px] transition-all flex items-center px-2 py-0.5 rounded-md border shadow-sm shrink-0 ${isActive
+                            ? (roomSubStatus === 'ready_for_provider'
+                                ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
+                                : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
+                            : isPast ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
                             } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'} min-w-fit`}
                     >
                         {isPast && <span className="text-[9px] font-bold mr-0.5">✓</span>}
-                        <span className="uppercase tracking-tight whitespace-nowrap">
+                        <span className="uppercase tracking-tight whitespace-nowrap leading-none">
                             ROOM {displayRoom || ''}
                         </span>
                     </button>
@@ -477,12 +486,12 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                     {hasRoomTime ? (
                         <>
                             {nurseTime > 0 && (
-                                <span className="text-violet-700 font-bold flex items-center gap-0.5" title="Time with Nurse">
+                                <span className="text-violet-700 font-semibold flex items-center gap-0.5" title="Time with Nurse">
                                     <span className="text-[6px]">○</span>{formatCompactTime(nurseTime)}
                                 </span>
                             )}
                             {readyTime > 0 && (
-                                <span className="text-amber-700 font-bold flex items-center gap-0.5" title="Ready for Provider">
+                                <span className="text-amber-700 font-semibold flex items-center gap-0.5" title="Ready for Provider">
                                     <span className="text-[6px]">●</span>{formatCompactTime(readyTime)}
                                 </span>
                             )}
@@ -528,13 +537,13 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         <>
             <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
                 {/* Status flow - consistent sizing */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     <StatusBtn statusKey="arrived" label="Arrived" />
-                    <span className="text-slate-300 text-[8px] font-bold">→</span>
+                    <span className="text-slate-200 text-[8px]">→</span>
                     <StatusBtn statusKey="checked_in" label="Checked In" />
-                    <span className="text-slate-300 text-[8px] font-bold">→</span>
+                    <span className="text-slate-200 text-[8px]">→</span>
                     <RoomBtn />
-                    <span className="text-slate-300 text-[8px] font-bold">→</span>
+                    <span className="text-slate-200 text-[8px]">→</span>
                     <StatusBtn statusKey="checked_out" label="Out" />
                 </div>
 
