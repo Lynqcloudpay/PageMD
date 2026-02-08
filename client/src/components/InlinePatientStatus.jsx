@@ -375,23 +375,12 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             ? (roomSubStatus === 'ready_for_provider' ? 'text-amber-700 font-bold' : 'text-violet-700 font-bold')
             : isPast ? 'text-violet-500' : 'text-gray-300 hover:text-gray-500';
 
-        const handleRoomClick = async (e) => {
+        const handleRoomClick = (e) => {
             e.stopPropagation();
             if (isTerminalState || !canUpdateStatus) return;
 
-            // If not in room, set status to in_room first
-            if (status !== 'in_room') {
-                try {
-                    setSaving(true);
-                    await handleStatusChange('in_room', 'with_nurse', room || '');
-                } catch (err) {
-                    console.error('Failed to set room status:', err);
-                } finally {
-                    setSaving(false);
-                }
-            }
-
-            // Show input and prepopulate
+            // Just show the input, don't trigger status change yet
+            // This prevents re-renders that kill the input focus
             setShowRoomInput(true);
             setRoomInput(room || '');
         };
@@ -444,8 +433,8 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 )}
 
                 {showRoomInput ? (
-                    <div className="flex items-center bg-violet-50 border-2 border-violet-400 rounded-lg shadow-sm px-1.5 py-0.5 shrink-0">
-                        <span className="text-[10px] font-bold text-violet-900 mr-1 uppercase tracking-tighter">ROOM</span>
+                    <div className="flex items-center bg-white border border-violet-200 rounded-md shadow-sm px-1.5 py-0.5 shrink-0">
+                        <span className="text-[9px] font-semibold text-violet-400 mr-1 uppercase">ROOM</span>
                         <input
                             ref={inputRef}
                             type="text"
@@ -459,7 +448,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                                     setShowRoomInput(false);
                                 }
                             }}
-                            className="w-[24px] text-[10px] bg-transparent text-violet-900 focus:ring-0 outline-none font-bold placeholder-violet-300"
+                            className="w-[20px] text-[10px] bg-transparent text-violet-700 focus:ring-0 outline-none font-bold"
                             placeholder="#"
                             onClick={(e) => e.stopPropagation()}
                         />
@@ -469,12 +458,12 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         type="button"
                         onClick={handleRoomClick}
                         disabled={saving || isTerminalState || !canUpdateStatus}
-                        className={`text-[9px] transition-all flex items-center gap-1 px-2 py-0.5 rounded-lg border shadow-sm shrink-0 ${isActive
-                            ? (roomSubStatus === 'ready_for_provider'
-                                ? 'bg-amber-100 border-amber-300 text-amber-800 font-black'
-                                : 'bg-violet-100 border-violet-300 text-violet-800 font-black')
-                            : isPast ? 'bg-violet-50 border-violet-100 text-violet-500' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-500'
-                            } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-400'} min-w-fit`}
+                        className={`text-[9px] transition-all flex items-center gap-1 px-2 py-0.5 rounded-md border shadow-sm shrink-0 ${isActive
+                                ? (roomSubStatus === 'ready_for_provider'
+                                    ? 'bg-amber-50 border-amber-200 text-amber-700 font-bold'
+                                    : 'bg-violet-50 border-violet-200 text-violet-700 font-bold')
+                                : isPast ? 'bg-violet-50 border-violet-100 text-violet-400' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+                            } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'} min-w-fit`}
                     >
                         {isPast && <span className="text-[9px] font-bold mr-0.5">✓</span>}
                         <span className="uppercase tracking-tight whitespace-nowrap">
