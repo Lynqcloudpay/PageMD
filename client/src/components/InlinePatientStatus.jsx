@@ -27,7 +27,16 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
 
     // Room input state
     const [showRoomInput, setShowRoomInput] = useState(false);
-    const [roomInput, setRoomInput] = useState('');
+    const [roomInput, setRoomInput] = useState(room || '');
+    const inputRef = useRef(null);
+
+    // Auto-focus room input when it appears
+    useEffect(() => {
+        if (showRoomInput && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [showRoomInput]);
 
     // No Show / Cancelled modal state
     const [showReasonModal, setShowReasonModal] = useState(false);
@@ -366,22 +375,18 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
             ? (roomSubStatus === 'ready_for_provider' ? 'text-amber-700 font-bold' : 'text-violet-700 font-bold')
             : isPast ? 'text-violet-500' : 'text-gray-300 hover:text-gray-500';
 
-        const handleRoomClick = async (e) => {
+        const handleRoomClick = (e) => {
             e.stopPropagation();
             if (isTerminalState || !canUpdateStatus) return;
 
             // If not in room, first set status to in_room (with_nurse default)
             if (status !== 'in_room') {
-                await handleStatusChange('in_room', 'with_nurse', room || '');
+                handleStatusChange('in_room', 'with_nurse', room || '');
             }
 
-            // Always ask for room number if it's currently empty
-            const currentR = room || '';
-            const newRoomVal = window.prompt("Enter Room Number:", currentR);
-
-            if (newRoomVal !== null && newRoomVal.trim() !== currentR) {
-                handleStatusChange('in_room', roomSubStatus || 'with_nurse', newRoomVal.trim());
-            }
+            // Always show input to edit room directly
+            setShowRoomInput(true);
+            setRoomInput(room || '');
         };
 
         const handleRoomSubmit = () => {
@@ -425,25 +430,45 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                     )}
                 </span>
 
-                <button
-                    type="button"
-                    onClick={handleRoomClick}
-                    disabled={saving || isTerminalState || !canUpdateStatus}
-                    title={!canUpdateStatus ? 'You do not have permission to update appointment status' : 'Click to set/change room'}
-                    className={`text-[9px] transition-all flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shadow-sm ${isActive
+                {showRoomInput ? (
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={roomInput}
+                        onChange={(e) => setRoomInput(e.target.value)}
+                        onBlur={handleRoomSubmit}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleRoomSubmit();
+                            if (e.key === 'Escape') {
+                                setRoomInput(room || '');
+                                setShowRoomInput(false);
+                            }
+                        }}
+                        className="w-[50px] text-[9px] px-1.5 py-0.5 border-2 border-violet-400 bg-violet-50 text-violet-900 rounded-lg focus:ring-0 outline-none font-bold shadow-sm"
+                        placeholder="Room #"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                ) : (
+                    <button
+                        type="button"
+                        onClick={handleRoomClick}
+                        disabled={saving || isTerminalState || !canUpdateStatus}
+                        title={!canUpdateStatus ? 'You do not have permission to update appointment status' : 'Click to set/change room'}
+                        className={`text-[9px] transition-all flex items-center gap-1.5 px-2 py-0.5 rounded-lg border shadow-sm ${isActive
                             ? (roomSubStatus === 'ready_for_provider'
                                 ? 'bg-amber-100 border-amber-300 text-amber-800 font-bold ring-2 ring-amber-100 animate-pulse'
                                 : 'bg-violet-100 border-violet-300 text-violet-800 font-bold')
                             : isPast ? 'bg-violet-50 border-violet-100 text-violet-500' : 'bg-white border-slate-100 text-slate-300 hover:text-slate-500'
-                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} min-w-[65px] justify-center`}
-                >
-                    <span className="inline-flex items-center min-w-[8px]">
-                        {isPast && <span className="text-[8px]">✓</span>}
-                    </span>
-                    <span className={`${isActive ? 'underline underline-offset-2' : ''} flex-shrink-0`}>
-                        {displayRoom ? `ROOM ${displayRoom}` : 'ROOM'}
-                    </span>
-                </button>
+                            } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} min-w-[65px] justify-center`}
+                    >
+                        <span className="inline-flex items-center min-w-[8px]">
+                            {isPast && <span className="text-[8px]">✓</span>}
+                        </span>
+                        <span className={`${isActive ? 'underline underline-offset-2' : ''} flex-shrink-0`}>
+                            {displayRoom ? `ROOM ${displayRoom}` : 'ROOM'}
+                        </span>
+                    </button>
+                )}
 
                 {/* Show timings separately - always reserve space for both timings */}
                 <span className="text-[8px] opacity-70 flex items-center gap-0.5 w-[65px] text-left">
@@ -535,33 +560,6 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
     return (
         <>
             <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                {/* Visit Type Toggle (Green for Telehealth) */}
-                <div className="flex items-center mr-4 pr-4 border-r border-slate-100">
-                    <button
-                        onClick={async () => {
-                            if (saving || isTerminalState) return;
-                            const newMethod = appointment.visitMethod === 'telehealth' ? 'office' : 'telehealth';
-                            const newType = newMethod === 'telehealth' ? 'Telehealth Visit' : 'Follow-up';
-                            setSaving(true);
-                            try {
-                                await appointmentsAPI.update(appointment.id, { visitMethod: newMethod, type: newType });
-                                if (onStatusUpdate) onStatusUpdate({ ...appointment, visitMethod: newMethod, type: newType });
-                            } catch (err) {
-                                console.error('Failed to toggle visit method:', err);
-                            } finally {
-                                setSaving(false);
-                            }
-                        }}
-                        disabled={saving || isTerminalState}
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${appointment.visitMethod === 'telehealth'
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm'
-                                : 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm'
-                            } ${saving || isTerminalState ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105 active:scale-95'}`}
-                    >
-                        {appointment.visitMethod === 'telehealth' ? 'TELEHEALTH' : 'OFFICE VISIT'}
-                    </button>
-                </div>
-
                 {/* Status flow - consistent sizing */}
                 <div className="flex items-center gap-2">
                     <StatusBtn statusKey="arrived" label="Arrived" />

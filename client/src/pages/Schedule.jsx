@@ -2,13 +2,85 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Clock, User, Search, X, Calendar, Users, ChevronDown, Filter, FilterX } from 'lucide-react';
 import { format, addDays } from 'date-fns';
-import { AlertTriangle, Shield } from 'lucide-react';
+import { AlertTriangle, Shield, Check, Mail, Phone, MapPin, MoreVertical } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { appointmentsAPI, authAPI, patientsAPI, followupsAPI } from '../services/api';
 import AddPatientModal from '../components/AddPatientModal';
 import InlinePatientStatus from '../components/InlinePatientStatus';
+
+// Visit Type Dropdown Component
+const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    const types = [
+        { label: 'Follow-up', method: 'office' },
+        { label: 'New Patient', method: 'office' },
+        { label: 'Sick Visit', method: 'office' },
+        { label: 'Telehealth Visit', method: 'telehealth' },
+        { label: 'Consultation', method: 'office' }
+    ];
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const currentType = appt.type || 'Follow-up';
+    const isTelehealth = appt.visitMethod === 'telehealth' || currentType === 'Telehealth Visit';
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isCancelledOrNoShow) setIsOpen(!isOpen);
+                }}
+                className={`text-[8px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 border shadow-sm flex items-center gap-1 ${isTelehealth
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        : 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                    } ${isCancelledOrNoShow ? 'opacity-50 grayscale line-through cursor-not-allowed' : 'cursor-pointer'}`}
+            >
+                {isTelehealth ? 'Telehealth' : currentType}
+                {!isCancelledOrNoShow && <ChevronDown className="w-2.5 h-2.5 opacity-50" />}
+            </button>
+
+            {isOpen && (
+                <div className="absolute left-0 mt-1 w-28 bg-white border border-slate-100 rounded-lg shadow-xl z-50 py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                    {types.map((t) => (
+                        <button
+                            key={t.label}
+                            onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                    await appointmentsAPI.update(appt.id, {
+                                        type: t.label,
+                                        visitMethod: t.method
+                                    });
+                                    if (onUpdate) onUpdate();
+                                    setIsOpen(false);
+                                } catch (err) {
+                                    console.error('Failed to update visit type:', err);
+                                }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-[9px] font-semibold hover:bg-slate-50 transition-colors ${t.label === 'Telehealth Visit' ? 'text-emerald-600' : 'text-slate-600'
+                                }`}
+                        >
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 // No Show / Cancelled Buttons Component (extracted for use in Schedule)
 const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
@@ -1006,7 +1078,9 @@ const Schedule = () => {
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Checked In</span>
                                     <span className="text-slate-200">/</span>
-                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 font-bold ring-2 ring-amber-100 flex items-center justify-center"></span> Room</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-violet-400"></span> Room Nurse</span>
+                                    <span className="text-slate-200">/</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Provider</span>
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400"></span> Out</span>
                                 </div>
@@ -1031,8 +1105,8 @@ const Schedule = () => {
                                                     }
                                                 }}
                                                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95 shadow-sm ${isSelected
-                                                        ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100'
-                                                        : 'bg-white border-slate-100 hover:border-slate-200'
+                                                    ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100'
+                                                    : 'bg-white border-slate-100 hover:border-slate-200'
                                                     }`}
                                             >
                                                 <div
@@ -1254,27 +1328,13 @@ const Schedule = () => {
                                                     </div>
 
                                                     {/* Column 2: Appointment Type + Duration - Fixed width */}
-                                                    <div className="flex-shrink-0 w-[100px] min-w-[100px] max-w-[100px]">
-                                                        <div className="flex items-center gap-1">
-                                                            <button
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    const newType = appt.type === 'Telehealth Visit' ? 'Follow-up' : 'Telehealth Visit';
-                                                                    const newMethod = newType === 'Telehealth Visit' ? 'telehealth' : 'office';
-                                                                    try {
-                                                                        await appointmentsAPI.update(appt.id, { type: newType, visitMethod: newMethod });
-                                                                        refreshAppointments();
-                                                                    } catch (err) {
-                                                                        console.error('Failed to toggle visit type:', err);
-                                                                    }
-                                                                }}
-                                                                className={`text-[8px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 ${appt.type === 'Telehealth Visit' || appt.visitMethod === 'telehealth'
-                                                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'
-                                                                    : 'bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-sm'
-                                                                    } ${isCancelledOrNoShow ? 'opacity-50 grayscale line-through' : ''}`}
-                                                            >
-                                                                {appt.type === 'Telehealth Visit' ? 'Tele' : appt.type}
-                                                            </button>
+                                                    <div className="flex-shrink-0 w-[110px] min-w-[110px] max-w-[110px]">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <VisitTypeDropdown
+                                                                appt={appt}
+                                                                onUpdate={refreshAppointments}
+                                                                isCancelledOrNoShow={isCancelledOrNoShow}
+                                                            />
                                                             <span className={`text-[8px] font-bold ${isCancelledOrNoShow ? 'text-slate-300' : 'text-slate-400'}`}>{appt.duration}m</span>
                                                         </div>
                                                     </div>
