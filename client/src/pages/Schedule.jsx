@@ -384,11 +384,11 @@ const ProviderSelector = ({ appointment, providers, currentProviderName, onProvi
                     e.stopPropagation();
                     setShowModal(true);
                 }}
-                className="text-[8px] px-2 py-0.5 rounded-md font-semibold uppercase tracking-wider transition-all hover:bg-slate-50 border border-slate-200 bg-white text-slate-500 shadow-sm flex items-center gap-1 shrink-0 w-full"
+                className="text-[9.5px] px-2 py-1 rounded-md font-semibold uppercase tracking-tight transition-all hover:bg-slate-50 border border-slate-200 bg-white text-slate-600 shadow-sm flex items-center gap-1 shrink-0 w-full"
                 title={currentProviderName || 'Provider'}
             >
                 <span className="truncate flex-1 text-left">{displayName}</span>
-                <ChevronDown className="w-2.5 h-2.5 opacity-40 shrink-0" />
+                <ChevronDown className="w-3 h-3 opacity-40 shrink-0" />
             </button>
 
             <ProviderChangeModal
@@ -1317,10 +1317,10 @@ const Schedule = () => {
                                             >
                                                 <div className="h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative">
 
-                                                    {/* Column 1: Patient Name - Fixed width with truncation */}
-                                                    <div className="flex-shrink-0 w-[140px] min-w-[140px] max-w-[140px]">
+                                                    {/* Column 1: Patient Name - Generous space */}
+                                                    <div className="flex-shrink-0 w-[180px] min-w-[180px] max-w-[180px]">
                                                         <span
-                                                            className={`font-medium text-[10px] leading-tight ${isCancelledOrNoShow ? 'text-slate-400 line-through' : 'text-slate-700'} hover:underline cursor-pointer truncate block w-full`}
+                                                            className={`font-semibold text-[11px] leading-tight ${isCancelledOrNoShow ? 'text-slate-400 line-through' : 'text-slate-700'} hover:underline cursor-pointer truncate block w-full`}
                                                             onClick={(e) => handlePatientNameClick(e, appt)}
                                                             title={appt.patientName}
                                                         >
@@ -1329,7 +1329,7 @@ const Schedule = () => {
                                                     </div>
 
                                                     {/* Column 2: Appointment Type + Duration - Fixed width */}
-                                                    <div className="flex-shrink-0 w-[110px] min-w-[110px] max-w-[110px]">
+                                                    <div className="flex-shrink-0 w-[100px] min-w-[100px] max-w-[100px]">
                                                         <div className="flex items-center gap-1.5">
                                                             <VisitTypeDropdown
                                                                 appt={appt}
@@ -1340,8 +1340,8 @@ const Schedule = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Column 3: Provider Name/Initials - Fixed width */}
-                                                    <div className="flex-shrink-0 w-[85px] min-w-[85px] max-w-[85px] flex items-center overflow-visible">
+                                                    {/* Column 3: Provider Name - Expanded room */}
+                                                    <div className="flex-shrink-0 w-[115px] min-w-[115px] max-w-[115px] flex items-center overflow-visible">
                                                         <ProviderSelector
                                                             appointment={appt}
                                                             providers={providers}
@@ -1351,8 +1351,8 @@ const Schedule = () => {
                                                         />
                                                     </div>
 
-                                                    {/* Column 4: Status Flow - Flexible but with min width */}
-                                                    <div className="flex-1 min-w-[150px] overflow-hidden">
+                                                    {/* Column 4: Status Flow - Flexible middle */}
+                                                    <div className="flex-1 min-w-[180px] overflow-visible">
                                                         <InlinePatientStatus
                                                             appointment={appt}
                                                             onStatusUpdate={refreshAppointments}
@@ -1361,8 +1361,8 @@ const Schedule = () => {
                                                         />
                                                     </div>
 
-                                                    {/* Column 5: No Show/Cancelled Buttons - Fixed width on right, always visible */}
-                                                    <div className="flex-shrink-0 w-[100px] min-w-[100px] max-w-[100px] flex items-center justify-end pr-1">
+                                                    {/* Column 5: No Show/Cancelled Buttons - Right aligned */}
+                                                    <div className="flex-shrink-0 w-[95px] min-w-[95px] max-w-[95px] flex items-center justify-end pr-1">
                                                         <NoShowCancelledButtons
                                                             appointment={appt}
                                                             onStatusUpdate={refreshAppointments}
