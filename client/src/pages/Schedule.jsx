@@ -602,6 +602,8 @@ const Schedule = () => {
         return saved !== null ? saved === 'true' : true;
     });
 
+    const [dismissedAppointmentIds, setDismissedAppointmentIds] = useState(new Set());
+
     // Save preference to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('schedule_showCancelled', showCancelledAppointments.toString());
@@ -1295,7 +1297,8 @@ const Schedule = () => {
                                                     Object.values(appointmentsByProvider).forEach(group => {
                                                         existingCount += group.appointments.filter(a =>
                                                             a.time?.substring(0, 5) === apptTime &&
-                                                            !['cancelled', 'no_show', 'no-show'].includes(a.patient_status)
+                                                            !['cancelled', 'no_show', 'no-show'].includes(a.patient_status) &&
+                                                            !dismissedAppointmentIds.has(a.id)
                                                         ).length;
                                                     });
 
@@ -1332,7 +1335,8 @@ const Schedule = () => {
                                     Object.values(appointmentsByProvider).forEach((providerGroup) => {
                                         providerGroup.appointments
                                             .filter(appt => {
-                                                const isCancelledOrNoShow = appt.patient_status === 'cancelled' || appt.patient_status === 'no_show';
+                                                if (dismissedAppointmentIds.has(appt.id)) return false;
+                                                const isCancelledOrNoShow = ['cancelled', 'no_show', 'no-show'].includes(appt.patient_status);
                                                 return showCancelledAppointments || !isCancelledOrNoShow;
                                             })
                                             .forEach(appt => {
@@ -1405,7 +1409,7 @@ const Schedule = () => {
                                         return (
                                             <div
                                                 key={appt.id}
-                                                className={`absolute border-l-[3px] rounded-lg shadow-sm hover:shadow-md transition-all overflow-visible ${isCancelledOrNoShow
+                                                className={`absolute border-l-[3px] rounded-lg shadow-sm hover:shadow-md transition-all overflow-visible group ${isCancelledOrNoShow
                                                     ? 'bg-slate-50 border-slate-300 opacity-60'
                                                     : isActiveInClinic
                                                         ? `${color.bg} ${color.border} ring-1 ring-indigo-400/30 shadow-indigo-100/20`
@@ -1419,8 +1423,25 @@ const Schedule = () => {
                                                     borderLeftColor: isCancelledOrNoShow
                                                         ? (['no_show', 'no-show'].includes(appt.patient_status) ? '#cbd5e1' : '#f1f5f9')
                                                         : color.accent,
+                                                    zIndex: isActiveInClinic ? 20 : 10
                                                 }}
                                             >
+                                                {isCancelledOrNoShow && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setDismissedAppointmentIds(prev => {
+                                                                const next = new Set(prev);
+                                                                next.add(appt.id);
+                                                                return next;
+                                                            });
+                                                        }}
+                                                        className="absolute -right-2 -top-2 w-4 h-4 rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 hover:text-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-30 cursor-pointer border border-white"
+                                                        title="Dismiss from schedule (will still appear in cancellations)"
+                                                    >
+                                                        <X className="w-2.5 h-2.5" />
+                                                    </button>
+                                                )}
                                                 <div className="h-full px-1.5 py-0 flex items-center gap-1.5 overflow-visible relative">
 
                                                     {/* Column 1: Patient Name - Generous space */}
