@@ -100,8 +100,8 @@ const RoomBtn = memo(({
                     onClick={handleCircleToggle}
                     disabled={saving}
                     className={`w-3 h-3 rounded-full transition-all border shrink-0 ${roomSubStatus === 'ready_for_provider'
-                            ? 'bg-amber-400 border-amber-500 shadow-sm'
-                            : 'bg-violet-400 border-violet-500 shadow-sm'
+                        ? 'bg-amber-400 border-amber-500 shadow-sm'
+                        : 'bg-violet-400 border-violet-500 shadow-sm'
                         } ${saving ? 'opacity-50' : 'hover:scale-110 active:scale-95 cursor-pointer'}`}
                     title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Yellow) - Click to revert to Nurse' : 'With Nurse (Purple) - Click to signal Ready for Provider'}
                 />
@@ -136,11 +136,11 @@ const RoomBtn = memo(({
                     onClick={handleRoomClick}
                     disabled={saving || isTerminalState || !canUpdateStatus}
                     className={`text-[9px] transition-all flex items-center px-2 py-0.5 rounded-md border shadow-sm shrink-0 ${isActive
-                            ? (roomSubStatus === 'ready_for_provider'
-                                ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
-                                : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
-                            : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
-                                : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+                        ? (roomSubStatus === 'ready_for_provider'
+                            ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
+                            : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
+                        : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
+                            : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
                         } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'} min-w-fit`}
                 >
                     {isTerminalState && status !== 'in_room' && <span className="text-[9px] font-bold mr-0.5">✓</span>}
@@ -371,7 +371,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 if (appointment.active_flags_count > 0) {
                     try {
                         const flagsRes = await patientFlagsAPI.getByPatient(appointment.patientId);
-                        const activeFlags = (flagsRes.data || []).filter(f \=\> f.status === 'active');
+                        const activeFlags = (flagsRes.data || []).filter(f => f.status === 'active');
                         activeFlags.forEach(flag => {
                             showNotification({
                                 title: `Patient Alert: ${flag.label}`,
@@ -424,145 +424,145 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
         }
     };
 
-    const handleCircleToggle = async(e) \=\> {
+    const handleCircleToggle = async (e) => {
         e.stopPropagation();
-        if(saving || status !== 'in_room' || !room) return;
-    const newSub = roomSubStatus === 'with_nurse' ? 'ready_for_provider' : 'with_nurse';
-    await handleStatusChange('in_room', newSub, room);
-};
+        if (saving || status !== 'in_room' || !room) return;
+        const newSub = roomSubStatus === 'with_nurse' ? 'ready_for_provider' : 'with_nurse';
+        await handleStatusChange('in_room', newSub, room);
+    };
 
-const handleNoShowOrCancelled = (newStatus) => {
-    if (newStatus === 'no_show') {
-        handleStatusChange(newStatus, null, null, null);
-    } else {
-        setPendingStatus(newStatus);
-        setShowReasonModal(true);
+    const handleNoShowOrCancelled = (newStatus) => {
+        if (newStatus === 'no_show') {
+            handleStatusChange(newStatus, null, null, null);
+        } else {
+            setPendingStatus(newStatus);
+            setShowReasonModal(true);
+        }
+    };
+
+    const handleReasonSubmit = () => {
+        if (reasonInput.trim()) {
+            handleStatusChange(pendingStatus, null, null, reasonInput.trim());
+        }
+    };
+
+    const getStatusOrder = (s) => ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'].indexOf(s);
+    const currentOrder = getStatusOrder(status);
+    const isTerminalState = status === 'checked_out' || status === 'no_show' || status === 'cancelled';
+
+    // Derived Room Data for RoomBtn
+    let displayRoom = room;
+    const isPastRoom = currentOrder > getStatusOrder('in_room');
+    if (!displayRoom && isPastRoom && appointment?.status_history) {
+        const roomEntry = appointment.status_history.filter(entry => entry.status === 'in_room').pop();
+        if (roomEntry?.current_room) displayRoom = roomEntry.current_room;
     }
-};
+    const hasRoomTime = (statusTimes['in_room_with_nurse'] || 0) + (statusTimes['in_room_ready_for_provider'] || 0) + (statusTimes['in_room'] || 0) > 0;
 
-const handleReasonSubmit = () => {
-    if (reasonInput.trim()) {
-        handleStatusChange(pendingStatus, null, null, reasonInput.trim());
+    let nurseTime = (statusTimes['in_room_with_nurse'] || 0) + (statusTimes['in_room'] || 0);
+    let readyTime = statusTimes['in_room_ready_for_provider'] || 0;
+    if (status === 'in_room' && currentStatusTime > 0) {
+        if (roomSubStatus === 'ready_for_provider') readyTime += currentStatusTime;
+        else nurseTime += currentStatusTime;
     }
-};
 
-const getStatusOrder = (s) => ['scheduled', 'arrived', 'checked_in', 'in_room', 'checked_out', 'no_show', 'cancelled'].indexOf(s);
-const currentOrder = getStatusOrder(status);
-const isTerminalState = status === 'checked_out' || status === 'no_show' || status === 'cancelled';
-
-// Derived Room Data for RoomBtn
-let displayRoom = room;
-const isPastRoom = currentOrder > getStatusOrder('in_room');
-if (!displayRoom && isPastRoom && appointment?.status_history) {
-    const roomEntry = appointment.status_history.filter(entry => entry.status === 'in_room').pop();
-    if (roomEntry?.current_room) displayRoom = roomEntry.current_room;
-}
-const hasRoomTime = (statusTimes['in_room_with_nurse'] || 0) + (statusTimes['in_room_ready_for_provider'] || 0) + (statusTimes['in_room'] || 0) > 0;
-
-let nurseTime = (statusTimes['in_room_with_nurse'] || 0) + (statusTimes['in_room'] || 0);
-let readyTime = statusTimes['in_room_ready_for_provider'] || 0;
-if (status === 'in_room' && currentStatusTime > 0) {
-    if (roomSubStatus === 'ready_for_provider') readyTime += currentStatusTime;
-    else nurseTime += currentStatusTime;
-}
-
-return (
-    <>
-        <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-1">
-                <StatusBtn
-                    statusKey="arrived" label="Arrived"
-                    currentStatus={status} currentOrder={currentOrder}
-                    statusTimes={statusTimes} currentStatusTime={currentStatusTime}
-                    handleStatusChange={handleStatusChange}
-                    saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
-                    formatCompactTime={formatCompactTime}
-                />
-                <span className="text-slate-200 text-[8px]">→</span>
-                <StatusBtn
-                    statusKey="checked_in" label="Checked In"
-                    currentStatus={status} currentOrder={currentOrder}
-                    statusTimes={statusTimes} currentStatusTime={currentStatusTime}
-                    handleStatusChange={handleStatusChange}
-                    saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
-                    formatCompactTime={formatCompactTime}
-                />
-                <span className="text-slate-200 text-[8px]">→</span>
-                <RoomBtn
-                    status={status} roomSubStatus={roomSubStatus} room={room}
-                    roomInput={roomInput} setRoomInput={setRoomInput}
-                    showRoomInput={showRoomInput} setShowRoomInput={setShowRoomInput}
-                    inputRef={inputRef} isEditingRef={isEditingRef}
-                    statusTimes={statusTimes} currentStatusTime={currentStatusTime} currentOrder={currentOrder}
-                    handleStatusChange={handleStatusChange} handleCircleToggle={handleCircleToggle}
-                    saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
-                    formatCompactTime={formatCompactTime}
-                    displayRoom={displayRoom} hasRoomTime={hasRoomTime} nurseTime={nurseTime} readyTime={readyTime}
-                />
-                <span className="text-slate-200 text-[8px]">→</span>
-                <StatusBtn
-                    statusKey="checked_out" label="Out"
-                    currentStatus={status} currentOrder={currentOrder}
-                    statusTimes={statusTimes} currentStatusTime={currentStatusTime}
-                    handleStatusChange={handleStatusChange}
-                    saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
-                    formatCompactTime={formatCompactTime}
-                />
-            </div>
-
-            {showCancelledBadge && (status === 'no_show' || status === 'cancelled') && (
-                <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ml-3 flex-shrink-0 ${status === 'no_show' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                    {status === 'no_show' ? 'NO SHOW' : 'CANCELLED'}
-                </span>
-            )}
-
-            {showNoShowCancelled && !isTerminalState && (
-                <div className="ml-4 flex items-center gap-3 border-l border-gray-200 pl-4">
-                    <NoShowCancelledBtn
-                        statusKey="no_show" label="No Show"
-                        currentStatus={status} handleNoShowOrCancelled={handleNoShowOrCancelled}
+    return (
+        <>
+            <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-1">
+                    <StatusBtn
+                        statusKey="arrived" label="Arrived"
+                        currentStatus={status} currentOrder={currentOrder}
+                        statusTimes={statusTimes} currentStatusTime={currentStatusTime}
+                        handleStatusChange={handleStatusChange}
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
+                        formatCompactTime={formatCompactTime}
                     />
-                    <NoShowCancelledBtn
-                        statusKey="cancelled" label="Cancelled"
-                        currentStatus={status} handleNoShowOrCancelled={handleNoShowOrCancelled}
+                    <span className="text-slate-200 text-[8px]">→</span>
+                    <StatusBtn
+                        statusKey="checked_in" label="Checked In"
+                        currentStatus={status} currentOrder={currentOrder}
+                        statusTimes={statusTimes} currentStatusTime={currentStatusTime}
+                        handleStatusChange={handleStatusChange}
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
+                        formatCompactTime={formatCompactTime}
+                    />
+                    <span className="text-slate-200 text-[8px]">→</span>
+                    <RoomBtn
+                        status={status} roomSubStatus={roomSubStatus} room={room}
+                        roomInput={roomInput} setRoomInput={setRoomInput}
+                        showRoomInput={showRoomInput} setShowRoomInput={setShowRoomInput}
+                        inputRef={inputRef} isEditingRef={isEditingRef}
+                        statusTimes={statusTimes} currentStatusTime={currentStatusTime} currentOrder={currentOrder}
+                        handleStatusChange={handleStatusChange} handleCircleToggle={handleCircleToggle}
+                        saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
+                        formatCompactTime={formatCompactTime}
+                        displayRoom={displayRoom} hasRoomTime={hasRoomTime} nurseTime={nurseTime} readyTime={readyTime}
+                    />
+                    <span className="text-slate-200 text-[8px]">→</span>
+                    <StatusBtn
+                        statusKey="checked_out" label="Out"
+                        currentStatus={status} currentOrder={currentOrder}
+                        statusTimes={statusTimes} currentStatusTime={currentStatusTime}
+                        handleStatusChange={handleStatusChange}
+                        saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
+                        formatCompactTime={formatCompactTime}
                     />
                 </div>
-            )}
-        </div>
 
-        {/* Cancellation Reason Modal */}
-        {showReasonModal && pendingStatus === 'cancelled' && (
-            <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center" onClick={() => setShowReasonModal(false)}>
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-xl">
-                        <h2 className="text-xl font-bold text-white">Cancel Appointment</h2>
+                {showCancelledBadge && (status === 'no_show' || status === 'cancelled') && (
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ml-3 flex-shrink-0 ${status === 'no_show' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                        {status === 'no_show' ? 'NO SHOW' : 'CANCELLED'}
+                    </span>
+                )}
+
+                {showNoShowCancelled && !isTerminalState && (
+                    <div className="ml-4 flex items-center gap-3 border-l border-gray-200 pl-4">
+                        <NoShowCancelledBtn
+                            statusKey="no_show" label="No Show"
+                            currentStatus={status} handleNoShowOrCancelled={handleNoShowOrCancelled}
+                            saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
+                        />
+                        <NoShowCancelledBtn
+                            statusKey="cancelled" label="Cancelled"
+                            currentStatus={status} handleNoShowOrCancelled={handleNoShowOrCancelled}
+                            saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
+                        />
                     </div>
-                    <div className="p-6">
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Cancellation Reason *</label>
-                            <textarea
-                                value={reasonInput}
-                                onChange={(e) => setReasonInput(e.target.value)}
-                                placeholder="Enter reason..."
-                                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm resize-none"
-                                rows={3} autoFocus
-                            />
+                )}
+            </div>
+
+            {/* Cancellation Reason Modal */}
+            {showReasonModal && pendingStatus === 'cancelled' && (
+                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center" onClick={() => setShowReasonModal(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 rounded-t-xl">
+                            <h2 className="text-xl font-bold text-white">Cancel Appointment</h2>
                         </div>
-                        <div className="flex items-center justify-end gap-3">
-                            <button type="button" onClick={() => setShowReasonModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">Cancel</button>
-                            <button type="button" onClick={handleReasonSubmit} disabled={!reasonInput.trim() || saving} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg disabled:opacity-50">
-                                {saving ? 'Saving...' : 'Confirm'}
-                            </button>
+                        <div className="p-6">
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Cancellation Reason *</label>
+                                <textarea
+                                    value={reasonInput}
+                                    onChange={(e) => setReasonInput(e.target.value)}
+                                    placeholder="Enter reason..."
+                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 text-sm resize-none"
+                                    rows={3} autoFocus
+                                />
+                            </div>
+                            <div className="flex items-center justify-end gap-3">
+                                <button type="button" onClick={() => setShowReasonModal(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg">Cancel</button>
+                                <button type="button" onClick={handleReasonSubmit} disabled={!reasonInput.trim() || saving} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg disabled:opacity-50">
+                                    {saving ? 'Saving...' : 'Confirm'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        )}
-    </>
-);
+            )}
+        </>
+    );
 };
 
 export default InlinePatientStatus;
