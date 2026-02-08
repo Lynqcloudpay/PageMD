@@ -9,6 +9,7 @@ import { appointmentsAPI, patientFlagsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useNotification } from './NotificationProvider';
+import { ChevronDown } from 'lucide-react';
 
 // --- SUB-COMPONENTS (Defined outside to prevent remounting) ---
 
@@ -33,13 +34,6 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
 
     const isDisabled = saving || isTerminalState || !canUpdateStatus;
 
-    // Define fixed widths based on label to help horizontal alignment
-    const minWidths = {
-        arrived: 'min-w-[50px]',
-        checked_in: 'min-w-[65px]',
-        checked_out: 'min-w-[40px]'
-    };
-
     return (
         <button
             type="button"
@@ -51,7 +45,7 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
             }}
             disabled={isDisabled}
             title={!canUpdateStatus ? 'You do not have permission to update appointment status' : ''}
-            className={`text-[9px] transition-all whitespace-nowrap px-1.5 py-0.5 rounded-md ${colors[statusKey]} ${minWidths[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className={`text-[9px] transition-all whitespace-nowrap px-1.5 py-0.5 rounded-md ${colors[statusKey]} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
             {isPast && <span className="text-[8px] mr-1">✓</span>}
             <span className={isActive ? 'underline underline-offset-2' : ''}>
@@ -82,6 +76,7 @@ const RoomBtn = memo(({
 
         isEditingRef.current = true;
         setShowRoomInput(true);
+        // setRoomInput(room || ''); // Already handled or handled by prop sync
     };
 
     const handleRoomSubmit = async () => {
@@ -97,22 +92,19 @@ const RoomBtn = memo(({
     };
 
     return (
-        <div className="flex items-center gap-1 shrink-0 px-1 py-0.5 rounded-lg bg-slate-50/50 border border-transparent hover:border-slate-100 transition-colors">
+        <div className="flex items-center gap-1 shrink-0">
             {/* Status Indicator Circle */}
             {isActive && room && (
                 <button
                     type="button"
                     onClick={handleCircleToggle}
                     disabled={saving}
-                    className={`w-2.5 h-2.5 rounded-full transition-all border shadow-sm shrink-0 relative flex items-center justify-center ${roomSubStatus === 'ready_for_provider'
-                            ? 'bg-amber-400 border-amber-500'
-                            : 'bg-violet-400 border-violet-500'
-                        } ${saving ? 'opacity-50' : 'hover:scale-125 active:scale-90 cursor-pointer'}`}
+                    className={`w-3 h-3 rounded-full transition-all border shrink-0 ${roomSubStatus === 'ready_for_provider'
+                        ? 'bg-amber-400 border-amber-500 shadow-sm'
+                        : 'bg-violet-400 border-violet-500 shadow-sm'
+                        } ${saving ? 'opacity-50' : 'hover:scale-110 active:scale-95 cursor-pointer'}`}
                     title={roomSubStatus === 'ready_for_provider' ? 'Ready for Provider (Yellow) - Click to revert to Nurse' : 'With Nurse (Purple) - Click to signal Ready for Provider'}
-                >
-                    <span className={`absolute inset-0 rounded-full animate-ping opacity-20 ${roomSubStatus === 'ready_for_provider' ? 'bg-amber-400' : 'bg-violet-400'
-                        }`} style={{ animationDuration: '3s' }}></span>
-                </button>
+                />
             )}
 
             {showRoomInput ? (
@@ -143,17 +135,17 @@ const RoomBtn = memo(({
                     type="button"
                     onClick={handleRoomClick}
                     disabled={saving || isTerminalState || !canUpdateStatus}
-                    className={`text-[9px] transition-all flex items-center px-2 py-0.5 rounded-md border shadow-sm shrink-0 min-w-[65px] h-[22px] ${isActive
-                            ? (roomSubStatus === 'ready_for_provider'
-                                ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
-                                : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
-                            : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
-                                : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
-                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'}`}
+                    className={`text-[9px] transition-all flex items-center px-2 py-0.5 rounded-md border shadow-sm shrink-0 ${isActive
+                        ? (roomSubStatus === 'ready_for_provider'
+                            ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
+                            : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
+                        : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
+                            : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+                        } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'} min-w-fit`}
                 >
                     {isTerminalState && status !== 'in_room' && <span className="text-[9px] font-bold mr-0.5">✓</span>}
-                    <span className="uppercase tracking-tight whitespace-nowrap leading-none flex-1 text-center">
-                        {displayRoom ? `RM ${displayRoom}` : 'ROOM'}
+                    <span className="uppercase tracking-tight whitespace-nowrap leading-none">
+                        ROOM {displayRoom || ''}
                     </span>
                 </button>
             )}
