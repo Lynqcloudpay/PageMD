@@ -255,7 +255,6 @@ router.post('/', requirePermission('schedule:edit'), idempotency, async (req, re
     const finalProviderId = providerId || req.user.id;
 
     // Check for existing appointments at the same time slot (max 2 per slot)
-    // Exception: If BOTH appointments are cancelled/no-show, treat slot as empty (0/2)
     const existingAppts = await pool.query(
       `SELECT patient_status
        FROM appointments
@@ -265,16 +264,18 @@ router.post('/', requirePermission('schedule:edit'), idempotency, async (req, re
       [finalProviderId, date, time]
     );
 
-    const allCancelled = existingAppts.rows.length === 2 &&
-      existingAppts.rows.every(row =>
-        row.patient_status === 'cancelled' || row.patient_status === 'no_show'
-      );
+    // Count only active appointments (exclude cancelled/no-show)
+    const activeApptsCount = existingAppts.rows.filter(row => {
+      const status = (row.patient_status || '').toLowerCase();
+      // Use includes for broader check (e.g. no-show vs no_show)
+      return status !== 'cancelled' && !status.includes('no_show') && !status.includes('no-show');
+    }).length;
 
-    // If both are cancelled, treat as empty (allow booking)
-    if (!allCancelled && existingAppts.rows.length >= 2) {
+    // If 2 or more active appointments exist, block booking
+    if (activeApptsCount >= 2) {
       return res.status(400).json({
-        error: 'Time slot is full. Maximum 2 appointments allowed per time slot.',
-        existingCount: existingAppts.rows.length
+        error: 'Time slot is full. Maximum 2 active appointments allowed per time slot.',
+        existingCount: activeApptsCount
       });
     }
 
