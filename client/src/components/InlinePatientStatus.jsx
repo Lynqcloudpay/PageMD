@@ -4,7 +4,7 @@
  * Compact version for displaying and editing patient status within appointment cards
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
 import { appointmentsAPI, patientFlagsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
