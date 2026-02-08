@@ -254,8 +254,26 @@ router.post('/', requirePermission('schedule:edit'), idempotency, async (req, re
     // Use current user as provider if not specified
     const finalProviderId = providerId || req.user.id;
 
-    // Overbooking cap removed per user request
+    // Dynamic Overbooking Cap check
+    const settingsRes = await pool.query(
+      'SELECT max_appointments_per_slot FROM clinical_settings ORDER BY updated_at DESC LIMIT 1'
+    );
+    const maxCap = settingsRes.rows[0]?.max_appointments_per_slot;
 
+    if (maxCap && maxCap > 0) {
+      const countRes = await pool.query(
+        'SELECT COUNT(*) FROM appointments WHERE appointment_date = $1 AND appointment_time = $2 AND provider_id = $3 AND patient_status NOT IN ($4, $5)',
+        [date, time, finalProviderId, 'cancelled', 'no-show']
+      );
+      const activeCount = parseInt(countRes.rows[0].count);
+
+      if (activeCount >= maxCap) {
+        return res.status(400).json({
+          error: `This slot is fully booked (limit: ${maxCap}). Please choose another time.`,
+          code: 'OVERBOOKING_LIMIT'
+        });
+      }
+    }
 
     const result = await pool.query(
       `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time, duration, appointment_type, notes, created_by, clinic_id, visit_method)

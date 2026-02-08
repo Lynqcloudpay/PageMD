@@ -7,7 +7,7 @@ import { AlertTriangle, Shield, Check, Mail, Phone, MapPin, MoreVertical } from 
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { appointmentsAPI, authAPI, patientsAPI, followupsAPI } from '../services/api';
+import { appointmentsAPI, authAPI, patientsAPI, followupsAPI, settingsAPI } from '../services/api';
 import AddPatientModal from '../components/AddPatientModal';
 import InlinePatientStatus from '../components/InlinePatientStatus';
 
@@ -610,6 +610,20 @@ const Schedule = () => {
     const scrollContainerRef = useRef(null);
     const [modalAppointments, setModalAppointments] = useState([]);
     const [loadingModalAppts, setLoadingModalAppts] = useState(false);
+    const [clinicalSettings, setClinicalSettings] = useState(null);
+
+    // Fetch clinical settings (includes max overbooking cap)
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const response = await settingsAPI.getClinical();
+                setClinicalSettings(response.data);
+            } catch (err) {
+                console.warn('Failed to fetch clinical settings:', err);
+            }
+        };
+        fetchSettings();
+    }, []);
     const [pendingFollowupId, setPendingFollowupId] = useState(null); // For auto-addressing after reschedule
     // Load saved preference from localStorage, default to true if not set
     const [showCancelledAppointments, setShowCancelledAppointments] = useState(() => {
@@ -1692,8 +1706,9 @@ const Schedule = () => {
                                                             });
 
                                                             const bookingCount = activeAppointments.length;
-                                                            const isFullyBooked = bookingCount >= 2;
-                                                            const hasOneBooking = bookingCount === 1;
+                                                            const maxSlots = clinicalSettings?.max_appointments_per_slot || 999; // Default to effectively no cap if not set
+                                                            const isFullyBooked = bookingCount >= maxSlots;
+                                                            const hasSomeBooking = bookingCount > 0;
                                                             const isSelected = newAppt.time === slot;
 
                                                             const bookedPatients = appointmentsAtSlot.map(a => {
@@ -1710,10 +1725,11 @@ const Schedule = () => {
                                                                         group relative h-10 rounded-lg flex items-center justify-center transition-all
                                                                         ${isFullyBooked ? 'bg-red-50 cursor-not-allowed' :
                                                                             isSelected ? 'bg-indigo-500 text-white shadow-lg ring-2 ring-indigo-200' :
-                                                                                hasOneBooking ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' :
+                                                                                hasSomeBooking ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' :
                                                                                     'bg-white hover:bg-slate-50 border border-slate-100 text-slate-600'}
                                                                     `}
-                                                                    title={bookedPatients.length > 0 ? `Booked: ${bookedPatients.join(', ')}` : 'Available'}
+                                                                    title={isFullyBooked ? `Slot Full (${bookingCount}/${maxSlots} booked: ${bookedPatients.join(', ')})` :
+                                                                        bookedPatients.length > 0 ? `Booked: ${bookedPatients.join(', ')}` : 'Available'}
                                                                 >
                                                                     <span className="text-[10px] font-bold">{slot}</span>
                                                                     {bookingCount > 0 && !isSelected && (

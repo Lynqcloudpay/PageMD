@@ -413,6 +413,7 @@ if (require.main === module) {
 
     // Start background services
     require('./scripts/migrate-referral-tokens')(); // Run migration for new columns
+    require('./scripts/migrate-overbooking-cap')(); // Run overbooking cap migration
     flagService.startMaintenance(3600000); // 1 hour
 
     // Sandbox Cleanup: Run every 10 minutes

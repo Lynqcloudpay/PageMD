@@ -88,7 +88,8 @@ router.get('/practice', authenticate, async (req, res) => {
           logo_url: c.logo_url,
           timezone: s.time_zone || 'America/New_York',
           date_format: s.date_format || 'MM/DD/YYYY',
-          time_format: s.time_format || '12h'
+          time_format: s.time_format || '12h',
+          max_appointments_per_slot: s.max_appointments_per_slot || null
         });
       }
     }
@@ -210,9 +211,10 @@ adminRouter.put('/practice', [
         UPDATE clinic_settings SET
           time_zone = COALESCE($1, time_zone),
           date_format = COALESCE($2, date_format),
-          time_format = COALESCE($3, time_format)
-        WHERE clinic_id = $4
-      `, [timezone, date_format, time_format, req.clinic.id]);
+          time_format = COALESCE($3, time_format),
+          max_appointments_per_slot = COALESCE($4, max_appointments_per_slot)
+        WHERE clinic_id = $5
+      `, [timezone, date_format, time_format, req.body.max_appointments_per_slot, req.clinic.id]);
 
       // Continue to update local tenant DB to keep tables in sync
       console.log(`[SETTINGS] Synchronizing control DB updates to tenant ${req.clinic.schema_name}`);
@@ -471,7 +473,8 @@ adminRouter.put('/clinical', async (req, res) => {
       'enable_clinical_alerts',
       'enable_drug_interaction_check',
       'enable_allergy_alerts',
-      'default_visit_duration_minutes'
+      'default_visit_duration_minutes',
+      'max_appointments_per_slot'
     ];
 
     const updates = {};
@@ -693,7 +696,8 @@ router.get('/all', authenticate, requireAdmin, async (req, res) => {
             logo_url: c.logo_url,
             timezone: s.time_zone || 'America/New_York',
             date_format: s.date_format || 'MM/DD/YYYY',
-            time_format: s.time_format || '12h'
+            time_format: s.time_format || '12h',
+            max_appointments_per_slot: s.max_appointments_per_slot || null
           }]
         };
       })()
