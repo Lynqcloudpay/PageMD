@@ -193,8 +193,9 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
             {/* Cancellation Reason Modal - only for cancelled status */}
             {showReasonModal && pendingStatus === 'cancelled' && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center"
-                    onClick={() => {
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center animate-in fade-in duration-200"
+                    onClick={(e) => {
+                        e.stopPropagation();
                         setShowReasonModal(false);
                         setReasonInput('');
                         setPendingStatus(null);
@@ -1702,24 +1703,21 @@ const Schedule = () => {
                                                         // Check how many appointments are at this exact time slot
                                                         const slotMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
 
-                                                        // Count ALL appointments that START at this exact slot time
-                                                        // Exception: If BOTH are cancelled/no-show, treat as empty (0/2)
+                                                        // Count only ACTIVE appointments (not cancelled or no-show)
                                                         const appointmentsAtSlot = modalAppointments.filter(appt => {
                                                             if (!appt.time) return false;
                                                             const apptTime = appt.time.substring(0, 5);
                                                             return apptTime === slot;
                                                         });
 
-                                                        // Check if both are cancelled/no-show
-                                                        const allCancelled = appointmentsAtSlot.length === 2 &&
-                                                            appointmentsAtSlot.every(appt =>
-                                                                appt.patient_status === 'cancelled' || ['no_show', 'no-show'].includes(appt.patient_status)
-                                                            );
+                                                        // Filter out cancelled/no-show appointments from the count
+                                                        const activeAppointments = appointmentsAtSlot.filter(appt => {
+                                                            const status = (appt.patient_status || '').toLowerCase();
+                                                            return status !== 'cancelled' && !['no_show', 'no-show'].includes(status);
+                                                        });
 
-                                                        // If both cancelled, treat as 0 bookings (empty slot)
-                                                        const effectiveCount = allCancelled ? 0 : appointmentsAtSlot.length;
-                                                        const bookingCount = effectiveCount;
-                                                        const isFullyBooked = bookingCount >= 2; // Max 2 patients per slot
+                                                        const bookingCount = activeAppointments.length;
+                                                        const isFullyBooked = bookingCount >= 2; // Max 2 ACTIVE patients per slot
                                                         const hasOneBooking = bookingCount === 1;
                                                         const isSelected = newAppt.time === slot;
 
