@@ -43,13 +43,13 @@ const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow }) => {
                     e.stopPropagation();
                     if (!isCancelledOrNoShow) setIsOpen(!isOpen);
                 }}
-                className={`text-[8px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 border shadow-sm flex items-center gap-1 ${isTelehealth
+                className={`text-[8px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 border shadow-sm flex items-center gap-1 whitespace-nowrap ${isTelehealth
                     ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                     : 'bg-indigo-50 text-indigo-600 border-indigo-100'
                     } ${isCancelledOrNoShow ? 'opacity-50 grayscale line-through cursor-not-allowed' : 'cursor-pointer'}`}
             >
                 {isTelehealth ? 'Telehealth' : currentType}
-                {!isCancelledOrNoShow && <ChevronDown className="w-2.5 h-2.5 opacity-50" />}
+                {!isCancelledOrNoShow && <ChevronDown className="w-2 h-2 opacity-50 shrink-0" />}
             </button>
 
             {isOpen && (
@@ -651,16 +651,16 @@ const Schedule = () => {
         }
 
         const colors = [
-            { bg: 'bg-indigo-50/40', border: 'border-indigo-100', text: 'text-indigo-700', accent: '#818cf8', light: 'bg-indigo-50' },
-            { bg: 'bg-teal-50/40', border: 'border-teal-100', text: 'text-teal-700', accent: '#2dd4bf', light: 'bg-teal-50' },
-            { bg: 'bg-rose-50/40', border: 'border-rose-100', text: 'text-rose-700', accent: '#fb7185', light: 'bg-rose-50' },
-            { bg: 'bg-amber-50/40', border: 'border-amber-100', text: 'text-amber-700', accent: '#f59e0b', light: 'bg-amber-50' },
-            { bg: 'bg-emerald-50/40', border: 'border-emerald-100', text: 'text-emerald-700', accent: '#10b981', light: 'bg-emerald-50' },
-            { bg: 'bg-sky-50/40', border: 'border-sky-100', text: 'text-sky-700', accent: '#0ea5e9', light: 'bg-sky-50' },
-            { bg: 'bg-orange-50/40', border: 'border-orange-100', text: 'text-orange-700', accent: '#f97316', light: 'bg-orange-50' },
-            { bg: 'bg-cyan-50/40', border: 'border-cyan-100', text: 'text-cyan-700', accent: '#06b6d4', light: 'bg-cyan-50' },
-            { bg: 'bg-fuchsia-50/40', border: 'border-fuchsia-100', text: 'text-fuchsia-700', accent: '#d946ef', light: 'bg-fuchsia-50' },
-            { bg: 'bg-blue-50/40', border: 'border-blue-100', text: 'text-blue-700', accent: '#3b82f6', light: 'bg-blue-50' },
+            { bg: 'bg-indigo-50/40', border: 'border-indigo-200', text: 'text-indigo-700', accent: '#6366f1', light: 'bg-indigo-50' }, // Vivid Indigo
+            { bg: 'bg-teal-50/40', border: 'border-teal-200', text: 'text-teal-700', accent: '#0d9488', light: 'bg-teal-50' },   // Electric Teal
+            { bg: 'bg-sky-50/40', border: 'border-sky-200', text: 'text-sky-700', accent: '#0ea5e9', light: 'bg-sky-50' },     // Frost Blue
+            { bg: 'bg-slate-100/40', border: 'border-slate-300', text: 'text-slate-700', accent: '#334155', light: 'bg-slate-100' }, // Charcoal Slate
+            { bg: 'bg-blue-100/30', border: 'border-blue-200', text: 'text-blue-800', accent: '#1e40af', light: 'bg-blue-100' },   // Midnight Cobalt
+            { bg: 'bg-emerald-50/40', border: 'border-emerald-200', text: 'text-emerald-700', accent: '#059669', light: 'bg-emerald-50' }, // Glacier Mint
+            { bg: 'bg-cyan-50/40', border: 'border-cyan-200', text: 'text-cyan-700', accent: '#0891b2', light: 'bg-cyan-50' },     // Bright Cyan
+            { bg: 'bg-blue-50/50', border: 'border-blue-200', text: 'text-blue-700', accent: '#2563eb', light: 'bg-blue-50' },     // Royal Blue
+            { bg: 'bg-zinc-100/40', border: 'border-zinc-300', text: 'text-zinc-700', accent: '#52525b', light: 'bg-zinc-100' },   // Steel Gray
+            { bg: 'bg-indigo-100/30', border: 'border-indigo-200', text: 'text-indigo-800', accent: '#3730a3', light: 'bg-indigo-100' }, // Deep Indigo
         ];
 
         return colors[Math.abs(hash) % colors.length];
