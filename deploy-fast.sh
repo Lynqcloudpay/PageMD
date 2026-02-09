@@ -140,6 +140,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "🧹 Cleaning up Sales Data..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/cleanup-sales-data.js || echo "⚠️ Warning: Sales data cleanup failed."
 
+  echo "⚙️  Running Scheduling Hours Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-scheduling-hours.js || echo "⚠️ Warning: Scheduling hours migration failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF
