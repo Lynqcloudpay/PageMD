@@ -93,7 +93,7 @@ const ResultImage = ({ doc }) => {
 const Section = ({ title, children, defaultOpen = true, isEdited = false, id, badge }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
-        <div id={id} className={`border ${isEdited ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-200/80'} rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm shadow-slate-100/50 mb-4 overflow-hidden transition-all duration-200`}>
+        <div id={id} className={`scroll-mt-20 border ${isEdited ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-200/80'} rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm shadow-slate-100/50 mb-4 overflow-hidden transition-all duration-200`}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`w-full px-4 py-2.5 ${isEdited ? 'bg-blue-50/30' : 'bg-gradient-to-r from-slate-50/80 to-white'} border-b ${isEdited ? 'border-blue-100/50' : 'border-slate-100'} flex items-center justify-between hover:bg-slate-50/80 transition-colors group`}
