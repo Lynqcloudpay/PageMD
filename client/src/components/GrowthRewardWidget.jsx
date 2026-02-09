@@ -136,98 +136,95 @@ const GrowthRewardWidget = () => {
                 <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
                     <div className="px-8 py-6 bg-slate-50/50 border-b border-slate-50 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm">
                                 <DollarSign className="w-5 h-5" />
                             </div>
                             <div>
-                                <h3 className="text-sm font-bold text-slate-900">Partner Program Value</h3>
-                                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Active Benefits & Revenue Impact</p>
+                                <h3 className="text-sm font-bold text-slate-800">Reward Program Overview</h3>
+                                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">How your referrals lower your bill</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Status:</span>
-                            <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                                {tierName} Member
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Level:</span>
+                            <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-100">
+                                {tierName} Partner
                             </div>
                         </div>
                     </div>
 
                     <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Monthly Comparison */}
-                        <div className="space-y-6">
+                        <div className="space-y-5">
                             <div>
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Monthly Cost Comparison</label>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] mb-4 block">Current Value</label>
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-slate-200 transition-colors">
+                                    <div className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 group hover:border-slate-200 transition-colors">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm">
+                                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 border border-slate-100">
                                                 <Users className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-bold text-slate-600">Standard Price</p>
-                                                <p className="text-[9px] text-slate-400 uppercase tracking-tight">Without Referrals</p>
+                                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Market Rate</p>
+                                                <p className="text-[9px] text-slate-400 uppercase font-medium">Standard Pricing</p>
                                             </div>
                                         </div>
-                                        <span className="text-sm font-bold text-slate-400 line-through">${math?.standardTotal?.toLocaleString()}</span>
+                                        <span className="text-sm font-bold text-slate-400/80 line-through">${math?.standardTotal?.toLocaleString()}</span>
                                     </div>
 
-                                    <div className="flex items-center justify-between p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 ring-2 ring-indigo-500/10 transition-all">
+                                    <div className="flex items-center justify-between p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50 transition-all">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-sm">
+                                            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
                                                 <Star className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <p className="text-[11px] font-bold text-indigo-900">Your Partner Price</p>
-                                                <p className="text-[9px] text-indigo-500 uppercase tracking-tight font-black">{ghostSeats} Active Referrals</p>
+                                                <p className="text-[10px] font-bold text-indigo-900 uppercase tracking-tight">Your Partner Price</p>
+                                                <p className="text-[9px] text-indigo-500 font-bold uppercase">{ghostSeats} Referral Weight</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-lg font-black text-indigo-600">${totalMonthly?.toLocaleString()}</span>
-                                            <p className="text-[9px] text-indigo-400 font-bold uppercase">Monthly</p>
+                                            <span className="text-xl font-bold text-indigo-600 tracking-tight">${totalMonthly?.toLocaleString()}</span>
+                                            <p className="text-[9px] text-indigo-400 font-bold uppercase">per month</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
-                                        <Percent className="w-3.5 h-3.5" />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight">Active Savings Rate</span>
+                                    <Percent className="w-3.5 h-3.5 text-emerald-500" />
+                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight">Volume Discount</span>
                                 </div>
-                                <span className="text-sm font-black text-emerald-600">{math?.discountPercentage?.toFixed(1)}% OFF</span>
+                                <span className="text-sm font-bold text-emerald-600">{math?.discountPercentage?.toFixed(1)}% SAVED</span>
                             </div>
                         </div>
 
                         {/* Annual Savings Impact */}
                         <div className="flex flex-col">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Annual Financial Impact</label>
-                            <div className="flex-1 bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 block">Yearly Value</label>
+                            <div className="flex-1 bg-white border border-indigo-100 rounded-[2.5rem] p-8 text-indigo-950 relative overflow-hidden">
                                 {/* Decorative elements */}
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
 
                                 <div className="relative z-10 flex flex-col h-full justify-between">
-                                    <div className="flex items-center gap-2 opacity-80">
+                                    <div className="flex items-center gap-2 text-indigo-400">
                                         <Calendar className="w-4 h-4" />
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Projected 12-Month ROI</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Projected 12-Month Impact</span>
                                     </div>
 
                                     <div className="py-4">
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-5xl font-black tracking-tighter">${math?.annualSavings?.toLocaleString()}</span>
+                                            <span className="text-5xl font-bold tracking-tighter text-indigo-600">${math?.annualSavings?.toLocaleString()}</span>
                                         </div>
-                                        <p className="text-indigo-200 text-xs font-medium mt-1">Total Savings per year</p>
+                                        <p className="text-slate-500 text-[11px] font-medium mt-1">Net profit preserved through rewards</p>
                                     </div>
 
-                                    <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
                                         <div>
-                                            <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mb-1">Per Referral</p>
-                                            <p className="text-sm font-bold">${Math.round(math?.savingsPerReferral || 0)} / mo saved</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Impact Per Referral</p>
+                                            <p className="text-sm font-bold text-indigo-950">~${Math.round(math?.savingsPerReferral || 0)}/mo</p>
                                         </div>
-                                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/5">
-                                            <ArrowUpRight className="w-5 h-5 text-indigo-100" />
+                                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center border border-indigo-100">
+                                            <ArrowUpRight className="w-5 h-5 text-indigo-600" />
                                         </div>
                                     </div>
                                 </div>
@@ -260,23 +257,22 @@ const GrowthRewardWidget = () => {
                             </div>
 
                             <div className="mt-auto space-y-4">
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Growth Goal</span>
-                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tight">
-                                            {nextMilestone.referralsNeeded} more Referral{nextMilestone.referralsNeeded === 1 ? '' : 's'}
+                                <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Volume Goal</span>
+                                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
+                                            {nextMilestone.referralsNeeded} more referral{nextMilestone.referralsNeeded === 1 ? '' : 's'}
                                         </span>
                                     </div>
-                                    <div className="relative h-3 bg-white rounded-full overflow-hidden border border-slate-100">
-                                        {/* Dynamic visualization: current ghost seats relative to next milestone goal */}
+                                    <div className="relative h-2.5 bg-white rounded-full overflow-hidden border border-slate-100/50">
                                         <div
-                                            className="absolute inset-y-0 left-0 bg-indigo-500 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                                            className="absolute inset-y-0 left-0 bg-indigo-500 rounded-full transition-all duration-1000 shadow-sm"
                                             style={{ width: `${(ghostSeats / (ghostSeats + nextMilestone.referralsNeeded)) * 100}%` }}
                                         ></div>
                                     </div>
-                                    <div className="flex justify-between mt-2">
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{ghostSeats} Referrals</span>
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{ghostSeats + nextMilestone.referralsNeeded} Target</span>
+                                    <div className="flex justify-between mt-3">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{ghostSeats} Active</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{ghostSeats + nextMilestone.referralsNeeded} Goal</span>
                                     </div>
                                 </div>
                                 <p className="text-[10px] text-slate-400 text-center font-medium italic">
@@ -298,35 +294,49 @@ const GrowthRewardWidget = () => {
                 </div>
             </div>
 
-            {/* Detailed Math Breakdown - Transparency */}
-            <div className="bg-slate-50/50 rounded-[2rem] border border-slate-100 p-8">
-                <div className="flex items-center gap-3 mb-6">
+            {/* Simplified Value Logic */}
+            <div className="bg-slate-50/30 rounded-[2.5rem] border border-slate-100 p-10">
+                <div className="flex items-center gap-3 mb-8">
                     <Info className="w-4 h-4 text-slate-400" />
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">The Staircase Model Breakdown</h3>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em]">How the Rewards Math Works</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="space-y-1">
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Step 1: Virtual Total</p>
-                        <p className="text-xl font-black text-slate-800">${safeStats.virtualTotal?.toLocaleString()}</p>
-                        <p className="text-[9px] text-slate-400 italic">Sum of {safeStats.totalBillingSeats} seats across tiers</p>
-                    </div>
-                    <div className="flex items-center justify-center md:justify-start">
-                        <ArrowRight className="w-5 h-5 text-slate-300" />
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Step 2: Effective Rate</p>
-                        <p className="text-xl font-black text-slate-800">${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</p>
-                        <p className="text-[9px] text-slate-400 italic">Weighted average per virtual seat</p>
-                    </div>
-                    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-50 -translate-y-1/2 translate-x-1/2 rounded-full rotate-12 transition-transform group-hover:scale-110"></div>
-                        <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-tight mb-1">Step 3: Your Final Bill</p>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black text-slate-900">${totalMonthly?.toLocaleString()}</span>
-                            <span className="text-[10px] font-bold text-slate-400">/ mo</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
+                    {/* Step 1 */}
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">1</span>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Network Volume</p>
                         </div>
-                        <p className="text-[9px] text-slate-400 mt-2 font-medium">Calculation: {safeStats.physicalSeats} MDs × ${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</p>
+                        <p className="text-xl font-bold text-slate-800 mb-1">{safeStats.totalBillingSeats} Total Seats</p>
+                        <p className="text-[11px] text-slate-500 leading-relaxed font-medium">We combine your {safeStats.physicalSeats} providers with {safeStats.ghostSeats} referral points to calculate your volume discount.</p>
+                    </div>
+
+                    {/* Step 2 */}
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-400">2</span>
+                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bulk Discount Rate</p>
+                        </div>
+                        <div className="flex items-baseline gap-1 mb-1">
+                            <span className="text-xl font-bold text-slate-800">${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Average</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-relaxed font-medium">Because of the high total volume, every seat in the network drops to this weighted target price.</p>
+                    </div>
+
+                    {/* Step 3 */}
+                    <div className="relative z-10 bg-white shadow-xl shadow-slate-200/50 rounded-3xl p-6 border border-slate-100 ring-4 ring-slate-50">
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-black text-white">3</span>
+                            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Your Final Bill</p>
+                        </div>
+                        <div className="flex items-baseline gap-1 mb-1">
+                            <span className="text-2xl font-bold text-indigo-600 tracking-tight">${totalMonthly?.toLocaleString()}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">/ Month</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-tight">Calculation:</p>
+                        <p className="text-[10px] text-slate-500 font-medium"> {safeStats.physicalSeats} Provider{safeStats.physicalSeats === 1 ? '' : 's'} × ${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</p>
                     </div>
                 </div>
             </div>
