@@ -82,6 +82,13 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY}
       # Telehealth (Daily.co)
       DAILY_API_KEY: ${DAILY_API_KEY:-}
+      # Stripe Billing
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_SOLO: ${STRIPE_PRICE_SOLO}
+      STRIPE_PRICE_PARTNER: ${STRIPE_PRICE_PARTNER}
+      STRIPE_PRICE_ENTERPRISE: ${STRIPE_PRICE_ENTERPRISE}
     depends_on:
       db:
         condition: service_healthy
