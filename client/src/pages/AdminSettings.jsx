@@ -15,10 +15,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings, Building2, Users, Shield, Stethoscope, Mail,
-  ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2,
+  ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2, Check,
   DollarSign, Database, Activity, Lock, Globe, Clock, Bell,
-  Eye, EyeOff, Server, Zap, Upload, ShieldCheck, Gift
+  Eye, EyeOff, Server, Zap, Upload, ShieldCheck, Gift, ChevronRight, RefreshCw
 } from 'lucide-react';
+import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 import { settingsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
@@ -26,6 +28,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropper from '../components/ImageCropper';
 import FlagTypesSettings from '../components/FlagTypesSettings';
 import GrowthRewardWidget from '../components/GrowthRewardWidget';
+
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
 const AdminSettings = () => {
   const { user } = useAuth();
@@ -185,40 +191,50 @@ const AdminSettings = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-3">
+        <div className="p-4 bg-indigo-50 rounded-2xl animate-pulse">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        </div>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Loading Systems...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Administration & Settings</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage practice configuration, users, and system settings</p>
+    <div className="flex flex-col h-full -m-6 bg-slate-50/30">
+      {/* Clinic Style Standard Header */}
+      <div className="bg-white border-b border-slate-100 px-6 py-4 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center shadow-sm border border-indigo-100/50">
+              <Settings className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Administration & Settings</h1>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Practice Control Panel</span>
+                <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                <span className="text-[10px] font-medium text-slate-400">Manage clinical configuration, users, and security</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Save Status - Positioned in Header if active */}
+          {saveStatus && (
+            <div className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold animate-in fade-in zoom-in duration-300",
+              saveStatus.type === 'success' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
+            )}>
+              {saveStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+              {saveStatus.message}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Save Status */}
-      {saveStatus && (
-        <div className={`p-4 rounded-lg flex items-center space-x-2 ${saveStatus.type === 'success'
-          ? 'bg-green-50 border border-green-200 text-green-800'
-          : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
-          {saveStatus.type === 'success' ? (
-            <CheckCircle2 className="w-5 h-5" />
-          ) : (
-            <AlertCircle className="w-5 h-5" />
-          )}
-          <span>{saveStatus.message}</span>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="flex border-b border-gray-200 overflow-x-auto">
+      {/* Sticky Tab Nav - Glassmorphism */}
+      <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 overflow-x-auto scroller-hidden">
+        <div className="flex px-6 pt-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -234,19 +250,26 @@ const AdminSettings = () => {
                 navigate(`/admin-settings?tab=${tab.id}`, { replace: true });
                 setActiveTab(tab.id);
               }}
-              className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors whitespace-nowrap ${activeTab === tab.id
-                ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+              className={cn(
+                "flex items-center gap-2 px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider transition-all relative whitespace-nowrap",
+                activeTab === tab.id
+                  ? "text-indigo-600"
+                  : "text-slate-400 hover:text-slate-600"
+              )}
             >
-              <tab.icon className="w-5 h-5" />
+              <tab.icon className={cn("w-4 h-4", activeTab === tab.id ? "text-indigo-600" : "text-slate-400")} />
               <span>{tab.label}</span>
+              {activeTab === tab.id && (
+                <div className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-600 rounded-full animate-in fade-in slide-in-from-bottom-1 duration-300" />
+              )}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Tab Content */}
-        <div className="p-6">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-auto p-6">
+        <div className="max-w-6xl mx-auto space-y-6 pb-12">
           {activeTab === 'practice' && (
             <PracticeSettingsTab
               settings={practiceSettings}
@@ -282,7 +305,9 @@ const AdminSettings = () => {
           )}
 
           {activeTab === 'flags' && (
-            <FlagTypesSettings />
+            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+              <FlagTypesSettings />
+            </div>
           )}
 
           {activeTab === 'email' && (
@@ -302,11 +327,15 @@ const AdminSettings = () => {
           )}
 
           {activeTab === 'billing' && (
-            <BillingSettingsTab />
+            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+              <BillingSettingsTab />
+            </div>
           )}
 
           {activeTab === 'rewards' && (
-            <GrowthRewardWidget />
+            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+              <GrowthRewardWidget />
+            </div>
           )}
         </div>
       </div>
@@ -357,174 +386,177 @@ const PracticeSettingsTab = ({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Practice Information</h2>
+      {/* Practice Info Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Building2 className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Practice Information</h2>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Practice Name *</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Practice Name *</label>
             <input
               type="text"
               value={settings.practice_name || ''}
               onChange={(e) => updateField('practice_name', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
               placeholder="My Practice"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Practice Type</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Practice Type</label>
             <input
               type="text"
               value={settings.practice_type || ''}
               onChange={(e) => updateField('practice_type', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="Family Medicine, Cardiology, etc."
+              className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+              placeholder="e.g. Family Medicine"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID</label>
-            <input
-              type="text"
-              value={settings.tax_id || ''}
-              onChange={(e) => updateField('tax_id', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="XX-XXXXXXX"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">NPI (National Provider Identifier)</label>
-            <input
-              type="text"
-              maxLength={10}
-              value={settings.npi || ''}
-              onChange={(e) => updateField('npi', e.target.value.replace(/\D/g, ''))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="10 digits"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
-            <input
-              type="text"
-              value={settings.address_line1 || ''}
-              onChange={(e) => updateField('address_line1', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Tax ID</label>
+              <input
+                type="text"
+                value={settings.tax_id || ''}
+                onChange={(e) => updateField('tax_id', e.target.value)}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+                placeholder="XX-XXXXXXX"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">NPI</label>
+              <input
+                type="text"
+                maxLength={10}
+                value={settings.npi || ''}
+                onChange={(e) => updateField('npi', e.target.value.replace(/\D/g, ''))}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+                placeholder="10 digits"
+              />
+            </div>
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
-            <input
-              type="text"
-              value={settings.address_line2 || ''}
-              onChange={(e) => updateField('address_line2', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Clinic Address</label>
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={settings.address_line1 || ''}
+                onChange={(e) => updateField('address_line1', e.target.value)}
+                placeholder="Address Line 1"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+              />
+              <input
+                type="text"
+                value={settings.address_line2 || ''}
+                onChange={(e) => updateField('address_line2', e.target.value)}
+                placeholder="Address Line 2 (Optional)"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+              />
+              <div className="grid grid-cols-3 gap-3">
+                <input
+                  type="text"
+                  value={settings.city || ''}
+                  onChange={(e) => updateField('city', e.target.value)}
+                  placeholder="City"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+                />
+                <input
+                  type="text"
+                  maxLength={2}
+                  value={settings.state || ''}
+                  onChange={(e) => updateField('state', e.target.value.toUpperCase())}
+                  placeholder="State"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
+                />
+                <input
+                  type="text"
+                  value={settings.zip || ''}
+                  onChange={(e) => updateField('zip', e.target.value)}
+                  placeholder="ZIP Code"
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Phone</label>
+              <input
+                type="tel"
+                value={settings.phone || ''}
+                onChange={(e) => updateField('phone', e.target.value)}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Fax</label>
+              <input
+                type="tel"
+                value={settings.fax || ''}
+                onChange={(e) => updateField('fax', e.target.value)}
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-            <input
-              type="text"
-              value={settings.city || ''}
-              onChange={(e) => updateField('city', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-            <input
-              type="text"
-              maxLength={2}
-              value={settings.state || ''}
-              onChange={(e) => updateField('state', e.target.value.toUpperCase())}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="CA"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ZIP Code</label>
-            <input
-              type="text"
-              value={settings.zip || ''}
-              onChange={(e) => updateField('zip', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <input
-              type="tel"
-              value={settings.phone || ''}
-              onChange={(e) => updateField('phone', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fax</label>
-            <input
-              type="tel"
-              value={settings.fax || ''}
-              onChange={(e) => updateField('fax', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Official Email</label>
             <input
               type="email"
               value={settings.email || ''}
               onChange={(e) => updateField('email', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
-            <input
-              type="url"
-              value={settings.website || ''}
-              onChange={(e) => updateField('website', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="https://..."
+              className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
             />
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Practice Branding</h2>
-        <div className="flex items-start gap-8 px-4 py-2 bg-gray-50/50 rounded-xl border border-gray-100">
-          <div className="flex-shrink-0">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Practice Logo</label>
+      {/* Branding Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Globe className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Practice Branding</h2>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-12">
+          <div className="shrink-0">
             <div className="relative group">
-              <div className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center overflow-hidden bg-white group-hover:border-primary-500 transition-colors shadow-sm">
+              <div className="w-48 h-48 border border-slate-100 rounded-[2.5rem] flex items-center justify-center overflow-hidden bg-slate-50/50 group-hover:border-indigo-200 transition-all duration-300 shadow-inner">
                 {settings.logo_url ? (
-                  <img src={settings.logo_url} alt="Practice Logo" className="w-full h-full object-contain p-2" />
+                  <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain p-6 mix-blend-multiply" />
                 ) : (
-                  <div className="flex flex-col items-center gap-2 text-gray-400">
-                    <Building2 className="w-10 h-10" />
-                    <span className="text-[10px] font-medium uppercase tracking-wider">No Logo</span>
+                  <div className="flex flex-col items-center gap-3 text-slate-300">
+                    <Building2 className="w-12 h-12 stroke-[1]" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">No Logo</span>
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+
+                <div className="absolute inset-0 bg-indigo-600/10 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-300">
                   <button
                     type="button"
                     onClick={() => document.getElementById('logo-upload').click()}
-                    className="p-2.5 bg-white rounded-full text-primary-600 hover:bg-primary-50 shadow-lg transform scale-90 group-hover:scale-100 transition-transform"
+                    className="w-12 h-12 bg-white rounded-2xl text-indigo-600 shadow-xl flex items-center justify-center transform scale-75 group-hover:scale-100 transition-all duration-300 hover:bg-slate-50 active:scale-90"
+                    title="Upload New Logo"
                   >
                     <Upload className="w-5 h-5" />
                   </button>
                 </div>
+
+                {logoUploading && (
+                  <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+                  </div>
+                )}
               </div>
               <input
                 id="logo-upload"
@@ -534,45 +566,76 @@ const PracticeSettingsTab = ({
                 onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
-
-                  // Create a URL for the file and show the cropper
                   const reader = new FileReader();
                   reader.onload = () => {
                     setLogoCropSrc(reader.result);
                     setShowLogoCropper(true);
                   };
                   reader.readAsDataURL(file);
-                  // Reset the input so the same file can be selected again
                   e.target.value = '';
                 }}
               />
             </div>
-            <p className="text-[10px] text-gray-400 mt-2 text-center">PNG, JPG or SVG (max 2MB)</p>
           </div>
-          <div className="flex-1 pt-8">
-            <h4 className="text-sm font-semibold text-gray-800 mb-2">Branding Guidelines</h4>
-            <p className="text-xs text-gray-600 leading-relaxed mb-4">
-              Your practice logo appears on all patient-facing documents and official visit notes.
-              Upload a high-quality logo to ensure your clinical documentation looks professional.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[10px] text-gray-500">Transparent Background Preferred</span>
-              <span className="px-2 py-1 bg-white border border-gray-200 rounded text-[10px] text-gray-500">Square or Horizontal Layout</span>
+
+          <div className="flex-1 space-y-6 py-4">
+            <div>
+              <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-3">Logo Guidelines</h4>
+              <p className="text-sm text-slate-500 leading-relaxed max-w-lg">
+                Your practice logo defines your official documentation identity. It will appear on all patient notes, prescriptions, and portals.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {[
+                { icon: Check, label: "Transparent PNG preferred" },
+                { icon: Check, label: "Square or Rectangle" },
+                { icon: Check, label: "High Res (Min 400px)" }
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2 px-4 py-2 bg-slate-50/80 rounded-xl border border-slate-100">
+                  <item.icon className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{item.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-4 divide-y divide-slate-100">
+              <div className="py-4">
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Practice Website</label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                    <Globe className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
+                  </div>
+                  <input
+                    type="url"
+                    value={settings.website || ''}
+                    onChange={(e) => updateField('website', e.target.value)}
+                    className="w-full pl-12 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+                    placeholder="https://yourpractice.com"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Regional Settings</h2>
+      {/* Regional Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Clock className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Regional & Systems</h2>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Timezone</label>
             <select
               value={settings.timezone || 'America/New_York'}
               onChange={(e) => updateField('timezone', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm appearance-none cursor-pointer transition-all"
             >
               <option value="America/New_York">Eastern Time (ET)</option>
               <option value="America/Chicago">Central Time (CT)</option>
@@ -583,59 +646,51 @@ const PracticeSettingsTab = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date Format</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Date Format</label>
             <select
               value={settings.date_format || 'MM/DD/YYYY'}
               onChange={(e) => updateField('date_format', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm appearance-none cursor-pointer transition-all"
             >
-              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              <option value="MM/DD/YYYY">MM/DD/YYYY (USA)</option>
+              <option value="DD/MM/YYYY">DD/MM/YYYY (International)</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD (ISO)</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Time Format</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Time Format</label>
             <select
               value={settings.time_format || '12h'}
               onChange={(e) => updateField('time_format', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm appearance-none cursor-pointer transition-all"
             >
-              <option value="12h">12-hour (AM/PM)</option>
-              <option value="24h">24-hour</option>
+              <option value="12h">12-hour (Standard)</option>
+              <option value="24h">24-hour (Military)</option>
             </select>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-gray-200">
+      {/* Floating Save Bar - Local to tab logic but visually follows PLAN.md */}
+      <div className="sticky bottom-0 z-20 py-6 pr-6 pointer-events-none flex justify-end translate-y-2">
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
-          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Saving...</span>
-            </>
+            <RefreshCw className="w-4 h-4 animate-spin" />
           ) : (
-            <>
-              <Save className="w-4 h-4" />
-              <span>Save Settings</span>
-            </>
+            <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
           )}
+          <span>{saving ? 'Synchronizing...' : 'Save All Changes'}</span>
         </button>
       </div>
 
-      {/* Logo Cropper Modal */}
-      {showLogoCropper && logoCropSrc && (
+      {showLogoCropper && (
         <ImageCropper
-          imageSrc={logoCropSrc}
+          image={logoCropSrc}
           onCropComplete={handleCroppedLogoUpload}
           onCancel={() => {
             setShowLogoCropper(false);
@@ -658,193 +713,192 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
     setSettings(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  const sections = [
+    {
+      id: 'policy',
+      title: 'Password Policy',
+      icon: Lock,
+      fields: [
+        { id: 'password_min_length', label: 'Min Password Length', type: 'number', min: 6, max: 32 },
+      ],
+      checks: [
+        { id: 'password_require_uppercase', label: 'Require uppercase letter (A-Z)' },
+        { id: 'password_require_lowercase', label: 'Require lowercase letter (a-z)' },
+        { id: 'password_require_number', label: 'Require number (0-9)' },
+        { id: 'password_require_special', label: 'Require special character (!@#$%^&*)' },
+      ]
+    }
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Password Policy</h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Password Length</label>
-            <input
-              type="number"
-              min={6}
-              max={32}
-              value={settings.password_min_length || 8}
-              onChange={(e) => updateField('password_min_length', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
+      {/* Policy Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Lock className="w-4 h-4 text-slate-500" />
           </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Password Policy</h2>
+        </div>
 
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">Password Requirements</label>
-
-            <label className="flex items-center space-x-2 cursor-pointer">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Min Length Requirement</label>
               <input
-                type="checkbox"
-                checked={settings.password_require_uppercase ?? true}
-                onChange={() => toggleField('password_require_uppercase')}
-                className="w-4 h-4 text-primary-600 rounded"
+                type="number"
+                min={6}
+                max={32}
+                value={settings.password_min_length || 8}
+                onChange={(e) => updateField('password_min_length', parseInt(e.target.value))}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
               />
-              <span className="text-sm text-gray-700">Require uppercase letter (A-Z)</span>
-            </label>
+            </div>
 
-            <label className="flex items-center space-x-2 cursor-pointer">
+            <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-3">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Complexity Rules</p>
+              {[
+                { id: 'password_require_uppercase', label: 'Uppercase Letters' },
+                { id: 'password_require_lowercase', label: 'Lowercase Letters' },
+                { id: 'password_require_number', label: 'Numbers (0-9)' },
+                { id: 'password_require_special', label: 'Special Characters' }
+              ].map(check => (
+                <label key={check.id} className="flex items-center justify-between group cursor-pointer">
+                  <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">{check.label}</span>
+                  <div
+                    onClick={(e) => { e.preventDefault(); toggleField(check.id); }}
+                    className={cn(
+                      "w-10 h-6 rounded-full relative transition-all duration-300",
+                      settings[check.id] ?? true ? "bg-indigo-600 shadow-lg shadow-indigo-100" : "bg-slate-200"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-4 h-4 bg-white rounded-full absolute top-1 transition-all duration-300 shadow-sm",
+                      settings[check.id] ?? true ? "left-5" : "left-1"
+                    )} />
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Audit Trail Retention</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <Clock className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
+                </div>
+                <input
+                  type="number"
+                  min={30}
+                  max={2555}
+                  value={settings.audit_log_retention_days || 365}
+                  onChange={(e) => updateField('audit_log_retention_days', parseInt(e.target.value))}
+                  className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 px-1 mt-2 font-medium">Industry standard is 365 days or greater.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Session Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <ShieldCheck className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Access Control</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Session Timeout</label>
+            <div className="flex items-center gap-3">
               <input
-                type="checkbox"
-                checked={settings.password_require_lowercase ?? true}
-                onChange={() => toggleField('password_require_lowercase')}
-                className="w-4 h-4 text-primary-600 rounded"
+                type="number"
+                min={5}
+                max={480}
+                value={settings.session_timeout_minutes || 30}
+                onChange={(e) => updateField('session_timeout_minutes', parseInt(e.target.value))}
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
               />
-              <span className="text-sm text-gray-700">Require lowercase letter (a-z)</span>
-            </label>
-
-            <label className="flex items-center space-x-2 cursor-pointer">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Min</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Inactivity Lock</label>
+            <div className="flex items-center gap-3">
               <input
-                type="checkbox"
-                checked={settings.password_require_number ?? true}
-                onChange={() => toggleField('password_require_number')}
-                className="w-4 h-4 text-primary-600 rounded"
+                type="number"
+                min={5}
+                max={120}
+                value={settings.inactivity_timeout_minutes || 15}
+                onChange={(e) => updateField('inactivity_timeout_minutes', parseInt(e.target.value))}
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
               />
-              <span className="text-sm text-gray-700">Require number (0-9)</span>
-            </label>
-
-            <label className="flex items-center space-x-2 cursor-pointer">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Min</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Max Login Fails</label>
+            <div className="flex items-center gap-2">
               <input
-                type="checkbox"
-                checked={settings.password_require_special ?? true}
-                onChange={() => toggleField('password_require_special')}
-                className="w-4 h-4 text-primary-600 rounded"
+                type="number"
+                min={3}
+                max={10}
+                value={settings.max_login_attempts || 5}
+                onChange={(e) => updateField('max_login_attempts', parseInt(e.target.value))}
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center font-bold text-rose-600"
               />
-              <span className="text-sm text-gray-700">Require special character (!@#$%^&*)</span>
-            </label>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Attempts</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 pt-8 border-t border-slate-50 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100/30">
+            <div className="flex items-center gap-3 mb-4">
+              <Lock className="w-5 h-5 text-indigo-500" />
+              <h3 className="text-sm font-bold text-slate-800">Multi-Factor Authentication (MFA)</h3>
+            </div>
+            <div className="space-y-4">
+              {[
+                { id: 'require_2fa', label: 'Enforce MFA for all practice users' },
+                { id: 'require_2fa_for_admin', label: 'Only require MFA for Administrator accounts' }
+              ].map(check => (
+                <label key={check.id} className="flex items-center gap-3 cursor-pointer group">
+                  <div
+                    onClick={(e) => { e.preventDefault(); toggleField(check.id); }}
+                    className={cn(
+                      "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-200",
+                      settings[check.id] ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-200 group-hover:border-indigo-300"
+                    )}
+                  >
+                    {settings[check.id] && <CheckCircle2 className="w-3 h-3 text-white" />}
+                  </div>
+                  <span className="text-sm text-slate-600 font-medium group-hover:text-slate-900 transition-colors">{check.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Session Security</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Session Timeout (minutes)</label>
-            <input
-              type="number"
-              min={5}
-              max={480}
-              value={settings.session_timeout_minutes || 30}
-              onChange={(e) => updateField('session_timeout_minutes', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Inactivity Timeout (minutes)</label>
-            <input
-              type="number"
-              min={5}
-              max={120}
-              value={settings.inactivity_timeout_minutes || 15}
-              onChange={(e) => updateField('inactivity_timeout_minutes', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Login Security</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Max Login Attempts</label>
-            <input
-              type="number"
-              min={3}
-              max={10}
-              value={settings.max_login_attempts || 5}
-              onChange={(e) => updateField('max_login_attempts', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Lockout Duration (minutes)</label>
-            <input
-              type="number"
-              min={5}
-              max={60}
-              value={settings.lockout_duration_minutes || 15}
-              onChange={(e) => updateField('lockout_duration_minutes', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Two-Factor Authentication</h2>
-
-        <div className="space-y-3">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.require_2fa ?? false}
-              onChange={() => toggleField('require_2fa')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Require 2FA for all users</span>
-          </label>
-
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.require_2fa_for_admin ?? false}
-              onChange={() => toggleField('require_2fa_for_admin')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Require 2FA for admin users</span>
-          </label>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Audit & Logging</h2>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Audit Log Retention (days)</label>
-          <input
-            type="number"
-            min={30}
-            max={2555}
-            value={settings.audit_log_retention_days || 365}
-            onChange={(e) => updateField('audit_log_retention_days', parseInt(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-          />
-          <p className="text-xs text-gray-500 mt-1">Recommended: 365 days (HIPAA minimum: 6 years for certain records)</p>
-        </div>
-      </div>
-
-      <div className="flex justify-end pt-4 border-t border-gray-200">
+      <div className="sticky bottom-0 z-20 py-6 pr-6 pointer-events-none flex justify-end translate-y-2">
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
-          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Saving...</span>
-            </>
+            <RefreshCw className="w-4 h-4 animate-spin" />
           ) : (
-            <>
-              <Save className="w-4 h-4" />
-              <span>Save Settings</span>
-            </>
+            <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
           )}
+          <span>{saving ? 'Synchronizing Security...' : 'Update Security Policy'}</span>
         </button>
       </div>
     </div>
@@ -863,175 +917,170 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Visit Requirements</h2>
-
-        <div className="space-y-3">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.require_dx_on_visit ?? true}
-              onChange={() => toggleField('require_dx_on_visit')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Require diagnosis on visit</span>
-          </label>
-
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.require_vitals_on_visit ?? false}
-              onChange={() => toggleField('require_vitals_on_visit')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Require vitals on visit</span>
-          </label>
+      {/* Visit Requirements Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Stethoscope className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Visit Requirements</h2>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Default Visit Duration (minutes)</label>
-            <input
-              type="number"
-              min={5}
-              max={120}
-              value={settings.default_visit_duration_minutes || 15}
-              onChange={(e) => updateField('default_visit_duration_minutes', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Mandatory Documentation</p>
+            {[
+              { id: 'require_dx_on_visit', label: 'Require diagnosis for visit sign-off' },
+              { id: 'require_vitals_on_visit', label: 'Require vitals entry for checkout' }
+            ].map(check => (
+              <label key={check.id} className="flex items-center gap-3 cursor-pointer group">
+                <div
+                  onClick={(e) => { e.preventDefault(); toggleField(check.id); }}
+                  className={cn(
+                    "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-200",
+                    settings[check.id] ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-200 group-hover:border-indigo-300"
+                  )}
+                >
+                  {settings[check.id] && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </div>
+                <span className="text-sm text-slate-600 font-medium group-hover:text-slate-900 transition-colors">{check.label}</span>
+              </label>
+            ))}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Max Appointments Per Slot</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                max={50}
-                disabled={!settings.max_appointments_per_slot && settings.max_appointments_per_slot !== 0}
-                value={settings.max_appointments_per_slot || ''}
-                onChange={(e) => updateField('max_appointments_per_slot', e.target.value === '' ? null : parseInt(e.target.value))}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-400"
-                placeholder="Unlimited"
-              />
-              <button
-                type="button"
-                onClick={() => updateField('max_appointments_per_slot', settings.max_appointments_per_slot ? null : 2)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${!settings.max_appointments_per_slot
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-              >
-                {!settings.max_appointments_per_slot ? 'Set Limit' : 'Disable Limit'}
-              </button>
+
+          <div className="space-y-6">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Default Visit Duration</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={5}
+                  max={120}
+                  value={settings.default_visit_duration_minutes || 15}
+                  onChange={(e) => updateField('default_visit_duration_minutes', parseInt(e.target.value))}
+                  className="w-24 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
+                />
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Minutes</span>
+              </div>
             </div>
-            <p className="text-[10px] text-gray-500 mt-1">
-              {!settings.max_appointments_per_slot
-                ? 'No limit enforced. Providers can book infinitely many patients per slot.'
-                : `Slots will be marked "Full" after ${settings.max_appointments_per_slot} appointments.`}
-            </p>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Scheduling Density</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  disabled={!settings.max_appointments_per_slot && settings.max_appointments_per_slot !== 0}
+                  value={settings.max_appointments_per_slot || ''}
+                  onChange={(e) => updateField('max_appointments_per_slot', e.target.value === '' ? null : parseInt(e.target.value))}
+                  className="w-24 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center disabled:bg-slate-100 disabled:text-slate-400"
+                  placeholder="∞"
+                />
+                <button
+                  type="button"
+                  onClick={() => updateField('max_appointments_per_slot', settings.max_appointments_per_slot ? null : 2)}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all",
+                    !settings.max_appointments_per_slot ? "bg-indigo-50 border-indigo-100 text-indigo-600" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                  )}
+                >
+                  {!settings.max_appointments_per_slot ? 'Set Cap' : 'Unlock Slot'}
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400 px-1 mt-2 font-medium">
+                {!settings.max_appointments_per_slot ? 'Unlimited appointments per time slot.' : `Restricted to ${settings.max_appointments_per_slot} patients per slot.`}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Clinical Alerts</h2>
+      {/* Clinical Alerts Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Bell className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Clinical Decision Support</h2>
+        </div>
 
-        <div className="space-y-3">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.enable_clinical_alerts ?? true}
-              onChange={() => toggleField('enable_clinical_alerts')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Enable clinical alerts</span>
-          </label>
-
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.enable_drug_interaction_check ?? true}
-              onChange={() => toggleField('enable_drug_interaction_check')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Enable drug interaction checking</span>
-          </label>
-
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.enable_allergy_alerts ?? true}
-              onChange={() => toggleField('enable_allergy_alerts')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Enable allergy alerts</span>
-          </label>
+        <div className="space-y-4 max-w-lg">
+          {[
+            { id: 'enable_clinical_alerts', label: 'Enable clinical safety alerts (Gaps in care)' },
+            { id: 'enable_drug_interaction_check', label: 'Surescripts Drug-Drug interaction checking' },
+            { id: 'enable_allergy_alerts', label: 'Allergy contradiction warnings' }
+          ].map(check => (
+            <label key={check.id} className="flex items-center justify-between group p-4 rounded-2xl bg-slate-50/50 border border-slate-100 cursor-pointer hover:bg-indigo-50/30 transition-all">
+              <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">{check.label}</span>
+              <div
+                onClick={(e) => { e.preventDefault(); toggleField(check.id); }}
+                className={cn(
+                  "w-10 h-6 rounded-full relative transition-all duration-300",
+                  settings[check.id] ?? true ? "bg-indigo-600 shadow-lg shadow-indigo-100" : "bg-slate-200"
+                )}
+              >
+                <div className={cn(
+                  "w-4 h-4 bg-white rounded-full absolute top-1 transition-all duration-300 shadow-sm",
+                  settings[check.id] ?? true ? "left-5" : "left-1"
+                )} />
+              </div>
+            </label>
+          ))}
         </div>
       </div>
 
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Data Retention</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Lab Results (days)</label>
-            <input
-              type="number"
-              min={365}
-              max={3650}
-              value={settings.lab_result_retention_days || 2555}
-              onChange={(e) => updateField('lab_result_retention_days', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
+      {/* Data Retention Card */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Database className="w-4 h-4 text-slate-500" />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Imaging Results (days)</label>
-            <input
-              type="number"
-              min={365}
-              max={3650}
-              value={settings.imaging_result_retention_days || 2555}
-              onChange={(e) => updateField('imaging_result_retention_days', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Documents (days)</label>
-            <input
-              type="number"
-              min={365}
-              max={3650}
-              value={settings.document_retention_days || 2555}
-              onChange={(e) => updateField('document_retention_days', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Data Retention Policy</h2>
         </div>
-        <p className="text-xs text-gray-500 mt-2">HIPAA requires minimum 6 years (2190 days) retention for certain records</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { id: 'lab_result_retention_days', label: 'Lab Results' },
+            { id: 'imaging_result_retention_days', label: 'Imaging Results' },
+            { id: 'document_retention_days', label: 'Clinical Documents' }
+          ].map(field => (
+            <div key={field.id}>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">{field.label}</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={365}
+                  max={3650}
+                  value={settings[field.id] || 2555}
+                  onChange={(e) => updateField(field.id, parseInt(e.target.value))}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
+                />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Days</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 flex items-center gap-3 p-4 bg-rose-50/50 rounded-2xl border border-rose-100/30">
+          <AlertCircle className="w-4 h-4 text-rose-500" />
+          <p className="text-[10px] font-medium text-rose-600 leading-relaxed uppercase tracking-wide">
+            HIPAA requires a minimum 6-year (2190 days) retention policy for most clinical records.
+          </p>
+        </div>
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-gray-200">
+      <div className="sticky bottom-0 z-20 py-6 pr-6 pointer-events-none flex justify-end translate-y-2">
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
-          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Saving...</span>
-            </>
+            <RefreshCw className="w-4 h-4 animate-spin" />
           ) : (
-            <>
-              <Save className="w-4 h-4" />
-              <span>Save Settings</span>
-            </>
+            <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
           )}
+          <span>{saving ? 'Synchronizing Clinical...' : 'Validate Clinical Policies'}</span>
         </button>
       </div>
     </div>
@@ -1040,8 +1089,6 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
 // Email Settings Tab Component
 const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
-  const [showPassword, setShowPassword] = useState(false);
-
   const updateField = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }));
   };
@@ -1052,89 +1099,86 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
   return (
     <div className="space-y-6">
-      {/* Resend Configuration removed - managed via server environment variables */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Mail className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Email Notifications</h2>
+        </div>
 
-
-      <div className="border-t border-gray-200 pt-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Settings</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">From Name</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">From Name</label>
             <input
               type="text"
               value={settings.from_name || ''}
               onChange={(e) => updateField('from_name', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
               placeholder="My Practice"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">From Email</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">From Email</label>
             <input
               type="email"
               value={settings.from_email || ''}
               onChange={(e) => updateField('from_email', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reply-To Email</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Reply-To Address</label>
             <input
               type="email"
               value={settings.reply_to_email || ''}
               onChange={(e) => updateField('reply_to_email', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Test Email Address</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Sandbox Test Address</label>
             <input
               type="email"
               value={settings.test_email || ''}
               onChange={(e) => updateField('test_email', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              placeholder="For testing email configuration"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all italic"
+              placeholder="Internal testing only"
             />
           </div>
         </div>
 
-        <div className="mt-4">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.enabled ?? false}
-              onChange={() => toggleField('enabled')}
-              className="w-4 h-4 text-primary-600 rounded"
-            />
-            <span className="text-sm text-gray-700">Enable email notifications</span>
+        <div className="mt-8 pt-6 border-t border-slate-50">
+          <label className="flex items-center gap-3 cursor-pointer group w-fit">
+            <div
+              onClick={(e) => { e.preventDefault(); toggleField('enabled'); }}
+              className={cn(
+                "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-200",
+                settings.enabled ? "bg-indigo-600 border-indigo-600" : "bg-white border-slate-200 group-hover:border-indigo-300"
+              )}
+            >
+              {settings.enabled && <CheckCircle2 className="w-3 h-3 text-white" />}
+            </div>
+            <span className="text-sm text-slate-600 font-bold group-hover:text-slate-900 transition-colors">Enable automatic email transmissions</span>
           </label>
         </div>
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-gray-200">
+      <div className="sticky bottom-0 z-20 py-6 pr-6 pointer-events-none flex justify-end translate-y-2">
         <button
           onClick={onSave}
           disabled={saving}
-          className="px-6 py-2 text-white rounded-lg flex items-center space-x-2 disabled:opacity-50 transition-all duration-200 hover:shadow-md"
-          style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }}
-          onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')}
-          onMouseLeave={(e) => !e.currentTarget.disabled && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}
+          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Saving...</span>
-            </>
+            <RefreshCw className="w-4 h-4 animate-spin" />
           ) : (
-            <>
-              <Save className="w-4 h-4" />
-              <span>Save Settings</span>
-            </>
+            <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
           )}
+          <span>{saving ? 'Validating SMTP...' : 'Update Communication Policy'}</span>
         </button>
       </div>
     </div>
@@ -1160,47 +1204,62 @@ const FeaturesTab = ({ features, onToggle }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Feature Flags</h2>
-        <p className="text-sm text-gray-600 mb-6">Enable or disable system features</p>
-
-        {Object.keys(groupedFeatures).map(category => (
-          <div key={category} className="mb-6">
-            <h3 className="text-md font-medium text-gray-800 mb-3">{categoryLabels[category] || category}</h3>
-            <div className="space-y-3">
-              {groupedFeatures[category].map(feature => (
-                <div key={feature.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{feature.description || feature.feature_key}</div>
-                    {feature.requires_config && (
-                      <div className="text-xs text-gray-500 mt-1">Requires additional configuration</div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => onToggle(feature.feature_key, !feature.enabled)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${feature.enabled
-                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                  >
-                    {feature.enabled ? (
-                      <>
-                        <ToggleRight className="w-5 h-5" />
-                        <span>Enabled</span>
-                      </>
-                    ) : (
-                      <>
-                        <ToggleLeft className="w-5 h-5" />
-                        <span>Disabled</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
+    <div className="space-y-8">
+      <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <Zap className="w-4 h-4 text-slate-500" />
           </div>
-        ))}
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Feature Control Matrix</h2>
+        </div>
+        <p className="text-sm text-slate-500 max-w-xl">
+          Toggle internal system flags to enable or disable modules. Changes are applied instantly across the entire clinic instance.
+        </p>
+
+        <div className="mt-8 space-y-10">
+          {Object.keys(groupedFeatures).map(category => (
+            <div key={category} className="space-y-4">
+              <div className="flex items-center gap-4">
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">{categoryLabels[category] || category}</h3>
+                <div className="h-px bg-slate-100 w-full"></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {groupedFeatures[category].map(feature => (
+                  <div key={feature.id} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-sm transition-all group">
+                    <div className="flex-1 pr-4">
+                      <div className="text-sm font-bold text-slate-700 group-hover:text-indigo-900 transition-colors uppercase tracking-tight">{feature.description || feature.feature_key}</div>
+                      {feature.requires_config && (
+                        <div className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wide">Requires Configuration</div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onToggle(feature.feature_key, !feature.enabled)}
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm",
+                        feature.enabled
+                          ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100"
+                          : "bg-slate-200 text-slate-600 hover:bg-slate-300 border border-slate-200"
+                      )}
+                    >
+                      {feature.enabled ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Active</span>
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft className="w-3.5 h-3.5" />
+                          <span>Inactive</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1210,15 +1269,28 @@ const FeaturesTab = ({ features, onToggle }) => {
 const BillingSettingsTab = () => {
   return (
     <div className="space-y-6">
-      <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+          <DollarSign className="w-4 h-4 text-slate-500" />
+        </div>
+        <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Financial Operations</h2>
+      </div>
+
+      <div className="p-8 bg-indigo-50/50 border border-indigo-100/30 rounded-[2rem]">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-indigo-100/50 shrink-0">
+            <Activity className="w-5 h-5 text-indigo-600" />
+          </div>
           <div>
-            <h3 className="font-medium text-blue-900">Billing Configuration</h3>
-            <p className="text-sm text-blue-700 mt-1">
-              Billing configuration settings will be available here. This section will include fee schedule management,
-              clearinghouse configuration, and claim submission settings.
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Revenue Cycle Management</h3>
+            <p className="text-sm text-slate-500 mt-2 leading-relaxed max-w-lg">
+              Comprehensive billing controls are currently being integrated. This section will soon host fee schedule management,
+              clearinghouse routing, and direct claim submission settings.
             </p>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Module arriving in next update</span>
+            </div>
           </div>
         </div>
       </div>

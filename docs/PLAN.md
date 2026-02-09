@@ -1,54 +1,39 @@
-# PLAN: Schedule High-Density UI & Provider Differentiation
+# Plan: Admin Settings Redesign
 
-## 🎼 Orchestration Report
+Redesign the Admin Settings page to match the new PageMD "Clinic Overview" aesthetics: compact, modern, space-aware, and premium.
 
-### Task
-Refactor the schedule layout to a high-density single row that fits perfectly within the 24px appointment slot. Implement unique, diverse provider coloring in the schedule and legend to avoid visual confusion.
+## 🎨 Design Goals
+- **Compact Header**: Thin out the main title and description.
+- **Glassmorphism Tabs**: Use sticky, blurred tab navigation with subtle indicators.
+- **High-Density Inputs**: Tighten padding, reduce font sizes (text-[10px] for labels, text-sm for inputs), and use a more refined grid layout.
+- **Premium Cards**: Group settings into refined section cards with subtle borders and shadows.
+- **Status Sync**: Ensure consistent save indicators and loading states.
 
-### Mode
-edit
+## 🛠️ Phases
 
-### Agents Invoked (MINIMUM 3)
-| # | Agent | Focus Area | Status |
-|---|-------|------------|--------|
-| 1 | project-planner | Task breakdown & planning | ✅ |
-| 2 | frontend-specialist | UI & Style implementation | 🔄 |
-| 3 | performance-optimizer | Density & Layout audit | 🔄 |
+### Phase 1: Header & Tab Navigation
+- Reduce header padding and font sizes.
+- Implement a floating/sticky tab bar with glassmorphism (backdrop-blur).
+- Use Lucide icons with consistent scaling (w-4 h-4).
 
----
+### Phase 2: Main Layout & Section Cards
+- Redesign the tab content container to be edge-to-edge with the clinic container.
+- Implement section cards for "Practice Information", "Security Policy", etc.
+- Use a tiered z-index approach similar to the schedule.
 
-## 🏗️ Technical Plan
+### Phase 3: Field-Level Optimizations
+- Reduce input padding (py-1.5 px-3).
+- Use `text-[10px] font-bold text-slate-500 uppercase tracking-widest` for labels.
+- Tighten the gap between fields (space-y-4 instead of default margins).
 
-### Phase 1: Provider Color System
-1. **Refresh Color Palette**: Expand `getProviderColor` in `Schedule.jsx` with more diverse, high-contrast professional colors (Emerald, Blue, Orange, Cyan, Fuchsia, etc.) to ensure providers are distinguishable.
-2. **Remove Active Override**: In the appointment card rendering, remove the hardcoded `#818cf8` active border color. Instead, use the provider's specific `color.accent` but apply a heavier weight or a distinct `ring` effect to indicate "Active" status. This keeps provider identity preserved even when the patient is in clinic.
+### Phase 4: Tab-Specific Refinements
+- **Practice**: Compact address grid and logo uploader.
+- **Security**: Refined toggles and policy inputs.
+- **Clinical**: Condensed list of clinical defaults.
+- **Features**: Grid-based toggle list.
 
-### Phase 2: High-Density Single-Row Refactor
-1. **Vertical Tightening**:
-   - Ensure all elements inside the appointment card have a strict height constraint to fit within the `24px` card.
-   - Reduce padding and margins in `InlinePatientStatus` buttons (`StatusBtn`, `RoomBtn`).
-2. **Horizontal streamlining**:
-   - In `Schedule.jsx`, adjust column widths to prioritize critical information.
-   - In `InlinePatientStatus.jsx`, replace the "→" arrow with a more subtle separator (e.g., a slim vertical bar or dot).
-   - Condense the "FOLLOW-UP" and status buttons to use smaller text or icons where appropriate, but maintain readability.
-3. **Component Synchronization**:
-   - Ensure `InlinePatientStatus` sub-components use absolute positioning or negative margins if needed to keep the row height strictly under control.
-
-### Phase 3: Alignment & Cleanup
-1. **Legend Alignment**: Ensure the provider legend at the top uses the same color mapping as the schedule cards.
-2. **Final Audit**: Check responsiveness and ensure that "Active" appointments are still clearly distinguished from "Scheduled" appointments without losing the provider's color identity.
-
----
-
-## 🛠️ Implementation Steps
-
-1. **Modify `Schedule.jsx`**:
-   - Update `getProviderColor` with more distinct colors.
-   - Update appointment card rendering logic for colors and active states.
-   - Adjust column widths for better horizontal flow.
-2. **Modify `InlinePatientStatus.jsx`**:
-   - Reduce heights and paddings.
-   - Simplify separators.
-   - Ensure the "bulky" feel is eliminated by removing unnecessary borders/shadows in standard states.
-
-Onaylıyor musunuz? (Y/N)
+## 🧪 Verification
+- Test responsiveness across monitor sizes.
+- Verify "Save" functionality in all tabs.
+- Ensure tab switching preserves state where possible.
+- Lint and security check.
