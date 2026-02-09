@@ -254,12 +254,14 @@ const auditRoutes = require('./routes/audit');
 app.use('/api/audit', auditRoutes);
 
 // Billing endpoints
+// IMPORTANT: Stripe routes must be mounted BEFORE /api/billing to prevent
+// the billing.js middleware (router.use(authenticate)) from blocking webhooks
+app.use('/api/billing/stripe', require('./routes/billing-stripe'));
 const billingRoutes = require('./routes/billing');
 const feeSheetRoutes = require('./routes/fee-sheet');
 const growthRoutes = require('./routes/growth');
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/billing', billingRoutes);
-app.use('/api/billing/stripe', require('./routes/billing-stripe'));
 app.use('/api/growth', growthRoutes);
 app.use('/api/fee-sheet', feeSheetRoutes);
 app.use('/api/billing-openemr', require('./routes/billing-openemr'));
