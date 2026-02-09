@@ -9,8 +9,8 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
             className={cn(
                 "group relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-[1.2rem] transition-all duration-300 overflow-hidden mb-0.5",
                 active
-                    ? "text-blue-600 bg-white/95 shadow-md scale-[1.02] z-20"
-                    : "text-slate-600 hover:text-blue-600 hover:bg-white/50"
+                    ? "text-blue-700 bg-white/95 shadow-md scale-[1.02] z-20"
+                    : "text-slate-800 hover:text-blue-600 hover:bg-white/50"
             )}
         >
             {/* The "Bubble" animation from login page */}
@@ -22,14 +22,14 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
             <div className="relative z-10 flex items-center w-full">
                 <Icon className={cn(
                     "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
-                    active ? "text-blue-600" : "text-slate-400 group-hover:text-blue-500"
+                    active ? "text-blue-600" : "text-slate-500 group-hover:text-blue-500"
                 )} />
 
                 {!collapsed && (
                     <>
                         <span className={cn(
                             "ml-3 text-[14px] font-bold transition-all duration-300 flex-1 tracking-tight",
-                            active ? "text-blue-700" : "text-slate-600 group-hover:text-blue-600"
+                            active ? "text-blue-700" : "text-slate-800 group-hover:text-blue-600"
                         )}>
                             {label}
                         </span>

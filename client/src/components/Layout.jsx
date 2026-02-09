@@ -366,7 +366,7 @@ const Layout = ({ children }) => {
                             <div className="flex-shrink-0">
                                 {!sidebarCollapsed && (
                                     <div className="px-4 mb-2">
-                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.2em]">
+                                        <div className="text-[10px] font-bold text-blue-900/60 uppercase tracking-[0.2em]">
                                             Navigation
                                         </div>
                                     </div>
@@ -390,7 +390,7 @@ const Layout = ({ children }) => {
                             <div className="flex-shrink-0">
                                 {!sidebarCollapsed && (
                                     <div className="px-4 mb-2">
-                                        <div className="text-[10px] font-bold text-blue-900/30 uppercase tracking-[0.2em]">
+                                        <div className="text-[10px] font-bold text-blue-900/60 uppercase tracking-[0.2em]">
                                             Workflows
                                         </div>
                                     </div>
