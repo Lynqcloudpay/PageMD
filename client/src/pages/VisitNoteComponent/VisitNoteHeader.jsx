@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Save, Lock, Eye, Printer, PanelRight, Sparkles,
+    Save, Lock, FileText, Eye, Printer, PanelRight, Sparkles,
     CheckCircle2, AlertCircle, RotateCcw, ArrowLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -162,8 +162,8 @@ const VisitNoteHeader = ({
                             <button
                                 onClick={() => setShowQuickActions(!showQuickActions)}
                                 className={`p-2.5 rounded-xl transition-all shadow-sm border ${showQuickActions
-                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                        : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                    ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                    : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
                                     }`}
                                 title="Insights Panel"
                             >
