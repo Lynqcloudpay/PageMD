@@ -201,7 +201,7 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="flex flex-col h-full -m-6 bg-slate-50/30">
+    <div className="flex flex-col h-full -mx-6 -mb-6 bg-slate-50/30">
       {/* Clinic Style Standard Header */}
       <div className="bg-white border-b border-slate-100 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
