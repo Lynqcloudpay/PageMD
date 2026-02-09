@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const { requirePermission } = require('../services/authorization');
 const pool = require('../db');
+const { enrichWithPatientNames } = require('../services/patientNameUtils');
 
 // All compliance routes require admin/audit permission
 router.use(authenticate, requirePermission('audit:view'));
@@ -73,7 +74,8 @@ router.get('/logs', async (req, res) => {
         params.push(parseInt(limit), parseInt(offset));
 
         const result = await pool.query(query, params);
-        res.json(result.rows);
+        const enrichedRows = await enrichWithPatientNames(result.rows, 'patient_id');
+        res.json(enrichedRows);
     } catch (error) {
         console.error('[Compliance-Route] Error fetching logs:', error);
         res.status(500).json({ error: 'Failed to fetch audit logs' });
@@ -116,7 +118,8 @@ router.get('/alerts', async (req, res) => {
         query += ` ORDER BY a.created_at DESC`;
 
         const result = await pool.query(query, params);
-        res.json(result.rows);
+        const enrichedRows = await enrichWithPatientNames(result.rows, 'patient_id');
+        res.json(enrichedRows);
     } catch (error) {
         console.error('[Compliance-Route] Error fetching alerts:', error);
         res.status(500).json({ error: 'Failed to fetch privacy alerts' });
@@ -201,7 +204,8 @@ router.get('/reports/restricted-patients', async (req, res) => {
         `;
 
         const result = await pool.query(query, [clinicId]);
-        res.json(result.rows);
+        const enrichedRows = await enrichWithPatientNames(result.rows, 'id');
+        res.json(enrichedRows);
     } catch (error) {
         console.error('[Compliance-Route] Error fetching restricted patients:', error);
         res.status(500).json({ error: 'Failed to fetch restricted patients report' });

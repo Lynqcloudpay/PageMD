@@ -7,7 +7,7 @@ import {
 import { complianceAPI, usersAPI, patientsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
 
-const Compliance = () => {
+const Compliance = ({ inline = false }) => {
     const [activeTab, setActiveTab] = useState('logs');
     console.log('[Compliance] Rendered version: 1.0.2 (Ultra-Compact)');
     const [loading, setLoading] = useState(false);
@@ -310,71 +310,92 @@ const Compliance = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50/50 p-8 pt-20">
-            {/* Header */}
-            <div className="max-w-7xl mx-auto mb-10">
-                <div className="flex justify-between items-end">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-                                <Shield className="text-white w-5 h-5" />
+        <div className={cn("min-h-screen", !inline ? "bg-slate-50/50 p-8 pt-20" : "bg-transparent")}>
+            {/* Header - Only if NOT inline */}
+            {!inline && (
+                <div className="max-w-7xl mx-auto mb-10">
+                    <div className="flex justify-between items-end">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                                    <Shield className="text-white w-5 h-5" />
+                                </div>
+                                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Compliance & Audit</h1>
                             </div>
-                            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Compliance & Audit</h1>
+                            <p className="text-slate-400 text-xs font-medium ml-1 uppercase tracking-widest">System Integrity & Patient Privacy</p>
                         </div>
-                        <p className="text-slate-400 text-xs font-medium ml-1">Monitor chart access and privacy alerts.</p>
+                        <button
+                            onClick={exportCSV}
+                            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest"
+                        >
+                            <Download size={16} />
+                            Export Audit Data
+                        </button>
                     </div>
-                    <button
-                        onClick={exportCSV}
-                        className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all active:scale-95"
-                    >
-                        <Download size={18} />
-                        Export Audit Data
-                    </button>
                 </div>
-            </div>
+            )}
 
             {/* Stats Grid */}
-            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            <div className={cn("grid grid-cols-1 md:grid-cols-4 gap-4 mb-8", !inline && "max-w-7xl mx-auto")}>
                 {[
-                    { label: 'Total Chart Access', value: stats.totalOpens, icon: Eye, color: 'blue' },
-                    { label: 'Restricted Access', value: stats.restrictedOpens, icon: Lock, color: 'orange' },
-                    { label: 'Break Glass Events', value: stats.breakGlasses, icon: AlertTriangle, color: 'red' },
-                    { label: 'Pending Alerts', value: stats.activeAlerts, icon: AlertTriangle, color: 'amber' }
+                    { label: 'Total Chart Access', value: stats.totalOpens, icon: Eye, color: 'indigo' },
+                    { label: 'Restricted Access', value: stats.restrictedOpens, icon: Lock, color: 'amber' },
+                    { label: 'Break Glass Events', value: stats.breakGlasses, icon: AlertTriangle, color: 'rose' },
+                    { label: 'Pending Alerts', value: stats.activeAlerts, icon: Activity, color: 'indigo' }
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-3">
-                        <div className={`w-9 h-9 bg-${stat.color}-500/10 rounded-lg flex items-center justify-center`}>
-                            <stat.icon className={`text-${stat.color}-600 w-4 h-4`} />
+                    <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4 group hover:border-indigo-100 transition-all">
+                        <div className={cn(
+                            "w-11 h-11 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110",
+                            stat.color === 'indigo' ? "bg-indigo-50 text-indigo-600" :
+                                stat.color === 'amber' ? "bg-amber-50 text-amber-600" :
+                                    "bg-rose-50 text-rose-600"
+                        )}>
+                            <stat.icon className="w-5 h-5" />
                         </div>
                         <div>
-                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">{stat.label}</div>
-                            <div className="text-lg font-black text-slate-900 leading-none">{stat.value}</div>
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none mb-1.5">{stat.label}</div>
+                            <div className="text-xl font-black text-slate-900 leading-none tracking-tight">{stat.value}</div>
                         </div>
                     </div>
                 ))}
             </div>
 
             {/* Main Content Card */}
-            <div className="max-w-7xl mx-auto bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden min-h-[600px] flex flex-col">
+            <div className={cn(
+                "bg-white rounded-[2rem] border border-slate-100 overflow-hidden flex flex-col",
+                !inline ? "max-w-7xl mx-auto shadow-xl shadow-slate-200/50 min-h-[600px]" : "border-none"
+            )}>
                 {/* Navigation Tabs */}
-                <div className="flex border-b border-slate-100 px-8 bg-slate-50/50">
+                <div className="flex border-b border-slate-100 px-6 bg-slate-50/30">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-6 py-4 text-xs font-black transition-all border-b-2 relative ${activeTab === tab.id
-                                ? 'border-blue-600 text-blue-600'
-                                : 'border-transparent text-slate-400 hover:text-slate-600'
-                                }`}
+                            className={cn(
+                                "flex items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 relative",
+                                activeTab === tab.id
+                                    ? 'border-indigo-600 text-indigo-600'
+                                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                            )}
                         >
                             <tab.icon className="w-4 h-4" />
-                            {tab.label}
+                            <span>{tab.label}</span>
                             {tab.badge && (
-                                <span className="ml-1.5 w-4 h-4 bg-red-500 text-white text-[9px] rounded-full flex items-center justify-center shadow-lg shadow-red-200">
+                                <span className="ml-1.5 w-4 h-4 bg-rose-500 text-white text-[9px] rounded-full flex items-center justify-center shadow-lg shadow-rose-200 animate-in zoom-in duration-300">
                                     {tab.badge}
                                 </span>
                             )}
                         </button>
                     ))}
+                    {inline && (
+                        <button
+                            onClick={exportCSV}
+                            className="ml-auto flex items-center gap-2 px-4 py-2 my-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all"
+                        >
+                            <Download size={14} />
+                            Export
+                        </button>
+                    )}
                 </div>
 
                 {/* Filters Bar */}

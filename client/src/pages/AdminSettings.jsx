@@ -28,6 +28,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import ImageCropper from '../components/ImageCropper';
 import FlagTypesSettings from '../components/FlagTypesSettings';
 import GrowthRewardWidget from '../components/GrowthRewardWidget';
+import UserManagement from './UserManagement';
+import Compliance from './Compliance';
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -239,14 +241,6 @@ const AdminSettings = () => {
             <button
               key={tab.id}
               onClick={() => {
-                if (tab.id === 'users') {
-                  navigate('/users');
-                  return;
-                }
-                if (tab.id === 'compliance') {
-                  navigate('/compliance');
-                  return;
-                }
                 navigate(`/admin-settings?tab=${tab.id}`, { replace: true });
                 setActiveTab(tab.id);
               }}
@@ -329,6 +323,18 @@ const AdminSettings = () => {
           {activeTab === 'billing' && (
             <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
               <BillingSettingsTab />
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+              <UserManagement inline={true} />
+            </div>
+          )}
+
+          {activeTab === 'compliance' && (
+            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
+              <Compliance inline={true} />
             </div>
           )}
 

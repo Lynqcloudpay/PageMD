@@ -1,7 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingDown, Users, Copy, Send, CheckCircle2, Zap, ArrowUpRight, Gift, Percent } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    TrendingDown, Users, Copy, Send, CheckCircle2, Zap,
+    ArrowUpRight, Gift, Percent, Calendar, DollarSign,
+    ChevronRight, ArrowRight, Info, ShieldCheck, Star
+} from 'lucide-react';
 import { growthAPI } from '../services/api';
 import { showSuccess, showError } from '../utils/toast';
+import { twMerge } from 'tailwind-merge';
+import { clsx } from 'clsx';
+
+function cn(...inputs) {
+    return twMerge(clsx(inputs));
+}
 
 const GrowthRewardWidget = () => {
     const [stats, setStats] = useState(null);
@@ -43,20 +53,62 @@ const GrowthRewardWidget = () => {
         }
     };
 
+    // Advanced Marketing Math
+    const math = useMemo(() => {
+        if (!stats) return null;
+
+        const { physicalSeats, ghostSeats, totalMonthly, virtualTotal } = stats;
+
+        // TIERS from backend (source of truth)
+        const TIERS = [
+            { name: 'Solo', min: 1, max: 1, rate: 399 },
+            { name: 'Partner', min: 2, max: 3, rate: 299 },
+            { name: 'Professional', min: 4, max: 5, rate: 249 },
+            { name: 'Premier', min: 6, max: 8, rate: 199 },
+            { name: 'Elite', min: 9, max: 10, rate: 149 },
+            { name: 'Enterprise', min: 11, max: 999, rate: 99 },
+        ];
+
+        // 1. Calculate Standard Price (if no ghost seats existed)
+        let standardTotal = 0;
+        for (let i = 1; i <= physicalSeats; i++) {
+            const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
+            standardTotal += tier.rate;
+        }
+
+        // 2. Savings Calculations
+        const monthlySavings = Math.max(0, standardTotal - totalMonthly);
+        const annualSavings = monthlySavings * 12;
+        const savingsPerReferral = ghostSeats > 0 ? monthlySavings / ghostSeats : 0;
+        const discountPercentage = standardTotal > 0 ? (monthlySavings / standardTotal) * 100 : 0;
+
+        return {
+            standardTotal,
+            monthlySavings,
+            annualSavings,
+            savingsPerReferral,
+            discountPercentage,
+            tierInfo: TIERS
+        };
+    }, [stats]);
+
     if (loading) return (
-        <div className="flex items-center justify-center p-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col items-center justify-center p-20 space-y-4">
+            <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-indigo-500 animate-spin"></div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Analyzing Partner Metrics...</p>
         </div>
     );
 
     const safeStats = stats || {
         currentRate: 399,
-        totalBillingSeats: 1,
+        marginalRate: 399,
+        tierName: 'Solo',
+        totalMonthly: 399,
         physicalSeats: 1,
-        virtualTotal: 399,
-        referralCode: null,
         ghostSeats: 0,
-        activeGracePeriods: [],
+        totalBillingSeats: 1,
+        effectiveRate: 399,
+        referralLink: '',
         nextMilestone: { referralsNeeded: 1, newRate: 299 }
     };
 
@@ -68,209 +120,377 @@ const GrowthRewardWidget = () => {
         nextMilestone,
         totalBillingSeats,
         physicalSeats,
-        virtualTotal,
-        referralLink,
         ghostSeats,
-        activeGracePeriods
+        totalBillingSeats: totalSeats,
+        referralLink,
+        activeGracePeriods,
+        referrals = []
     } = safeStats;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Overview Section */}
-            <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Partner Program Rewards</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Current Rate Card */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Current Tier</span>
-                            <div className="bg-primary-100 text-primary-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                                {tierName || `Level ${totalBillingSeats}`}
-                            </div>
-                        </div>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold text-gray-900">${marginalRate || currentRate}</span>
-                            <span className="text-sm font-medium text-gray-500">/ MD / month</span>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                            {/* Billing Equation Logic (The Why) */}
-                            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">The Equation</p>
-                                <div className="space-y-1">
-                                    <div className="flex justify-between text-[11px] text-gray-600">
-                                        <span>Virtual Total ({safeStats.totalBillingSeats} seats)</span>
-                                        <span className="font-bold">${safeStats.virtualTotal?.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between text-[11px] text-gray-600">
-                                        <span>Effective Avg. Rate</span>
-                                        <span className="font-bold">${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</span>
-                                    </div>
-                                    <div className="pt-1 border-t border-gray-200 flex justify-between text-[11px] font-black text-primary-700">
-                                        <span>{safeStats.physicalSeats} MDs × ${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</span>
-                                        <span>${totalMonthly}</span>
-                                    </div>
-                                </div>
-                            </div>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* Main Financial Overview */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                            <div className="flex justify-between items-center px-3 py-2 bg-primary-50 border border-primary-100 rounded-lg">
-                                <span className="text-[10px] font-black text-primary-700 uppercase tracking-widest">Final Bill</span>
-                                <span className="text-base font-black text-primary-700">${totalMonthly}</span>
+                {/* Current Impact Card */}
+                <div className="lg:col-span-2 bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+                    <div className="px-8 py-6 bg-slate-50/50 border-b border-slate-50 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                                <DollarSign className="w-5 h-5" />
                             </div>
-                            <p className="text-[9px] text-gray-400 font-medium italic text-right">* Ghost seats reduce your average rate per doctor.</p>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-900">Partner Program Value</h3>
+                                <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Active Benefits & Revenue Impact</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Status:</span>
+                            <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                                {tierName} Member
+                            </div>
                         </div>
                     </div>
 
-                    {/* Next Milestone Card */}
+                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Monthly Comparison */}
+                        <div className="space-y-6">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Monthly Cost Comparison</label>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-slate-200 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm">
+                                                <Users className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-slate-600">Standard Price</p>
+                                                <p className="text-[9px] text-slate-400 uppercase tracking-tight">Without Referrals</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-400 line-through">${math?.standardTotal?.toLocaleString()}</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 ring-2 ring-indigo-500/10 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-xl bg-indigo-500 flex items-center justify-center text-white shadow-sm">
+                                                <Star className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-indigo-900">Your Partner Price</p>
+                                                <p className="text-[9px] text-indigo-500 uppercase tracking-tight font-black">{ghostSeats} Active Referrals</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-lg font-black text-indigo-600">${totalMonthly?.toLocaleString()}</span>
+                                            <p className="text-[9px] text-indigo-400 font-bold uppercase">Monthly</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+                                        <Percent className="w-3.5 h-3.5" />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-tight">Active Savings Rate</span>
+                                </div>
+                                <span className="text-sm font-black text-emerald-600">{math?.discountPercentage?.toFixed(1)}% OFF</span>
+                            </div>
+                        </div>
+
+                        {/* Annual Savings Impact */}
+                        <div className="flex flex-col">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Annual Financial Impact</label>
+                            <div className="flex-1 bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-2xl shadow-indigo-200">
+                                {/* Decorative elements */}
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                                <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-400/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2"></div>
+
+                                <div className="relative z-10 flex flex-col h-full justify-between">
+                                    <div className="flex items-center gap-2 opacity-80">
+                                        <Calendar className="w-4 h-4" />
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Projected 12-Month ROI</span>
+                                    </div>
+
+                                    <div className="py-4">
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-5xl font-black tracking-tighter">${math?.annualSavings?.toLocaleString()}</span>
+                                        </div>
+                                        <p className="text-indigo-200 text-xs font-medium mt-1">Total Savings per year</p>
+                                    </div>
+
+                                    <div className="pt-6 border-t border-white/10 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mb-1">Per Referral</p>
+                                            <p className="text-sm font-bold">${Math.round(math?.savingsPerReferral || 0)} / mo saved</p>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/5">
+                                            <ArrowUpRight className="w-5 h-5 text-indigo-100" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Milestone Card - High Visibility */}
+                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 flex flex-col">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 border border-amber-100">
+                            <Gift className="w-6 h-6" />
+                        </div>
+                        <div className="text-right">
+                            <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                                Next Milestone
+                            </span>
+                        </div>
+                    </div>
+
                     {nextMilestone ? (
-                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Target Rate</span>
-                                <div className="bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full text-xs font-bold">
-                                    Next Tier
+                        <div className="flex-1 flex flex-col">
+                            <div className="mb-6">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Monthly Rate</p>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-4xl font-black text-slate-800">${nextMilestone.newRate}</span>
+                                    <span className="text-xs font-bold text-slate-400">/ MD</span>
                                 </div>
                             </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-bold text-gray-900">${nextMilestone.newRate}</span>
-                                <span className="text-sm font-medium text-gray-500">/ MD / month</span>
-                            </div>
-                            <div className="mt-4">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Progress</span>
-                                    <span className="text-[10px] font-bold text-gray-500">{nextMilestone.referralsNeeded} more needed</span>
+
+                            <div className="mt-auto space-y-4">
+                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase">Growth Goal</span>
+                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-tight">
+                                            {nextMilestone.referralsNeeded} more Referral{nextMilestone.referralsNeeded === 1 ? '' : 's'}
+                                        </span>
+                                    </div>
+                                    <div className="relative h-3 bg-white rounded-full overflow-hidden border border-slate-100">
+                                        {/* Dynamic visualization: current ghost seats relative to next milestone goal */}
+                                        <div
+                                            className="absolute inset-y-0 left-0 bg-indigo-500 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                                            style={{ width: `${(ghostSeats / (ghostSeats + nextMilestone.referralsNeeded)) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                    <div className="flex justify-between mt-2">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{ghostSeats} Referrals</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{ghostSeats + nextMilestone.referralsNeeded} Target</span>
+                                    </div>
                                 </div>
-                                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-amber-400 rounded-full transition-all duration-1000"
-                                        style={{ width: `${(1 / (nextMilestone.referralsNeeded + 1)) * 100}%` }}
-                                    ></div>
-                                </div>
+                                <p className="text-[10px] text-slate-400 text-center font-medium italic">
+                                    "Referrals increase your practice weight without increasing your bill."
+                                </p>
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-green-50 p-6 rounded-xl border border-green-100 flex flex-col justify-center">
-                            <div className="flex items-center gap-2 text-green-700 mb-1">
-                                <CheckCircle2 className="w-5 h-5" />
-                                <span className="font-bold">Maximum Discount</span>
+                        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+                            <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                <ShieldCheck className="w-8 h-8" />
                             </div>
-                            <p className="text-sm text-green-600">You have reached the highest partner tier available.</p>
+                            <div>
+                                <h4 className="font-bold text-slate-900">Highest Tier Reached</h4>
+                                <p className="text-xs text-slate-500 max-w-[150px] mx-auto mt-2 italic">You are already maximizing your partner savings.</p>
+                            </div>
                         </div>
                     )}
+                </div>
+            </div>
 
-                    {/* Active Perks */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-3">Active Perks</span>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Zap className={`w-4 h-4 ${ghostSeats > 0 ? 'text-primary-600' : 'text-gray-300'}`} />
-                                    <span className={`text-sm ${ghostSeats > 0 ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>Ghost Seats</span>
-                                </div>
-                                <span className={`text-xs font-bold ${ghostSeats > 0 ? 'text-primary-600' : 'text-gray-400'}`}>{ghostSeats} active</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <TrendingDown className={`w-4 h-4 ${activeGracePeriods?.length > 0 ? 'text-amber-500' : 'text-gray-300'}`} />
-                                    <span className={`text-sm ${activeGracePeriods?.length > 0 ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>Price Protection</span>
-                                </div>
-                                <span className={`text-xs font-bold ${activeGracePeriods?.length > 0 ? 'text-amber-600' : 'text-gray-400'}`}>
-                                    {activeGracePeriods?.length > 0 ? 'Active' : 'Inactive'}
-                                </span>
-                            </div>
+            {/* Detailed Math Breakdown - Transparency */}
+            <div className="bg-slate-50/50 rounded-[2rem] border border-slate-100 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                    <Info className="w-4 h-4 text-slate-400" />
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">The Staircase Model Breakdown</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="space-y-1">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Step 1: Virtual Total</p>
+                        <p className="text-xl font-black text-slate-800">${safeStats.virtualTotal?.toLocaleString()}</p>
+                        <p className="text-[9px] text-slate-400 italic">Sum of {safeStats.totalBillingSeats} seats across tiers</p>
+                    </div>
+                    <div className="flex items-center justify-center md:justify-start">
+                        <ArrowRight className="w-5 h-5 text-slate-300" />
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">Step 2: Effective Rate</p>
+                        <p className="text-xl font-black text-slate-800">${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</p>
+                        <p className="text-[9px] text-slate-400 italic">Weighted average per virtual seat</p>
+                    </div>
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-50 -translate-y-1/2 translate-x-1/2 rounded-full rotate-12 transition-transform group-hover:scale-110"></div>
+                        <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-tight mb-1">Step 3: Your Final Bill</p>
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-black text-slate-900">${totalMonthly?.toLocaleString()}</span>
+                            <span className="text-[10px] font-bold text-slate-400">/ mo</span>
                         </div>
+                        <p className="text-[9px] text-slate-400 mt-2 font-medium">Calculation: {safeStats.physicalSeats} MDs × ${(safeStats.virtualTotal / safeStats.totalBillingSeats).toFixed(2)}</p>
                     </div>
                 </div>
             </div>
 
             {/* Referral Tools Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4">
-                {/* Invite Section */}
-                <div>
-                    <h3 className="text-md font-semibold text-gray-800 mb-4">Invite Other MDs</h3>
-                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                        <p className="text-sm text-gray-600 mb-6">
-                            Invite your colleagues to PageMD. For every clinic that joins through your link, your monthly rate decreases.
-                        </p>
-                        <form onSubmit={handleInvite} className="space-y-4">
-                            <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 px-1">Colleague Name</label>
-                                    <input
-                                        type="text"
-                                        value={inviteData.name}
-                                        onChange={e => setInviteData({ ...inviteData, name: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm transition-all"
-                                        placeholder="Dr. Smith"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 px-1">Email Address</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={inviteData.email}
-                                        onChange={e => setInviteData({ ...inviteData, email: e.target.value })}
-                                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm transition-all"
-                                        placeholder="doctor@example.com"
-                                    />
-                                </div>
-                            </div>
-                            <button
-                                type="submit"
-                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary-600 text-white font-bold text-sm rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
-                            >
-                                <Send className="w-4 h-4" />
-                                Send Invitation
-                            </button>
-                        </form>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Advanced Invite Panel */}
+                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 flex flex-col">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900">Invite Colleagues</h3>
+                            <p className="text-xs text-slate-500 mt-1">Accelerate your time-to-savings by growing the network.</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                            <Send className="w-5 h-5" />
+                        </div>
                     </div>
+
+                    <form onSubmit={handleInvite} className="space-y-4 flex-1">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">Colleague Profile Name</label>
+                                <input
+                                    type="text"
+                                    value={inviteData.name}
+                                    onChange={e => setInviteData({ ...inviteData, name: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-sm placeholder:text-slate-300"
+                                    placeholder="e.g. Dr. Jordan Smith"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">Practice Email Address</label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={inviteData.email}
+                                    onChange={e => setInviteData({ ...inviteData, email: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-sm placeholder:text-slate-300"
+                                    placeholder="doctor@medicalgroup.com"
+                                />
+                            </div>
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={isInviting}
+                            className="w-full mt-4 py-4 bg-indigo-500 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-600 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center justify-center gap-3"
+                        >
+                            {isInviting ? (
+                                <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+                            ) : (
+                                <>
+                                    <span>Send VIP Invitation</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                </>
+                            )}
+                        </button>
+                    </form>
                 </div>
 
-                {/* Tracking & Links */}
-                <div>
-                    <h3 className="text-md font-semibold text-gray-800 mb-4">Referral Link</h3>
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 space-y-6">
-                        <div>
-                            <p className="text-sm text-gray-600 mb-3 font-medium">Your Personal Link</p>
-                            <div className="flex gap-2">
-                                <div className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 font-mono truncate">
-                                    {referralLink || 'No link generated yet'}
-                                </div>
-                                <button
-                                    onClick={copyLink}
-                                    className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors shadow-sm active:scale-95"
-                                >
-                                    <Copy className="w-4 h-4" />
-                                </button>
+                {/* Referral Link & Management */}
+                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 space-y-8">
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            Your Personal Link
+                        </h3>
+                        <div className="flex gap-2 p-1.5 bg-slate-50 border border-slate-100 rounded-2xl">
+                            <div className="flex-1 px-4 py-2 text-xs text-slate-500 font-mono truncate align-middle flex items-center">
+                                {referralLink || 'Processing...'}
+                            </div>
+                            <button
+                                onClick={copyLink}
+                                className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-50 transition-all shadow-sm active:scale-95 flex items-center gap-2"
+                            >
+                                <Copy className="w-3.5 h-3.5" />
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Active Grace Periods / Churn Protection */}
+                    {activeGracePeriods?.length > 0 && (
+                        <div className="p-6 rounded-[1.5rem] bg-amber-50/50 border border-amber-100/50">
+                            <div className="flex items-center gap-2 text-amber-800 mb-4">
+                                <TrendingDown className="w-5 h-5" />
+                                <span className="font-extrabold text-xs uppercase tracking-tight">Active Churn Protection</span>
+                            </div>
+                            <div className="space-y-4">
+                                {activeGracePeriods.map((grace, i) => (
+                                    <div key={i} className="flex items-start gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 animate-pulse"></div>
+                                        <div className="flex-1">
+                                            <p className="text-[11px] font-bold text-amber-900 leading-tight">
+                                                {grace.name} deactivation status
+                                            </p>
+                                            <p className="text-[10px] text-amber-700 mt-1">
+                                                Your current rate is protected until <span className="font-black underline">{new Date(grace.expiresAt).toLocaleDateString()}</span>.
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
+                    )}
 
-                        {/* Recent Alerts / Info */}
-                        {activeGracePeriods?.length > 0 && (
-                            <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
-                                <div className="flex items-center gap-2 text-amber-800 mb-2">
-                                    <TrendingDown className="w-4 h-4" />
-                                    <span className="font-bold text-sm">Churn Protection Active</span>
-                                </div>
-                                <div className="space-y-2">
-                                    {activeGracePeriods.map((grace, i) => (
-                                        <p key={i} className="text-xs text-amber-700">
-                                            <strong>{grace.name}</strong> has deactivated. Your special rate is protected until <strong>{new Date(grace.expiresAt).toLocaleDateString()}</strong>.
-                                        </p>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="p-4 rounded-lg bg-blue-50 border border-blue-100 text-blue-800 text-xs leading-relaxed">
-                            <p className="flex items-center gap-2 mb-1">
-                                <Percent className="w-3.5 h-3.5" />
-                                <strong>How it works:</strong>
-                            </p>
-                            Every clinic you refer that stays active for 3 months reduces your base rate. If a referral churns, we provide a 30-day grace period to help you maintain your discount level.
+                    {/* How It Works Micro-Section */}
+                    <div className="p-6 bg-slate-50/30 rounded-[1.5rem] border border-slate-100">
+                        <div className="flex items-center gap-2 text-slate-400 mb-3">
+                            <ShieldCheck className="w-4 h-4" />
+                            <span className="text-[10px] font-black uppercase tracking-widest">Network Rules</span>
                         </div>
+                        <p className="text-[11px] leading-relaxed text-slate-500">
+                            Every clinic you refer that remains active contributes to your <span className="font-bold text-slate-700 underline decoration-indigo-200">Practice Weight</span>. If a clinic deactivates, our Smart Reward Engine applies a <span className="font-bold text-slate-700">30-day Price Lock</span> to your account automatically.
+                        </p>
                     </div>
                 </div>
             </div>
+
+            {/* Referral History Table (New) */}
+            {referrals.length > 0 && (
+                <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="px-8 py-6 border-b border-slate-50">
+                        <h3 className="text-sm font-bold text-slate-900">Referral History</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-slate-50/50">
+                                <tr>
+                                    <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Practice</th>
+                                    <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {referrals.map((ref, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
+                                        <td className="px-8 py-4">
+                                            <div className="text-sm font-bold text-slate-700">{ref.name}</div>
+                                            <div className="text-[10px] text-slate-400">Joined {new Date(ref.date).toLocaleDateString()}</div>
+                                        </td>
+                                        <td className="px-8 py-4">
+                                            <span className={cn(
+                                                "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
+                                                ref.status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                                    ref.status === 'churned' ? "bg-amber-50 text-amber-600 border-amber-100" :
+                                                        "bg-slate-50 text-slate-400 border-slate-100"
+                                            )}>
+                                                {ref.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-4 text-right">
+                                            <span className={cn(
+                                                "text-sm font-black",
+                                                ref.status === 'active' ? "text-indigo-600" : "text-slate-400"
+                                            )}>
+                                                {ref.status === 'active' ? "-1 Seat Weight" : "0 Neutral"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
