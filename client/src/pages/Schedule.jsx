@@ -61,7 +61,7 @@ const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow, value, onChang
                             onClick={async (e) => {
                                 e.stopPropagation();
                                 if (onChange) {
-                                    onChange(t.label);
+                                    onChange(t.label, t.method);
                                     setIsOpen(false);
                                 } else if (appt) {
                                     try {
@@ -1633,14 +1633,14 @@ const Schedule = () => {
                                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Visit Type</label>
                                             <VisitTypeDropdown
                                                 value={newAppt.type}
-                                                onChange={(type) => setNewAppt({ ...newAppt, type })}
+                                                onChange={(type, method) => setNewAppt({ ...newAppt, type, visitMethod: method || newAppt.visitMethod })}
                                             />
                                         </div>
                                         <div>
                                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Visit Method</label>
                                             <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-100">
                                                 <button
-                                                    onClick={() => setNewAppt({ ...newAppt, visitMethod: 'office' })}
+                                                    onClick={() => setNewAppt({ ...newAppt, visitMethod: 'office', type: newAppt.type === 'Telehealth Visit' ? 'Follow-up' : newAppt.type })}
                                                     className={`flex-1 py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${newAppt.visitMethod === 'office'
                                                         ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100/50'
                                                         : 'text-slate-400 hover:text-slate-600'
@@ -1649,7 +1649,7 @@ const Schedule = () => {
                                                     Office
                                                 </button>
                                                 <button
-                                                    onClick={() => setNewAppt({ ...newAppt, visitMethod: 'telehealth' })}
+                                                    onClick={() => setNewAppt({ ...newAppt, visitMethod: 'telehealth', type: 'Telehealth Visit' })}
                                                     className={`flex-1 py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${newAppt.visitMethod === 'telehealth'
                                                         ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100/50'
                                                         : 'text-slate-400 hover:text-slate-600'
