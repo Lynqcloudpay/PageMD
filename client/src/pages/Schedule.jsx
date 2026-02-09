@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Clock, User, Search, X, Calendar, Users, ChevronDown, Filter, FilterX } from 'lucide-react';
@@ -643,12 +643,22 @@ const Schedule = () => {
         localStorage.setItem('schedule_showCancelled', showCancelledAppointments.toString());
     }, [showCancelledAppointments]);
 
-    // Time slots from 7 AM to 6 PM
+    // Time slots from 7 AM to 7 PM
     const timeSlots = [];
-    for (let i = 7; i <= 18; i++) {
+    for (let i = 7; i <= 19; i++) {
         timeSlots.push(`${i.toString().padStart(2, '0')}:00`);
         timeSlots.push(`${i.toString().padStart(2, '0')}:30`);
     }
+
+    const visibleTimeSlots = useMemo(() => {
+        if (timeFilter === 'both') return timeSlots;
+        return timeSlots.filter(slot => {
+            const hour = parseInt(slot.split(':')[0]);
+            if (timeFilter === 'am') return hour < 12;
+            if (timeFilter === 'pm') return hour >= 12;
+            return true;
+        });
+    }, [timeFilter, timeSlots]);
 
     // Handle prefilled patient from Cancellations page and open modal
     useEffect(() => {
@@ -860,9 +870,9 @@ const Schedule = () => {
     }, {});
 
     // Calculate required height for each time slot based on ALL appointments across ALL providers
-    const compactCardHeight = 21;
+    const compactCardHeight = 24;
     const verticalGap = 1;
-    const baseSlotHeight = 40;
+    const baseSlotHeight = 48;
     const getTimeSlotHeight = (time) => {
         const apptTime = time.substring(0, 5);
         let totalAppointments = 0;
@@ -1217,6 +1227,29 @@ const Schedule = () => {
 
                             <div className="h-4 w-[1px] bg-slate-200"></div>
 
+                            <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-100">
+                                <button
+                                    onClick={() => setTimeFilter('am')}
+                                    className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all ${timeFilter === 'am' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                                >
+                                    AM Only
+                                </button>
+                                <button
+                                    onClick={() => setTimeFilter('pm')}
+                                    className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all ${timeFilter === 'pm' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                                >
+                                    PM Only
+                                </button>
+                                <button
+                                    onClick={() => setTimeFilter('both')}
+                                    className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all ${timeFilter === 'both' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                                >
+                                    Full Day
+                                </button>
+                            </div>
+
+                            <div className="h-4 w-[1px] bg-slate-200"></div>
+
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-slate-400">
                                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-400"></span> Arrived</span>
@@ -1279,7 +1312,7 @@ const Schedule = () => {
                             {/* Time Slots Grid */}
                             <div className="relative">
                                 {/* Time Column and Provider Columns */}
-                                {timeSlots.map((time, idx) => {
+                                {visibleTimeSlots.map((time, idx) => {
                                     const isHour = time.endsWith(':00');
                                     const hour = parseInt(time.split(':')[0]);
                                     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
@@ -1390,13 +1423,16 @@ const Schedule = () => {
                                     });
 
                                     return allAppointments.map(appt => {
-                                        const [hours, minutes] = appt.time.split(':').map(Number);
-                                        const minutesFromStart = (hours - 7) * 60 + minutes;
-                                        // Calculate cumulative top position based on previous time slots
+                                        const apptTime = appt.time?.substring(0, 5) || '';
+
+                                        // Skip if not in visible time slots
+                                        const slotIdx = visibleTimeSlots.indexOf(apptTime);
+                                        if (slotIdx === -1) return null;
+
+                                        // Calculate cumulative top position based on previous visible time slots
                                         let cumulativeTop = 0;
-                                        const apptSlotIndex = Math.floor(minutesFromStart / 30);
-                                        for (let i = 0; i < apptSlotIndex; i++) {
-                                            cumulativeTop += getTimeSlotHeight(timeSlots[i]);
+                                        for (let i = 0; i < slotIdx; i++) {
+                                            cumulativeTop += getTimeSlotHeight(visibleTimeSlots[i]);
                                         }
                                         const baseTopPx = cumulativeTop;
 
@@ -1405,7 +1441,6 @@ const Schedule = () => {
                                         const verticalGap = 1;
 
                                         // Find position within this time slot
-                                        const apptTime = appt.time.substring(0, 5);
                                         const appointmentsAtSameTime = appointmentsByTime[apptTime] || [];
                                         const overlapIndex = appointmentsAtSameTime.findIndex(a => a.id === appt.id);
 
