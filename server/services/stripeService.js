@@ -277,16 +277,35 @@ class StripeService {
 
     async _recordPayment(invoice) {
         const customerId = invoice.customer;
-        const result = await pool.controlPool.query('SELECT id FROM clinics WHERE stripe_customer_id = $1', [customerId]);
-        const clinicId = result.rows[0]?.id;
+        const result = await pool.controlPool.query('SELECT id, display_name FROM clinics WHERE stripe_customer_id = $1', [customerId]);
+        const clinic = result.rows[0];
 
-        if (clinicId) {
+        if (clinic) {
+            const clinicId = clinic.id;
+            console.log(`[Stripe] ✅ Payment received for clinic ${clinic.display_name} (${clinicId}): $${(invoice.amount_paid / 100).toFixed(2)}`);
+
             try {
+                // 1. Record the payment event
                 await pool.controlPool.query(`
                     INSERT INTO platform_billing_events (clinic_id, stripe_event_id, event_type, amount_total, status)
-                    VALUES ($1, $2, 'payment_succeeded', $3, 'completed')`,
+                    VALUES ($1, $2, 'payment_succeeded', $3, 'completed')
+                    ON CONFLICT (stripe_event_id) DO NOTHING`,
                     [clinicId, invoice.id, invoice.amount_paid]
                 );
+
+                // 2. AUTOMATICALLY ACTIVATE THE CLINIC SERVICE
+                // This is the key automation - unlock billing and set status to active
+                await pool.controlPool.query(`
+                    UPDATE clinics 
+                       SET billing_locked = false,
+                           status = 'active',
+                           last_payment_at = NOW(),
+                           stripe_subscription_status = 'active'
+                     WHERE id = $1`,
+                    [clinicId]
+                );
+
+                console.log(`[Stripe] 🎉 Clinic ${clinic.display_name} service automatically activated!`);
             } catch (err) {
                 console.error(`[Stripe] Error recording payment: ${err.message}`);
             }

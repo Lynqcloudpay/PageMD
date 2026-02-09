@@ -58,10 +58,18 @@ router.get('/clinics', verifySuperAdmin, async (req, res) => {
         let query = `
             SELECT 
                 c.*,
-                NULL as subscription_status,
-                NULL as current_period_end,
-                'Active' as plan_name,
-                0 as price_monthly,
+                c.stripe_subscription_status as subscription_status,
+                c.current_period_end,
+                c.billing_locked,
+                c.last_payment_at,
+                CASE 
+                    WHEN c.stripe_subscription_status = 'active' THEN 'Active Subscription'
+                    WHEN c.stripe_subscription_status = 'trialing' THEN 'Trial'
+                    WHEN c.stripe_subscription_status IS NULL THEN 'No Subscription'
+                    ELSE COALESCE(c.stripe_subscription_status, 'Free')
+                END as plan_name,
+                (SELECT SUM(amount_total) FROM platform_billing_events WHERE clinic_id = c.id AND event_type = 'payment_succeeded') as total_revenue,
+                (SELECT created_at FROM platform_billing_events WHERE clinic_id = c.id AND event_type = 'payment_succeeded' ORDER BY created_at DESC LIMIT 1) as last_payment_date,
                 COUNT(DISTINCT st.id) FILTER (WHERE st.status IN ('open', 'in_progress')) as open_tickets,
                 COALESCE(csc.onboarding_complete, false) as onboarding_complete
             FROM clinics c
@@ -257,6 +265,59 @@ router.get('/clinics/:id/users', verifySuperAdmin, async (req, res) => {
     } catch (error) {
         console.error('[SuperAdmin] Error fetching clinic users:', error);
         res.status(500).json({ error: 'Failed to fetch users for this clinic' });
+    }
+});
+
+/**
+ * GET /api/super/clinics/:id/billing
+ * Get billing history and payment events for a specific clinic
+ */
+router.get('/clinics/:id/billing', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Get clinic billing info
+        const clinicRes = await pool.controlPool.query(`
+            SELECT 
+                id, display_name, slug,
+                stripe_customer_id, stripe_subscription_id, stripe_subscription_status,
+                current_period_end, billing_locked, last_payment_at, status
+            FROM clinics WHERE id = $1
+        `, [id]);
+
+        if (clinicRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Clinic not found' });
+        }
+
+        // Get payment history
+        const eventsRes = await pool.controlPool.query(`
+            SELECT * FROM platform_billing_events 
+            WHERE clinic_id = $1 
+            ORDER BY created_at DESC 
+            LIMIT 50
+        `, [id]);
+
+        // Calculate totals
+        const totalsRes = await pool.controlPool.query(`
+            SELECT 
+                COALESCE(SUM(amount_total), 0) as total_revenue,
+                COUNT(*) as payment_count
+            FROM platform_billing_events 
+            WHERE clinic_id = $1 AND event_type = 'payment_succeeded'
+        `, [id]);
+
+        res.json({
+            clinic: clinicRes.rows[0],
+            events: eventsRes.rows,
+            totals: {
+                totalRevenue: totalsRes.rows[0].total_revenue,
+                totalRevenueDollars: (totalsRes.rows[0].total_revenue / 100).toFixed(2),
+                paymentCount: parseInt(totalsRes.rows[0].payment_count) || 0
+            }
+        });
+    } catch (error) {
+        console.error('[SuperAdmin] Error fetching clinic billing:', error);
+        res.status(500).json({ error: 'Failed to fetch billing history' });
     }
 });
 
