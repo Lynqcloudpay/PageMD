@@ -12,9 +12,13 @@ import AddPatientModal from '../components/AddPatientModal';
 import InlinePatientStatus from '../components/InlinePatientStatus';
 
 // Visit Type Dropdown Component
-const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow, value, onChange }) => {
+const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow, value, onChange, onOpenChange }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        if (onOpenChange) onOpenChange(isOpen);
+    }, [isOpen, onOpenChange]);
 
     const types = [
         { label: 'Follow-up', method: 'office' },
@@ -550,6 +554,7 @@ const Schedule = () => {
     const [showModal, setShowModal] = useState(false);
     const [showAddPatientModal, setShowAddPatientModal] = useState(false);
     const [clickedTimeSlot, setClickedTimeSlot] = useState(null);
+    const [activeDropdownApptId, setActiveDropdownApptId] = useState(null);
 
     // Color Palette
     const PROVIDER_PALETTE = [
@@ -1436,7 +1441,7 @@ const Schedule = () => {
                                                     borderLeftColor: isCancelledOrNoShow
                                                         ? (['no_show', 'no-show'].includes(appt.patient_status) ? '#cbd5e1' : '#f1f5f9')
                                                         : color.accent,
-                                                    zIndex: isActiveInClinic ? 20 : 10
+                                                    zIndex: activeDropdownApptId === appt.id ? 100 : (isActiveInClinic ? 20 : 10)
                                                 }}
                                             >
                                                 {isCancelledOrNoShow && (
@@ -1475,6 +1480,10 @@ const Schedule = () => {
                                                                 appt={appt}
                                                                 onUpdate={refreshAppointments}
                                                                 isCancelledOrNoShow={isCancelledOrNoShow}
+                                                                onOpenChange={(open) => {
+                                                                    if (open) setActiveDropdownApptId(appt.id);
+                                                                    else if (activeDropdownApptId === appt.id) setActiveDropdownApptId(null);
+                                                                }}
                                                             />
                                                             <span className={`text-[8px] font-bold ${isCancelledOrNoShow ? 'text-slate-300' : 'text-slate-400'}`}>{appt.duration}m</span>
                                                         </div>
