@@ -134,273 +134,282 @@ const UserManagement = ({ inline = false }) => {
     return matchesSearch && matchesStatus && matchesRole;
   });
 
-  return (
-    <span className={cn(
-      "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border",
-      status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-        status === 'suspended' ? "bg-amber-50 text-amber-600 border-amber-100" :
-          "bg-slate-50 text-slate-400 border-slate-100"
-    )}>
-      <Icon className="w-3 h-3" />
-      <span>{status}</span>
-    </span>
-  );
-};
+  const getStatusBadge = (status) => {
+    const config = {
+      active: { color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
+      suspended: { color: 'bg-yellow-100 text-yellow-800', icon: AlertCircle },
+      inactive: { color: 'bg-gray-100 text-gray-800', icon: XCircle }
+    };
+    const { icon: Icon } = config[status] || config.inactive;
 
-if (loading) {
-  return (
-    <div className="flex items-center justify-center h-64">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-    </div>
-  );
-}
+    return (
+      <span className={cn(
+        "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border",
+        status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+          status === 'suspended' ? "bg-amber-50 text-amber-600 border-amber-100" :
+            "bg-slate-50 text-slate-400 border-slate-100"
+      )}>
+        <Icon className="w-3 h-3" />
+        <span>{status}</span>
+      </span>
+    );
+  };
 
-return (
-  <div className={cn("flex flex-col gap-6", !inline && "px-6 py-6")}>
-    {/* Header - Only if not inline */}
-    {!inline && (
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">User Management</h1>
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1">System Access & Role Control</p>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl flex items-center gap-2 transition-all hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 text-xs font-black uppercase tracking-widest"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Add User</span>
-        </button>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
       </div>
-    )}
+    );
+  }
 
-    {/* Filters Bar */}
-    <div className="bg-slate-50/50 rounded-[2rem] border border-slate-100 p-3 flex flex-col md:flex-row gap-3">
-      <div className="relative flex-1 group">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-11 pr-4 py-3 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-sm placeholder:text-slate-300"
-        />
-      </div>
-
-      <div className="flex gap-3">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-5 py-3 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-xs font-bold text-slate-600 appearance-none min-w-[140px]"
-        >
-          <option value="all">Status: All</option>
-          <option value="active">Active Only</option>
-          <option value="suspended">Suspended</option>
-          <option value="inactive">Inactive</option>
-        </select>
-
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="px-5 py-3 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-xs font-bold text-slate-600 appearance-none min-w-[160px]"
-        >
-          <option value="all">Role: All</option>
-          {roles && Array.isArray(roles) && roles.map(role => (
-            <option key={role.id} value={role.id}>{role.name}</option>
-          ))}
-        </select>
-
-        {inline && (
+  return (
+    <div className={cn("flex flex-col gap-6", !inline && "px-6 py-6")}>
+      {/* Header - Only if not inline */}
+      {!inline && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">User Management</h1>
+            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1">System Access & Role Control</p>
+          </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-2xl flex items-center gap-2 transition-all hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 text-[10px] font-black uppercase tracking-widest whitespace-nowrap ml-2"
+            className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl flex items-center gap-2 transition-all hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 text-xs font-black uppercase tracking-widest"
           >
             <UserPlus className="w-4 h-4" />
-            <span>New Account</span>
+            <span>Add User</span>
           </button>
-        )}
+        </div>
+      )}
+
+      {/* Filters Bar */}
+      <div className="bg-slate-50/50 rounded-[2rem] border border-slate-100 p-3 flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-sm placeholder:text-slate-300"
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-5 py-3 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-xs font-bold text-slate-600 appearance-none min-w-[140px]"
+          >
+            <option value="all">Status: All</option>
+            <option value="active">Active Only</option>
+            <option value="suspended">Suspended</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-5 py-3 bg-white border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all outline-none text-xs font-bold text-slate-600 appearance-none min-w-[160px]"
+          >
+            <option value="all">Role: All</option>
+            {roles && Array.isArray(roles) && roles.map(role => (
+              <option key={role.id} value={role.id}>{role.name}</option>
+            ))}
+          </select>
+
+          {inline && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-2xl flex items-center gap-2 transition-all hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-100 active:scale-95 text-[10px] font-black uppercase tracking-widest whitespace-nowrap ml-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>New Account</span>
+            </button>
+          )}
+        </div>
       </div>
-    </div>
 
-    {/* Users Table */}
-    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-slate-50">
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Full Identity</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Assignment</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Security Status</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Last Presence</th>
-              <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {filteredUsers.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                  No users found
-                </td>
+      {/* Users Table */}
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-slate-50">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Full Identity</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Assignment</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Security Status</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Last Presence</th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
               </tr>
-            ) : (
-              <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="px-8 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:border-indigo-100 group-hover:text-indigo-500 transition-all font-black text-xs">
-                      {user.first_name?.[0]}{user.last_name?.[0]}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-slate-800">
-                        {user.first_name} {user.last_name}
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-8 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:border-indigo-100 group-hover:text-indigo-500 transition-all font-black text-xs">
+                          {user.first_name?.[0]}{user.last_name?.[0]}
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-slate-800">
+                            {user.first_name} {user.last_name}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-medium">{user.email}</div>
+                        </div>
                       </div>
-                      <div className="text-[11px] text-slate-400 font-medium">{user.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-600">{user.role_name || 'No Role'}</span>
-                    {user.is_admin && (
-                      <span className="px-2 py-0.5 text-[9px] font-black bg-amber-50 text-amber-600 border border-amber-100 rounded-full uppercase tracking-tighter">
-                        Admin Access
-                      </span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-8 py-4 whitespace-nowrap">
-                  {getStatusBadge(user.status)}
-                </td>
-                <td className="px-8 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-1.5 text-slate-400 italic text-[11px] font-medium">
-                    {user.last_login
-                      ? new Date(user.last_login).toLocaleDateString()
-                      : 'No Login Data'}
-                  </div>
-                </td>
-                <td className="px-8 py-4 whitespace-nowrap text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => handleToggleAdmin(user)}
-                      className={cn(
-                        "p-2 rounded-xl transition-all",
-                        user.is_admin ? "text-amber-500 bg-amber-50" : "text-slate-300 hover:text-slate-500 hover:bg-slate-50"
-                      )}
-                      title={user.is_admin ? 'Remove Admin Privileges' : 'Grant Admin Privileges'}
-                    >
-                      <Shield className={cn("w-4 h-4", user.is_admin && "fill-current")} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedUser(user);
-                        setShowEditModal(true);
-                      }}
-                      className="p-2 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
-                      title="Edit User"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    {user.status === 'active' ? (
-                      <button
-                        onClick={() => handleStatusChange(user.id, 'suspended')}
-                        className="p-2 text-slate-300 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
-                        title="Suspend User"
-                      >
-                        <Lock className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleStatusChange(user.id, 'active')}
-                        className="p-2 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
-                        title="Activate User"
-                      >
-                        <Unlock className="w-4 h-4" />
-                      </button>
-                    )}
-                    {user.id !== currentUser?.id && (
-                      <button
-                        onClick={async () => {
-                          if (confirm('⚠️ WARNING: This will permanently delete this user and cannot be undone.\n\nAre you sure you want to permanently delete this user?')) {
-                            try {
-                              await usersAPI.delete(user.id);
-                              loadUsers();
-                              alert('User permanently deleted');
-                            } catch (error) {
-                              console.error('Error deleting user:', error);
-                              const errorData = error.response?.data;
+                    </td>
+                    <td className="px-8 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-600">{user.role_name || 'No Role'}</span>
+                        {user.is_admin && (
+                          <span className="px-2 py-0.5 text-[9px] font-black bg-amber-50 text-amber-600 border border-amber-100 rounded-full uppercase tracking-tighter">
+                            Admin Access
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-8 py-4 whitespace-nowrap">
+                      {getStatusBadge(user.status)}
+                    </td>
+                    <td className="px-8 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5 text-slate-400 italic text-[11px] font-medium">
+                        {user.last_login
+                          ? new Date(user.last_login).toLocaleDateString()
+                          : 'No Login Data'}
+                      </div>
+                    </td>
+                    <td className="px-8 py-4 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleToggleAdmin(user)}
+                          className={cn(
+                            "p-2 rounded-xl transition-all",
+                            user.is_admin ? "text-amber-500 bg-amber-50" : "text-slate-300 hover:text-slate-500 hover:bg-slate-50"
+                          )}
+                          title={user.is_admin ? 'Remove Admin Privileges' : 'Grant Admin Privileges'}
+                        >
+                          <Shield className={cn("w-4 h-4", user.is_admin && "fill-current")} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowEditModal(true);
+                          }}
+                          className="p-2 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
+                          title="Edit User"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        {user.status === 'active' ? (
+                          <button
+                            onClick={() => handleStatusChange(user.id, 'suspended')}
+                            className="p-2 text-slate-300 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                            title="Suspend User"
+                          >
+                            <Lock className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleStatusChange(user.id, 'active')}
+                            className="p-2 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                            title="Activate User"
+                          >
+                            <Unlock className="w-4 h-4" />
+                          </button>
+                        )}
+                        {user.id !== currentUser?.id && (
+                          <button
+                            onClick={async () => {
+                              if (confirm('⚠️ WARNING: This will permanently delete this user and cannot be undone.\n\nAre you sure you want to permanently delete this user?')) {
+                                try {
+                                  await usersAPI.delete(user.id);
+                                  loadUsers();
+                                  alert('User permanently deleted');
+                                } catch (error) {
+                                  console.error('Error deleting user:', error);
+                                  const errorData = error.response?.data;
 
-                              // Handle 409 conflict - user has associated records
-                              if (error.response?.status === 409 && errorData?.details) {
-                                const { visits, signedNotes, messages } = errorData.details;
-                                const recordSummary = [
-                                  visits > 0 ? `${visits} visit(s)` : null,
-                                  signedNotes > 0 ? `${signedNotes} signed note(s)` : null,
-                                  messages > 0 ? `${messages} message(s)` : null,
-                                ].filter(Boolean).join(', ');
+                                  // Handle 409 conflict - user has associated records
+                                  if (error.response?.status === 409 && errorData?.details) {
+                                    const { visits, signedNotes, messages } = errorData.details;
+                                    const recordSummary = [
+                                      visits > 0 ? `${visits} visit(s)` : null,
+                                      signedNotes > 0 ? `${signedNotes} signed note(s)` : null,
+                                      messages > 0 ? `${messages} message(s)` : null,
+                                    ].filter(Boolean).join(', ');
 
-                                const shouldDeactivate = confirm(
-                                  `Cannot delete user: They have ${recordSummary} that must be preserved for HIPAA compliance.\n\n` +
-                                  `Would you like to DEACTIVATE this user instead?\n\n` +
-                                  `(Deactivated users cannot log in but their records remain intact)`
-                                );
+                                    const shouldDeactivate = confirm(
+                                      `Cannot delete user: They have ${recordSummary} that must be preserved for HIPAA compliance.\n\n` +
+                                      `Would you like to DEACTIVATE this user instead?\n\n` +
+                                      `(Deactivated users cannot log in but their records remain intact)`
+                                    );
 
-                                if (shouldDeactivate) {
-                                  try {
-                                    await usersAPI.updateStatus(user.id, { status: 'inactive' });
-                                    loadUsers();
-                                    alert('User has been deactivated successfully');
-                                  } catch (statusError) {
-                                    alert('Failed to deactivate user: ' + (statusError.response?.data?.error || statusError.message));
+                                    if (shouldDeactivate) {
+                                      try {
+                                        await usersAPI.updateStatus(user.id, { status: 'inactive' });
+                                        loadUsers();
+                                        alert('User has been deactivated successfully');
+                                      } catch (statusError) {
+                                        alert('Failed to deactivate user: ' + (statusError.response?.data?.error || statusError.message));
+                                      }
+                                    }
+                                  } else {
+                                    alert(errorData?.error || 'Failed to delete user');
                                   }
                                 }
-                              } else {
-                                alert(errorData?.error || 'Failed to delete user');
                               }
-                            }
-                          }
-                        }}
-                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        title="Permanently Delete User"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))
+                            }}
+                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                            title="Permanently Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Create User Modal */}
+      {showCreateModal && (
+        <CreateUserModal
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            loadUsers();
+          }}
+          roles={roles}
+        />
+      )}
+
+      {/* Edit User Modal */}
+      {showEditModal && selectedUser && (
+        <EditUserModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedUser(null);
+            loadUsers();
+          }}
+          user={selectedUser}
+          roles={roles}
+        />
+      )}
     </div>
-
-    {/* Create User Modal */}
-    {showCreateModal && (
-      <CreateUserModal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          loadUsers();
-        }}
-        roles={roles}
-      />
-    )}
-
-    {/* Edit User Modal */}
-    {showEditModal && selectedUser && (
-      <EditUserModal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedUser(null);
-          loadUsers();
-        }}
-        user={selectedUser}
-        roles={roles}
-      />
-    )}
-  </div>
-);
+  );
 };
 
 // Create User Modal Component - Comprehensive OpenEMR Style
