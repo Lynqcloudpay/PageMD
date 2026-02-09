@@ -282,6 +282,12 @@ export const billingAPI = {
 
   // Statistics
   getStatistics: (params) => api.get('/billing/statistics', { params }),
+
+  // Stripe Subscription Integration
+  stripe: {
+    getStatus: () => api.get('/billing/stripe/status'),
+    createCheckoutSession: (priceId) => api.post('/billing/stripe/create-checkout-session', { priceId }),
+  }
 };
 
 // Real Eligibility API (270/271)

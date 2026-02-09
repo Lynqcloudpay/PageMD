@@ -11,6 +11,7 @@
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
 const passwordService = require('./passwordService');
+const stripeService = require('./stripeService');
 
 class UserService {
   /**
@@ -270,7 +271,14 @@ class UserService {
            DO UPDATE SET schema_name = $2`,
           [email, currentSchema]
         );
-        // console.log(`[UserService] Added ${email} to platform_user_lookup for schema ${currentSchema}`);
+
+        // Sync Stripe Subscription quantity (async)
+        const clinicRes = await pool.controlPool.query('SELECT id FROM clinics WHERE schema_name = $1', [currentSchema]);
+        if (clinicRes.rows[0]) {
+          stripeService.syncSubscriptionQuantity(clinicRes.rows[0].id).catch(err =>
+            console.error('[UserService] Stripe Sync Failed:', err)
+          );
+        }
       }
     } catch (lookupError) {
       console.error('[UserService] Failed to update platform_user_lookup:', lookupError);
@@ -350,6 +358,23 @@ class UserService {
     `;
 
     const result = await pool.query(query, params);
+
+    // If status changed or role changed, sync Stripe (async)
+    if (updates.status || updates.roleId) {
+      try {
+        const schemaRes = await pool.query('SELECT current_schema()');
+        const currentSchema = schemaRes.rows[0].current_schema;
+        const clinicRes = await pool.controlPool.query('SELECT id FROM clinics WHERE schema_name = $1', [currentSchema]);
+        if (clinicRes.rows[0]) {
+          stripeService.syncSubscriptionQuantity(clinicRes.rows[0].id).catch(err =>
+            console.error('[UserService] Stripe Sync Failed (Update):', err)
+          );
+        }
+      } catch (e) {
+        // Non-critical
+      }
+    }
+
     return result.rows[0];
   }
 

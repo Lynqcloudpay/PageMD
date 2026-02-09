@@ -259,6 +259,7 @@ const feeSheetRoutes = require('./routes/fee-sheet');
 const growthRoutes = require('./routes/growth');
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/billing', billingRoutes);
+app.use('/api/billing/stripe', require('./routes/billing-stripe'));
 app.use('/api/growth', growthRoutes);
 app.use('/api/fee-sheet', feeSheetRoutes);
 app.use('/api/billing-openemr', require('./routes/billing-openemr'));

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { settingsAPI } from '../services/api';
+import { settingsAPI, billingAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -1293,33 +1293,191 @@ const FeaturesTab = ({ features, onToggle }) => {
 
 // Billing Settings Tab Component
 const BillingSettingsTab = () => {
+  const [billingInfo, setBillingInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    fetchBillingStatus();
+  }, []);
+
+  const fetchBillingStatus = async () => {
+    try {
+      setLoading(true);
+      const response = await billingAPI.stripe.getStatus();
+      setBillingInfo(response.data);
+    } catch (error) {
+      console.error('Error fetching billing status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpgrade = async (priceId) => {
+    try {
+      setRedirecting(true);
+      const response = await billingAPI.stripe.createCheckoutSession(priceId);
+      if (response.data.url) {
+        window.location.href = response.data.url;
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('Failed to initiate secure checkout. Please try again.');
+    } finally {
+      setRedirecting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
+  const TIERS = [
+    { name: 'Solo', range: '1 MD', rate: '$399/mo', desc: 'Single physician practice' },
+    { name: 'Partner', range: '2-10 MDs', rate: '$299/mo', desc: 'Growing group practice' },
+    { name: 'Enterprise', range: '11+ MDs', rate: '$99/mo', desc: 'Large scale operations' },
+  ];
+
+  const currentTierName = billingInfo?.tier || 'Free/Trial';
+  const status = billingInfo?.subscriptionStatus || 'none';
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
-          <DollarSign className="w-4 h-4 text-slate-500" />
+    <div className="space-y-8">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+            <DollarSign className="w-4 h-4 text-slate-500" />
+          </div>
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Subscription & Billing</h2>
         </div>
-        <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Financial Operations</h2>
+        {billingInfo?.subscriptionId && (
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+            status === 'active' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
+          )}>
+            <div className={cn("w-1.5 h-1.5 rounded-full", status === 'active' ? "bg-emerald-500" : "bg-rose-500")} />
+            {status}
+          </div>
+        )}
       </div>
 
-      <div className="p-8 bg-indigo-50/50 border border-indigo-100/30 rounded-[2rem]">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-indigo-100/50 shrink-0">
-            <Activity className="w-5 h-5 text-indigo-600" />
+      {/* Current Plan Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 p-8 bg-white border border-slate-100 rounded-[2rem] shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Activity className="w-32 h-32" />
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-tight">Revenue Cycle Management</h3>
-            <p className="text-sm text-slate-500 mt-2 leading-relaxed max-w-lg">
-              Comprehensive billing controls are currently being integrated. This section will soon host fee schedule management,
-              clearinghouse routing, and direct claim submission settings.
-            </p>
-            <div className="mt-6 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Module arriving in next update</span>
+
+          <div className="relative z-10">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Current Plan</div>
+            <h3 className="text-3xl font-black text-slate-900 tracking-tight mb-4 capitalize">
+              {currentTierName} Plan
+            </h3>
+
+            <div className="flex flex-wrap gap-4 mt-6">
+              <div className="px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Seats</span>
+                <span className="text-sm font-bold text-slate-700">{billingInfo?.totalSeats || 0} Licensed Users</span>
+              </div>
+              <div className="px-4 py-3 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-1">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Referring Bonus</span>
+                <span className="text-sm font-bold text-emerald-600">{billingInfo?.ghostSeats || 0} Ghost Seats</span>
+              </div>
+              {billingInfo?.periodEnd && (
+                <div className="px-4 py-3 bg-indigo-50/30 rounded-2xl border border-indigo-100/30 flex flex-col gap-1">
+                  <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Renews On</span>
+                  <span className="text-sm font-bold text-indigo-600">
+                    {new Date(billingInfo.periodEnd).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        <div className="p-8 bg-slate-900 text-white rounded-[2rem] shadow-xl flex flex-col justify-between">
+          <div>
+            <CreditCard className="w-8 h-8 text-indigo-400 mb-6" />
+            <h4 className="text-lg font-bold tracking-tight mb-2">Billing Method</h4>
+            <p className="text-xs text-slate-400 leading-relaxed mb-6">
+              Securely manage your payment methods and view past invoices via Stripe.
+            </p>
+          </div>
+
+          <button
+            onClick={() => handleUpgrade()}
+            disabled={redirecting}
+            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl font-bold text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+          >
+            {redirecting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <span>{billingInfo?.subscriptionId ? 'Manage Billing' : 'Setup Subscriptions'}</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Staircase Tiers */}
+      <div className="space-y-4">
+        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] px-1">Institutional Pricing (Staircase)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {TIERS.map((tier) => (
+            <div
+              key={tier.name}
+              className={cn(
+                "p-6 rounded-[2rem] border transition-all",
+                currentTierName === tier.name
+                  ? "bg-indigo-50/50 border-indigo-200 ring-2 ring-indigo-600/5 shadow-lg"
+                  : "bg-white border-slate-100 hover:border-slate-200"
+              )}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-widest">{tier.name}</span>
+                {currentTierName === tier.name && (
+                  <span className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-[8px] font-black uppercase">Active</span>
+                )}
+              </div>
+              <div className="mb-4">
+                <div className="text-3xl font-black text-slate-900">{tier.rate}</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Per Physician / Month</div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[11px] text-slate-600 font-medium">{tier.range} Support</span>
+                </div>
+                <div className="text-[10px] text-slate-400 pr-4">{tier.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ACH Nudge */}
+      {billingInfo?.totalSeats > 5 && (
+        <div className="p-6 bg-amber-50/50 border border-amber-100/30 rounded-[2rem] flex items-start gap-4">
+          <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-amber-100/50 shrink-0">
+            <Zap className="w-5 h-5 text-amber-500" />
+          </div>
+          <div>
+            <h4 className="text-[11px] font-bold text-amber-800 uppercase tracking-widest">Recommended: ACH Billing</h4>
+            <p className="text-sm text-amber-700/70 mt-1 leading-relaxed max-w-lg">
+              Since you have {billingInfo.totalSeats} physicians, we recommend switching to ACH payments. This eliminates credit card processing fees and provides more stable billing for institutional accounts.
+            </p>
+            <button className="mt-4 text-[10px] font-bold text-amber-800 uppercase tracking-widest underline decoration-amber-200 hover:decoration-amber-500 transition-all">
+              Contact Treasury to Switch
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
