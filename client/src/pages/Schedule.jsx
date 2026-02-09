@@ -638,6 +638,15 @@ const Schedule = () => {
 
     const [dismissedAppointmentIds, setDismissedAppointmentIds] = useState(new Set());
 
+    const [timeFilter, setTimeFilter] = useState(() => {
+        const saved = localStorage.getItem('schedule_timeFilter');
+        return saved || 'both'; // 'am', 'pm', 'both'
+    });
+
+    useEffect(() => {
+        localStorage.setItem('schedule_timeFilter', timeFilter);
+    }, [timeFilter]);
+
     // Save preference to localStorage whenever it changes
     useEffect(() => {
         localStorage.setItem('schedule_showCancelled', showCancelledAppointments.toString());
