@@ -1255,7 +1255,7 @@ const Schedule = () => {
                     <div className="flex-1 overflow-auto" ref={scrollContainerRef}>
                         <div className="min-w-full inline-block">
                             {/* Single Column Header */}
-                            <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-100">
+                            <div className="sticky top-0 z-[35] bg-white/95 backdrop-blur-sm border-b border-slate-100">
                                 <div className="flex">
                                     <div className="w-20 flex-shrink-0 border-r border-slate-100 bg-slate-50/30"></div>
                                     <div className="flex-1 px-4 py-2">
@@ -1411,7 +1411,7 @@ const Schedule = () => {
                                         }
 
                                         // Full width of single column
-                                        const timeColumnWidth = 96;
+                                        const timeColumnWidth = 80;
                                         const slotWidthCalc = `calc(100% - ${timeColumnWidth + 4}px)`;
                                         const leftOffset = `${timeColumnWidth + 2}px`;
 
