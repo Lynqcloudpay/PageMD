@@ -3,8 +3,8 @@ import { Activity, Thermometer, Wind, Droplets, Scale, MoveVertical } from 'luci
 
 const VitalInput = ({ label, value, unit, icon: Icon, onChange, colorClass, isAbnormal, disabled, refProp }) => (
     <div className={`p-4 rounded-2xl border transition-all ${isAbnormal
-            ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
-            : 'bg-white border-slate-100 hover:border-blue-100'
+        ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
+        : 'bg-white border-slate-100 hover:border-blue-100'
         }`}>
         <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -39,13 +39,19 @@ const VitalsGrid = ({
     previousWeight,
     getWeightChange,
     calculateBMI,
-    refs
+    systolicRef,
+    diastolicRef,
+    pulseRef,
+    o2satRef,
+    tempRef,
+    weightRef,
+    heightRef
 }) => {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div className={`p-4 rounded-2xl border transition-all col-span-1 ${isAbnormalVital('systolic', vitals.systolic) || isAbnormalVital('diastolic', vitals.diastolic)
-                    ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
-                    : 'bg-white border-slate-100 hover:border-blue-100'
+                ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
+                : 'bg-white border-slate-100 hover:border-blue-100'
                 }`}>
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
@@ -57,7 +63,7 @@ const VitalsGrid = ({
                 </div>
                 <div className="flex items-center gap-1">
                     <input
-                        ref={refs.systolicRef}
+                        ref={systolicRef}
                         type="number"
                         value={vitals.systolic || ''}
                         onChange={(e) => {
@@ -71,7 +77,7 @@ const VitalsGrid = ({
                     />
                     <span className="text-slate-300 font-light text-xl">/</span>
                     <input
-                        ref={refs.diastolicRef}
+                        ref={diastolicRef}
                         type="number"
                         value={vitals.diastolic || ''}
                         onChange={(e) => {
@@ -90,21 +96,21 @@ const VitalsGrid = ({
                 label="Heart Rate" value={vitals.pulse} unit="BPM" icon={Activity}
                 onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
                 isAbnormal={isAbnormalVital('pulse', vitals.pulse)}
-                disabled={isLocked} refProp={refs.pulseRef}
+                disabled={isLocked} refProp={pulseRef}
             />
 
             <VitalInput
                 label="O2 Sat" value={vitals.o2sat} unit="%" icon={Droplets}
                 onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
                 isAbnormal={isAbnormalVital('o2sat', vitals.o2sat)}
-                disabled={isLocked} refProp={refs.o2satRef}
+                disabled={isLocked} refProp={o2satRef}
             />
 
             <VitalInput
                 label="Temperature" value={vitals.temp} unit="°F" icon={Thermometer}
                 onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
                 isAbnormal={isAbnormalVital('temp', vitals.temp)}
-                disabled={isLocked} refProp={refs.tempRef}
+                disabled={isLocked} refProp={tempRef}
             />
 
             <div className="p-4 rounded-2xl bg-white border border-slate-100 hover:border-blue-100 transition-all col-span-1 md:col-span-2 lg:col-span-1">
@@ -118,7 +124,7 @@ const VitalsGrid = ({
                 </div>
                 <div className="flex items-baseline gap-2">
                     <input
-                        ref={refs.weightRef}
+                        ref={weightRef}
                         type="number"
                         step="0.1"
                         value={vitals.weight || ''}

@@ -2658,7 +2658,7 @@ const VisitNote = () => {
 
                         {/* Vitals */}
                         <VisitNoteSection title="Vital Signs" defaultOpen={true} id="vitals">
-                            <VitalsGrid vitals={vitals} setVitals={setVitals} isLocked={isLocked} isAbnormalVital={isAbnormalVital} calculateBMI={calculateBMI} heightRef={heightRef} systolicRef={systolicRef} diastolicRef={diastolicRef} pulseRef={pulseRef} o2satRef={o2satRef} tempRef={tempRef} weightRef={weightRef} hpiRef={hpiRef} />
+                            <VitalsGrid vitals={vitals} setVitals={setVitals} isLocked={isLocked} isAbnormalVital={isAbnormalVital} calculateBMI={calculateBMI} heightRef={heightRef} systolicRef={systolicRef} diastolicRef={diastolicRef} pulseRef={pulseRef} o2satRef={o2satRef} tempRef={tempRef} weightRef={weightRef} hpiRef={hpiRef} previousWeight={previousWeight} getWeightChange={getWeightChange} />
                         </VisitNoteSection>
 
                         {/* Chief Complaint */}
