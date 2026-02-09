@@ -49,6 +49,7 @@ const ChartReviewModal = ({
 
     // Helper to get patient name (handles both naming conventions)
     const getPatientName = () => {
+        if (!patientData) return { first: '', last: '', full: 'Unknown Patient' };
         const first = patientData.first_name || patientData.firstName || '';
         const last = patientData.last_name || patientData.lastName || '';
         return { first, last, full: `${first} ${last}`.trim() || 'Unknown Patient' };
@@ -326,23 +327,38 @@ const ChartReviewModal = ({
                     {/* Left Column - Main Content (3/5) */}
                     <div className="col-span-3 space-y-3">
                         {/* Patient Header */}
-                        <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm flex items-center gap-3">
+                        <div className="p-4 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center gap-4">
                             <div className="relative">
-                                <PatientHeaderPhoto
-                                    firstName={patientName.first}
-                                    lastName={patientName.last}
-                                    photoUrl={patientData.photo_url || patientData.photoUrl}
-                                    className="w-10 h-10 text-sm shadow border-2 border-white"
-                                />
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
+                                {patientData ? (
+                                    <PatientHeaderPhoto
+                                        firstName={patientName.first}
+                                        lastName={patientName.last}
+                                        photoUrl={patientData?.photo_url || patientData?.photoUrl}
+                                        className="w-12 h-12 text-sm shadow border-2 border-white"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 animate-pulse">
+                                        <Clock className="w-5 h-5" />
+                                    </div>
+                                )}
+                                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h2 className="text-base font-bold text-slate-900 truncate">
-                                    {patientName.full}
-                                </h2>
-                                <div className="text-[9px] text-slate-400 uppercase tracking-wider">
-                                    MRN: {patientData.id || patientData.patient_id || '---'} • <span className="text-blue-600 font-bold">Active</span>
-                                </div>
+                                {patientData ? (
+                                    <>
+                                        <h2 className="text-lg font-black text-slate-900 truncate tracking-tight">
+                                            {patientName.full}
+                                        </h2>
+                                        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                                            MRN: {patientData?.id || patientData?.patient_id || '---'} • <span className="text-emerald-600">Active Record</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="h-4 w-32 bg-slate-100 rounded animate-pulse"></div>
+                                        <div className="h-2 w-20 bg-slate-50 rounded animate-pulse"></div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1132,20 +1148,23 @@ const ChartReviewModal = ({
                 </div>
 
                 {/* Professional Footer */}
-                <div className="px-8 py-6 bg-white border-t border-slate-100 flex items-center justify-between flex-shrink-0">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        <Clock className="w-4 h-4" />
-                        {activeTab === 'Summary' ? 'Clinical Overview • Real-time Data' :
-                            activeTab === 'Notes' ? 'Encounter Logs • Patient History' :
-                                activeTab === 'Vitals' ? 'Biometric Trends • Standardized' :
-                                    'Clinical Documentation • External Records'}
+                <div className="px-8 py-8 bg-white border-t border-slate-100 flex items-center justify-between flex-shrink-0 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+                    <div className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-slate-300" />
+                        </div>
+                        <div>
+                            <div className="text-slate-500">{activeTab} View</div>
+                            <div className="text-[10px] font-medium lowercase italic">Last updated: {format(new Date(), 'h:mm a')}</div>
+                        </div>
                     </div>
                     {onViewFullChart && (
                         <button
                             onClick={onViewFullChart}
-                            className="px-8 py-3 bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 hover:-translate-y-0.5 active:translate-y-0"
+                            className="px-10 py-4 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center gap-2 hover:-translate-y-0.5"
                         >
-                            Review Full Medical Chart →
+                            Open Full Patient Chart
+                            <Eye className="w-4 h-4" />
                         </button>
                     )}
                 </div>

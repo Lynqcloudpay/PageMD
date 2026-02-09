@@ -5,9 +5,9 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
-        <div 
-            id={id} 
-            className={`vn-card scroll-mt-24 mb-6 overflow-hidden ${isEdited ? 'vn-autonomous-active' : ''} ${className}`}
+        <div
+            id={id}
+            className={`vn-card scroll-mt-24 mb-6 overflow-visible ${isEdited ? 'vn-autonomous-active' : ''} ${className}`}
         >
             <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -28,16 +28,15 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <ChevronDown 
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+                    <ChevronDown
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
                     />
                 </div>
             </button>
-            
-            <div 
-                className={`transition-all duration-300 ease-in-out ${
-                    isOpen ? 'max-h-[8000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-                }`}
+
+            <div
+                className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[8000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+                    }`}
             >
                 <div className="p-5 bg-white/40">
                     {children}

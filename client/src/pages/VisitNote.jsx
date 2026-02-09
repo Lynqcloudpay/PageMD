@@ -732,28 +732,23 @@ const VisitNote = () => {
     };
 
     // Decode HTML entities (handles double-encoding)
-    const decodeHtmlEntities = (rawText) => {
-        if (!rawText) return rawText;
-        const text = typeof rawText === 'string' ? rawText : String(rawText);
-        // Handle double-encoded entities like &amp;amp;#x2F;
-        let decoded = text
-            .replace(/&amp;amp;/g, '&')
-            .replace(/&amp;#x2F;/g, '/')
-            .replace(/&amp;#47;/g, '/')
-            .replace(/&amp;lt;/g, '<')
-            .replace(/&amp;gt;/g, '>')
-            .replace(/&amp;quot;/g, '"')
-            .replace(/&amp;apos;/g, "'");
-        // Handle single-encoded entities
-        decoded = decoded
-            .replace(/&#x2F;/g, '/')
-            .replace(/&#47;/g, '/')
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&apos;/g, "'");
-        return decoded;
+    const decodeHtmlEntities = (text) => {
+        if (typeof text !== 'string') return String(text || '');
+        let str = text;
+        if (typeof document !== 'undefined') {
+            const txt = document.createElement('textarea');
+            for (let i = 0; i < 4; i++) {
+                const prev = str;
+                txt.innerHTML = str;
+                str = txt.value;
+                // Aggressively handle slashes and other common entities
+                str = str.replace(/&#x2F;/ig, '/').replace(/&#47;/g, '/').replace(/&sol;/g, '/').replace(/&amp;/g, '&');
+                if (str === prev) break;
+            }
+        } else {
+            str = str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x2F;/ig, '/');
+        }
+        return str;
     };
 
     const parseNoteText = (text) => {
@@ -1070,7 +1065,7 @@ const VisitNote = () => {
                         setVitals({
                             systolic: v.systolic || '',
                             diastolic: v.diastolic || '',
-                            bp: v.bp || (v.systolic && v.diastolic ? `${v.systolic}/${v.diastolic}` : ''),
+                            bp: decodeHtmlEntities(v.bp) || (v.systolic && v.diastolic ? `${v.systolic}/${v.diastolic}` : ''),
                             bpReadings: v.bpReadings || [],
                             temp: v.temp || '',
                             pulse: v.pulse || '',
@@ -2239,6 +2234,22 @@ const VisitNote = () => {
         }
     }, [id, currentVisitId]);
 
+    // Fetch history for Chart Review Modal
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (!id) return;
+            setChartReviewData(prev => ({ ...prev, loading: true }));
+            try {
+                const response = await visitsAPI.getByPatient(id);
+                setChartReviewData({ visits: response.data || [], loading: false });
+            } catch (error) {
+                console.error('Error fetching history for chart review:', error);
+                setChartReviewData({ visits: [], loading: false });
+            }
+        };
+        fetchHistory();
+    }, [id]);
+
     const filteredDotPhrases = useMemo(() => {
         if (!dotPhraseSearch.trim()) return [];
         const search = dotPhraseSearch.toLowerCase();
@@ -2616,17 +2627,19 @@ const VisitNote = () => {
                     providerName={providerName}
                 />
 
-                <QuickNav
-                    sections={[
-                        { id: 'vitals', label: 'Vitals' },
-                        { id: 'hpi', label: 'HPI' },
-                        { id: 'ros-pe', label: 'ROS/PE' },
-                        { id: 'pamfos', label: 'History' },
-                        { id: 'results', label: 'Results' },
-                        { id: 'assessment', label: 'Assessment' },
-                        { id: 'plan', label: 'Plan' },
-                    ]}
-                />
+                <div className="vn-quick-bar-container">
+                    <QuickNav
+                        sections={[
+                            { id: 'vitals', label: 'Vitals' },
+                            { id: 'hpi', label: 'HPI' },
+                            { id: 'ros-pe', label: 'ROS/PE' },
+                            { id: 'pamfos', label: 'History' },
+                            { id: 'results', label: 'Results' },
+                            { id: 'assessment', label: 'Assessment' },
+                            { id: 'plan', label: 'Plan' },
+                        ]}
+                    />
+                </div>
 
                 {/* Retraction Banner */}
                 {isRetracted && (
@@ -2679,7 +2692,13 @@ const VisitNote = () => {
                                     value={noteData.chiefComplaint || ''}
                                     onChange={(e) => handleTextChange(e.target.value, 'chiefComplaint')}
                                     disabled={isLocked}
-                                    className="w-full bg-transparent border-none text-sm font-bold focus:ring-0 text-slate-800 placeholder:text-slate-300"
+                                    className="vn-input px-3 text-base font-bold"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            document.getElementById('hpi-textarea')?.focus();
+                                        }
+                                    }}
                                 />
                             </div>
                         </div>
@@ -2753,7 +2772,7 @@ const VisitNote = () => {
                                         onClick={() => openCarryForward('hpi')}
                                         className="flex items-center gap-2 px-3 py-1.5 text-slate-500 hover:text-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
                                     >
-                                        <RotateCcw className="w-4 h-4" />
+                                        <History className="w-4 h-4" />
                                         Pull Prior
                                     </button>
                                 )}
@@ -2761,8 +2780,7 @@ const VisitNote = () => {
                         </VisitNoteSection>
 
                         {/* ROS and PE Side by Side */}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div id="ros-pe" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 scroll-mt-32">
                             {/* ROS */}
                             <VisitNoteSection title="Review of Systems" defaultOpen={true} id="ros">
                                 <div className="vn-selection-grid">
@@ -3153,7 +3171,7 @@ const VisitNote = () => {
                                                     <div className="space-y-1">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Smoking Status</label>
                                                         <select
-                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
                                                             value={socialHistory?.smoking_status || ''}
                                                             onChange={(e) => saveSocialHistory({ smoking_status: e.target.value })}
                                                         >
@@ -3166,7 +3184,7 @@ const VisitNote = () => {
                                                     <div className="space-y-1">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Alcohol Use</label>
                                                         <select
-                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
                                                             value={socialHistory?.alcohol_use || ''}
                                                             onChange={(e) => saveSocialHistory({ alcohol_use: e.target.value })}
                                                         >
@@ -3180,7 +3198,7 @@ const VisitNote = () => {
                                                     <div className="space-y-1">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Occupation</label>
                                                         <input
-                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
                                                             value={socialHistory?.occupation || ''}
                                                             placeholder="Occupation"
                                                             onBlur={(e) => saveSocialHistory({ occupation: e.target.value })}
@@ -3190,7 +3208,7 @@ const VisitNote = () => {
                                                     <div className="space-y-1 md:col-span-2">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Exercise & Diet</label>
                                                         <input
-                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
                                                             value={socialHistory?.exercise_frequency || ''}
                                                             placeholder="Exercise & Diet Details"
                                                             onBlur={(e) => saveSocialHistory({ exercise_frequency: e.target.value })}
@@ -3249,7 +3267,13 @@ const VisitNote = () => {
                         </VisitNoteSection>
 
                         {/* Assessment */}
-                        <VisitNoteSection title="Assessment" defaultOpen={true} isEdited={editedSections.has('assessment')} id="assessment">
+                        <VisitNoteSection
+                            title="Assessment"
+                            defaultOpen={true}
+                            isEdited={editedSections.has('assessment')}
+                            id="assessment"
+                            className={showIcd10Search ? 'z-50 relative' : 'z-20 relative'}
+                        >
                             {/* ICD-10 Search - Simple inline search */}
                             {hasPrivilege('search_icd10') && (
                                 <div className="mb-3 relative">
@@ -3265,7 +3289,13 @@ const VisitNote = () => {
                                                 setShowIcd10Search(true);
                                             }}
                                             disabled={isLocked}
-                                            className="vn-input pl-9"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    // Assessment logic
+                                                }
+                                            }}
+                                            className="vn-input !pl-14 pr-10"
                                         />
                                         <button
                                             onClick={() => setShowICD10Modal(true)}
@@ -3277,7 +3307,7 @@ const VisitNote = () => {
                                     </div>
 
                                     {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
-                                        <div className="absolute z-[60] mt-2 w-full border border-slate-100 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl max-h-80 overflow-y-auto py-2">
+                                        <div className="absolute z-[100] mt-2 w-full border border-slate-200 rounded-2xl bg-white shadow-2xl max-h-80 overflow-y-auto py-2">
                                             {icd10Results.map((code) => (
                                                 <button
                                                     key={code.id || code.code}
@@ -3340,7 +3370,13 @@ const VisitNote = () => {
                         </VisitNoteSection>
 
                         {/* Plan */}
-                        <VisitNoteSection title="Plan" defaultOpen={true} isEdited={editedSections.has('plan')} id="plan">
+                        <VisitNoteSection
+                            title="Plan"
+                            defaultOpen={true}
+                            isEdited={editedSections.has('plan')}
+                            id="plan"
+                            className="z-10 relative"
+                        >
                             <div className="relative">
                                 {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
                                     <div className="space-y-5">
@@ -3715,7 +3751,7 @@ const VisitNote = () => {
                     {/* Right: Quick Actions Sidebar */}
                     {
                         showQuickActions && !isSigned && (
-                            <div className="w-72 flex-shrink-0 sticky top-4 h-fit">
+                            <div className="w-72 flex-shrink-0 sticky top-4 h-fit z-10">
                                 <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                                     {/* Sidebar Header */}
                                     <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -4111,7 +4147,7 @@ const VisitNote = () => {
                                 {/* Header */}
                                 <div className="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-600 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <RotateCcw className="w-5 h-5 text-white" />
+                                        <History className="w-5 h-5 text-white" />
                                         <h2 className="text-lg font-bold text-white">Pull from Previous Visit</h2>
                                         <span className="text-[11px] font-bold uppercase text-slate-300 bg-slate-500 px-2 py-0.5 rounded">
                                             {carryForwardField?.toUpperCase()}

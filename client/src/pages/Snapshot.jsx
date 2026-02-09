@@ -670,7 +670,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
         // Parse BP and HR using the same logic as the trend chart
         const bpRaw = String(latest.fullBp || latest.bp || '');
-        const bpClean = bpRaw.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/').replace(/&slash;/g, '/').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        const bpClean = decodeHtmlEntities(bpRaw);
         const sys = parseInt(bpClean.split('/')[0]);
         const dia = parseInt(bpClean.split('/')[1]);
         const hr = parseInt(latest.hr);
@@ -1967,7 +1967,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             .map((v, idx) => {
                                                                 // Decode HTML entities like &#x2F; (slash) 
                                                                 const bpRaw = String(v.fullBp || v.bp || '');
-                                                                const bpClean = bpRaw.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/').replace(/&slash;/g, '/').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                                                                const bpClean = decodeHtmlEntities(bpRaw);
 
                                                                 const sys = parseInt(bpClean.split('/')[0]) || null;
                                                                 const dia = parseInt(bpClean.split('/')[1]) || null;

@@ -329,11 +329,7 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 if (v && typeof v === 'object') {
                     const decodedVitals = {};
                     Object.keys(v).forEach(key => {
-                        let value = v[key];
-                        if (typeof value === 'string') {
-                            value = value.replace(/&#x2F;/g, '/').replace(/&#47;/g, '/').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-                        }
-                        decodedVitals[key] = value;
+                        decodedVitals[key] = decodeHtmlEntities(v[key]);
                     });
                     setVitals(decodedVitals);
                 }
@@ -649,10 +645,10 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                 <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</div>
                                 <div className="grid grid-cols-2 gap-3">
                                     {[
-                                        { l: 'BP', v: vitals?.bp },
-                                        { l: 'Pulse', v: vitals?.pulse },
-                                        { l: 'Temp', v: vitals?.temp },
-                                        { l: 'O2', v: vitals?.o2sat }
+                                        { l: 'BP', v: decodeHtmlEntities(vitals?.bp) },
+                                        { l: 'Pulse', v: decodeHtmlEntities(vitals?.pulse) },
+                                        { l: 'Temp', v: decodeHtmlEntities(vitals?.temp) },
+                                        { l: 'O2', v: decodeHtmlEntities(vitals?.o2sat) }
                                     ].map((v, i) => (
                                         <div key={i} className="p-2 bg-slate-50 border border-slate-100 rounded text-center">
                                             <div className="text-[10px] font-bold text-slate-400 uppercase">{v.l}</div>
@@ -1044,11 +1040,11 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                                         <span className="section-label text-blue-400 text-[10px] mb-2">Physical Observations (Vitals)</span>
                                         <div className="grid grid-cols-5 gap-4 mt-2">
                                             {[
-                                                { label: 'B/P', value: vitals?.bp, unit: 'mmHg' },
-                                                { label: 'Pulse', value: vitals?.pulse, unit: 'bpm' },
-                                                { label: 'Temp', value: vitals?.temp, unit: '°F' },
-                                                { label: 'O2 Sat', value: vitals?.o2sat, unit: '%' },
-                                                { label: 'BMI', value: vitals?.bmi, unit: '' }
+                                                { label: 'B/P', value: decodeHtmlEntities(vitals?.bp), unit: 'mmHg' },
+                                                { label: 'Pulse', value: decodeHtmlEntities(vitals?.pulse), unit: 'bpm' },
+                                                { label: 'Temp', value: decodeHtmlEntities(vitals?.temp), unit: '°F' },
+                                                { label: 'O2 Sat', value: decodeHtmlEntities(vitals?.o2sat), unit: '%' },
+                                                { label: 'BMI', value: decodeHtmlEntities(vitals?.bmi), unit: '' }
                                             ].map((v, i) => (
                                                 <div key={i} className="bg-blue-50/30 border border-blue-50 rounded px-3 py-2 text-center">
                                                     <div className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">{v.label}</div>

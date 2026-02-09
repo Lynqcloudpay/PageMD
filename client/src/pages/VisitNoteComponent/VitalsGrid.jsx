@@ -1,19 +1,19 @@
 import React from 'react';
 import { Activity, Thermometer, Wind, Droplets, Scale, MoveVertical } from 'lucide-react';
 
-const VitalInput = ({ label, value, unit, icon: Icon, onChange, colorClass, isAbnormal, disabled, refProp }) => (
-    <div className={`p-4 rounded-2xl border transition-all ${isAbnormal
+const VitalInput = ({ label, value, unit, icon: Icon, onChange, onKeyDown, isAbnormal, disabled, refProp, placeholder = "--" }) => (
+    <div className={`p-3 rounded-xl border transition-all ${isAbnormal
         ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
-        : 'bg-white border-slate-100 hover:border-blue-100'
+        : 'bg-white border-slate-100 hover:border-blue-100/50'
         }`}>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${isAbnormal ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-                    <Icon className="w-3.5 h-3.5" />
+                <div className={`p-1 rounded-md ${isAbnormal ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
+                    <Icon className="w-3 h-3" />
                 </div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
             </div>
-            {unit && <span className="text-[10px] font-bold text-slate-300">{unit}</span>}
+            {unit && <span className="text-[9px] font-bold text-slate-300">{unit}</span>}
         </div>
         <div className="flex items-baseline gap-1">
             <input
@@ -22,10 +22,11 @@ const VitalInput = ({ label, value, unit, icon: Icon, onChange, colorClass, isAb
                 step="0.1"
                 value={value || ''}
                 onChange={onChange}
+                onKeyDown={onKeyDown}
                 disabled={disabled}
-                className={`w-full bg-transparent border-none p-0 text-xl font-bold focus:ring-0 ${isAbnormal ? 'text-red-700' : 'text-slate-800'
-                    } disabled:opacity-70`}
-                placeholder="--"
+                className={`w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 ${isAbnormal ? 'text-red-600' : 'text-slate-700'
+                    } disabled:opacity-50`}
+                placeholder={placeholder}
             />
         </div>
     </div>
@@ -47,19 +48,27 @@ const VitalsGrid = ({
     weightRef,
     heightRef
 }) => {
+    const handleEnter = (e, nextRef) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            nextRef?.current?.focus();
+        }
+    };
+
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className={`p-4 rounded-2xl border transition-all col-span-1 ${isAbnormalVital('systolic', vitals.systolic) || isAbnormalVital('diastolic', vitals.diastolic)
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className={`p-3 rounded-xl border transition-all col-span-1 ${isAbnormalVital('systolic', vitals.systolic) || isAbnormalVital('diastolic', vitals.diastolic)
                 ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
-                : 'bg-white border-slate-100 hover:border-blue-100'
+                : 'bg-white border-slate-100 hover:border-blue-100/50'
                 }`}>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                        <div className={`p-1.5 rounded-lg ${isAbnormalVital('systolic', vitals.systolic) ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-                            <Activity className="w-3.5 h-3.5" />
+                        <div className={`p-1 rounded-md ${isAbnormalVital('systolic', vitals.systolic) ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
+                            <Activity className="w-3 h-3" />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Blood Pressure</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">BP</span>
                     </div>
+                    <span className="text-[9px] font-bold text-slate-300">mmHg</span>
                 </div>
                 <div className="flex items-center gap-1">
                     <input
@@ -70,12 +79,13 @@ const VitalsGrid = ({
                             const sys = e.target.value;
                             setVitals({ ...vitals, systolic: sys, bp: sys && vitals.diastolic ? `${sys}/${vitals.diastolic}` : '' });
                         }}
+                        onKeyDown={(e) => handleEnter(e, diastolicRef)}
                         disabled={isLocked}
-                        className={`w-14 bg-transparent border-none p-0 text-xl font-bold focus:ring-0 text-right ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-700' : 'text-slate-800'
+                        className={`w-14 bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-right ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600' : 'text-slate-700'
                             }`}
                         placeholder="--"
                     />
-                    <span className="text-slate-300 font-light text-xl">/</span>
+                    <span className="text-slate-300 font-light text-base">/</span>
                     <input
                         ref={diastolicRef}
                         type="number"
@@ -84,8 +94,9 @@ const VitalsGrid = ({
                             const dia = e.target.value;
                             setVitals({ ...vitals, diastolic: dia, bp: vitals.systolic && dia ? `${vitals.systolic}/${dia}` : '' });
                         }}
+                        onKeyDown={(e) => handleEnter(e, pulseRef)}
                         disabled={isLocked}
-                        className={`w-14 bg-transparent border-none p-0 text-xl font-bold focus:ring-0 ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-700' : 'text-slate-800'
+                        className={`w-14 bg-transparent border-none p-0 text-base font-bold focus:ring-0 ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600' : 'text-slate-700'
                             }`}
                         placeholder="--"
                     />
@@ -95,6 +106,7 @@ const VitalsGrid = ({
             <VitalInput
                 label="Heart Rate" value={vitals.pulse} unit="BPM" icon={Activity}
                 onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
+                onKeyDown={(e) => handleEnter(e, o2satRef)}
                 isAbnormal={isAbnormalVital('pulse', vitals.pulse)}
                 disabled={isLocked} refProp={pulseRef}
             />
@@ -102,24 +114,26 @@ const VitalsGrid = ({
             <VitalInput
                 label="O2 Sat" value={vitals.o2sat} unit="%" icon={Droplets}
                 onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
+                onKeyDown={(e) => handleEnter(e, tempRef)}
                 isAbnormal={isAbnormalVital('o2sat', vitals.o2sat)}
                 disabled={isLocked} refProp={o2satRef}
             />
 
             <VitalInput
-                label="Temperature" value={vitals.temp} unit="°F" icon={Thermometer}
+                label="Temp" value={vitals.temp} unit="°F" icon={Thermometer}
                 onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
+                onKeyDown={(e) => handleEnter(e, weightRef)}
                 isAbnormal={isAbnormalVital('temp', vitals.temp)}
                 disabled={isLocked} refProp={tempRef}
             />
 
-            <div className="p-4 rounded-2xl bg-white border border-slate-100 hover:border-blue-100 transition-all col-span-1 md:col-span-2 lg:col-span-1">
-                <div className="flex items-center justify-between mb-2">
+            <div className="p-3 rounded-xl bg-white border border-slate-100 hover:border-blue-100/50 transition-all">
+                <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-slate-100 text-slate-500">
-                            <Scale className="w-3.5 h-3.5" />
+                        <div className="p-1 rounded-md bg-slate-50 text-slate-400">
+                            <Scale className="w-3 h-3" />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Weight</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Weight</span>
                     </div>
                 </div>
                 <div className="flex items-baseline gap-2">
@@ -133,28 +147,41 @@ const VitalsGrid = ({
                             const bmi = calculateBMI(w, vitals.weightUnit, vitals.height, vitals.heightUnit);
                             setVitals({ ...vitals, weight: w, bmi });
                         }}
+                        onKeyDown={(e) => handleEnter(e, heightRef)}
                         disabled={isLocked}
-                        className="w-full bg-transparent border-none p-0 text-xl font-bold focus:ring-0 text-slate-800"
+                        className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-slate-700"
                         placeholder="--"
                     />
-                    <span className="text-[10px] font-bold text-slate-400">{vitals.weightUnit}</span>
+                    <span className="text-[9px] font-bold text-slate-300">{vitals.weightUnit}</span>
                 </div>
                 {previousWeight && (() => {
                     const change = getWeightChange();
                     if (!change) return null;
                     const isIncrease = parseFloat(change.lbs) > 0;
                     return (
-                        <div className={`mt-1 text-[9px] font-bold flex items-center gap-1 ${isIncrease ? 'text-red-500' : 'text-emerald-500'}`}>
-                            {isIncrease ? '↑' : '↓'} {Math.abs(change.lbs)} lbs since last visit
+                        <div className={`mt-0.5 text-[8px] font-bold flex items-center gap-0.5 ${isIncrease ? 'text-red-500' : 'text-emerald-500'}`}>
+                            {isIncrease ? '↑' : '↓'} {Math.abs(change.lbs)}
                         </div>
                     );
                 })()}
             </div>
 
             <VitalInput
-                label="BMI" value={vitals.bmi} icon={Activity}
+                label="Height" value={vitals.height} unit={vitals.heightUnit} icon={MoveVertical}
+                onChange={(e) => {
+                    const h = e.target.value;
+                    const bmi = calculateBMI(vitals.weight, vitals.weightUnit, h, vitals.heightUnit);
+                    setVitals({ ...vitals, height: h, bmi });
+                }}
+                onKeyDown={(e) => handleEnter(e, null)} // End of vitals grid
+                isAbnormal={false}
+                disabled={isLocked} refProp={heightRef}
+            />
+
+            <VitalInput
+                label="BMI" value={vitals.bmi} icon={Wind}
                 isAbnormal={isAbnormalVital('bmi', vitals.bmi)}
-                disabled={true} // BMI is calculated
+                disabled={true}
             />
         </div>
     );
