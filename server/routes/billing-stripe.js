@@ -26,6 +26,42 @@ router.get('/preview', authenticate, async (req, res) => {
 });
 
 /**
+ * POST /api/billing/stripe/portal
+ * Creates a Stripe Customer Portal session for viewing invoices and managing billing.
+ */
+router.post('/portal', authenticate, async (req, res) => {
+    try {
+        const clinicId = req.user.clinicId || req.clinic?.id;
+        if (!clinicId) {
+            return res.status(400).json({ error: 'Clinic context missing' });
+        }
+
+        // Get the clinic's Stripe customer ID
+        const { rows } = await pool.controlPool.query(
+            'SELECT stripe_customer_id FROM clinics WHERE id = $1',
+            [clinicId]
+        );
+
+        const customerId = rows[0]?.stripe_customer_id;
+        if (!customerId) {
+            return res.status(400).json({ error: 'No billing account found. Please set up a subscription first.' });
+        }
+
+        // Create a portal session
+        const returnUrl = `${process.env.FRONTEND_URL || process.env.APP_BASE_URL}/settings/billing`;
+        const portalSession = await stripe.billingPortal.sessions.create({
+            customer: customerId,
+            return_url: returnUrl,
+        });
+
+        res.json({ url: portalSession.url });
+    } catch (error) {
+        console.error('[Stripe] Portal session failed:', error);
+        res.status(500).json({ error: 'Failed to open billing portal' });
+    }
+});
+
+/**
  * POST /api/billing/stripe/create-checkout-session
  * Initial subscription setup. Users are redirected here from the Billing page.
  * The price is calculated dynamically based on seat counts.

@@ -288,6 +288,7 @@ export const billingAPI = {
     getStatus: () => api.get('/billing/stripe/status'),
     getPreview: () => api.get('/billing/stripe/preview'),
     createCheckoutSession: () => api.post('/billing/stripe/create-checkout-session'),
+    openPortal: () => api.post('/billing/stripe/portal'),
     sync: () => api.post('/billing/stripe/sync'),
   }
 };

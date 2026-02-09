@@ -17,7 +17,8 @@ import {
   Settings, Building2, Users, Shield, Stethoscope, Mail,
   ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2, Check,
   DollarSign, Database, Activity, Lock, Globe, Clock, Bell,
-  Eye, EyeOff, Server, Zap, Upload, ShieldCheck, Gift, ChevronRight, RefreshCw
+  Eye, EyeOff, Server, Zap, Upload, ShieldCheck, Gift, ChevronRight, RefreshCw,
+  CreditCard, FileText
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -1415,7 +1416,7 @@ const BillingSettingsTab = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button
           onClick={handleUpgrade}
           disabled={redirecting}
@@ -1434,6 +1435,36 @@ const BillingSettingsTab = () => {
             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           )}
         </button>
+
+        {billingInfo?.stripe_subscription_id && (
+          <button
+            onClick={async () => {
+              try {
+                setRedirecting(true);
+                const response = await billingAPI.stripe.openPortal();
+                if (response.data.url) {
+                  window.location.href = response.data.url;
+                }
+              } catch (error) {
+                console.error('Error opening portal:', error);
+                alert('Failed to open billing portal. Please try again.');
+              } finally {
+                setRedirecting(false);
+              }
+            }}
+            disabled={redirecting}
+            className="p-6 bg-white border border-slate-100 text-slate-900 rounded-[2rem] shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50/30 disabled:opacity-50 flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-4">
+              <FileText className="w-6 h-6 text-indigo-500" />
+              <div className="text-left">
+                <div className="text-sm font-bold">View Invoices</div>
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider">Payment History</div>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 group-hover:text-indigo-500 transition-all" />
+          </button>
+        )}
 
         {billingInfo?.current_period_end && (
           <div className="p-6 bg-white border border-slate-100 rounded-[2rem] flex items-center justify-between">
