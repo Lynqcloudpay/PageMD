@@ -1519,7 +1519,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
                     <p className="text-gray-600">Loading patient chart...</p>
@@ -1531,7 +1531,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const age = patient ? calculateAge(patient.dob) : null;
 
     return (
-        <div className="min-h-screen bg-neutral-50">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
             <div className="w-full px-4">
                 <PatientHeader
                     patient={patient}
@@ -1561,7 +1561,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 />
 
                 {/* Quick Navigation Bar - Neutralized */}
-                <div className="px-6 py-2 bg-white border-b border-gray-200 mb-6 shadow-sm sticky top-0 z-[5]">
+                <div className="px-6 py-2.5 bg-white/70 backdrop-blur-md border-b border-white/50 mb-6 shadow-lg shadow-slate-200/20 sticky top-0 z-[5] rounded-b-2xl mx-2">
                     <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-hide">
                             <button
@@ -1630,7 +1630,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-md transition-all hover:bg-slate-50 hover:shadow-sm whitespace-nowrap"
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-slate-600 bg-white/60 backdrop-blur-sm border border-slate-100 rounded-xl transition-all hover:bg-white/80 hover:shadow-md whitespace-nowrap"
                                 title="Print Orders"
                             >
                                 <Printer className="w-3.5 h-3.5" />
@@ -1638,7 +1638,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </button>
                             <button
                                 onClick={() => setShowChartReview(true)}
-                                className="flex items-center gap-1 px-2.5 py-1 bg-white text-indigo-600 hover:bg-indigo-50 text-[11px] font-bold rounded-full border border-indigo-200 transition-all"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50/80 backdrop-blur-sm text-indigo-600 hover:bg-indigo-100/80 text-[11px] font-medium rounded-xl border border-indigo-100 transition-all"
                                 title="Chart Review"
                             >
                                 <Eye className="w-3.5 h-3.5" />
@@ -1646,7 +1646,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </button>
                             <button
                                 onClick={() => setShowSpecialtyTracker(true)}
-                                className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 text-[11px] font-bold rounded-full transition-all shadow-sm"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-rose-400 to-pink-400 text-white hover:from-rose-500 hover:to-pink-500 text-[11px] font-medium rounded-xl transition-all shadow-md shadow-rose-500/20"
                                 title="Specialty Tracker - At-a-glance trends"
                             >
                                 <Activity className="w-3.5 h-3.5" />
@@ -1657,7 +1657,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="relative group/visit">
                                 <button
                                     onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
-                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-slate-800 rounded-md transition-all hover:bg-slate-900 hover:shadow-md"
+                                    className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl transition-all hover:from-primary-600 hover:to-primary-700 hover:shadow-lg hover:scale-[1.02] shadow-md shadow-primary-500/20"
                                 >
                                     {todayDraftVisit ? (
                                         <>
@@ -1715,11 +1715,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 {/* Left Column: Compact Reference Cards + Visit History */}
                                 <div className="lg:col-span-1 space-y-4">
                                     {/* Sticky Note / Quick Reminder */}
-                                    <div className="bg-yellow-50/50 rounded-lg border-2 border-dashed border-yellow-200 p-4 relative group/sticky hover:shadow-md transition-all h-[120px] flex flex-col">
+                                    <div className="bg-amber-50/40 backdrop-blur-sm rounded-2xl border border-amber-100/50 p-4 relative group/sticky hover:shadow-lg hover:shadow-amber-100/30 transition-all h-[120px] flex flex-col">
                                         <div className="flex items-center justify-between mb-2 shrink-0">
                                             <div className="flex items-center gap-2">
                                                 <Pin className="w-3.5 h-3.5 text-yellow-600 -rotate-12" />
-                                                <h3 className="text-[11px] font-black text-yellow-800 uppercase tracking-widest">Sticky Note</h3>
+                                                <h3 className="text-[11px] font-semibold text-amber-700 tracking-wide">Sticky Note</h3>
                                             </div>
                                             {!isEditingSticky ? (
                                                 <button onClick={() => setIsEditingSticky(true)} className="opacity-0 group-hover/sticky:opacity-100 p-1 hover:bg-yellow-100 rounded transition-all">
@@ -1727,22 +1727,22 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 </button>
                                             ) : (
                                                 <div className="flex items-center gap-2">
-                                                    <button onClick={handleSaveSticky} className="text-[8px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">SAVE</button>
-                                                    <button onClick={() => setIsEditingSticky(false)} className="text-[8px] font-bold text-slate-400">CANCEL</button>
+                                                    <button onClick={handleSaveSticky} className="text-[9px] font-medium text-emerald-600 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-100">Save</button>
+                                                    <button onClick={() => setIsEditingSticky(false)} className="text-[9px] font-medium text-slate-400">Cancel</button>
                                                 </div>
                                             )}
                                         </div>
                                         <div className="flex-1 overflow-y-auto scrollbar-hide">
                                             {isEditingSticky ? (
                                                 <textarea
-                                                    className="w-full h-full bg-white/50 border border-yellow-200 rounded p-2 text-[11px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-300 resize-none"
+                                                    className="w-full h-full bg-white/60 backdrop-blur-sm border border-amber-100 rounded-xl p-2 text-[11px] font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-200 resize-none"
                                                     value={stickyNoteText}
                                                     onChange={(e) => setStickyNoteText(e.target.value)}
                                                     placeholder="Write a clinical reminder here..."
                                                     autoFocus
                                                 />
                                             ) : (
-                                                <p className="text-[11px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap">
+                                                <p className="text-[11px] font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
                                                     {stickyNoteText || "No active reminders for this patient. Click edit to add one."}
                                                 </p>
                                             )}
@@ -1750,15 +1750,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Visit History Section */}
-                                    <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+                                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50">
                                         <div
-                                            className="px-3 py-2.5 border-b border-slate-100 flex items-center justify-between bg-white cursor-pointer hover:bg-slate-50 transition-colors group/header"
+                                            className="px-3 py-2.5 border-b border-slate-100/50 flex items-center justify-between bg-white/50 cursor-pointer hover:bg-white/70 transition-colors group/header rounded-t-2xl"
                                             onClick={() => setShowVisitFoldersModal(true)}
                                             title={`View all ${filteredNotes.length} medical encounters`}
                                         >
                                             <div className="flex items-center space-x-2">
                                                 <FileText className="w-3.5 h-3.5 text-slate-400 group-hover/header:text-slate-600" />
-                                                <h3 className="font-bold text-[11px] text-slate-800 uppercase tracking-wide">Visit History</h3>
+                                                <h3 className="font-medium text-[11px] text-slate-600 tracking-wide">Visit History</h3>
                                                 {filteredNotes.length > 0 && (
                                                     <span className="text-[10px] text-slate-400 font-medium ml-1">({filteredNotes.length})</span>
                                                 )}
@@ -1783,15 +1783,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 }`} />
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-bold text-slate-800">{note.type}</span>
+                                                                    <span className="text-[10px] font-medium text-slate-700">{note.type}</span>
                                                                     {note.preliminary ? (
-                                                                        <span className="text-[8px] font-bold text-white bg-amber-500 px-1.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Preliminary</span>
+                                                                        <span className="text-[8px] font-medium text-white bg-amber-400 px-1.5 py-0.5 rounded-lg shadow-sm">Preliminary</span>
                                                                     ) : note.signed ? (
-                                                                        <span className="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wider">Signed</span>
+                                                                        <span className="text-[8px] font-medium text-emerald-600 bg-emerald-50/80 px-1.5 py-0.5 rounded-lg border border-emerald-100">Signed</span>
                                                                     ) : note.retracted ? (
-                                                                        <span className="text-[8px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-100 uppercase tracking-wider">Retracted</span>
+                                                                        <span className="text-[8px] font-medium text-red-500 bg-red-50/80 px-1.5 py-0.5 rounded-lg border border-red-100">Retracted</span>
                                                                     ) : (
-                                                                        <span className="text-[8px] font-bold text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-full border border-slate-200 uppercase tracking-wider">Draft</span>
+                                                                        <span className="text-[8px] font-medium text-slate-500 bg-slate-50/80 px-1.5 py-0.5 rounded-lg border border-slate-100">Draft</span>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
@@ -1821,8 +1821,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Health Maintenance Section - Specialized */}
-                                    <div className="bg-slate-50/50 rounded-2xl shadow-sm border border-slate-200 overflow-hidden group/hm hover:border-blue-200 transition-all duration-300">
-                                        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-white">
+                                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 overflow-hidden group/hm hover:border-blue-200/50 transition-all duration-300">
+                                        <div className="px-4 py-3 border-b border-slate-100/50 flex items-center justify-between bg-white/50">
                                             <div className="flex items-center gap-2">
                                                 <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                     <ShieldCheck className="w-3.5 h-3.5" />
@@ -1830,7 +1830,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 <select
                                                     value={hmSpecialtyFilter}
                                                     onChange={(e) => setHmSpecialtyFilter(e.target.value)}
-                                                    className="bg-transparent text-[11px] font-bold text-slate-800 uppercase tracking-widest outline-none cursor-pointer hover:text-blue-600 transition-colors"
+                                                    className="bg-transparent text-[11px] font-medium text-slate-600 tracking-wide outline-none cursor-pointer hover:text-blue-600 transition-colors"
                                                 >
                                                     {Object.keys(HM_PRESETS).map(spec => (
                                                         <option key={spec} value={spec}>{spec} Optimization</option>
@@ -1846,7 +1846,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 combinedOptimizationItems.map(item => (
                                                     <div key={item.id} className="flex items-center justify-between group/item cursor-pointer" onClick={() => !item.is_automated && !item.is_metric && handleEditHM(item)}>
                                                         <div className="flex flex-col min-w-0">
-                                                            <span className={`text-[10px] font-bold truncate ${item.is_automated || item.is_metric ? 'text-slate-400 italic' : 'text-slate-700'}`}>
+                                                            <span className={`text-[10px] font-medium truncate ${item.is_automated || item.is_metric ? 'text-slate-400 italic' : 'text-slate-600'}`}>
                                                                 {item.item_name}
                                                             </span>
                                                             <span className="text-[9px] text-slate-400 font-medium">
@@ -1854,7 +1854,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded border ${item.is_automated ? 'text-indigo-400 border-indigo-100 bg-indigo-50/30' :
+                                                            <span className={`text-[8px] font-medium tracking-tight px-1.5 py-0.5 rounded-lg border ${item.is_automated ? 'text-indigo-400 border-indigo-100 bg-indigo-50/30' :
                                                                 item.is_metric ? 'text-slate-300 border-slate-100 bg-slate-50' :
                                                                     item.status === 'Overdue' ? 'text-rose-500 bg-rose-50 border-rose-100 animate-pulse' :
                                                                         item.status === 'Completed' ? 'text-emerald-500 bg-emerald-50 border-emerald-100' :
@@ -1867,7 +1867,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 ))
                                             ) : (
                                                 <div className="text-center py-4 bg-white/50 rounded-xl border border-dashed border-slate-200">
-                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider italic">No specialty tracking set</p>
+                                                    <p className="text-[10px] text-slate-400 font-medium italic">No specialty tracking set</p>
                                                 </div>
                                             )}
 
@@ -1877,7 +1877,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         setPatientChartTab('reports');
                                                         setShowPatientChart(true);
                                                     }}
-                                                    className="w-full py-2 bg-white border border-slate-200 text-[10px] font-bold text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:shadow-sm transition-all rounded-xl flex items-center justify-center gap-2 group/btn"
+                                                    className="w-full py-2 bg-white/70 backdrop-blur-sm border border-slate-100 text-[10px] font-medium text-slate-500 hover:text-blue-600 hover:border-blue-200/50 hover:shadow-md transition-all rounded-xl flex items-center justify-center gap-2 group/btn"
                                                 >
                                                     Clinical Quality Measures <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                                                 </button>
@@ -1927,7 +1927,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     )}
 
                                     {/* Vitals Trend Wave - Enhanced Clinical Visualization */}
-                                    <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 mb-6 relative overflow-hidden group/wave isolate">
+                                    <div className="bg-white/70 backdrop-blur-sm p-6 rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/30 mb-6 relative overflow-hidden group/wave isolate">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/20 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/30 transition-colors duration-1000" />
 
                                         <div className="flex justify-between items-center mb-6 relative">
@@ -1936,9 +1936,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <Waves className="w-5 h-5 opacity-90" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-0.5 text-left">Clinical Trend Wave</h3>
+                                                    <h3 className="text-[10px] font-medium text-slate-400 tracking-wider mb-0.5 text-left">Clinical Trend Wave</h3>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-bold text-slate-800">Cardiovascular Performance</span>
+                                                        <span className="text-sm font-medium text-slate-700">Cardiovascular Performance</span>
                                                         <span className={`px-2 py-0.5 bg-${vitalStatus.color}-50 text-${vitalStatus.color}-600 text-[9px] font-bold uppercase rounded-lg border border-${vitalStatus.color}-100`}>
                                                             {vitalStatus.label}
                                                         </span>
@@ -1948,11 +1948,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex gap-6 bg-slate-50/50 backdrop-blur-md p-2 px-4 rounded-xl border border-slate-100">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
-                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Sys. BP</span>
+                                                    <span className="text-[9px] font-medium text-slate-500 tracking-wide">Sys. BP</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
-                                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Heart Rate</span>
+                                                    <span className="text-[9px] font-medium text-slate-500 tracking-wide">Heart Rate</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -2093,13 +2093,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Detailed Boards Grid - Custom Proportions for Clinical Depth */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-4">
                                         {/* Column 1: Problems - Geometric Match */}
-                                        <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-rose-200 transition-colors h-[416px]">
-                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                        <div className="flex flex-col bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 overflow-hidden hover:border-rose-200/50 transition-colors h-[416px]">
+                                            <div className="px-4 py-3 border-b border-slate-100/50 flex items-center justify-between bg-white/50">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
                                                         <Activity className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Problem List</h3>
+                                                    <h3 className="font-medium text-[11px] text-slate-600 tracking-wide">Problem List</h3>
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                             </div>
@@ -2110,7 +2110,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <div key={prob.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group" title={prob.name}>
                                                                 <div className="flex items-center gap-3 min-w-0">
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-                                                                    <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-rose-700 leading-tight">{prob.name}</span>
+                                                                    <span className="text-[10px] font-medium text-slate-700 truncate group-hover:text-rose-600 leading-tight">{prob.name}</span>
                                                                 </div>
                                                             </div>
                                                         ))}
@@ -2118,20 +2118,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 ) : (
                                                     <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                                                         <Activity className="w-6 h-6 text-slate-200 mb-2" />
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No active problems</p>
+                                                        <p className="text-[10px] text-slate-400 font-medium text-center">No active problems</p>
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
 
                                         {/* Column 2: Medications - Now Compact lg:col-span-1 */}
-                                        <div className="flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-blue-200 transition-colors h-[416px]">
-                                            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                        <div className="flex flex-col bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 overflow-hidden hover:border-blue-200/50 transition-colors h-[416px]">
+                                            <div className="px-4 py-3 border-b border-slate-100/50 flex items-center justify-between bg-white/50">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                         <Pill className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-semibold text-[11px] text-slate-800 uppercase tracking-widest">Medications</h3>
+                                                    <h3 className="font-medium text-[11px] text-slate-600 tracking-wide">Medications</h3>
                                                 </div>
                                                 <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                             </div>
@@ -2142,7 +2142,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <div key={med.id} className="flex flex-col px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group" title={decodeHtmlEntities(med.medication_name)}>
                                                                 <div className="flex items-center gap-2 min-w-0">
                                                                     <div className="w-1 h-1 rounded-full bg-emerald-400 flex-shrink-0" />
-                                                                    <span className="text-[10px] font-bold text-slate-800 truncate group-hover:text-blue-700 leading-tight">
+                                                                    <span className="text-[10px] font-medium text-slate-700 truncate group-hover:text-blue-600 leading-tight">
                                                                         {decodeHtmlEntities(med.medication_name)}
                                                                     </span>
                                                                 </div>
@@ -2157,7 +2157,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 ) : (
                                                     <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
                                                         <Pill className="w-6 h-6 text-slate-200 mb-2" />
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest text-center">No active medications</p>
+                                                        <p className="text-[10px] text-slate-400 font-medium text-center">No active medications</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -2166,13 +2166,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         {/* Middle Stack: Allergies & Surgical */}
                                         <div className="flex flex-col gap-4 h-[416px]">
                                             {/* Allergies - Increased Height */}
-                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-amber-200 transition-colors">
-                                                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-amber-200/50 transition-colors">
+                                                <div className="px-4 py-2.5 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-amber-50 text-amber-500 rounded-md">
                                                             <AlertCircle className="w-3 h-3" />
                                                         </div>
-                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Allergies</h3>
+                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Allergies</h3>
                                                     </div>
                                                     <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
@@ -2183,28 +2183,28 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 <div key={allergy.id} className="flex items-center justify-between px-2 py-1 rounded bg-rose-50/20 border border-rose-100/10" title={`${allergy.allergen} (${allergy.severity || 'Reaction'})`}>
                                                                     <div className="flex items-center gap-2 min-w-0">
                                                                         <div className="w-1 h-1 rounded-full bg-rose-500 shrink-0" />
-                                                                        <span className="text-[10px] font-bold text-rose-800 truncate">{allergy.allergen}</span>
+                                                                        <span className="text-[10px] font-medium text-rose-700 truncate">{allergy.allergen}</span>
                                                                     </div>
-                                                                    <span className="text-[8px] font-bold text-rose-400 uppercase tracking-widest shrink-0 ml-2">{allergy.severity || 'Reaction'}</span>
+                                                                    <span className="text-[8px] font-medium text-rose-400 tracking-wide shrink-0 ml-2">{allergy.severity || 'Reaction'}</span>
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     ) : (
                                                         <div className="h-full flex items-center justify-center">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1 rounded-full border border-slate-100">NKDA</span>
+                                                            <span className="text-[10px] font-medium text-slate-500 bg-slate-50/80 px-3 py-1 rounded-xl border border-slate-100">NKDA</span>
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
 
                                             {/* Surgical History - Compact but with more space */}
-                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-purple-200 transition-colors">
-                                                <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-violet-200/50 transition-colors">
+                                                <div className="px-4 py-2 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="p-1 bg-purple-50 text-purple-500 rounded-md">
+                                                        <div className="p-1 bg-violet-50 text-violet-500 rounded-md">
                                                             <Scissors className="w-3 h-3" />
                                                         </div>
-                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Surgical History</h3>
+                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Surgical History</h3>
                                                     </div>
                                                     <button onClick={() => { setPatientChartTab('surgical'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
@@ -2214,8 +2214,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             {surgicalHistory.map(surg => (
                                                                 <div key={surg.id} className="text-[10px] p-2 rounded-lg bg-slate-50/30 border border-slate-100/50" title={surg.procedure_name}>
                                                                     <div className="flex justify-between items-start">
-                                                                        <span className="font-bold text-slate-800 leading-tight truncate">{surg.procedure_name}</span>
-                                                                        <span className="text-[8px] font-black text-slate-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
+                                                                        <span className="font-medium text-slate-700 leading-tight truncate">{surg.procedure_name}</span>
+                                                                        <span className="text-[8px] font-medium text-slate-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
                                                                     </div>
                                                                     {surg.notes && <p className="text-[9px] text-slate-500 italic mt-0.5 line-clamp-1 truncate" title={surg.notes}>{surg.notes}</p>}
                                                                 </div>
@@ -2233,13 +2233,13 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         {/* Column 4: Social & Family Stack */}
                                         <div className="flex flex-col gap-4 h-[416px]">
                                             {/* Family History - Top */}
-                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-emerald-200 transition-colors">
-                                                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-emerald-200/50 transition-colors">
+                                                <div className="px-4 py-2.5 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-emerald-50 text-emerald-500 rounded-md">
                                                             <ShieldPlus className="w-3 h-3" />
                                                         </div>
-                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Family History</h3>
+                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Family History</h3>
                                                     </div>
                                                     <button onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
@@ -2249,8 +2249,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             {familyHistory.map(fam => (
                                                                 <div key={fam.id} className="flex flex-col px-2 py-1.5 rounded-lg bg-emerald-50/20 border border-emerald-100/10" title={`${fam.condition} - Relationship: ${fam.relationship}`}>
                                                                     <div className="flex items-center justify-between">
-                                                                        <span className="text-[10px] font-bold text-slate-800 truncate">{fam.condition}</span>
-                                                                        <span className="text-[8px] font-bold text-emerald-600 uppercase bg-white px-1 rounded border border-emerald-100 shrink-0 ml-2">{fam.relationship}</span>
+                                                                        <span className="text-[10px] font-medium text-slate-700 truncate">{fam.condition}</span>
+                                                                        <span className="text-[8px] font-medium text-emerald-600 bg-white/80 px-1 rounded border border-emerald-100 shrink-0 ml-2">{fam.relationship}</span>
                                                                     </div>
                                                                 </div>
                                                             ))}
@@ -2264,33 +2264,33 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
 
                                             {/* Social History - Fixed Bottom to align with Surgical */}
-                                            <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:border-indigo-200 transition-colors">
-                                                <div className="px-4 py-2 border-b border-slate-100 flex items-center bg-slate-50/30 justify-between">
+                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-indigo-200/50 transition-colors">
+                                                <div className="px-4 py-2 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">
                                                             <Users className="w-3 h-3" />
                                                         </div>
-                                                        <h3 className="font-semibold text-[10px] text-slate-800 uppercase tracking-widest">Social History</h3>
+                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Social History</h3>
                                                     </div>
                                                     <button onClick={() => { setPatientChartTab('social'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
                                                 <div className="p-2.5 flex-1">
                                                     <div className="grid grid-cols-2 gap-2 mt-1">
                                                         <div className="p-2 rounded-xl bg-blue-50/40 border border-blue-100/30 text-center">
-                                                            <p className="text-[7px] font-bold text-blue-400 uppercase tracking-tighter mb-0.5">Smoking</p>
-                                                            <p className="text-[10px] font-bold text-slate-700 truncate" title={socialHistory?.smoking_status || '—'}>{socialHistory?.smoking_status === 'Never smoker' ? 'Never' : (socialHistory?.smoking_status || '—')}</p>
+                                                            <p className="text-[7px] font-medium text-blue-400 tracking-tight mb-0.5">Smoking</p>
+                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.smoking_status || '—'}>{socialHistory?.smoking_status === 'Never smoker' ? 'Never' : (socialHistory?.smoking_status || '—')}</p>
                                                         </div>
                                                         <div className="p-2 rounded-xl bg-purple-50/40 border border-purple-100/30 text-center">
-                                                            <p className="text-[7px] font-bold text-purple-400 uppercase tracking-tighter mb-0.5">Alcohol</p>
-                                                            <p className="text-[10px] font-bold text-slate-700 truncate" title={socialHistory?.alcohol_use || '—'}>{socialHistory?.alcohol_use || '—'}</p>
+                                                            <p className="text-[7px] font-medium text-violet-400 tracking-tight mb-0.5">Alcohol</p>
+                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.alcohol_use || '—'}>{socialHistory?.alcohol_use || '—'}</p>
                                                         </div>
                                                         <div className="p-2 rounded-xl bg-emerald-50/40 border border-emerald-100/30 text-center">
-                                                            <p className="text-[7px] font-bold text-emerald-400 uppercase tracking-tighter mb-0.5">Occupation</p>
-                                                            <p className="text-[10px] font-bold text-slate-700 truncate" title={socialHistory?.occupation || '—'}>{socialHistory?.occupation || '—'}</p>
+                                                            <p className="text-[7px] font-medium text-emerald-400 tracking-tight mb-0.5">Occupation</p>
+                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.occupation || '—'}>{socialHistory?.occupation || '—'}</p>
                                                         </div>
                                                         <div className="p-2 rounded-xl bg-amber-50/40 border border-amber-100/30 text-center">
-                                                            <p className="text-[7px] font-bold text-amber-400 uppercase tracking-tighter mb-0.5">Exercise</p>
-                                                            <p className="text-[10px] font-bold text-slate-700 truncate" title={socialHistory?.exercise_frequency || '—'}>{socialHistory?.exercise_frequency || '—'}</p>
+                                                            <p className="text-[7px] font-medium text-amber-400 tracking-tight mb-0.5">Exercise</p>
+                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.exercise_frequency || '—'}>{socialHistory?.exercise_frequency || '—'}</p>
                                                         </div>
                                                     </div>
                                                 </div>
