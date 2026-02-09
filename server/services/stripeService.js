@@ -2,10 +2,86 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const pool = require('../db');
 
 /**
+ * PRICING TIERS (Staircase Model)
+ * The effective rate decreases as the clinic grows.
+ * Ghost seats (from referrals) count toward the tier but are not billed.
+ */
+const PRICING_TIERS = {
+    SOLO_RATE: 399,       // First seat (1 MD)
+    PARTNER_RATE: 299,    // Seats 2-10
+    ENTERPRISE_RATE: 99,  // Seats 11+
+};
+
+/**
  * StripeService handles platform-level subscription management for clinics.
  * It manages the link between our 'clinics' table and Stripe's Billing engine.
  */
 class StripeService {
+    /**
+     * Calculates the monthly billing amount using the staircase model.
+     * The formula:
+     * 1. Calculate total seats = physical + ghost
+     * 2. Calculate cumulative staircase cost for ALL seats
+     * 3. Derive the effective rate = total cost / total seats
+     * 4. Final charge = effective rate × physical seats only
+     * 
+     * Example: 2 physical + 5 ghost = 7 total seats
+     * - Seat 1: $399
+     * - Seats 2-7: 6 × $299 = $1794
+     * - Total virtual cost: $2193
+     * - Effective rate: $2193 / 7 = $313.29
+     * - Final charge: 2 × $313.29 = $627 (rounded)
+     */
+    async calculateMonthlyTotal(clinicId) {
+        const counts = await this._getSeatCounts(clinicId);
+        const totalSeats = counts.physicalSeats + counts.ghostSeats;
+
+        if (totalSeats === 0) {
+            return {
+                physicalSeats: 0,
+                ghostSeats: 0,
+                totalSeats: 0,
+                virtualTotal: 0,
+                effectiveRate: 0,
+                monthlyTotal: 0,
+                tier: 'None'
+            };
+        }
+
+        // Calculate cumulative staircase cost for ALL virtual seats
+        let virtualTotal = 0;
+        for (let i = 1; i <= totalSeats; i++) {
+            if (i === 1) {
+                virtualTotal += PRICING_TIERS.SOLO_RATE;
+            } else if (i <= 10) {
+                virtualTotal += PRICING_TIERS.PARTNER_RATE;
+            } else {
+                virtualTotal += PRICING_TIERS.ENTERPRISE_RATE;
+            }
+        }
+
+        // Calculate effective rate (averaged across all seats)
+        const effectiveRate = virtualTotal / totalSeats;
+
+        // Final charge is effective rate × physical seats only
+        const monthlyTotal = Math.round(effectiveRate * counts.physicalSeats);
+
+        // Determine display tier name
+        let tier = 'Solo';
+        if (totalSeats >= 11) tier = 'Enterprise';
+        else if (totalSeats >= 2) tier = 'Partner';
+
+        return {
+            physicalSeats: counts.physicalSeats,
+            ghostSeats: counts.ghostSeats,
+            totalSeats,
+            virtualTotal,
+            effectiveRate: Math.round(effectiveRate * 100) / 100, // 2 decimal places
+            monthlyTotal,
+            tier
+        };
+    }
+
     /**
      * Ensures a clinic has a Stripe Customer ID.
      * Updates the control database if a new customer is created.
@@ -44,10 +120,14 @@ class StripeService {
 
     /**
      * Creates a Checkout Session for a clinic to subscribe to PageMD.
-     * Implements "Option A" (Hosted Checkout).
+     * Uses the single $1/unit price with quantity = calculated monthly total.
      */
-    async createCheckoutSession(clinicId, priceId, successUrl, cancelUrl) {
+    async createCheckoutSession(clinicId, successUrl, cancelUrl) {
         const customerId = await this.ensureCustomer(clinicId);
+        const billing = await this.calculateMonthlyTotal(clinicId);
+
+        // Ensure at least $1 for the initial subscription
+        const quantity = Math.max(billing.monthlyTotal, 1);
 
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
@@ -56,13 +136,16 @@ class StripeService {
             payment_method_collection: 'always',
             line_items: [
                 {
-                    price: priceId,
-                    quantity: 1, // Will be synced to actual seat count after subscription starts
+                    price: process.env.STRIPE_PRICE_ID,
+                    quantity: quantity,
                 }
             ],
             subscription_data: {
                 metadata: {
-                    clinic_id: clinicId
+                    clinic_id: clinicId,
+                    tier: billing.tier,
+                    physical_seats: billing.physicalSeats,
+                    ghost_seats: billing.ghostSeats,
                 }
             },
             success_url: successUrl,
@@ -73,8 +156,8 @@ class StripeService {
     }
 
     /**
-     * Syncs a clinic's actual seat count (Physical + Ghost) to Stripe.
-     * This ensures the "Staircase" billing model is reflected in the next invoice.
+     * Syncs a clinic's calculated monthly total to Stripe.
+     * This ensures billing is updated when users are added/removed or referrals change.
      */
     async syncSubscriptionQuantity(clinicId) {
         // 1. Get Clinic & Stripe Info
@@ -89,17 +172,28 @@ class StripeService {
             return;
         }
 
-        // 2. Calculate actual seat count (logic pulled from growth.js)
-        const counts = await this._getSeatCounts(clinicId);
-        const totalSeats = counts.physicalSeats; // We bill based on physical seats, ghost seats cover the cost
+        // 2. Calculate the new monthly total
+        const billing = await this.calculateMonthlyTotal(clinicId);
+        const quantity = Math.max(billing.monthlyTotal, 1);
 
-        // 3. Update Stripe Subscription
+        // 3. Update Stripe Subscription quantity
         const subscription = await stripe.subscriptions.retrieve(clinic.stripe_subscription_id);
         const subscriptionItemId = subscription.items.data[0].id;
 
-        console.log(`[Stripe] Syncing quantity for clinic ${clinicId}: ${totalSeats} seats`);
+        console.log(`[Stripe] Syncing quantity for clinic ${clinicId}: $${quantity} (${billing.physicalSeats} physical + ${billing.ghostSeats} ghost = ${billing.totalSeats} seats)`);
         await stripe.subscriptionItems.update(subscriptionItemId, {
-            quantity: totalSeats,
+            quantity: quantity,
+        });
+
+        // 4. Update metadata with current billing breakdown
+        await stripe.subscriptions.update(clinic.stripe_subscription_id, {
+            metadata: {
+                clinic_id: clinicId,
+                tier: billing.tier,
+                physical_seats: billing.physicalSeats,
+                ghost_seats: billing.ghostSeats,
+                effective_rate: billing.effectiveRate,
+            }
         });
     }
 
@@ -157,7 +251,7 @@ class StripeService {
         const clinicId = subscription.metadata.clinic_id;
         const status = subscription.status;
         const periodEnd = new Date(subscription.current_period_end * 1000);
-        const priceId = subscription.items.data[0].price.id;
+        const priceId = subscription.items.data[0]?.price?.id;
 
         console.log(`[Stripe] Updating subscription for clinic ${clinicId}: ${status}`);
         await pool.controlPool.query(`
@@ -187,11 +281,15 @@ class StripeService {
         const clinicId = result.rows[0]?.id;
 
         if (clinicId) {
-            await pool.controlPool.query(`
-                INSERT INTO platform_billing_events (clinic_id, stripe_event_id, event_type, amount_total, status)
-                VALUES ($1, $2, 'payment_succeeded', $3, 'completed')`,
-                [clinic_id, invoice.id, invoice.amount_paid]
-            );
+            try {
+                await pool.controlPool.query(`
+                    INSERT INTO platform_billing_events (clinic_id, stripe_event_id, event_type, amount_total, status)
+                    VALUES ($1, $2, 'payment_succeeded', $3, 'completed')`,
+                    [clinicId, invoice.id, invoice.amount_paid]
+                );
+            } catch (err) {
+                console.error(`[Stripe] Error recording payment: ${err.message}`);
+            }
         }
     }
 

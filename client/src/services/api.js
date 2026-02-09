@@ -283,10 +283,12 @@ export const billingAPI = {
   // Statistics
   getStatistics: (params) => api.get('/billing/statistics', { params }),
 
-  // Stripe Subscription Integration
+  // Stripe Subscription Integration (Dynamic Pricing)
   stripe: {
     getStatus: () => api.get('/billing/stripe/status'),
-    createCheckoutSession: (priceId) => api.post('/billing/stripe/create-checkout-session', { priceId }),
+    getPreview: () => api.get('/billing/stripe/preview'),
+    createCheckoutSession: () => api.post('/billing/stripe/create-checkout-session'),
+    sync: () => api.post('/billing/stripe/sync'),
   }
 };
 
