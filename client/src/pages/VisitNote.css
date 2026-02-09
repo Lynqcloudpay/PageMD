@@ -1,0 +1,226 @@
+/* VisitNote Redesign - Modern Soft UI Design System */
+
+:root {
+  --vn-bg-base: #F8FAFC;
+  --vn-bg-card: rgba(255, 255, 255, 0.85);
+  --vn-border-soft: rgba(226, 232, 240, 0.8);
+  --vn-text-main: #334155;
+  --vn-text-muted: #64748B;
+  --vn-accent: #3B82F6;
+  --vn-accent-soft: rgba(59, 130, 246, 0.1);
+  --vn-success: #10B981;
+  --vn-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --vn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --vn-radius-xl: 1rem;
+  --vn-radius-2xl: 1.5rem;
+}
+
+.vn-soft-ui {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--vn-text-main);
+  background-color: var(--vn-bg-base);
+}
+
+/* Glassmorphism Cards */
+.vn-card {
+  background: var(--vn-bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--vn-border-soft);
+  border-radius: var(--vn-radius-xl);
+  box-shadow: var(--vn-shadow-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vn-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--vn-shadow-md);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Typography Overrides - Less Bold, More Meaningful */
+.vn-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--vn-text-main);
+  letter-spacing: -0.01em;
+}
+
+.vn-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vn-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Quick Bar / Sticky Navigation */
+.vn-quick-bar {
+  position: sticky;
+  top: 1rem;
+  z-index: 40;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 9999px;
+  border: 1px solid var(--vn-border-soft);
+  margin-bottom: 2rem;
+  width: fit-content;
+}
+
+.vn-quick-link {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--vn-text-muted);
+  border-radius: 9999px;
+  transition: all 0.2s;
+}
+
+.vn-quick-link:hover {
+  background: white;
+  color: var(--vn-accent);
+  box-shadow: var(--vn-shadow-sm);
+}
+
+.vn-quick-link.active {
+  background: var(--vn-accent);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+/* Autonomous Animation */
+@keyframes vn-subtle-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 10px 2px rgba(59, 130, 246, 0.1);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.vn-autonomous-active {
+  animation: vn-subtle-glow 2s infinite;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Input Fields - Modern & Minimal */
+.vn-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--vn-border-soft);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.vn-input:focus {
+  outline: none;
+  border-bottom-color: var(--vn-accent);
+}
+
+.vn-textarea {
+  width: 100%;
+  padding: 1rem;
+  background: white;
+  border: 1px solid var(--vn-border-soft);
+  border-radius: var(--vn-radius-xl);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  resize: vertical;
+  transition: all 0.2s;
+}
+
+.vn-textarea:focus {
+  outline: none;
+  border-color: var(--vn-accent);
+  box-shadow: 0 0 0 4px var(--vn-accent-soft);
+}
+
+/* Charting Speed: Command Palette Style Suggestions */
+.vn-suggestion-portal {
+  position: absolute;
+  z-index: 50;
+  background: white;
+  border: 1px solid var(--vn-border-soft);
+  border-radius: var(--vn-radius-xl);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-width: 240px;
+}
+
+.vn-suggestion-item {
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  transition: all 0.1s;
+}
+
+.vn-suggestion-item:hover,
+.vn-suggestion-item.active {
+  background: var(--vn-bg-base);
+  color: var(--vn-accent);
+}
+
+/* ROS and PE Grid Systems */
+.vn-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.vn-selection-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--vn-radius-xl);
+  background: white;
+  border: 1.5px solid var(--vn-border-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.vn-selection-item:hover {
+  border-color: var(--vn-accent);
+  background: var(--vn-bg-base);
+}
+
+.vn-selection-item.active {
+  background: var(--vn-accent-soft);
+  border-color: var(--vn-accent);
+  color: var(--vn-accent);
+}
+
+.vn-selection-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Badges */
+.badge {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-primary {
+  background: var(--vn-accent-soft);
+  color: var(--vn-accent);
+}

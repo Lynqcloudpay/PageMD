@@ -31,6 +31,15 @@ import ResultImportModal from '../components/ResultImportModal';
 import DiagnosisLinkModal from '../components/DiagnosisLinkModal';
 import SignatureCard from '../components/SignatureCard';
 
+// Modular Redesign Components
+import './VisitNote.css';
+import VisitNoteHeader from './VisitNoteComponent/VisitNoteHeader';
+import QuickNav from './VisitNoteComponent/QuickNav';
+import VisitNoteSection from './VisitNoteComponent/VisitNoteSection';
+import VitalsGrid from './VisitNoteComponent/VitalsGrid';
+import PlanDisplay from './VisitNoteComponent/PlanDisplay';
+import CommandPalette from './VisitNoteComponent/CommandPalette';
+
 // Image preview component for protected documents
 const ResultImage = ({ doc }) => {
     const [src, setSrc] = useState(null);
@@ -90,7 +99,7 @@ const ResultImage = ({ doc }) => {
 };
 
 // Collapsible Section Component - Refined UX
-const Section = ({ title, children, defaultOpen = true, isEdited = false, id, badge }) => {
+const SectionLegacy = ({ title, children, defaultOpen = true, isEdited = false, id, badge }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
         <div id={id} className={`scroll-mt-20 border ${isEdited ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-200/80'} rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm shadow-slate-100/50 mb-4 overflow-hidden transition-all duration-200`}>
@@ -120,7 +129,7 @@ const Section = ({ title, children, defaultOpen = true, isEdited = false, id, ba
 };
 
 // Plan Display Component
-const PlanDisplay = ({ plan }) => {
+const PlanDisplayLegacy = ({ plan }) => {
     if (!plan) return null;
     const lines = plan.split('\n');
     const formattedLines = [];
@@ -601,6 +610,77 @@ const VisitNote = () => {
     const hpiRef = useRef(null);
     const assessmentRef = useRef(null);
     const planRef = useRef(null);
+
+    // Command Palette State
+    const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+    const [commandSearchQuery, setCommandSearchQuery] = useState('');
+    const [commandSuggestions, setCommandSuggestions] = useState([]);
+    const [isCommandLoading, setIsCommandLoading] = useState(false);
+
+    // Command Palette Trigger Logic
+    useEffect(() => {
+        const handleKeyPress = (e) => {
+            // Trigger with '/' or 'Cmd/Ctrl + K'
+            if ((e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') ||
+                ((e.metaKey || e.ctrlKey) && e.key === 'k')) {
+                e.preventDefault();
+                setCommandPaletteOpen(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, []);
+
+    // Command Palette Search Logic
+    useEffect(() => {
+        if (!commandPaletteOpen || commandSearchQuery.length < 2) {
+            setCommandSuggestions([]);
+            return;
+        }
+
+        const performSearch = async () => {
+            setIsCommandLoading(true);
+            try {
+                const [icd10Res, ordersRes] = await Promise.all([
+                    codesAPI.searchICD10(commandSearchQuery),
+                    ordersCatalogAPI.search(commandSearchQuery)
+                ]);
+
+                const suggestions = [
+                    ...(icd10Res.data || []).slice(0, 5).map(i => ({
+                        type: 'diagnosis',
+                        title: i.description,
+                        code: i.code,
+                        source: i
+                    })),
+                    ...(ordersRes.data || []).slice(0, 5).map(o => ({
+                        type: 'order',
+                        title: o.name,
+                        code: o.category,
+                        source: o
+                    }))
+                ];
+                setCommandSuggestions(suggestions);
+            } catch (error) {
+                console.error('Command Palette Search Error:', error);
+            } finally {
+                setIsCommandLoading(false);
+            }
+        };
+
+        const timeout = setTimeout(performSearch, 300);
+        return () => clearTimeout(timeout);
+    }, [commandSearchQuery, commandPaletteOpen]);
+
+    const handleCommandSelect = (item) => {
+        if (item.type === 'diagnosis') {
+            handleAddICD10(item.source, true);
+        } else if (item.type === 'order') {
+            handleOrderSelect(item.source);
+        }
+        setCommandPaletteOpen(false);
+        setCommandSearchQuery('');
+    };
 
     // Refs for vitals inputs
     const systolicRef = useRef(null);
@@ -2494,223 +2574,80 @@ const VisitNote = () => {
     // Signed notes now use the same template as editable notes, just with disabled inputs
 
     return (
-        <div className="min-h-screen bg-white py-8">
-            <div className="w-full max-w-[98%] mx-auto px-4">
-                {/* Master Back Button */}
-                <div className="mb-4">
-                    <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="flex items-center space-x-2 text-gray-600 hover:text-primary-900 transition-colors">
-                        <ArrowLeft className="w-5 h-5" />
-                        <span className="text-sm font-medium">Back to Patient Chart</span>
-                    </button>
-                </div>
+        <div className="vn-soft-ui min-h-screen pb-20">
+            <CommandPalette
+                isOpen={commandPaletteOpen}
+                onClose={() => setCommandPaletteOpen(false)}
+                onSelect={handleCommandSelect}
+                searchQuery={commandSearchQuery}
+                setSearchQuery={setCommandSearchQuery}
+                suggestions={commandSuggestions}
+                isLoading={isCommandLoading}
+            />
 
-                {isDirectEditing && (
-                    <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between shadow-sm animate-in slide-in-from-top-2 duration-300">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-100 rounded-full">
-                                <Sparkles className="w-5 h-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-black text-blue-900 uppercase tracking-tight">Direct Editing Mode</h3>
-                                <p className="text-xs text-blue-700 font-medium">You are currently modifying the trainee's primary documentation. Your changes will be saved directly to the note.</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setIsDirectEditing(false)}
-                                className="px-3 py-1.5 text-blue-600 hover:bg-blue-100 rounded-md text-xs font-bold transition-colors uppercase tracking-widest"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => handleCosign(attestationText, 'Direct Edit')}
-                                disabled={isSaving}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"
-                            >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Finalize & Cosign
-                            </button>
-                        </div>
-                    </div>
-                )}
+            <div className="w-full max-w-[1400px] mx-auto px-4 pt-6">
+                <VisitNoteHeader
+                    visitData={visitData}
+                    visitType={visitType}
+                    setVisitType={setVisitType}
+                    isSigned={isSigned}
+                    isPreliminary={isPreliminary}
+                    isLocked={isLocked}
+                    isRetracted={isRetracted}
+                    isSaving={isSaving}
+                    lastSaved={lastSaved}
+                    handleSave={handleSave}
+                    handleSign={handleSign}
+                    setShowCosignModal={setShowCosignModal}
+                    setShowPrintModal={setShowPrintModal}
+                    setShowPrintOrdersModal={setShowPrintOrdersModal}
+                    setShowChartReview={setShowChartReview}
+                    showQuickActions={showQuickActions}
+                    setShowQuickActions={setShowQuickActions}
+                    setShowRetractModal={setShowRetractModal}
+                    viewRetractedContent={viewRetractedContent}
+                    setViewRetractedContent={setViewRetractedContent}
+                    retractionInfo={retractionInfo}
+                    isDirectEditing={isDirectEditing}
+                    setIsDirectEditing={setIsDirectEditing}
+                    handleCosign={handleCosign}
+                    navigate={navigate}
+                    id={id}
+                    providerName={providerName}
+                />
 
-                {/* Header - Glassmorphism */}
-                <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-2xl shadow-lg shadow-slate-200/30 mb-4 p-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <select
-                                    value={visitType}
-                                    onChange={(e) => setVisitType(e.target.value)}
-                                    disabled={isSigned || isPreliminary}
-                                    className="text-lg font-semibold text-slate-800 bg-transparent border-none rounded-lg focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-slate-50/50 px-1 -ml-1 transition-colors"
-                                >
-                                    <option value="Follow-up">Follow-up</option>
-                                    <option value="New Patient">New Patient</option>
-                                    <option value="Sick Visit">Sick Visit</option>
-                                    <option value="Physical">Physical</option>
-                                    <option value="Telehealth Visit">Telehealth</option>
-                                    <option value="Consultation">Consultation</option>
-                                    <option value="Office Visit">Office Visit</option>
-                                </select>
-                                <span className="text-lg font-semibold text-slate-800">Note</span>
-                            </div>
-                            <p className="text-xs text-slate-500">{visitDate} • {providerName}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={async () => {
-                                    setShowChartReview(true);
-                                    setChartReviewData({ visits: [], loading: true });
-                                    try {
-                                        const res = await visitsAPI.getByPatient(id);
-                                        setChartReviewData({ visits: res.data || [], loading: false });
-                                    } catch (e) {
-                                        console.error('Error fetching visits for chart review:', e);
-                                        setChartReviewData({ visits: [], loading: false });
-                                    }
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 shadow-sm"
-                                title="Quick Chart Review"
-                            >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>Review</span>
-                            </button>
-                            {isSigned && (
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-xs font-medium">
-                                    <Lock className="w-3.5 h-3.5" />
-                                    <span>Signed</span>
-                                    {currentVisitData.note_signed_at && (
-                                        <span className="text-emerald-600 text-[10px]">
-                                            {format(new Date(currentVisitData.note_signed_at), 'MM/dd h:mm a')}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-                            {!isSigned && !isPreliminary && (
-                                <>
-                                    {lastSaved && <span className="text-[10px] text-slate-400 italic">Saved {lastSaved.toLocaleTimeString()}</span>}
-                                    <button
-                                        onClick={handleSave}
-                                        disabled={isSaving}
-                                        className="px-3 py-1.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl shadow-sm flex items-center gap-1.5 disabled:opacity-50 transition-all hover:shadow-md text-xs font-medium"
-                                    >
-                                        <Save className="w-3.5 h-3.5" />
-                                        <span>{isSaving ? 'Saving...' : 'Save'}</span>
-                                    </button>
-                                    <button
-                                        onClick={handleSign}
-                                        className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-all hover:shadow-md text-xs font-medium"
-                                    >
-                                        <Lock className="w-3.5 h-3.5" />
-                                        <span>{user?.role_name === 'Resident' || user?.role === 'Resident' ? 'Submit' : 'Sign'}</span>
-                                    </button>
-                                </>
-                            )}
-                            {isPreliminary && !isDirectEditing && (user?.role_name === 'Physician' || user?.role_name === 'CLINICIAN' || user?.role_name === 'Admin' || user?.role === 'admin' || user?.role === 'clinician') && (
-                                <button
-                                    onClick={() => setShowCosignModal(true)}
-                                    className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-all hover:shadow-md text-xs font-medium"
-                                >
-                                    <Sparkles className="w-3.5 h-3.5" />
-                                    <span>Cosign</span>
-                                </button>
-                            )}
-                            <button
-                                onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white/80 text-slate-600 hover:bg-slate-50 text-xs font-medium rounded-xl border border-slate-200 transition-colors"
-                                title="Print Orders"
-                            >
-                                <Printer className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors" title="Print Note">
-                                <Printer className="w-3.5 h-3.5" />
-                            </button>
-                            {!isSigned && (
-                                <button
-                                    onClick={() => setShowQuickActions(!showQuickActions)}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-colors text-xs font-medium border ${showQuickActions ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white/80 text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                                    title="Toggle Quick Actions Panel"
-                                >
-                                    <PanelRight className="w-3.5 h-3.5" />
-                                </button>
-                            )}
-                            {isSigned && !isRetracted && (
-                                <button
-                                    onClick={() => setShowRetractModal(true)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/80 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-medium transition-colors"
-                                    title="Retract Note"
-                                >
-                                    <AlertCircle className="w-3.5 h-3.5" />
-                                </button>
-                            )}
-                            {isRetracted && (
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-medium">
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>Retracted</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                <QuickNav
+                    sections={[
+                        { id: 'vitals', label: 'Vitals' },
+                        { id: 'hpi', label: 'HPI' },
+                        { id: 'ros-pe', label: 'ROS/PE' },
+                        { id: 'pamfos', label: 'History' },
+                        { id: 'results', label: 'Results' },
+                        { id: 'assessment', label: 'Assessment' },
+                        { id: 'plan', label: 'Plan' },
+                    ]}
+                />
 
-                {/* Quick Navigation Bar - Sticky */}
-                <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 -mx-4 px-4 py-2 mb-4 flex items-center gap-1 overflow-x-auto scrollbar-hide">
-                    {[
-                        { id: 'vitals', label: 'Vitals', icon: Activity },
-                        { id: 'hpi', label: 'HPI', icon: FileText },
-                        { id: 'ros-pe', label: 'ROS/PE', icon: Stethoscope },
-                        { id: 'pamfos', label: 'History', icon: Users },
-                        { id: 'results', label: 'Results', icon: FlaskConical },
-                        { id: 'assessment', label: 'Assessment', icon: ClipboardList },
-                        { id: 'plan', label: 'Plan', icon: CheckCircle2 },
-                    ].map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors whitespace-nowrap"
-                        >
-                            <item.icon className="w-3.5 h-3.5" />
-                            {item.label}
-                        </button>
-                    ))}
-                </div>
-                {/* Preliminary Banner */}
-                {isPreliminary && (
-                    <div className="bg-amber-500 text-white p-4 rounded-lg mb-4 flex items-center justify-between shadow-lg animate-in slide-in-from-top-4 duration-300">
-                        <div className="flex items-center gap-3">
-                            <ClipboardList className="w-6 h-6" />
-                            <div>
-                                <h3 className="text-base font-bold uppercase tracking-widest">Preliminary Report - Cosignature Required</h3>
-                                <p className="text-xs text-amber-50 font-medium">
-                                    {(visitData?.note_signed_by_role || '').match(/NP|PA|PRACTITIONER|ASSISTANT/i)
-                                        ? "This clinical note requires review and cosignature by an attending physician."
-                                        : "This documentation was authored by a trainee and requires clinical validation by an attending physician."
-                                    }
-                                    {visitData?.note_signed_by_name && ` (Signed by ${visitData.note_signed_by_name} on ${format(new Date(visitData.note_signed_at), 'MM/dd/yyyy')})`}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
                 {/* Retraction Banner */}
                 {isRetracted && (
-                    <div className="bg-red-600 text-white p-4 rounded-lg mb-4 flex items-center justify-between shadow-lg animate-in slide-in-from-top-4 duration-300">
-                        <div className="flex items-center gap-3">
-                            <AlertCircle className="w-6 h-6" />
+                    <div className="bg-red-500/10 backdrop-blur-sm border border-red-200 p-5 rounded-3xl mb-8 flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-red-500 text-white rounded-2xl shadow-lg shadow-red-200">
+                                <AlertCircle className="w-6 h-6" />
+                            </div>
                             <div>
-                                <h3 className="text-base font-bold uppercase tracking-widest">Retracted / Entered in Error</h3>
-                                <p className="text-xs text-red-100 font-medium">
-                                    This clinical note has been voided. Original documentation is preserved for audit purposes only.
-                                    {retractionInfo && ` (Retracted by ${retractionInfo.retracted_by_name} on ${format(new Date(retractionInfo.retracted_at), 'MM/dd/yyyy')})`}
+                                <h3 className="text-sm font-bold text-red-900 uppercase tracking-widest">Retracted / Entered in Error</h3>
+                                <p className="text-xs text-red-700 font-medium">
+                                    Voided for clinical audit.
+                                    {retractionInfo && ` (By ${retractionInfo.retracted_by_name} on ${format(new Date(retractionInfo.retracted_at), 'MM/dd/yyyy')})`}
                                 </p>
                             </div>
                         </div>
                         <button
                             onClick={() => setViewRetractedContent(!viewRetractedContent)}
-                            className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full text-xs font-bold transition-all border border-white/40"
+                            className="px-4 py-2 bg-white text-red-600 rounded-xl text-xs font-bold border border-red-100 shadow-sm hover:bg-red-50 transition-all"
                         >
-                            {viewRetractedContent ? 'Hide Original Content' : 'View Original Content'}
+                            {viewRetractedContent ? 'Hide original content' : 'Review original content'}
                         </button>
                     </div>
                 )}
@@ -2720,191 +2657,40 @@ const VisitNote = () => {
                     <div className={`${showQuickActions && !isLocked ? 'flex-1' : 'w-full'} transition-all duration-300 ${isRetracted && !viewRetractedContent ? 'opacity-40 blur-[1px] pointer-events-none grayscale' : ''}`}>
 
                         {/* Vitals */}
-                        <Section title="Vital Signs" defaultOpen={true} id="vitals">
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-700 mb-1">BP (mmHg)</label>
-                                    <div className="flex items-center gap-1">
-                                        <input ref={systolicRef} type="number" placeholder="120" value={vitals.systolic}
-                                            onChange={(e) => {
-                                                const sys = e.target.value;
-                                                const bp = sys && vitals.diastolic ? `${sys}/${vitals.diastolic}` : '';
-                                                setVitals({ ...vitals, systolic: sys, bp });
-                                            }}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); diastolicRef.current?.focus(); } }}
-                                            disabled={isLocked}
-                                            className={`w-14 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                        />
-                                        <span className="text-neutral-400 text-xs font-medium px-0.5">/</span>
-                                        <input ref={diastolicRef} type="number" placeholder="80" value={vitals.diastolic}
-                                            onChange={(e) => {
-                                                const dia = e.target.value;
-                                                const bp = vitals.systolic && dia ? `${vitals.systolic}/${dia}` : '';
-                                                setVitals({ ...vitals, diastolic: dia, bp });
-                                            }}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); pulseRef.current?.focus(); } }}
-                                            disabled={isLocked}
-                                            className={`w-14 px-1.5 py-1 text-xs border border-gray-300 rounded-md bg-white focus:ring-1 focus:ring-accent-500 focus:border-accent-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600 font-semibold border-red-300' : 'text-gray-900'}`}
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-700 mb-1">HR (bpm)</label>
-                                    <input ref={pulseRef} type="number" placeholder="72" value={vitals.pulse}
-                                        onChange={(e) => setVitals({ ...vitals, pulse: e.target.value })}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); o2satRef.current?.focus(); } }}
-                                        disabled={isLocked}
-                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('pulse', vitals.pulse) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-700 mb-1">O2 Sat (%)</label>
-                                    <input ref={o2satRef} type="number" placeholder="98" value={vitals.o2sat}
-                                        onChange={(e) => setVitals({ ...vitals, o2sat: e.target.value })}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); tempRef.current?.focus(); } }}
-                                        disabled={isLocked}
-                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${isAbnormalVital('o2sat', vitals.o2sat) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-700 mb-1">Temp (°F)</label>
-                                    <input ref={tempRef} type="number" step="0.1" placeholder="98.6" value={vitals.temp}
-                                        onChange={(e) => setVitals({ ...vitals, temp: e.target.value })}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); weightRef.current?.focus(); } }}
-                                        disabled={isLocked}
-                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors ${isAbnormalVital('temp', vitals.temp) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-700 mb-1">
-                                        Weight
-                                        {previousWeight && (() => {
-                                            const change = getWeightChange();
-                                            if (!change) return null;
-                                            const isIncrease = parseFloat(change.lbs) > 0;
-                                            return <span className={`ml-1.5 text-xs font-normal ${isIncrease ? 'text-red-600' : 'text-green-600'}`}>({isIncrease ? '+' : ''}{change.lbs} lbs)</span>;
-                                        })()}
-                                    </label>
-                                    <div className="flex items-center gap-1">
-                                        <input ref={weightRef} type="text" value={vitals.weight || ''}
-                                            onChange={(e) => {
-                                                const weight = e.target.value;
-                                                const newVitals = { ...vitals, weight };
-                                                if (weight && vitals.height) {
-                                                    newVitals.bmi = calculateBMI(weight, vitals.weightUnit, vitals.height, vitals.heightUnit);
-                                                } else {
-                                                    newVitals.bmi = '';
-                                                }
-                                                setVitals(newVitals);
-                                            }}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); heightRef.current?.focus(); } }}
-                                            disabled={isLocked}
-                                            className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
-                                        />
-                                        <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
-                                            <button type="button" onClick={() => {
-                                                const newUnit = 'lbs';
-                                                if (vitals.weight && vitals.weightUnit !== newUnit) {
-                                                    const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                    const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
-                                                    if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
-                                                    setVitals(newVitals);
-                                                } else {
-                                                    setVitals({ ...vitals, weightUnit: newUnit });
-                                                }
-                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'lbs' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'lbs' ? { background: '#3B82F6' } : {}}>lbs</button>
-                                            <button type="button" onClick={() => {
-                                                const newUnit = 'kg';
-                                                if (vitals.weight && vitals.weightUnit !== newUnit) {
-                                                    const converted = convertWeight(vitals.weight, vitals.weightUnit, newUnit);
-                                                    const newVitals = { ...vitals, weightUnit: newUnit, weight: converted };
-                                                    if (converted && vitals.height) newVitals.bmi = calculateBMI(converted, newUnit, vitals.height, vitals.heightUnit);
-                                                    setVitals(newVitals);
-                                                } else {
-                                                    setVitals({ ...vitals, weightUnit: newUnit });
-                                                }
-                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.weightUnit === 'kg' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.weightUnit === 'kg' ? { background: '#3B82F6' } : {}}>kg</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-700 mb-1">Height</label>
-                                    <div className="flex items-center gap-1">
-                                        <input ref={heightRef} type="number" step="0.1" placeholder="70" value={vitals.height}
-                                            onChange={(e) => {
-                                                const height = e.target.value;
-                                                const newVitals = { ...vitals, height };
-                                                if (height && vitals.weight) {
-                                                    newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, height, vitals.heightUnit);
-                                                } else {
-                                                    newVitals.bmi = '';
-                                                }
-                                                setVitals(newVitals);
-                                            }}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); hpiRef.current?.focus(); } }}
-                                            disabled={isLocked}
-                                            className="w-16 px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-white disabled:text-neutral-900 transition-colors text-neutral-900"
-                                        />
-                                        <div className="flex border border-neutral-300 rounded-md overflow-hidden flex-shrink-0">
-                                            <button type="button" onClick={() => {
-                                                const newUnit = 'in';
-                                                if (vitals.height && vitals.heightUnit !== newUnit) {
-                                                    const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                    const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
-                                                    if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
-                                                    setVitals(newVitals);
-                                                } else {
-                                                    setVitals({ ...vitals, heightUnit: newUnit });
-                                                }
-                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'in' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'in' ? { background: '#3B82F6' } : {}}>in</button>
-                                            <button type="button" onClick={() => {
-                                                const newUnit = 'cm';
-                                                if (vitals.height && vitals.heightUnit !== newUnit) {
-                                                    const converted = convertHeight(vitals.height, vitals.heightUnit, newUnit);
-                                                    const newVitals = { ...vitals, heightUnit: newUnit, height: converted };
-                                                    if (converted && vitals.weight) newVitals.bmi = calculateBMI(vitals.weight, vitals.weightUnit, converted, newUnit);
-                                                    setVitals(newVitals);
-                                                } else {
-                                                    setVitals({ ...vitals, heightUnit: newUnit });
-                                                }
-                                            }} disabled={isLocked} className={`px-1.5 py-1 text-xs font-medium transition-colors ${vitals.heightUnit === 'cm' ? 'text-white' : 'bg-white text-neutral-700 hover:bg-strong-azure/10'} disabled:bg-white disabled:text-neutral-700`} style={vitals.heightUnit === 'cm' ? { background: '#3B82F6' } : {}}>cm</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-700 mb-1">BMI</label>
-                                    <input type="text" value={vitals.bmi || ''} readOnly placeholder="Auto"
-                                        className={`w-full px-1.5 py-1 text-xs border border-neutral-300 rounded-md bg-gray-50 transition-colors ${vitals.bmi && isAbnormalVital('bmi', vitals.bmi) ? 'text-red-600 font-semibold border-red-300' : 'text-neutral-900'}`}
-                                    />
-                                </div>
-                            </div>
-                        </Section>
+                        <VisitNoteSection title="Vital Signs" defaultOpen={true} id="vitals">
+                            <VitalsGrid vitals={vitals} setVitals={setVitals} isLocked={isLocked} isAbnormalVital={isAbnormalVital} calculateBMI={calculateBMI} heightRef={heightRef} systolicRef={systolicRef} diastolicRef={diastolicRef} pulseRef={pulseRef} o2satRef={o2satRef} tempRef={tempRef} weightRef={weightRef} hpiRef={hpiRef} />
+                        </VisitNoteSection>
 
                         {/* Chief Complaint */}
-                        <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-1">
-                                <label className="block text-sm font-black text-slate-800 uppercase tracking-tight">Chief Complaint</label>
+                        <div className="mb-5">
+                            <div className="flex items-center gap-3 mb-2 px-1">
+                                <label className="text-sm font-black text-slate-800 uppercase tracking-widest">Chief Complaint</label>
                                 {editedSections.has('chiefComplaint') && (
-                                    <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[8px] font-black uppercase rounded border border-blue-600 shadow-sm shadow-blue-600/20 flex items-center gap-1">
-                                        <Sparkles className="w-2 h-2" />
-                                        Modified by Attending
+                                    <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-black uppercase rounded-full shadow-sm shadow-blue-200 flex items-center gap-1">
+                                        <Sparkles className="w-2.5 h-2.5" />
+                                        Modified
                                     </span>
                                 )}
                             </div>
-                            <div className={`p-3 bg-neutral-50 rounded-xl border ${editedSections.has('chiefComplaint') ? 'border-blue-200 bg-blue-50/30' : 'border-neutral-100'} transition-all duration-300`}>
-                                <input type="text" placeholder="Enter chief complaint..." value={noteData.chiefComplaint || ''}
+                            <div className={`vn-card p-4 bg-white/50 border ${editedSections.has('chiefComplaint') ? 'border-primary-200 ring-4 ring-primary-50/30' : 'border-slate-100'} transition-all duration-300`}>
+                                <input
+                                    type="text"
+                                    placeholder="Enter chief complaint..."
+                                    value={noteData.chiefComplaint || ''}
                                     onChange={(e) => handleTextChange(e.target.value, 'chiefComplaint')}
                                     disabled={isLocked}
-                                    className="w-full bg-transparent border-none text-xs font-medium focus:ring-0 text-slate-900 placeholder:text-slate-400"
+                                    className="w-full bg-transparent border-none text-sm font-bold focus:ring-0 text-slate-800 placeholder:text-slate-300"
                                 />
                             </div>
                         </div>
 
                         {/* HPI */}
-                        <Section title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')} id="hpi">
+                        <VisitNoteSection title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')} id="hpi">
                             <div className="relative">
-                                <span className="absolute top-2 right-2 text-[10px] text-gray-400 font-medium bg-white/80 px-1 rounded">F2 for templates</span>
-                                <textarea ref={hpiRef} value={noteData.hpi}
+                                <span className="absolute -top-1.5 right-4 z-10 text-[9px] font-black text-slate-300 bg-white px-2 py-0.5 rounded-full border border-slate-50 uppercase tracking-widest group-focus-within:text-primary-400 transition-colors">F2 for templates</span>
+                                <textarea
+                                    ref={hpiRef}
+                                    value={noteData.hpi}
                                     onChange={(e) => {
                                         setNoteData({ ...noteData, hpi: e.target.value });
                                         handleTextChange(e.target.value, 'hpi');
@@ -2935,505 +2721,510 @@ const VisitNote = () => {
                                         }
                                     }}
                                     onFocus={() => setActiveTextArea('hpi')}
-                                    rows={12}
-                                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-100 focus:border-primary-400 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-shadow text-slate-800 min-h-[160px] shadow-sm"
-                                    placeholder="Type .dotphrase to expand, or press F2 to find [] placeholders..."
+                                    className="vn-textarea min-h-[180px] pt-4"
+                                    placeholder="Describe the clinical history..."
                                 />
                                 {autocompleteState.show && autocompleteState.field === 'hpi' && autocompleteState.suggestions.length > 0 && (
-                                    <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
+                                    <div className="absolute z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto mt-2 w-72" style={{ top: `${autocompleteState.position.top}px` }}>
                                         {autocompleteState.suggestions.map((item, index) => (
                                             <button
                                                 key={item.key}
                                                 type="button"
                                                 onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                                className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                                    }`}
+                                                className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-50/50' : ''}`}
                                             >
-                                                <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
-                                                <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
+                                                <div className="font-bold text-slate-900 text-xs tracking-tight mb-0.5">.{item.key}</div>
+                                                <div className="text-[10px] text-slate-500 truncate font-medium">{item.template}</div>
                                             </button>
                                         ))}
                                     </div>
                                 )}
                             </div>
-                            <div className="mt-1.5 flex items-center space-x-3 text-xs text-neutral-500">
-                                <button onClick={() => { setActiveTextArea('hpi'); setShowDotPhraseModal(true); }} className="flex items-center space-x-1 text-primary-600 hover:text-primary-700 transition-colors">
-                                    <Zap className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">Dot Phrases (F2)</span>
+                            <div className="mt-4 flex items-center gap-4">
+                                <button
+                                    onClick={() => { setActiveTextArea('hpi'); setShowDotPhraseModal(true); }}
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-primary-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-50 transition-all border border-slate-100 hover:border-primary-100"
+                                >
+                                    <Zap className="w-4 h-4" />
+                                    Templates (F2)
                                 </button>
                                 {!isLocked && (
-                                    <button onClick={() => openCarryForward('hpi')} className="flex items-center space-x-1 text-slate-600 hover:text-slate-800 transition-colors">
-                                        <RotateCcw className="w-3.5 h-3.5" />
-                                        <span className="text-xs font-medium">Pull Prior</span>
+                                    <button
+                                        onClick={() => openCarryForward('hpi')}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-slate-500 hover:text-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                    >
+                                        <RotateCcw className="w-4 h-4" />
+                                        Pull Prior
                                     </button>
                                 )}
                             </div>
-                        </Section>
+                        </VisitNoteSection>
 
                         {/* ROS and PE Side by Side */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             {/* ROS */}
-                            <Section title="Review of Systems" defaultOpen={true} id="ros-pe">
-                                <div className="grid grid-cols-2 gap-2 mb-2">
+                            <VisitNoteSection title="Review of Systems" defaultOpen={true} id="ros">
+                                <div className="vn-selection-grid">
                                     {Object.keys(noteData.ros).map(system => (
-                                        <label key={system} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-transparent hover:border-slate-100">
-                                            {noteData.ros[system] ? <CheckSquare className="w-4 h-4 text-primary-500" /> : <Square className="w-4 h-4 text-slate-300" />}
-                                            <span className="text-xs font-medium text-slate-700 capitalize">{system}</span>
-                                            <input type="checkbox" checked={noteData.ros[system]}
-                                                disabled={isLocked}
-                                                onChange={(e) => {
-                                                    const isChecked = e.target.checked;
-                                                    const systemName = system.charAt(0).toUpperCase() + system.slice(1);
-                                                    const findings = rosFindings[system] || '';
-                                                    const newRos = { ...noteData.ros, [system]: isChecked };
-                                                    let newRosNotes = noteData.rosNotes || '';
-                                                    const findingsLine = `**${systemName}:** ${findings}`;
-                                                    if (isChecked) {
-                                                        if (!newRosNotes.includes(`**${systemName}:**`)) {
-                                                            newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
-                                                        }
-                                                    } else {
-                                                        newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                        <div
+                                            key={system}
+                                            className={`vn-selection-item ${noteData.ros[system] ? 'active' : ''}`}
+                                            onClick={() => {
+                                                if (isLocked) return;
+                                                const isChecked = !noteData.ros[system];
+                                                const systemName = system.charAt(0).toUpperCase() + system.slice(1);
+                                                const findings = rosFindings[system] || '';
+                                                const newRos = { ...noteData.ros, [system]: isChecked };
+                                                let newRosNotes = noteData.rosNotes || '';
+                                                const findingsLine = `**${systemName}:** ${findings}`;
+                                                if (isChecked) {
+                                                    if (!newRosNotes.includes(`**${systemName}:**`)) {
+                                                        newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
                                                     }
-                                                    setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
-                                                }}
-                                                className="hidden"
-                                            />
-                                        </label>
+                                                } else {
+                                                    newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                                }
+                                                setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
+                                            }}
+                                        >
+                                            {noteData.ros[system] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 opacity-30" />}
+                                            <span className="vn-selection-label">{system}</span>
+                                        </div>
                                     ))}
                                 </div>
-                                <textarea value={noteData.rosNotes} onChange={(e) => handleTextChange(e.target.value, 'rosNotes')}
+                                <textarea
+                                    value={noteData.rosNotes}
+                                    onChange={(e) => handleTextChange(e.target.value, 'rosNotes')}
                                     disabled={isLocked}
-                                    rows={10}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
-                                    placeholder="ROS notes..."
+                                    rows={6}
+                                    className="vn-textarea text-xs min-h-[100px]"
+                                    placeholder="Abnormal findings in ROS..."
                                 />
-                                <div className="mt-1.5 flex items-center gap-2">
-                                    <button onClick={() => {
-                                        const allRos = {};
-                                        Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
-                                        let rosText = '';
-                                        Object.keys(rosFindings).forEach(key => {
-                                            const systemName = key.charAt(0).toUpperCase() + key.slice(1);
-                                            rosText += `${systemName}: ${rosFindings[key]}\n`;
-                                        });
-                                        setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
-                                    }} disabled={isLocked} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                        Pre-fill Normal ROS
+                                <div className="mt-4 flex items-center gap-3">
+                                    <button
+                                        onClick={() => {
+                                            const allRos = {};
+                                            Object.keys(noteData.ros).forEach(key => { allRos[key] = true; });
+                                            let rosText = '';
+                                            Object.keys(rosFindings).forEach(key => {
+                                                const systemName = key.charAt(0).toUpperCase() + key.slice(1);
+                                                rosText += `**${systemName}:** ${rosFindings[key]}\n`;
+                                            });
+                                            setNoteData({ ...noteData, ros: allRos, rosNotes: rosText.trim() });
+                                        }}
+                                        disabled={isLocked}
+                                        className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all text-[10px] font-bold uppercase tracking-wider"
+                                    >
+                                        Pre-fill Normal
                                     </button>
                                     {!isLocked && (
-                                        <button onClick={() => openCarryForward('ros')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
-                                            <RotateCcw className="w-3 h-3" />
+                                        <button
+                                            onClick={() => openCarryForward('ros')}
+                                            className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all text-[10px] font-bold uppercase tracking-wider"
+                                        >
                                             Pull Prior
                                         </button>
                                     )}
                                 </div>
-                            </Section>
+                            </VisitNoteSection>
 
                             {/* Physical Exam */}
-                            <Section title="Physical Examination" defaultOpen={true}>
-                                <div className="grid grid-cols-2 gap-1 mb-1.5">
+                            <VisitNoteSection title="Physical Examination" defaultOpen={true} id="pe">
+                                <div className="vn-selection-grid">
                                     {Object.keys(noteData.pe).map(system => (
-                                        <label key={system} className="flex items-center space-x-1 cursor-pointer">
-                                            {noteData.pe[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
-                                            <span className="text-xs text-neutral-700 capitalize">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                            <input type="checkbox" checked={noteData.pe[system]}
-                                                disabled={isLocked}
-                                                onChange={(e) => {
-                                                    const isChecked = e.target.checked;
-                                                    const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                                    const findings = peFindings[system] || '';
-                                                    const newPe = { ...noteData.pe, [system]: isChecked };
-                                                    let newPeNotes = noteData.peNotes || '';
-                                                    const findingsLine = `**${systemName}:** ${findings}`;
-                                                    if (isChecked) {
-                                                        if (!newPeNotes.includes(`**${systemName}:**`)) {
-                                                            newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
-                                                        }
-                                                    } else {
-                                                        newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                        <div
+                                            key={system}
+                                            className={`vn-selection-item ${noteData.pe[system] ? 'active' : ''}`}
+                                            onClick={() => {
+                                                if (isLocked) return;
+                                                const isChecked = !noteData.pe[system];
+                                                const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                                const findings = peFindings[system] || '';
+                                                const newPe = { ...noteData.pe, [system]: isChecked };
+                                                let newPeNotes = noteData.peNotes || '';
+                                                const findingsLine = `**${systemName}:** ${findings}`;
+                                                if (isChecked) {
+                                                    if (!newPeNotes.includes(`**${systemName}:**`)) {
+                                                        newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
                                                     }
-                                                    setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
-                                                }}
-                                                className="hidden"
-                                            />
-                                        </label>
+                                                } else {
+                                                    newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
+                                                }
+                                                setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
+                                            }}
+                                        >
+                                            {noteData.pe[system] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 opacity-30" />}
+                                            <span className="vn-selection-label">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                        </div>
                                     ))}
                                 </div>
-                                <textarea value={noteData.peNotes} onChange={(e) => handleTextChange(e.target.value, 'peNotes')}
+                                <textarea
+                                    value={noteData.peNotes}
+                                    onChange={(e) => handleTextChange(e.target.value, 'peNotes')}
                                     disabled={isLocked}
-                                    rows={10}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[120px]"
-                                    placeholder="PE findings..."
+                                    rows={6}
+                                    className="vn-textarea text-xs min-h-[100px]"
+                                    placeholder="Abnormal findings in exam..."
                                 />
-                                <div className="mt-1.5 flex items-center gap-2">
-                                    <button onClick={() => {
-                                        const allPe = {};
-                                        Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
-                                        let peText = '';
-                                        Object.keys(peFindings).forEach(key => {
-                                            const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                            peText += `${systemName}: ${peFindings[key]}\n`;
-                                        });
-                                        setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
-                                    }} disabled={isLocked} className="px-2 py-1 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md disabled:opacity-50 transition-colors">
-                                        Pre-fill Normal PE
+                                <div className="mt-4 flex items-center gap-3">
+                                    <button
+                                        onClick={() => {
+                                            const allPe = {};
+                                            Object.keys(noteData.pe).forEach(key => { allPe[key] = true; });
+                                            let peText = '';
+                                            Object.keys(peFindings).forEach(key => {
+                                                const systemName = key.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                                peText += `**${systemName}:** ${peFindings[key]}\n`;
+                                            });
+                                            setNoteData({ ...noteData, pe: allPe, peNotes: peText.trim() });
+                                        }}
+                                        disabled={isLocked}
+                                        className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all text-[10px] font-bold uppercase tracking-wider"
+                                    >
+                                        Pre-fill Normal
                                     </button>
                                     {!isLocked && (
-                                        <button onClick={() => openCarryForward('pe')} className="px-2 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors flex items-center gap-1">
-                                            <RotateCcw className="w-3 h-3" />
+                                        <button
+                                            onClick={() => openCarryForward('pe')}
+                                            className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all text-[10px] font-bold uppercase tracking-wider"
+                                        >
                                             Pull Prior
                                         </button>
                                     )}
                                 </div>
-                            </Section>
+                            </VisitNoteSection>
                         </div>
 
+
                         {/* PAMFOS Section - Past Medical, Allergies, Meds, Family, Social/Other */}
-                        <Section
+                        <VisitNoteSection
                             title="Patient History (PAMFOS)"
                             defaultOpen={false}
                             id="pamfos"
                             badge={(patientData?.problems?.length || 0) + (patientData?.medications?.length || 0) + (patientData?.allergies?.length || 0)}
                         >
-                            <div className="bg-white/50 p-1">
-                                <div className="space-y-6">
-
-                                    {/* P - Past Medical History */}
-                                    <HistoryList
-                                        title="Past Medical History"
-                                        icon={<Activity className="w-4 h-4 text-rose-500" />}
-                                        items={patientData?.problems || []}
-                                        emptyMessage="No active problems"
-                                        renderItem={(problem) => (
-                                            <div className="flex justify-between items-start w-full group/item">
-                                                <div>
-                                                    <span className="font-medium text-slate-800 text-sm">
-                                                        {(problem.problem_name || '')
-                                                            .replace(/^(\d+(\.\d+)*\.?\s*)+/, '')
-                                                            .replace(/&amp;/g, '&')
-                                                            .replace(/&#x2f;/gi, '/')
-                                                            .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
-                                                    </span>
-                                                    {problem.icd10_code && <span className="text-slate-400 ml-2 text-xs">({problem.icd10_code})</span>}
-                                                </div>
-                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${problem.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
-                                                    {problem.status}
+                            <div className="space-y-8 py-2">
+                                {/* P - Past Medical History */}
+                                <HistoryList
+                                    title="Past Medical History"
+                                    icon={<Activity className="w-4 h-4 text-rose-500" />}
+                                    items={patientData?.problems || []}
+                                    emptyMessage="No active problems"
+                                    renderItem={(problem) => (
+                                        <div className="flex justify-between items-start w-full group/item">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="font-bold text-slate-800 text-sm leading-tight">
+                                                    {(problem.problem_name || '')
+                                                        .replace(/^(\d+(\.\d+)*\.?\s*)+/, '')
+                                                        .replace(/&amp;/g, '&')
+                                                        .replace(/&#x2f;/gi, '/')
+                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
                                                 </span>
+                                                {problem.icd10_code && <span className="text-[10px] font-black text-slate-400 tracking-wider">ICD-10: {problem.icd10_code}</span>}
                                             </div>
-                                        )}
-                                        renderInput={(props) => <ProblemInput {...props} />}
-                                        onAdd={async (data) => {
-                                            try {
-                                                const res = await patientsAPI.addProblem(id, data);
-                                                setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Problem added', 'success');
-                                            } catch (e) { showToast('Failed to add problem', 'error'); }
-                                        }}
-                                        onDelete={async (itemId) => {
-                                            if (!confirm('Are you sure?')) return;
-                                            try {
-                                                await patientsAPI.deleteProblem(itemId);
-                                                setPatientData(prev => ({ ...prev, problems: prev.problems.filter(p => p.id !== itemId) }));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Problem deleted', 'success');
-                                            } catch (e) { showToast('Failed to delete problem', 'error'); }
-                                        }}
-                                    />
+                                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border ${problem.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                                                }`}>
+                                                {problem.status}
+                                            </span>
+                                        </div>
+                                    )}
+                                    renderInput={(props) => <ProblemInput {...props} />}
+                                    onAdd={async (data) => {
+                                        try {
+                                            const res = await patientsAPI.addProblem(id, data);
+                                            setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Problem added', 'success');
+                                        } catch (e) { showToast('Failed to add problem', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteProblem(itemId);
+                                            setPatientData(prev => ({ ...prev, problems: prev.problems.filter(p => p.id !== itemId) }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Problem deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete problem', 'error'); }
+                                    }}
+                                />
 
-                                    {/* A - Allergies */}
-                                    <HistoryList
-                                        title="Allergies"
-                                        icon={<Activity className="w-4 h-4 text-orange-600" />}
-                                        items={patientData?.allergies || []}
-                                        emptyMessage="No known allergies"
-                                        renderItem={(allergy) => (
-                                            <div className="flex justify-between items-start w-full">
-                                                <span className="font-medium text-red-700">{allergy.allergen}</span>
-                                                {allergy.reaction && <span className="text-gray-500 text-xs mx-1">- {allergy.reaction}</span>}
-                                                {allergy.severity && allergy.severity !== 'unknown' && <span className="text-gray-400 text-[10px] italic">({allergy.severity})</span>}
+                                {/* A - Allergies */}
+                                <HistoryList
+                                    title="Allergies"
+                                    icon={<Activity className="w-4 h-4 text-orange-500" />}
+                                    items={patientData?.allergies || []}
+                                    emptyMessage="No known allergies"
+                                    renderItem={(allergy) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="font-bold text-red-600 text-sm leading-tight">{allergy.allergen}</span>
+                                                {allergy.reaction && <span className="text-[10px] text-slate-500 font-medium">Reaction: {allergy.reaction}</span>}
                                             </div>
-                                        )}
-                                        renderInput={(props) => <AllergyInput {...props} />}
-                                        onAdd={async (data) => {
-                                            try {
-                                                const payload = typeof data === 'string' ? { allergen: data, severity: 'unknown' } : data;
-                                                const res = await patientsAPI.addAllergy(id, payload);
-                                                setPatientData(prev => ({ ...prev, allergies: [res.data, ...(prev.allergies || [])] }));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Allergy added', 'success');
-                                            } catch (e) { showToast('Failed to add allergy', 'error'); }
-                                        }}
-                                        onDelete={async (itemId) => {
-                                            if (!confirm('Are you sure?')) return;
-                                            try {
-                                                await patientsAPI.deleteAllergy(itemId);
-                                                setPatientData(prev => ({ ...prev, allergies: prev.allergies.filter(a => a.id !== itemId) }));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Allergy deleted', 'success');
-                                            } catch (e) { showToast('Failed to delete allergy', 'error'); }
-                                        }}
-                                    />
+                                            {allergy.severity && allergy.severity !== 'unknown' && (
+                                                <span className="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
+                                                    {allergy.severity}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    renderInput={(props) => <AllergyInput {...props} />}
+                                    onAdd={async (data) => {
+                                        try {
+                                            const payload = typeof data === 'string' ? { allergen: data, severity: 'unknown' } : data;
+                                            const res = await patientsAPI.addAllergy(id, payload);
+                                            setPatientData(prev => ({ ...prev, allergies: [res.data, ...(prev.allergies || [])] }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Allergy added', 'success');
+                                        } catch (e) { showToast('Failed to add allergy', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteAllergy(itemId);
+                                            setPatientData(prev => ({ ...prev, allergies: prev.allergies.filter(a => a.id !== itemId) }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Allergy deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete allergy', 'error'); }
+                                    }}
+                                />
 
-                                    {/* M - Medications */}
-                                    <HistoryList
-                                        title="Home Medications"
-                                        icon={<Pill className="w-4 h-4 text-blue-600" />}
-                                        items={(patientData?.medications || []).filter(m => {
-                                            // Only show active medications
-                                            if (m.active === false) return false;
-
-                                            // Only show medications started BEFORE this visit
-                                            // Home medications = what patient was taking before today
-                                            if (visitData?.visit_date) {
-                                                const visitDate = new Date(visitData.visit_date);
-                                                visitDate.setHours(0, 0, 0, 0); // Set to start of day
-
-                                                if (m.start_date) {
-                                                    const medStartDate = new Date(m.start_date);
-                                                    medStartDate.setHours(0, 0, 0, 0); // Set to start of day
-
-                                                    // Include if medication was started before or on the day of this visit
-                                                    const shouldShow = medStartDate <= visitDate;
-                                                    console.log(`[HomeMeds] ${m.medication_name}: medStart=${medStartDate.toISOString()}, visitDate=${visitDate.toISOString()}, show=${shouldShow}`);
-                                                    return shouldShow;
-                                                }
+                                {/* M - Medications */}
+                                <HistoryList
+                                    title="Home Medications"
+                                    icon={<Pill className="w-4 h-4 text-blue-500" />}
+                                    items={(patientData?.medications || []).filter(m => {
+                                        if (m.active === false) return false;
+                                        if (visitData?.visit_date) {
+                                            const visitDate = new Date(visitData.visit_date);
+                                            visitDate.setHours(0, 0, 0, 0);
+                                            if (m.start_date) {
+                                                const medStartDate = new Date(m.start_date);
+                                                medStartDate.setHours(0, 0, 0, 0);
+                                                return medStartDate <= visitDate;
                                             }
-
-                                            // If no dates available, default to showing it
-                                            // (this handles legacy data without dates)
-                                            return true;
-                                        })}
-                                        emptyMessage="No active medications"
-                                        renderItem={(med) => {
-                                            // Decode HTML entities in medication name
-                                            const decodedName = (med.medication_name || '')
-                                                .replace(/&amp;/g, '&')
-                                                .replace(/&#x2f;/gi, '/')
-                                                .replace(/&#47;/g, '/')
-                                                .replace(/&quot;/g, '"')
-                                                .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
-                                            return (
-                                                <div className="flex justify-between items-start w-full">
-                                                    <span className="font-medium text-gray-900">{decodedName}</span>
-                                                    <span className="text-gray-500 text-xs">
-                                                        {[med.dosage, med.frequency, med.route].filter(Boolean).join(' ')}
+                                        }
+                                        return true;
+                                    })}
+                                    emptyMessage="No active medications"
+                                    renderItem={(med) => {
+                                        const decodedName = (med.medication_name || '')
+                                            .replace(/&amp;/g, '&')
+                                            .replace(/&#x2f;/gi, '/')
+                                            .replace(/&#47;/g, '/')
+                                            .replace(/&quot;/g, '"')
+                                            .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
+                                        return (
+                                            <div className="flex justify-between items-start w-full">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-bold text-slate-800 text-sm leading-tight">{decodedName}</span>
+                                                    <span className="text-[10px] text-slate-500 font-medium italic">
+                                                        {[med.dosage, med.frequency, med.route].filter(Boolean).join(' • ')}
                                                     </span>
                                                 </div>
+                                            </div>
+                                        );
+                                    }}
+                                    renderInput={(props) => <MedicationInput {...props} />}
+                                    onAdd={async (data) => {
+                                        try {
+                                            const res = await patientsAPI.addMedication(id, data);
+                                            setPatientData(prev => ({ ...prev, medications: [res.data, ...(prev.medications || [])] }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Medication added', 'success');
+                                        } catch (e) { showToast('Failed to add medication', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteMedication(itemId);
+                                            setPatientData(prev => ({ ...prev, medications: prev.medications.filter(m => m.id !== itemId) }));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Medication deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete medication', 'error'); }
+                                    }}
+                                />
+
+                                {/* F - Family History */}
+                                <HistoryList
+                                    title="Family History"
+                                    icon={<Users className="w-4 h-4 text-purple-600" />}
+                                    items={familyHistory}
+                                    emptyMessage="No family history recorded"
+                                    renderItem={(hist) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <span className="font-bold text-slate-800 text-sm">{hist.condition}</span>
+                                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{hist.relationship}</span>
+                                        </div>
+                                    )}
+                                    renderInput={(props) => <FamilyHistoryInput {...props} />}
+                                    onAdd={async (data) => {
+                                        try {
+                                            const res = await patientsAPI.addFamilyHistory(id, data);
+                                            setFamilyHistory(prev => [res.data, ...prev]);
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Family history added', 'success');
+                                        } catch (e) { showToast('Failed to add family history', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteFamilyHistory(itemId);
+                                            setFamilyHistory(prev => prev.filter(h => h.id !== itemId));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Family history deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete family history', 'error'); }
+                                    }}
+                                />
+
+                                {/* S - Surgical History */}
+                                <HistoryList
+                                    title="Surgical History"
+                                    icon={<ActivitySquare className="w-4 h-4 text-blue-600" />}
+                                    items={surgicalHistory}
+                                    emptyMessage="No surgical history recorded"
+                                    renderItem={(surg) => (
+                                        <div className="flex justify-between items-start w-full">
+                                            <div>
+                                                <span className="font-bold text-slate-800 text-sm">{surg.procedure_name}</span>
+                                                {surg.date && (
+                                                    <span className="text-slate-400 text-[10px] ml-2 font-medium">
+                                                        ({format(new Date(surg.date), 'MM/dd/yyyy')})
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {surg.surgeon && <span className="text-[10px] text-slate-500 font-medium italic">{surg.surgeon}</span>}
+                                        </div>
+                                    )}
+                                    renderInput={(props) => <SurgicalHistoryInput {...props} />}
+                                    onAdd={async (data) => {
+                                        try {
+                                            const res = await patientsAPI.addSurgicalHistory(id, data);
+                                            setSurgicalHistory(prev => [res.data, ...prev]);
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Surgical history added', 'success');
+                                        } catch (e) { showToast('Failed to add surgical history', 'error'); }
+                                    }}
+                                    onDelete={async (itemId) => {
+                                        if (!confirm('Are you sure?')) return;
+                                        try {
+                                            await patientsAPI.deleteSurgicalHistory(itemId);
+                                            setSurgicalHistory(prev => prev.filter(h => h.id !== itemId));
+                                            window.dispatchEvent(new Event('patient-data-updated'));
+                                            showToast('Surgical history deleted', 'success');
+                                        } catch (e) { showToast('Failed to delete surgical history', 'error'); }
+                                    }}
+                                />
+
+                                {/* O/S - Social History */}
+                                <div className="vn-card overflow-hidden">
+                                    <div className="flex items-center gap-2 px-5 py-3 bg-slate-50/50 border-b border-slate-100">
+                                        <UserCircle className="w-4 h-4 text-teal-600" />
+                                        <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Social History</h4>
+                                    </div>
+                                    <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                        {/* Helper to transform and save social history */}
+                                        {(() => {
+                                            const saveSocialHistory = async (changes) => {
+                                                try {
+                                                    const updatedState = { ...socialHistory, ...changes };
+                                                    const payload = {
+                                                        smokingStatus: updatedState.smoking_status,
+                                                        smokingPackYears: updatedState.smoking_pack_years,
+                                                        alcoholUse: updatedState.alcohol_use,
+                                                        alcoholQuantity: updatedState.alcohol_quantity,
+                                                        drugUse: updatedState.drug_use,
+                                                        exerciseFrequency: updatedState.exercise_frequency,
+                                                        diet: updatedState.diet,
+                                                        occupation: updatedState.occupation,
+                                                        livingSituation: updatedState.living_situation,
+                                                        notes: updatedState.notes
+                                                    };
+                                                    await patientsAPI.saveSocialHistory(id, payload);
+                                                    setSocialHistory(updatedState);
+                                                    window.dispatchEvent(new Event('patient-data-updated'));
+                                                } catch (e) {
+                                                    showToast('Failed to update social history', 'error');
+                                                }
+                                            };
+
+                                            return (
+                                                <>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Smoking Status</label>
+                                                        <select
+                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            value={socialHistory?.smoking_status || ''}
+                                                            onChange={(e) => saveSocialHistory({ smoking_status: e.target.value })}
+                                                        >
+                                                            <option value="">Unknown</option>
+                                                            <option value="Never smoker">Never smoker</option>
+                                                            <option value="Former smoker">Former smoker</option>
+                                                            <option value="Current smoker">Current smoker</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Alcohol Use</label>
+                                                        <select
+                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            value={socialHistory?.alcohol_use || ''}
+                                                            onChange={(e) => saveSocialHistory({ alcohol_use: e.target.value })}
+                                                        >
+                                                            <option value="">Unknown</option>
+                                                            <option value="None">None</option>
+                                                            <option value="Social">Social</option>
+                                                            <option value="Moderate">Moderate</option>
+                                                            <option value="Heavy">Heavy</option>
+                                                        </select>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Occupation</label>
+                                                        <input
+                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            value={socialHistory?.occupation || ''}
+                                                            placeholder="Occupation"
+                                                            onBlur={(e) => saveSocialHistory({ occupation: e.target.value })}
+                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1 md:col-span-2">
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Exercise & Diet</label>
+                                                        <input
+                                                            className="vn-input !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            value={socialHistory?.exercise_frequency || ''}
+                                                            placeholder="Exercise & Diet Details"
+                                                            onBlur={(e) => saveSocialHistory({ exercise_frequency: e.target.value })}
+                                                            onChange={(e) => setSocialHistory(prev => ({ ...prev, exercise_frequency: e.target.value }))}
+                                                        />
+                                                    </div>
+                                                </>
                                             );
-                                        }}
-                                        renderInput={(props) => <MedicationInput {...props} />}
-                                        onAdd={async (data) => {
-                                            try {
-                                                const res = await patientsAPI.addMedication(id, data);
-                                                setPatientData(prev => ({ ...prev, medications: [res.data, ...(prev.medications || [])] }));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Medication added', 'success');
-                                            } catch (e) { showToast('Failed to add medication', 'error'); }
-                                        }}
-                                        onDelete={async (itemId) => {
-                                            if (!confirm('Are you sure?')) return;
-                                            try {
-                                                await patientsAPI.deleteMedication(itemId);
-                                                setPatientData(prev => ({ ...prev, medications: prev.medications.filter(m => m.id !== itemId) }));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Medication deleted', 'success');
-                                            } catch (e) { showToast('Failed to delete medication', 'error'); }
-                                        }}
-                                    />
-
-                                    {/* F - Family History */}
-                                    <HistoryList
-                                        title="Family History"
-                                        icon={<Users className="w-4 h-4 text-purple-600" />}
-                                        items={familyHistory}
-                                        emptyMessage="No family history recorded"
-                                        renderItem={(hist) => (
-                                            <div className="flex justify-between items-start w-full">
-                                                <span className="font-medium text-gray-900">{hist.condition}</span>
-                                                <span className="text-gray-500 text-xs">{hist.relationship}</span>
-                                            </div>
-                                        )}
-                                        renderInput={(props) => <FamilyHistoryInput {...props} />}
-                                        onAdd={async (data) => {
-                                            try {
-                                                const res = await patientsAPI.addFamilyHistory(id, data);
-                                                setFamilyHistory(prev => [res.data, ...prev]);
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Family history added', 'success');
-                                            } catch (e) { showToast('Failed to add family history', 'error'); }
-                                        }}
-                                        onDelete={async (itemId) => {
-                                            if (!confirm('Are you sure?')) return;
-                                            try {
-                                                await patientsAPI.deleteFamilyHistory(itemId);
-                                                setFamilyHistory(prev => prev.filter(h => h.id !== itemId));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Family history deleted', 'success');
-                                            } catch (e) { showToast('Failed to delete family history', 'error'); }
-                                        }}
-                                    />
-
-                                    {/* S - Surgical History */}
-                                    <HistoryList
-                                        title="Surgical History"
-                                        icon={<ActivitySquare className="w-4 h-4 text-blue-600" />}
-                                        items={surgicalHistory}
-                                        emptyMessage="No surgical history recorded"
-                                        renderItem={(surg) => (
-                                            <div className="flex justify-between items-start w-full">
-                                                <div>
-                                                    <span className="font-medium text-gray-900">{surg.procedure_name}</span>
-                                                    {surg.date && (
-                                                        <span className="text-gray-500 text-[10px] ml-2">
-                                                            ({format(new Date(surg.date), 'MM/dd/yyyy')})
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {surg.surgeon && <span className="text-gray-500 text-xs">{surg.surgeon}</span>}
-                                            </div>
-                                        )}
-                                        renderInput={(props) => <SurgicalHistoryInput {...props} />}
-                                        onAdd={async (data) => {
-                                            try {
-                                                const res = await patientsAPI.addSurgicalHistory(id, data);
-                                                setSurgicalHistory(prev => [res.data, ...prev]);
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Surgical history added', 'success');
-                                            } catch (e) { showToast('Failed to add surgical history', 'error'); }
-                                        }}
-                                        onDelete={async (itemId) => {
-                                            if (!confirm('Are you sure?')) return;
-                                            try {
-                                                await patientsAPI.deleteSurgicalHistory(itemId);
-                                                setSurgicalHistory(prev => prev.filter(h => h.id !== itemId));
-                                                window.dispatchEvent(new Event('patient-data-updated'));
-                                                showToast('Surgical history deleted', 'success');
-                                            } catch (e) { showToast('Failed to delete surgical history', 'error'); }
-                                        }}
-                                    />
-
-                                    {/* O/S - Social History */}
-                                    <div className="border rounded-md border-gray-100 bg-white">
-                                        <div className="flex items-center gap-2 p-2 bg-gray-50 border-b border-gray-100">
-                                            <UserCircle className="w-4 h-4 text-teal-600" />
-                                            <h4 className="text-sm font-semibold text-gray-800">Other / Social History</h4>
-                                        </div>
-                                        <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                            {/* Helper to transform and save social history */}
-                                            {(() => {
-                                                const saveSocialHistory = async (changes) => {
-                                                    try {
-                                                        const updatedState = { ...socialHistory, ...changes };
-                                                        // Map snake_case state to camelCase payload for backend
-                                                        const payload = {
-                                                            smokingStatus: updatedState.smoking_status,
-                                                            smokingPackYears: updatedState.smoking_pack_years,
-                                                            alcoholUse: updatedState.alcohol_use,
-                                                            alcoholQuantity: updatedState.alcohol_quantity,
-                                                            drugUse: updatedState.drug_use,
-                                                            exerciseFrequency: updatedState.exercise_frequency,
-                                                            diet: updatedState.diet,
-                                                            occupation: updatedState.occupation,
-                                                            livingSituation: updatedState.living_situation,
-                                                            notes: updatedState.notes
-                                                        };
-                                                        await patientsAPI.saveSocialHistory(id, payload);
-                                                        setSocialHistory(updatedState);
-                                                        window.dispatchEvent(new Event('patient-data-updated'));
-                                                    } catch (e) {
-                                                        console.error('Error saving social history:', e);
-                                                        showToast('Failed to update social history', 'error');
-                                                    }
-                                                };
-
-                                                return (
-                                                    <>
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 block mb-1">Smoking Status</label>
-                                                            <select
-                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                                value={socialHistory?.smoking_status || ''}
-                                                                onChange={(e) => saveSocialHistory({ smoking_status: e.target.value })}
-                                                            >
-                                                                <option value="">Unknown</option>
-                                                                <option value="Never smoker">Never smoker</option>
-                                                                <option value="Former smoker">Former smoker</option>
-                                                                <option value="Current smoker">Current smoker</option>
-                                                            </select>
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 block mb-1">Alcohol Use</label>
-                                                            <select
-                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                                value={socialHistory?.alcohol_use || ''}
-                                                                onChange={(e) => saveSocialHistory({ alcohol_use: e.target.value })}
-                                                            >
-                                                                <option value="">Unknown</option>
-                                                                <option value="None">None</option>
-                                                                <option value="Social">Social</option>
-                                                                <option value="Moderate">Moderate</option>
-                                                                <option value="Heavy">Heavy</option>
-                                                            </select>
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 block mb-1">Occupation</label>
-                                                            <input
-                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                                value={socialHistory?.occupation || ''}
-                                                                placeholder="Occupation"
-                                                                onBlur={(e) => saveSocialHistory({ occupation: e.target.value })}
-                                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, occupation: e.target.value }))}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 block mb-1">Diet</label>
-                                                            <input
-                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                                value={socialHistory?.diet || ''}
-                                                                placeholder="Diet details"
-                                                                onBlur={(e) => saveSocialHistory({ diet: e.target.value })}
-                                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, diet: e.target.value }))}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-xs text-gray-500 block mb-1">Exercise</label>
-                                                            <input
-                                                                className="w-full p-1.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                                                                value={socialHistory?.exercise_frequency || ''}
-                                                                placeholder="Frequency"
-                                                                onBlur={(e) => saveSocialHistory({ exercise_frequency: e.target.value })}
-                                                                onChange={(e) => setSocialHistory(prev => ({ ...prev, exercise_frequency: e.target.value }))}
-                                                            />
-                                                        </div>
-                                                    </>
-                                                );
-                                            })()}
-                                        </div>
+                                        })()}
                                     </div>
                                 </div>
                             </div>
-                        </Section>
+                        </VisitNoteSection>
 
                         {/* Results / Data Section */}
-                        <Section title="Results / Data" defaultOpen={true} id="results">
+                        <VisitNoteSection title="Results / Data" defaultOpen={true} id="results" badge={visitDocuments.length}>
                             {visitDocuments.length === 0 && (
-                                <div className="py-8 border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center text-slate-300">
-                                    <FilePlus className="w-8 h-8 mb-2 opacity-40" />
-                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">No Results Linked</p>
+                                <div className="py-12 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center text-slate-300 bg-slate-50/30">
+                                    <FilePlus className="w-10 h-10 mb-3 opacity-20" />
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">No Results Linked</p>
                                 </div>
                             )}
 
                             {visitDocuments.length > 0 && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                     {visitDocuments.map(doc => (
-                                        <div key={doc.id} className="relative group bg-slate-50 border border-slate-100 p-2 rounded-xl">
-                                            <ResultImage doc={doc} />
-                                            <div className="flex justify-between items-center mt-2 px-1">
-                                                <div className="flex flex-col">
-                                                    <p className="text-[11px] font-semibold text-slate-700 truncate max-w-[180px]">{doc.filename}</p>
-                                                    <p className="text-[9px] text-slate-400 font-medium uppercase tracking-wide">
+                                        <div key={doc.id} className="relative group bg-white border border-slate-100 p-2.5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
+                                            <div className="rounded-xl overflow-hidden border border-slate-50/50">
+                                                <ResultImage doc={doc} />
+                                            </div>
+                                            <div className="flex justify-between items-center mt-3 px-1">
+                                                <div className="flex flex-col min-w-0">
+                                                    <p className="text-xs font-bold text-slate-700 truncate">{doc.filename}</p>
+                                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
                                                         {format(new Date(doc.created_at || new Date()), 'MMM d, yyyy')}
                                                     </p>
                                                 </div>
@@ -3441,25 +3232,24 @@ const VisitNote = () => {
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         if (confirm('Remove image from note?')) {
-                                                            // Unlink
                                                             documentsAPI.update(doc.id, { visit_id: null })
                                                                 .then(() => setVisitDocuments(prev => prev.filter(d => d.id !== doc.id)));
                                                         }
                                                     }}
-                                                    className="p-1.5 bg-rose-50 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-100"
+                                                    className="p-2 bg-rose-50 text-rose-500 rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-100"
                                                     title="Unlink from visit"
                                                 >
-                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                        </Section>
+                        </VisitNoteSection>
 
                         {/* Assessment */}
-                        <Section title="Assessment" defaultOpen={true} isEdited={editedSections.has('assessment')} id="assessment">
+                        <VisitNoteSection title="Assessment" defaultOpen={true} isEdited={editedSections.has('assessment')} id="assessment">
                             {/* ICD-10 Search - Simple inline search */}
                             {hasPrivilege('search_icd10') && (
                                 <div className="mb-3 relative">
@@ -3475,20 +3265,19 @@ const VisitNote = () => {
                                                 setShowIcd10Search(true);
                                             }}
                                             disabled={isLocked}
-                                            className={`w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-100 focus:border-primary-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed transition-all shadow-sm ${editingDiagnosisIndex !== null ? 'border-primary-500 ring-2 ring-primary-100' : ''}`}
+                                            className="vn-input pl-9"
                                         />
-                                        {/* Optional Modal Button Trigger (Small Icon) */}
                                         <button
                                             onClick={() => setShowICD10Modal(true)}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
                                             title="Advanced Search"
                                         >
-                                            <PanelRight className="w-4 h-4" />
+                                            <Search className="w-4 h-4" />
                                         </button>
                                     </div>
 
                                     {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
-                                        <div className="absolute z-[60] mt-1 w-full border border-neutral-200 rounded-lg bg-white shadow-2xl max-h-80 overflow-y-auto py-1">
+                                        <div className="absolute z-[60] mt-2 w-full border border-slate-100 rounded-2xl bg-white/95 backdrop-blur-md shadow-xl max-h-80 overflow-y-auto py-2">
                                             {icd10Results.map((code) => (
                                                 <button
                                                     key={code.id || code.code}
@@ -3498,119 +3287,120 @@ const VisitNote = () => {
                                                         setIcd10Results([]);
                                                         setShowIcd10Search(false);
                                                     }}
-                                                    className="w-full text-left px-3 py-2 border-b border-neutral-50 last:border-0 hover:bg-primary-50 transition-colors group"
+                                                    className="w-full text-left px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors group"
                                                 >
-                                                    <div className="flex items-center justify-between mb-0.5">
-                                                        <span className="font-bold text-primary-700 text-xs group-hover:text-primary-800 tracking-tight">{code.code}</span>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="font-bold text-primary-600 text-xs tracking-tight">{code.code}</span>
                                                         {!code.is_billable && (
-                                                            <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 uppercase tracking-tighter">Non-Billable</span>
+                                                            <span className="text-[9px] font-black bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-widest">Non-Billable</span>
                                                         )}
                                                     </div>
-                                                    <div className="text-xs text-neutral-700 leading-tight line-clamp-2">{code.description}</div>
+                                                    <div className="text-xs text-slate-600 leading-relaxed line-clamp-2 font-medium">{code.description}</div>
                                                 </button>
                                             ))}
                                         </div>
                                     )}
 
-                                    {/* No results message */}
                                     {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
-                                        <div className="mt-1 border border-neutral-200 rounded-md bg-white p-3 text-center">
-                                            <p className="text-xs text-neutral-500">No codes found for "{icd10Search}"</p>
+                                        <div className="mt-2 border border-slate-100 rounded-2xl bg-white p-4 text-center">
+                                            <p className="text-xs text-slate-400 font-medium italic">No codes found for "{icd10Search}"</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* Show structured list of diagnoses when not signed and diagnoses exist */}
                             {!isSigned && diagnoses.length > 0 && (
-                                <div className="mb-2 border border-neutral-200 rounded-md bg-white p-2">
-                                    <div className="space-y-1">
-                                        {diagnoses.map((diag, idx) => (
-                                            <div key={idx} className="flex items-center justify-between py-1 px-2 hover:bg-neutral-50 rounded group transition-colors">
-                                                <div className="flex-1 text-xs text-neutral-900 flex items-center">
-                                                    <span className="font-medium mr-2">{idx + 1}.</span>
-                                                    <button
-                                                        onClick={() => {
-                                                            // Use modal for editing instead of inline search
-                                                            setEditingDiagnosisIndex(idx);
-                                                            setShowICD10Modal(true);
-                                                        }}
-                                                        className="flex-1 text-left hover:text-primary-600 hover:underline transition-colors"
-                                                    >
-                                                        {diag.replace(/^\d+\.\s*/, '')}
-                                                    </button>
+                                <div className="space-y-2.5 mt-4">
+                                    {diagnoses.map((diag, idx) => (
+                                        <div key={idx} className="vn-card p-3 flex items-center justify-between group">
+                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                <div className="w-6 h-6 flex-shrink-0 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center text-[10px] font-black">
+                                                    {idx + 1}
                                                 </div>
                                                 <button
-                                                    onClick={() => removeDiagnosisFromAssessment(idx)}
-                                                    className="opacity-0 group-hover:opacity-100 text-neutral-300 hover:text-red-500 transition-all ml-2"
+                                                    onClick={() => {
+                                                        setEditingDiagnosisIndex(idx);
+                                                        setShowICD10Modal(true);
+                                                    }}
+                                                    className="text-left font-bold text-slate-700 text-sm hover:text-primary-600 transition-colors truncate"
                                                 >
-                                                    <X className="w-3 h-3" />
+                                                    {diag.replace(/^\d+\.\s*/, '')}
                                                 </button>
                                             </div>
-                                        ))}
-                                    </div>
+                                            <button
+                                                onClick={() => removeDiagnosisFromAssessment(idx)}
+                                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
-                            {/* Free text assessment removed per request */}
-                        </Section>
+                        </VisitNoteSection>
 
                         {/* Plan */}
-                        <Section title="Plan" defaultOpen={true} isEdited={editedSections.has('plan')} id="plan">
+                        <VisitNoteSection title="Plan" defaultOpen={true} isEdited={editedSections.has('plan')} id="plan">
                             <div className="relative">
-                                {/* Show structured plan preview only when editing and there's structured data */}
                                 {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
-                                    <div className="mb-4 space-y-3">
+                                    <div className="space-y-5">
                                         {noteData.planStructured.map((item, index) => (
-                                            <div key={index} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-shadow hover:shadow-md group">
-                                                <div className="bg-slate-50/80 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-                                                    <div className="flex items-center gap-2 overflow-hidden">
-                                                        <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-slate-200 text-slate-600 rounded-full text-[10px] font-bold">{index + 1}</span>
-                                                        <span className="font-semibold text-xs text-slate-700 truncate">{item.diagnosis}</span>
+                                            <div key={index} className="vn-card group p-0 overflow-hidden shadow-sm">
+                                                <div className="px-5 py-3.5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className="w-6 h-6 flex-shrink-0 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-[10px] font-black">
+                                                            {index + 1}
+                                                        </div>
+                                                        <span className="font-bold text-slate-800 text-sm truncate">{item.diagnosis}</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1">
+                                                    <div className="flex items-center gap-2">
                                                         <button
                                                             onClick={() => {
                                                                 setSelectedDiagnosis(item.diagnosis);
                                                                 setShowOrderModal(true);
                                                             }}
-                                                            className="px-2 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-medium hover:bg-primary-50 hover:text-primary-600 hover:border-primary-100 transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100"
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-primary-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-50 hover:border-primary-100 transition-all shadow-sm"
                                                         >
-                                                            <Plus className="w-3 h-3" />
+                                                            <Plus className="w-3.5 h-3.5" />
                                                             Add Order
                                                         </button>
                                                         {!isLocked && (
                                                             <button
                                                                 onClick={() => removeFromPlan(index)}
-                                                                className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
                                                                 title="Remove Diagnosis"
                                                             >
-                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                <Trash2 className="w-4 h-4" />
                                                             </button>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                <div className="p-3 bg-white">
+                                                <div className="p-5">
                                                     {item.orders.length === 0 ? (
-                                                        <p className="text-[10px] text-slate-400 italic pl-1">No orders entered. Click "Add Order" above.</p>
+                                                        <div className="py-4 border-2 border-dashed border-slate-50/50 rounded-2xl flex flex-col items-center justify-center bg-slate-50/10">
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 italic">No orders pending</p>
+                                                        </div>
                                                     ) : (
-                                                        <ul className="space-y-1.5">
+                                                        <div className="space-y-3">
                                                             {item.orders.flatMap((order, orderIdx) => {
                                                                 const orderParts = order.split(';').map(part => part.trim()).filter(part => part);
                                                                 return orderParts.map((part, partIdx) => (
-                                                                    <li key={`${orderIdx}-${partIdx}`} className="text-xs text-slate-700 flex items-start group/order pl-1">
-                                                                        <div className="mr-2 mt-1.5 w-1 h-1 rounded-full bg-slate-300 group-hover/order:bg-primary-400"></div>
-                                                                        <span className="flex-1 leading-relaxed">{part}</span>
+                                                                    <div key={`${orderIdx}-${partIdx}`} className="flex items-center justify-between group/order bg-slate-50/30 p-2.5 rounded-xl border border-transparent hover:border-slate-100 hover:bg-white transition-all">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary-400"></div>
+                                                                            <span className="text-sm text-slate-700 font-medium leading-relaxed">{part}</span>
+                                                                        </div>
                                                                         <button
                                                                             onClick={() => removeFromPlan(index, orderIdx)}
-                                                                            className="opacity-0 group-hover/order:opacity-100 text-slate-300 hover:text-rose-500 transition-all p-0.5"
+                                                                            className="opacity-0 group-hover/order:opacity-100 p-1.5 text-slate-300 hover:text-rose-500 transition-all rounded-lg"
                                                                         >
-                                                                            <X className="w-3 h-3" />
+                                                                            <X className="w-3.5 h-3.5" />
                                                                         </button>
-                                                                    </li>
+                                                                    </div>
                                                                 ));
                                                             })}
-                                                        </ul>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
@@ -3619,39 +3409,40 @@ const VisitNote = () => {
                                 )}
 
                                 {isSigned && (
-                                    <div className="p-4 border border-slate-200 rounded-xl bg-slate-50 text-xs leading-relaxed text-slate-700">
-                                        <PlanDisplay plan={noteData.plan} />
+                                    <div className="vn-card p-5 bg-slate-50/50 text-sm leading-relaxed text-slate-700 font-medium">
+                                        <PlanDisplayLegacy plan={noteData.plan} />
                                     </div>
                                 )}
+
                                 {autocompleteState.show && autocompleteState.field === 'plan' && autocompleteState.suggestions.length > 0 && (
-                                    <div className="absolute z-50 bg-white border border-neutral-300 rounded-md shadow-lg max-h-32 overflow-y-auto mt-0.5 w-64" style={{ top: `${autocompleteState.position.top}px` }}>
+                                    <div className="absolute z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto mt-2 w-72" style={{ top: `${autocompleteState.position.top}px` }}>
                                         {autocompleteState.suggestions.map((item, index) => (
                                             <button
                                                 key={item.key}
                                                 type="button"
                                                 onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                                className={`w-full text-left px-2 py-1 border-b border-neutral-100 hover:bg-primary-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-100' : ''
-                                                    }`}
+                                                className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-50/50' : ''}`}
                                             >
-                                                <div className="font-medium text-neutral-900 text-xs">{item.key}</div>
-                                                <div className="text-xs text-neutral-500 truncate">{item.template.substring(0, 60)}...</div>
+                                                <div className="font-bold text-slate-900 text-xs tracking-tight mb-0.5">.{item.key}</div>
+                                                <div className="text-[10px] text-slate-500 truncate font-medium">{item.template}</div>
                                             </button>
                                         ))}
                                     </div>
                                 )}
                             </div>
+
                             {!isLocked && (
-                                <div className="mt-4 flex space-x-2 pt-2 border-t border-slate-100">
+                                <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-slate-100">
                                     {hasPrivilege('order_labs') && (
                                         <button
                                             onClick={() => {
                                                 setOrderModalTab('labs');
                                                 setShowOrderModal(true);
                                             }}
-                                            className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
+                                            className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2"
                                         >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>Geneal Lab Order</span>
+                                            <FlaskConical className="w-4 h-4" />
+                                            Order Labs
                                         </button>
                                     )}
                                     <button
@@ -3659,9 +3450,10 @@ const VisitNote = () => {
                                             setOrderModalTab('medications');
                                             setShowOrderModal(true);
                                         }}
-                                        className="px-3 py-1.5 text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition-colors"
+                                        className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
                                     >
-                                        Prescribe Rx (General)
+                                        <Pill className="w-4 h-4 text-blue-500" />
+                                        Prescribe Rx
                                     </button>
                                     {hasPrivilege('create_referrals') && (
                                         <button
@@ -3669,151 +3461,149 @@ const VisitNote = () => {
                                                 setOrderModalTab('referrals');
                                                 setShowOrderModal(true);
                                             }}
-                                            className="px-3 py-1.5 text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition-colors"
+                                            className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
                                         >
-                                            Send Referral
+                                            <Share2 className="w-4 h-4 text-purple-500" />
+                                            Referral
                                         </button>
                                     )}
                                 </div>
                             )}
-                        </Section>
+                        </VisitNoteSection>
 
-
-                        {/* Caregiver Training (CTS) */}
-                        <Section title="Caregiver Training Services (CTS)" defaultOpen={false} isEdited={editedSections.has('cts')} id="cts">
-                            <div className="relative">
-                                <textarea
-                                    value={noteData.cts || ''}
-                                    onChange={(e) => handleTextChange(e.target.value, 'cts')}
-                                    placeholder="Document topic (e.g. Wound Care), time spent, and if telehealth..."
-                                    className="w-full text-xs p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-100 focus:border-primary-400 min-h-[80px] transition-all"
-                                    disabled={isLocked}
-                                />
-                                {!isSigned && (
-                                    <div className="mt-3 text-xs">
-                                        <label className="block text-slate-500 font-medium mb-1.5 uppercase tracking-wide text-[10px]">Quick Templates</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {[
-                                                'CTS: Wound Care Education (15 min)',
-                                                'CTS: Infection Control (10 min)',
-                                                'CTS: ADL Assistance Techniques',
-                                                'CTS: Medication Administration'
-                                            ].map((template) => (
-                                                <button
-                                                    key={template}
-                                                    onClick={() => handleTextChange(noteData.cts ? `${noteData.cts}\n${template}` : template, 'cts')}
-                                                    className="px-2.5 py-1.5 bg-white border border-slate-200 hover:border-primary-200 hover:bg-primary-50 text-slate-600 hover:text-primary-700 rounded-lg text-xs transition-all shadow-sm"
-                                                >
-                                                    {template}
-                                                </button>
-                                            ))}
+                        {/* Additional Clinical Sections Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 overflow-visible">
+                            {/* Caregiver Training (CTS) */}
+                            <VisitNoteSection title="Caregiver Training (CTS)" defaultOpen={false} isEdited={editedSections.has('cts')} id="cts">
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={noteData.cts || ''}
+                                        onChange={(e) => handleTextChange(e.target.value, 'cts')}
+                                        placeholder="Education topics, duration, participant response..."
+                                        className="vn-textarea min-h-[120px]"
+                                        disabled={isLocked}
+                                    />
+                                    {!isSigned && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Quick Templates</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    'CTS: Wound Care Education (15 min)',
+                                                    'CTS: Infection Control (10 min)',
+                                                    'CTS: ADL Assistance Techniques',
+                                                    'CTS: Medication Administration'
+                                                ].map((template) => (
+                                                    <button
+                                                        key={template}
+                                                        onClick={() => handleTextChange(noteData.cts ? `${noteData.cts}\n${template}` : template, 'cts')}
+                                                        className="px-3 py-1.5 bg-white border border-slate-100 hover:border-primary-200 text-slate-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                                                    >
+                                                        {template}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Section>
+                                    )}
+                                </div>
+                            </VisitNoteSection>
 
-                        {/* ASCVD Risk Management */}
-                        <Section title="ASCVD Risk Management" defaultOpen={false} isEdited={editedSections.has('ascvd')} id="ascvd">
-                            <div className="relative">
-                                <textarea
-                                    value={noteData.ascvd || ''}
-                                    onChange={(e) => handleTextChange(e.target.value, 'ascvd')}
-                                    placeholder="Risk score, category, and management plan..."
-                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
-                                    disabled={isLocked}
-                                />
-                                {!isSigned && (
-                                    <div className="mt-2 text-xs">
-                                        <label className="block text-neutral-600 font-medium mb-1">Risk Categories:</label>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {['Low Risk (<5%)', 'Borderline (5-7.4%)', 'Intermediate (7.5-19.9%)', 'High Risk (≥20%)'].map((risk) => (
-                                                <button
-                                                    key={risk}
-                                                    onClick={() => handleTextChange(noteData.ascvd ? `${noteData.ascvd}\nRisk Category: ${risk}` : `Risk Category: ${risk}`, 'ascvd')}
-                                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-xs transition-colors"
-                                                >
-                                                    {risk}
-                                                </button>
-                                            ))}
+                            {/* ASCVD Risk Management */}
+                            <VisitNoteSection title="ASCVD Risk Management" defaultOpen={false} isEdited={editedSections.has('ascvd')} id="ascvd">
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={noteData.ascvd || ''}
+                                        onChange={(e) => handleTextChange(e.target.value, 'ascvd')}
+                                        placeholder="10-year risk score, statin therapy goal, lifestyle plan..."
+                                        className="vn-textarea min-h-[120px]"
+                                        disabled={isLocked}
+                                    />
+                                    {!isSigned && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Risk Categories</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {['Low Risk (<5%)', 'Borderline (5-7.4%)', 'Intermediate (7.5-19.9%)', 'High Risk (≥20%)'].map((risk) => (
+                                                    <button
+                                                        key={risk}
+                                                        onClick={() => handleTextChange(noteData.ascvd ? `${noteData.ascvd}\nRisk Category: ${risk}` : `Risk Category: ${risk}`, 'ascvd')}
+                                                        className="px-3 py-1.5 bg-white border border-slate-100 hover:border-primary-200 text-slate-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                                                    >
+                                                        {risk}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Section>
+                                    )}
+                                </div>
+                            </VisitNoteSection>
+                        </div>
 
-                        {/* Behavioral Safety Plan */}
-                        <Section title="Behavioral Safety Plan" defaultOpen={false} isEdited={editedSections.has('safetyPlan')}>
-                            <div className="relative">
-                                <textarea
-                                    value={noteData.safetyPlan || ''}
-                                    onChange={(e) => handleTextChange(e.target.value, 'safetyPlan')}
-                                    placeholder="Warning signs, coping strategies, and contacts..."
-                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
-                                    disabled={isLocked}
-                                />
-                                {!isSigned && (
-                                    <div className="mt-2 text-xs">
-                                        <label className="block text-neutral-600 font-medium mb-1">Components:</label>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {['Warning Signs', 'Coping Strategies', 'Social Contacts', 'Professional Contacts'].map((comp) => (
-                                                <button
-                                                    key={comp}
-                                                    onClick={() => handleTextChange(noteData.safetyPlan ? `${noteData.safetyPlan}\n${comp}: ` : `${comp}: `, 'safetyPlan')}
-                                                    className="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded text-xs transition-colors"
-                                                >
-                                                    {comp}
-                                                </button>
-                                            ))}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 overflow-visible">
+                            {/* Behavioral Safety Plan */}
+                            <VisitNoteSection title="Behavioral Safety Plan" defaultOpen={false} isEdited={editedSections.has('safetyPlan')}>
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={noteData.safetyPlan || ''}
+                                        onChange={(e) => handleTextChange(e.target.value, 'safetyPlan')}
+                                        placeholder="Warning signs, coping strategies, supportive contacts..."
+                                        className="vn-textarea min-h-[120px]"
+                                        disabled={isLocked}
+                                    />
+                                    {!isSigned && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Section Headers</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {['Warning Signs', 'Coping Strategies', 'Social Contacts', 'Professional Contacts'].map((comp) => (
+                                                    <button
+                                                        key={comp}
+                                                        onClick={() => handleTextChange(noteData.safetyPlan ? `${noteData.safetyPlan}\n${comp}: ` : `${comp}: `, 'safetyPlan')}
+                                                        className="px-3 py-1.5 bg-white border border-slate-100 hover:border-primary-200 text-slate-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                                                    >
+                                                        {comp}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        </Section>
+                                    )}
+                                </div>
+                            </VisitNoteSection>
 
-                        {/* Care Plan */}
-                        <Section title="Care Plan" defaultOpen={true} isEdited={editedSections.has('carePlan')}>
-                            <div className="relative">
+                            {/* Care Plan */}
+                            <VisitNoteSection title="Care Plan" defaultOpen={true} isEdited={editedSections.has('carePlan')}>
                                 <textarea
                                     value={noteData.carePlan || ''}
                                     onChange={(e) => handleTextChange(e.target.value, 'carePlan')}
-                                    placeholder="Summary of what needs to be done in preparation for the next visit..."
-                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[80px]"
+                                    placeholder="Next steps, coordination of care, patient goals..."
+                                    className="vn-textarea min-h-[120px]"
                                     disabled={isLocked}
                                 />
-                            </div>
-                        </Section>
+                            </VisitNoteSection>
+                        </div>
 
                         {/* Follow Up */}
-                        <Section title="Follow Up" defaultOpen={true}>
-                            <div className="relative">
+                        <VisitNoteSection title="Follow Up" defaultOpen={true}>
+                            <div className="space-y-4">
                                 <textarea
                                     value={noteData.followUp || ''}
                                     onChange={(e) => setNoteData({ ...noteData, followUp: e.target.value })}
-                                    placeholder="Follow up instructions..."
-                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
+                                    placeholder="Return for follow up in..."
+                                    className="vn-textarea min-h-[80px]"
                                     disabled={isLocked}
                                 />
                                 {!isSigned && (
-                                    <div className="mt-2 text-xs">
-                                        <label className="block text-neutral-600 font-medium mb-1">Quick Select:</label>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {['1 Week', '2 Weeks', '1 Month', '3 Months', '6 Months', '1 Year', 'PRN'].map((duration) => (
-                                                <button
-                                                    key={duration}
-                                                    onClick={() => {
-                                                        setNoteData({ ...noteData, followUp: duration });
-                                                    }}
-                                                    className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 rounded text-xs transition-colors"
-                                                >
-                                                    {duration}
-                                                </button>
-                                            ))}
-                                        </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['1 Week', '2 Weeks', '1 Month', '3 Months', '6 Months', '1 Year', 'PRN'].map((duration) => (
+                                            <button
+                                                key={duration}
+                                                onClick={() => setNoteData({ ...noteData, followUp: duration })}
+                                                className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100"
+                                            >
+                                                {duration}
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
-                        </Section>
+                        </VisitNoteSection>
 
                         {/* Signature Manifestation */}
                         {(isSigned || isPreliminary) && (
@@ -3840,37 +3630,58 @@ const VisitNote = () => {
 
                         {/* Bottom Action Buttons */}
                         {!isSigned && !isPreliminary && (
-                            <div className="mt-6 pt-4 border-t border-neutral-200 flex items-center justify-between">
-                                <div className="flex items-center space-x-1.5">
-                                    {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}
-                                    <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: isSaving ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}>
-                                        <Save className="w-3.5 h-3.5" />
-                                        <span>{isSaving ? 'Saving...' : 'Save'}</span>
-                                    </button>
-                                    <button onClick={handleSign} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
-                                        <Lock className="w-3.5 h-3.5" />
-                                        <span>Sign</span>
+                            <div className="mt-10 pt-8 border-t border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className="px-5 py-2.5 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all shadow-md shadow-primary-200 flex items-center gap-2 min-w-[120px] justify-center"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        <span>{isSaving ? 'Saving...' : 'Save Progress'}</span>
                                     </button>
                                     <button
+                                        onClick={handleSign}
+                                        className="px-5 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2 min-w-[120px] justify-center"
+                                    >
+                                        <Lock className="w-4 h-4" />
+                                        <span>Sign Note</span>
+                                    </button>
+                                    {lastSaved && (
+                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-2">
+                                            Saved {lastSaved.toLocaleTimeString()}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button
                                         onClick={handleCreateSuperbill}
-                                        className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
+                                        className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
                                         title="Create/Open Commercial Superbill"
                                     >
-                                        <DollarSign className="w-3.5 h-3.5" />
+                                        <DollarSign className="w-4 h-4" />
                                         <span>Superbill</span>
                                     </button>
-                                    <button onClick={handleDelete} className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-colors text-xs font-medium">
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                        <span>Delete</span>
+                                    <button
+                                        onClick={() => navigate(`/patient/${id}/snapshot`)}
+                                        className="p-2.5 bg-white border border-slate-200 text-slate-500 hover:text-slate-800 rounded-2xl transition-all shadow-sm"
+                                        title="Back to Patient Chart"
+                                    >
+                                        <ArrowLeft className="w-4 h-4" />
                                     </button>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => navigate(`/patient/${id}/snapshot`)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors flex items-center gap-1" title="Back to Patient Chart">
-                                        <ArrowLeft className="w-3.5 h-3.5" />
-                                        <span className="text-xs font-medium">Chart</span>
+                                    <button
+                                        onClick={() => setShowPrintModal(true)}
+                                        className="p-2.5 bg-white border border-slate-200 text-slate-500 hover:text-slate-800 rounded-2xl transition-all shadow-sm"
+                                        title="Print"
+                                    >
+                                        <Printer className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print">
-                                        <Printer className="w-3.5 h-3.5" />
+                                    <button
+                                        onClick={handleDelete}
+                                        className="p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-2xl transition-all shadow-sm border border-rose-100"
+                                        title="Delete Note"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
@@ -3902,190 +3713,192 @@ const VisitNote = () => {
                     {/* End of main content div */}
 
                     {/* Right: Quick Actions Sidebar */}
-                    {showQuickActions && !isSigned && (
-                        <div className="w-72 flex-shrink-0 sticky top-4 h-fit">
-                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                                {/* Sidebar Header */}
-                                <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quick Actions</span>
-                                    <button onClick={() => setShowQuickActions(false)} className="p-1 hover:bg-slate-200 rounded transition-colors">
-                                        <X className="w-3.5 h-3.5 text-slate-500" />
-                                    </button>
-                                </div>
-
-                                {/* Problem List Section */}
-                                <div className="border-b border-slate-100">
-                                    <div className="px-3 py-2 bg-slate-50/50">
-                                        <div className="flex items-center gap-1.5">
-                                            <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
-                                            <span className="text-[10px] font-bold text-slate-600 uppercase">Problem List</span>
-                                        </div>
+                    {
+                        showQuickActions && !isSigned && (
+                            <div className="w-72 flex-shrink-0 sticky top-4 h-fit">
+                                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                                    {/* Sidebar Header */}
+                                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quick Actions</span>
+                                        <button onClick={() => setShowQuickActions(false)} className="p-1 hover:bg-slate-200 rounded transition-colors">
+                                            <X className="w-3.5 h-3.5 text-slate-500" />
+                                        </button>
                                     </div>
-                                    <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
-                                        {(patientData?.problems || []).filter(p => p.status === 'active').length > 0 ? (
-                                            <div className="space-y-1">
-                                                {(() => {
-                                                    const seen = new Set();
-                                                    return (patientData?.problems || [])
-                                                        .filter(p => p.status === 'active')
-                                                        .filter(p => {
-                                                            const cleanName = (p.problem_name || p.name || '')
-                                                                .replace(/^[\d.\s]+/, '')
-                                                                .toLowerCase()
-                                                                .trim();
-                                                            if (seen.has(cleanName)) return false;
-                                                            seen.add(cleanName);
-                                                            return true;
-                                                        })
-                                                        .slice(0, 10)
-                                                        .map((p, idx) => (
-                                                            <button
-                                                                key={idx}
-                                                                onClick={() => addProblemToAssessment(p)}
-                                                                className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
-                                                            >
-                                                                <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
-                                                                <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">
-                                                                    {(p.problem_name || '').replace(/^[\d.\s]+/, '')}
-                                                                </span>
-                                                                {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
-                                                            </button>
-                                                        ));
-                                                })()}
+
+                                    {/* Problem List Section */}
+                                    <div className="border-b border-slate-100">
+                                        <div className="px-3 py-2 bg-slate-50/50">
+                                            <div className="flex items-center gap-1.5">
+                                                <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
+                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Problem List</span>
                                             </div>
-                                        ) : (
-                                            <div className="text-[10px] text-slate-400 italic text-center py-2">No active problems</div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Medications Section */}
-                                <div className="border-b border-slate-100">
-                                    <div className="px-3 py-2 bg-slate-50/50">
-                                        <div className="flex items-center gap-1.5">
-                                            <Pill className="w-3.5 h-3.5 text-emerald-500" />
-                                            <span className="text-[10px] font-bold text-slate-600 uppercase">Medications</span>
+                                        </div>
+                                        <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
+                                            {(patientData?.problems || []).filter(p => p.status === 'active').length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {(() => {
+                                                        const seen = new Set();
+                                                        return (patientData?.problems || [])
+                                                            .filter(p => p.status === 'active')
+                                                            .filter(p => {
+                                                                const cleanName = (p.problem_name || p.name || '')
+                                                                    .replace(/^[\d.\s]+/, '')
+                                                                    .toLowerCase()
+                                                                    .trim();
+                                                                if (seen.has(cleanName)) return false;
+                                                                seen.add(cleanName);
+                                                                return true;
+                                                            })
+                                                            .slice(0, 10)
+                                                            .map((p, idx) => (
+                                                                <button
+                                                                    key={idx}
+                                                                    onClick={() => addProblemToAssessment(p)}
+                                                                    className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
+                                                                >
+                                                                    <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
+                                                                    <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">
+                                                                        {(p.problem_name || '').replace(/^[\d.\s]+/, '')}
+                                                                    </span>
+                                                                    {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
+                                                                </button>
+                                                            ));
+                                                    })()}
+                                                </div>
+                                            ) : (
+                                                <div className="text-[10px] text-slate-400 italic text-center py-2">No active problems</div>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="p-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                        {(patientData?.medications || []).filter(m => m.active !== false).length > 0 ? (
-                                            <div className="space-y-1.5">
-                                                {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
-                                                    <div key={idx} className="px-2 py-1.5 bg-white rounded border border-slate-100">
-                                                        <div className="text-[11px] font-medium text-slate-800 truncate">
-                                                            {(m.medication_name || '')
-                                                                .replace(/&amp;/g, '&')
-                                                                .replace(/&#x2f;/gi, '/')
-                                                                .replace(/&#47;/g, '/')
-                                                                .replace(/&quot;/g, '"')
-                                                                .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+
+                                    {/* Medications Section */}
+                                    <div className="border-b border-slate-100">
+                                        <div className="px-3 py-2 bg-slate-50/50">
+                                            <div className="flex items-center gap-1.5">
+                                                <Pill className="w-3.5 h-3.5 text-emerald-500" />
+                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Medications</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                            {(patientData?.medications || []).filter(m => m.active !== false).length > 0 ? (
+                                                <div className="space-y-1.5">
+                                                    {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
+                                                        <div key={idx} className="px-2 py-1.5 bg-white rounded border border-slate-100">
+                                                            <div className="text-[11px] font-medium text-slate-800 truncate">
+                                                                {(m.medication_name || '')
+                                                                    .replace(/&amp;/g, '&')
+                                                                    .replace(/&#x2f;/gi, '/')
+                                                                    .replace(/&#47;/g, '/')
+                                                                    .replace(/&quot;/g, '"')
+                                                                    .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                            </div>
+                                                            <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
+                                                            <div className="flex gap-1 mt-1">
+                                                                <button onClick={() => addMedicationToPlan(m, 'continue')} className="px-1.5 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors">
+                                                                    Continue
+                                                                </button>
+                                                                <button onClick={() => addMedicationToPlan(m, 'refill')} className="px-1.5 py-0.5 text-[9px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors flex items-center gap-0.5">
+                                                                    <RefreshCw className="w-2.5 h-2.5" />
+                                                                    Refill
+                                                                </button>
+                                                                <button onClick={() => addMedicationToPlan(m, 'stop')} className="px-1.5 py-0.5 text-[9px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors flex items-center gap-0.5">
+                                                                    <StopCircle className="w-2.5 h-2.5" />
+                                                                    Stop
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
-                                                        <div className="flex gap-1 mt-1">
-                                                            <button onClick={() => addMedicationToPlan(m, 'continue')} className="px-1.5 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors">
-                                                                Continue
-                                                            </button>
-                                                            <button onClick={() => addMedicationToPlan(m, 'refill')} className="px-1.5 py-0.5 text-[9px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors flex items-center gap-0.5">
-                                                                <RefreshCw className="w-2.5 h-2.5" />
-                                                                Refill
-                                                            </button>
-                                                            <button onClick={() => addMedicationToPlan(m, 'stop')} className="px-1.5 py-0.5 text-[9px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors flex items-center gap-0.5">
-                                                                <StopCircle className="w-2.5 h-2.5" />
-                                                                Stop
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-[10px] text-slate-400 italic text-center py-2">No medications</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* HPI Templates Section */}
+                                    <div className="border-b border-slate-100">
+                                        <div className="px-3 py-2 bg-slate-50/50">
+                                            <div className="flex items-center gap-1.5">
+                                                <FileText className="w-3.5 h-3.5 text-blue-500" />
+                                                <span className="text-[10px] font-bold text-slate-600 uppercase">HPI Templates</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
+                                            <div className="space-y-1">
+                                                {hpiTemplates.map((t, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => insertHpiTemplate(t.key, t.text)}
+                                                        className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center gap-1.5 group"
+                                                    >
+                                                        <Zap className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
+                                                        <span className="text-slate-700 group-hover:text-blue-700">{t.key}</span>
+                                                    </button>
                                                 ))}
                                             </div>
-                                        ) : (
-                                            <div className="text-[10px] text-slate-400 italic text-center py-2">No medications</div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* HPI Templates Section */}
-                                <div className="border-b border-slate-100">
-                                    <div className="px-3 py-2 bg-slate-50/50">
-                                        <div className="flex items-center gap-1.5">
-                                            <FileText className="w-3.5 h-3.5 text-blue-500" />
-                                            <span className="text-[10px] font-bold text-slate-600 uppercase">HPI Templates</span>
                                         </div>
                                     </div>
-                                    <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
-                                        <div className="space-y-1">
-                                            {hpiTemplates.map((t, idx) => (
+
+                                    {/* Results Import Section */}
+                                    <div>
+                                        <div className="px-3 py-2 bg-slate-50/50">
+                                            <div className="flex items-center gap-1.5">
+                                                <FlaskConical className="w-3.5 h-3.5 text-purple-500" />
+                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Results</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-2">
+                                            <div className="grid grid-cols-2 gap-1.5">
                                                 <button
-                                                    key={idx}
-                                                    onClick={() => insertHpiTemplate(t.key, t.text)}
-                                                    className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center gap-1.5 group"
+                                                    onClick={() => openResultImport('Labs')}
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
                                                 >
-                                                    <Zap className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
-                                                    <span className="text-slate-700 group-hover:text-blue-700">{t.key}</span>
+                                                    <FlaskConical className="w-4 h-4 text-purple-500" />
+                                                    <span className="text-slate-600">Labs</span>
                                                 </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Results Import Section */}
-                                <div>
-                                    <div className="px-3 py-2 bg-slate-50/50">
-                                        <div className="flex items-center gap-1.5">
-                                            <FlaskConical className="w-3.5 h-3.5 text-purple-500" />
-                                            <span className="text-[10px] font-bold text-slate-600 uppercase">Results</span>
-                                        </div>
-                                    </div>
-                                    <div className="p-2">
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            <button
-                                                onClick={() => openResultImport('Labs')}
-                                                className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
-                                            >
-                                                <FlaskConical className="w-4 h-4 text-purple-500" />
-                                                <span className="text-slate-600">Labs</span>
-                                            </button>
-                                            <button
-                                                onClick={() => openResultImport('Imaging')}
-                                                className="px-2 py-2 text-[10px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex flex-col items-center gap-1"
-                                            >
-                                                <FileImage className="w-4 h-4 text-blue-500" />
-                                                <span className="text-slate-600">Image</span>
-                                            </button>
-                                            <button
-                                                onClick={() => openResultImport('Echo')}
-                                                className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
-                                            >
-                                                <Heart className="w-4 h-4 text-rose-500" />
-                                                <span className="text-slate-600">Echo</span>
-                                            </button>
-                                            <button
-                                                onClick={() => openResultImport('EKG')}
-                                                className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
-                                            >
-                                                <Waves className="w-4 h-4 text-rose-500" />
-                                                <span className="text-slate-600">EKG</span>
-                                            </button>
-                                            <button
-                                                onClick={() => openResultImport('Cath')}
-                                                className="px-2 py-2 text-[10px] bg-white hover:bg-red-50 rounded border border-slate-100 hover:border-red-200 transition-all flex flex-col items-center gap-1"
-                                            >
-                                                <Stethoscope className="w-4 h-4 text-red-500" />
-                                                <span className="text-slate-600">Cath</span>
-                                            </button>
-                                            <button
-                                                onClick={() => openResultImport('Stress')}
-                                                className="px-2 py-2 text-[10px] bg-white hover:bg-orange-50 rounded border border-slate-100 hover:border-orange-200 transition-all flex flex-col items-center gap-1"
-                                            >
-                                                <Activity className="w-4 h-4 text-orange-500" />
-                                                <span className="text-slate-600">Stress</span>
-                                            </button>
+                                                <button
+                                                    onClick={() => openResultImport('Imaging')}
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex flex-col items-center gap-1"
+                                                >
+                                                    <FileImage className="w-4 h-4 text-blue-500" />
+                                                    <span className="text-slate-600">Image</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => openResultImport('Echo')}
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                                >
+                                                    <Heart className="w-4 h-4 text-rose-500" />
+                                                    <span className="text-slate-600">Echo</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => openResultImport('EKG')}
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                                >
+                                                    <Waves className="w-4 h-4 text-rose-500" />
+                                                    <span className="text-slate-600">EKG</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => openResultImport('Cath')}
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-red-50 rounded border border-slate-100 hover:border-red-200 transition-all flex flex-col items-center gap-1"
+                                                >
+                                                    <Stethoscope className="w-4 h-4 text-red-500" />
+                                                    <span className="text-slate-600">Cath</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => openResultImport('Stress')}
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-orange-50 rounded border border-slate-100 hover:border-orange-200 transition-all flex flex-col items-center gap-1"
+                                                >
+                                                    <Activity className="w-4 h-4 text-orange-500" />
+                                                    <span className="text-slate-600">Stress</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )
+                    }
+                </div >
                 {/* End of flex container */}
 
                 {/* Modals */}
@@ -4120,19 +3933,21 @@ const VisitNote = () => {
                     patientProblems={patientData?.problems}
                 />
 
-                {showOrderPicker && (
-                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowOrderPicker(false)}>
-                        <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xl">
-                            <OrderPicker
-                                type={orderPickerType}
-                                onSelect={handleOrderSelect}
-                                onClose={() => setShowOrderPicker(false)}
-                                visitId={currentVisitId || urlVisitId}
-                                patientId={id}
-                            />
+                {
+                    showOrderPicker && (
+                        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowOrderPicker(false)}>
+                            <div onClick={(e) => e.stopPropagation()} className="w-full max-w-xl">
+                                <OrderPicker
+                                    type={orderPickerType}
+                                    onSelect={handleOrderSelect}
+                                    onClose={() => setShowOrderPicker(false)}
+                                    visitId={currentVisitId || urlVisitId}
+                                    patientId={id}
+                                />
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {showPrintModal && <VisitPrint visitId={currentVisitId || urlVisitId} patientId={id} onClose={() => setShowPrintModal(false)} />}
 
@@ -4156,42 +3971,46 @@ const VisitNote = () => {
                 />
 
                 {/* Diagnosis Link Modal for Meds */}
-                {showDiagnosisLinkModal && (
-                    <DiagnosisLinkModal
-                        isOpen={showDiagnosisLinkModal}
-                        onClose={() => setShowDiagnosisLinkModal(false)}
-                        diagnoses={diagnoses}
-                        onConfirm={(selectedDiagnoses) => {
-                            const { action, medication } = pendingMedAction;
-                            if (action === 'add') {
-                                setPatientData(prev => ({
-                                    ...prev,
-                                    medications: [{ ...medication, related_diagnoses: selectedDiagnoses }, ...(prev.medications || [])]
-                                }));
-                            }
-                            setShowDiagnosisLinkModal(false);
-                        }}
-                    />
-                )}
+                {
+                    showDiagnosisLinkModal && (
+                        <DiagnosisLinkModal
+                            isOpen={showDiagnosisLinkModal}
+                            onClose={() => setShowDiagnosisLinkModal(false)}
+                            diagnoses={diagnoses}
+                            onConfirm={(selectedDiagnoses) => {
+                                const { action, medication } = pendingMedAction;
+                                if (action === 'add') {
+                                    setPatientData(prev => ({
+                                        ...prev,
+                                        medications: [{ ...medication, related_diagnoses: selectedDiagnoses }, ...(prev.medications || [])]
+                                    }));
+                                }
+                                setShowDiagnosisLinkModal(false);
+                            }}
+                        />
+                    )
+                }
 
-                {showCosignModal && (
-                    <CosignModal
-                        isOpen={showCosignModal}
-                        onClose={() => setShowCosignModal(false)}
-                        visitData={visitData}
-                        authorshipModel={authorshipModel}
-                        setAuthorshipModel={setAuthorshipModel}
-                        attestationText={attestationText}
-                        setAttestationText={setAttestationText}
-                        macros={attestationMacros}
-                        onConfirm={() => {
-                            handleCosign(attestationText, authorshipModel);
-                        }}
-                        onCreateMacro={handleCreateMacro}
-                        onDeleteMacro={handleDeleteMacro}
-                        isSaving={isSaving}
-                    />
-                )}
+                {
+                    showCosignModal && (
+                        <CosignModal
+                            isOpen={showCosignModal}
+                            onClose={() => setShowCosignModal(false)}
+                            visitData={visitData}
+                            authorshipModel={authorshipModel}
+                            setAuthorshipModel={setAuthorshipModel}
+                            attestationText={attestationText}
+                            setAttestationText={setAttestationText}
+                            macros={attestationMacros}
+                            onConfirm={() => {
+                                handleCosign(attestationText, authorshipModel);
+                            }}
+                            onCreateMacro={handleCreateMacro}
+                            onDeleteMacro={handleDeleteMacro}
+                            isSaving={isSaving}
+                        />
+                    )
+                }
 
                 {/* Dot Phrase Modal */}
                 {
@@ -4251,129 +4070,135 @@ const VisitNote = () => {
                         </div>
                     )
                 }
-                {showPrintOrdersModal && (
-                    <PrintOrdersModal
-                        patient={{ ...patientData, id }}
-                        isOpen={showPrintOrdersModal}
-                        onClose={() => setShowPrintOrdersModal(false)}
-                    />
-                )}
+                {
+                    showPrintOrdersModal && (
+                        <PrintOrdersModal
+                            patient={{ ...patientData, id }}
+                            isOpen={showPrintOrdersModal}
+                            onClose={() => setShowPrintOrdersModal(false)}
+                        />
+                    )
+                }
 
                 {/* Chart Review Modal - Note Focused */}
-                {showChartReview && (
-                    <ChartReviewModal
-                        isOpen={showChartReview}
-                        onClose={() => setShowChartReview(false)}
-                        visits={chartReviewData.visits}
-                        isLoading={chartReviewData.loading}
-                        patientData={patientData}
-                        onViewFullChart={() => {
-                            setShowChartReview(false);
-                            setPatientChartTab('history');
-                            setShowPatientChart(true);
-                        }}
-                        onOpenVisit={(visitId) => {
-                            if (visitId !== (currentVisitId || urlVisitId)) {
-                                navigate(`/patient/${id}/visit/${visitId}`);
-                            }
-                        }}
-                    />
-                )}
+                {
+                    showChartReview && (
+                        <ChartReviewModal
+                            isOpen={showChartReview}
+                            onClose={() => setShowChartReview(false)}
+                            visits={chartReviewData.visits}
+                            isLoading={chartReviewData.loading}
+                            patientData={patientData}
+                            onViewFullChart={() => {
+                                setShowChartReview(false);
+                                setPatientChartTab('history');
+                                setShowPatientChart(true);
+                            }}
+                            onOpenVisit={(visitId) => {
+                                if (visitId !== (currentVisitId || urlVisitId)) {
+                                    navigate(`/patient/${id}/visit/${visitId}`);
+                                }
+                            }}
+                        />
+                    )
+                }
 
                 {/* Carry Forward Modal */}
-                {showCarryForward && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowCarryForward(false)}>
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
-                            {/* Header */}
-                            <div className="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-600 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <RotateCcw className="w-5 h-5 text-white" />
-                                    <h2 className="text-lg font-bold text-white">Pull from Previous Visit</h2>
-                                    <span className="text-[11px] font-bold uppercase text-slate-300 bg-slate-500 px-2 py-0.5 rounded">
-                                        {carryForwardField?.toUpperCase()}
-                                    </span>
+                {
+                    showCarryForward && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowCarryForward(false)}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+                                {/* Header */}
+                                <div className="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-600 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <RotateCcw className="w-5 h-5 text-white" />
+                                        <h2 className="text-lg font-bold text-white">Pull from Previous Visit</h2>
+                                        <span className="text-[11px] font-bold uppercase text-slate-300 bg-slate-500 px-2 py-0.5 rounded">
+                                            {carryForwardField?.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <button onClick={() => setShowCarryForward(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                                        <X className="w-5 h-5 text-white" />
+                                    </button>
                                 </div>
-                                <button onClick={() => setShowCarryForward(false)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                                    <X className="w-5 h-5 text-white" />
-                                </button>
-                            </div>
 
-                            {/* Content */}
-                            <div className="flex-1 overflow-y-auto p-6">
-                                {loadingPrevVisits ? (
-                                    <div className="flex items-center justify-center py-16">
-                                        <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                                    </div>
-                                ) : previousVisits.length === 0 ? (
-                                    <div className="text-center py-12 text-slate-400">
-                                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                        <p className="text-sm font-medium">No previous visits with notes found</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <p className="text-xs text-slate-500 mb-4">
-                                            Select a visit below to pull its <strong>{carryForwardField?.toUpperCase()}</strong> content into the current note.
-                                        </p>
-                                        {previousVisits.map((visit) => {
-                                            const sectionContent = extractSectionFromNote(visit.note_draft, carryForwardField);
-                                            const hasContent = sectionContent && sectionContent.trim().length > 0;
+                                {/* Content */}
+                                <div className="flex-1 overflow-y-auto p-6">
+                                    {loadingPrevVisits ? (
+                                        <div className="flex items-center justify-center py-16">
+                                            <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                    ) : previousVisits.length === 0 ? (
+                                        <div className="text-center py-12 text-slate-400">
+                                            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                            <p className="text-sm font-medium">No previous visits with notes found</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <p className="text-xs text-slate-500 mb-4">
+                                                Select a visit below to pull its <strong>{carryForwardField?.toUpperCase()}</strong> content into the current note.
+                                            </p>
+                                            {previousVisits.map((visit) => {
+                                                const sectionContent = extractSectionFromNote(visit.note_draft, carryForwardField);
+                                                const hasContent = sectionContent && sectionContent.trim().length > 0;
 
-                                            return (
-                                                <div key={visit.id} className={`p-4 rounded-xl border transition-all ${hasContent ? 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md cursor-pointer' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
-                                                    <div className="flex items-start justify-between mb-2">
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-sm font-bold text-slate-900">
-                                                                    {format(new Date(visit.visit_date), 'MMM d, yyyy')}
-                                                                </span>
-                                                                {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
+                                                return (
+                                                    <div key={visit.id} className={`p-4 rounded-xl border transition-all ${hasContent ? 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md cursor-pointer' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-bold text-slate-900">
+                                                                        {format(new Date(visit.visit_date), 'MMM d, yyyy')}
+                                                                    </span>
+                                                                    {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
+                                                                </div>
+                                                                <div className="text-[11px] text-slate-500 uppercase font-medium">
+                                                                    {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
+                                                                </div>
                                                             </div>
-                                                            <div className="text-[11px] text-slate-500 uppercase font-medium">
-                                                                {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
-                                                            </div>
+                                                            {hasContent && (
+                                                                <button
+                                                                    onClick={() => insertCarryForward(sectionContent)}
+                                                                    className="px-3 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5"
+                                                                >
+                                                                    <Copy className="w-3.5 h-3.5" />
+                                                                    Use This
+                                                                </button>
+                                                            )}
                                                         </div>
-                                                        {hasContent && (
-                                                            <button
-                                                                onClick={() => insertCarryForward(sectionContent)}
-                                                                className="px-3 py-1.5 bg-primary-600 text-white text-xs font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5"
-                                                            >
-                                                                <Copy className="w-3.5 h-3.5" />
-                                                                Use This
-                                                            </button>
+
+                                                        {hasContent ? (
+                                                            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                                                <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">
+                                                                    {carryForwardField?.toUpperCase()} Content
+                                                                </div>
+                                                                <div className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-4">
+                                                                    {sectionContent}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mt-2 text-xs text-slate-400 italic">
+                                                                No {carryForwardField?.toUpperCase()} content found in this visit
+                                                            </div>
                                                         )}
                                                     </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
 
-                                                    {hasContent ? (
-                                                        <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                            <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">
-                                                                {carryForwardField?.toUpperCase()} Content
-                                                            </div>
-                                                            <div className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-4">
-                                                                {sectionContent}
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="mt-2 text-xs text-slate-400 italic">
-                                                            No {carryForwardField?.toUpperCase()} content found in this visit
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                {/* Footer */}
+                                <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
+                                    <div className="text-xs text-slate-500">
+                                        Content will replace the current {carryForwardField?.toUpperCase()} field
                                     </div>
-                                )}
-                            </div>
-
-                            {/* Footer */}
-                            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
-                                <div className="text-xs text-slate-500">
-                                    Content will replace the current {carryForwardField?.toUpperCase()} field
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            </div>
+                    )
+                }
+            </div >
 
             <RetractionModal
                 isOpen={showRetractModal}
@@ -4406,7 +4231,7 @@ const VisitNote = () => {
                 isResident={(user?.role_name || user?.role || '').toUpperCase().includes('STUDENT') || (user?.role_name || user?.role || '').toUpperCase().includes('RESIDENT')}
                 onConfirm={handleSign}
             />
-        </div>
+        </div >
     );
 };
 
