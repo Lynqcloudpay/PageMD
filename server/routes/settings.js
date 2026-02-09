@@ -172,17 +172,20 @@ adminRouter.put('/practice', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    phone, fax, email, website, logo_url,
+    const {
+      practice_name, legal_name, tax_id, npi,
+      address_line1, address_line2, city, state, zip,
+      phone, fax, email, website, logo_url,
       timezone, date_format, time_format,
       scheduling_start_time, scheduling_end_time
-  } = req.body;
+    } = req.body;
 
-  // Handle variation in field name
-  const practice_type = req.body.practice_type || req.body.specialty;
+    // Handle variation in field name
+    const practice_type = req.body.practice_type || req.body.specialty;
 
-  if (req.clinic) {
-    // Update Control DB
-    await pool.controlPool.query(`
+    if (req.clinic) {
+      // Update Control DB
+      await pool.controlPool.query(`
         UPDATE clinics SET
           display_name = COALESCE($1, display_name),
           legal_name = COALESCE($2, legal_name),
@@ -203,14 +206,15 @@ adminRouter.put('/practice', [
           scheduling_end_time = COALESCE($17, scheduling_end_time)
         WHERE id = $18
       `, [
-      practice_name, legal_name, practice_type, tax_id, npi,
-      address_line1, address_line2, city, state, zip,
-      phone, fax, email, website, logo_url,
-      scheduling_start_time, scheduling_end_time,
-      req.clinic.id
-    ]);
+        practice_name, legal_name, practice_type, tax_id, npi,
+        address_line1, address_line2, city, state, zip,
+        phone, fax, email, website, logo_url,
+        scheduling_start_time, scheduling_end_time,
+        req.clinic.id
+      ]);
 
-    await pool.controlPool.query(`
+      await pool.controlPool.query(`
+        UPDATE clinic_settings SET
           time_zone = COALESCE($1, time_zone),
           date_format = COALESCE($2, date_format),
           time_format = COALESCE($3, time_format),
@@ -220,18 +224,18 @@ adminRouter.put('/practice', [
         WHERE clinic_id = $7
       `, [timezone, date_format, time_format, req.body.max_appointments_per_slot, scheduling_start_time, scheduling_end_time, req.clinic.id]);
 
-    // Continue to update local tenant DB to keep tables in sync
-    console.log(`[SETTINGS] Synchronizing control DB updates to tenant ${req.clinic.schema_name}`);
-  }
+      // Continue to update local tenant DB to keep tables in sync
+      console.log(`[SETTINGS] Synchronizing control DB updates to tenant ${req.clinic.schema_name}`);
+    }
 
-  // Fallback/Legacy local update - ALWAYS update this to keep tenant DB in sync
-  const dbClient = req.dbClient || pool;
-  const existing = await dbClient.query('SELECT id FROM practice_settings LIMIT 1');
+    // Fallback/Legacy local update - ALWAYS update this to keep tenant DB in sync
+    const dbClient = req.dbClient || pool;
+    const existing = await dbClient.query('SELECT id FROM practice_settings LIMIT 1');
 
-  let result;
-  if (existing.rows.length > 0) {
-    // Update existing
-    result = await dbClient.query(`
+    let result;
+    if (existing.rows.length > 0) {
+      // Update existing
+      result = await dbClient.query(`
         UPDATE practice_settings SET
           practice_name = COALESCE($1, practice_name),
           practice_type = COALESCE($2, practice_type),
@@ -257,44 +261,49 @@ adminRouter.put('/practice', [
         WHERE id = $21
         RETURNING *
       `, [
-      practice_name, practice_type, tax_id, npi,
-      address_line1, address_line2, city, state, zip,
-      phone, fax, email, website, logo_url,
-      timezone, date_format, time_format,
-      scheduling_start_time, scheduling_end_time,
-      req.user.id, existing.rows[0].id
-    ]);
-  } else {
-    // Create new
-    result = await dbClient.query(`
+        practice_name, practice_type, tax_id, npi,
+        address_line1, address_line2, city, state, zip,
+        phone, fax, email, website, logo_url,
+        timezone, date_format, time_format,
+        scheduling_start_time, scheduling_end_time,
+        req.user.id, existing.rows[0].id
+      ]);
+    } else {
+      // Create new
+      result = await dbClient.query(`
+        INSERT INTO practice_settings (
+          practice_name, practice_type, tax_id, npi,
+          address_line1, address_line2, city, state, zip,
+          phone, fax, email, website, logo_url,
           timezone, date_format, time_format, 
           scheduling_start_time, scheduling_end_time, updated_by
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING *
       `, [
-      practice_name || 'My Practice', practice_type, tax_id, npi,
-      address_line1, address_line2, city, state, zip,
-      phone, fax, email, website, logo_url,
-      timezone || 'America/New_York', date_format || 'MM/DD/YYYY', time_format || '12h',
-      scheduling_start_time || '07:00', scheduling_end_time || '19:00',
-      req.user.id
-    ]);
-  }
 
-  await logAudit(req.user.id, 'practice_settings_updated', 'settings', result.rows[0].id, {}, req.ip);
-  res.json(result.rows[0]);
-} catch (error) {
-  console.error('[SETTINGS] Error updating practice settings:', {
-    message: error.message,
-    stack: error.stack,
-    clinic: req.clinic?.slug,
-    user: req.user?.id
-  });
-  res.status(500).json({
-    error: 'Failed to update practice settings',
-    details: process.env.NODE_ENV === 'development' ? error.message : undefined
-  });
-}
+        practice_name || 'My Practice', practice_type, tax_id, npi,
+        address_line1, address_line2, city, state, zip,
+        phone, fax, email, website, logo_url,
+        timezone || 'America/New_York', date_format || 'MM/DD/YYYY', time_format || '12h',
+        scheduling_start_time || '07:00', scheduling_end_time || '19:00',
+        req.user.id
+      ]);
+    }
+
+    await logAudit(req.user.id, 'practice_settings_updated', 'settings', result.rows[0].id, {}, req.ip);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('[SETTINGS] Error updating practice settings:', {
+      message: error.message,
+      stack: error.stack,
+      clinic: req.clinic?.slug,
+      user: req.user?.id
+    });
+    res.status(500).json({
+      error: 'Failed to update practice settings',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 });
 
 /**
