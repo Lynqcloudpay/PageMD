@@ -18,6 +18,11 @@ const resolveTenant = async (req, res, next) => {
         return next();
     }
 
+    // 2. Skip Tenant Context for Stripe Webhooks (they don't have clinic context in headers)
+    if (req.path.includes('/billing/stripe/webhook')) {
+        return next();
+    }
+
     // 2. Determine Clinic Slug / Schema
     let slug = req.headers['x-clinic-slug'];
     let lookupSchema = null;
