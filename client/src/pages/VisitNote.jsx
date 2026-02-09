@@ -89,27 +89,32 @@ const ResultImage = ({ doc }) => {
     );
 };
 
-// Collapsible Section Component
-const Section = ({ title, children, defaultOpen = true, isEdited = false }) => {
+// Collapsible Section Component - Refined UX
+const Section = ({ title, children, defaultOpen = true, isEdited = false, id, badge }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
-        <div className={`border ${isEdited ? 'border-blue-300 shadow-blue-50 ring-1 ring-blue-400/20' : 'border-gray-200'} rounded-xl bg-white shadow-sm mb-3 overflow-hidden transition-all duration-300`}>
+        <div id={id} className={`border ${isEdited ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-200/80'} rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm shadow-slate-100/50 mb-4 overflow-hidden transition-all duration-200`}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full px-3 py-2 ${isEdited ? 'bg-blue-50/50' : 'bg-neutral-50'} border-b ${isEdited ? 'border-blue-100' : 'border-gray-200'} flex items-center justify-between hover:bg-opacity-80 transition-all`}
+                className={`w-full px-4 py-2.5 ${isEdited ? 'bg-blue-50/30' : 'bg-gradient-to-r from-slate-50/80 to-white'} border-b ${isEdited ? 'border-blue-100/50' : 'border-slate-100'} flex items-center justify-between hover:bg-slate-50/80 transition-colors group`}
             >
-                <div className="flex items-center gap-2.5">
-                    <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{title}</h3>
+                <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-semibold text-slate-700 tracking-wide">{title}</h3>
+                    {badge !== undefined && (
+                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-full">{badge}</span>
+                    )}
                     {isEdited && (
-                        <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[8px] font-black uppercase rounded border border-blue-600 shadow-sm shadow-blue-600/20 flex items-center gap-1">
-                            <Sparkles className="w-2 h-2" />
-                            Modified by Attending
+                        <span className="px-2 py-0.5 bg-blue-500 text-white text-[9px] font-medium rounded-full flex items-center gap-1">
+                            <Sparkles className="w-2.5 h-2.5" />
+                            Edited
                         </span>
                     )}
                 </div>
-                {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
-            {isOpen && <div className="p-3 bg-white">{children}</div>}
+            <div className={`transition-all duration-200 ${isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                <div className="p-4 bg-white/50">{children}</div>
+            </div>
         </div>
     );
 };
@@ -2529,30 +2534,30 @@ const VisitNote = () => {
                     </div>
                 )}
 
-                {/* Header */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-4 p-4">
-                    <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
+                {/* Header - Glassmorphism */}
+                <div className="bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-2xl shadow-lg shadow-slate-200/30 mb-4 p-4">
+                    <div className="flex items-center justify-between">
                         <div>
-                            <div className="flex items-center gap-1.5 mb-1">
+                            <div className="flex items-center gap-2 mb-0.5">
                                 <select
                                     value={visitType}
                                     onChange={(e) => setVisitType(e.target.value)}
                                     disabled={isSigned || isPreliminary}
-                                    className="text-base font-semibold text-neutral-900 bg-transparent border-none rounded-md focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-neutral-50 px-1 -ml-1 transition-all"
+                                    className="text-lg font-semibold text-slate-800 bg-transparent border-none rounded-lg focus:ring-2 focus:ring-primary-500 cursor-pointer hover:bg-slate-50/50 px-1 -ml-1 transition-colors"
                                 >
                                     <option value="Follow-up">Follow-up</option>
                                     <option value="New Patient">New Patient</option>
                                     <option value="Sick Visit">Sick Visit</option>
                                     <option value="Physical">Physical</option>
-                                    <option value="Telehealth Visit">Telehealth Visit</option>
+                                    <option value="Telehealth Visit">Telehealth</option>
                                     <option value="Consultation">Consultation</option>
                                     <option value="Office Visit">Office Visit</option>
                                 </select>
-                                <span className="text-base font-semibold text-neutral-900">Note</span>
+                                <span className="text-lg font-semibold text-slate-800">Note</span>
                             </div>
-                            <p className="text-xs text-neutral-600">{visitDate} • {providerName}</p>
+                            <p className="text-xs text-slate-500">{visitDate} • {providerName}</p>
                         </div>
-                        <div className="flex items-center space-x-1.5">
+                        <div className="flex items-center gap-2">
                             <button
                                 onClick={async () => {
                                     setShowChartReview(true);
@@ -2565,61 +2570,66 @@ const VisitNote = () => {
                                         setChartReviewData({ visits: [], loading: false });
                                     }
                                 }}
-                                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md transition-colors text-xs font-medium border bg-slate-900 text-white hover:bg-slate-800"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors text-xs font-medium bg-slate-800 text-white hover:bg-slate-700 shadow-sm"
                                 title="Quick Chart Review"
                             >
                                 <Eye className="w-3.5 h-3.5" />
                                 <span>Review</span>
                             </button>
                             {isSigned && (
-                                <div className="flex items-center space-x-2 text-green-700 text-xs font-medium">
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl text-xs font-medium">
                                     <Lock className="w-3.5 h-3.5" />
                                     <span>Signed</span>
                                     {currentVisitData.note_signed_at && (
-                                        <span className="text-neutral-500">
-                                            {format(new Date(currentVisitData.note_signed_at), 'MM/dd/yyyy h:mm a')}
+                                        <span className="text-emerald-600 text-[10px]">
+                                            {format(new Date(currentVisitData.note_signed_at), 'MM/dd h:mm a')}
                                         </span>
                                     )}
                                 </div>
                             )}
                             {!isSigned && !isPreliminary && (
                                 <>
-                                    {lastSaved && <span className="text-xs text-neutral-500 italic px-1.5">Saved {lastSaved.toLocaleTimeString()}</span>}
-                                    <button onClick={handleSave} disabled={isSaving} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 disabled:opacity-50 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: isSaving ? '#9CA3AF' : 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)')} onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)')}>
+                                    {lastSaved && <span className="text-[10px] text-slate-400 italic">Saved {lastSaved.toLocaleTimeString()}</span>}
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className="px-3 py-1.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl shadow-sm flex items-center gap-1.5 disabled:opacity-50 transition-all hover:shadow-md text-xs font-medium"
+                                    >
                                         <Save className="w-3.5 h-3.5" />
                                         <span>{isSaving ? 'Saving...' : 'Save'}</span>
                                     </button>
-                                    <button onClick={handleSign} className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
+                                    <button
+                                        onClick={handleSign}
+                                        className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-all hover:shadow-md text-xs font-medium"
+                                    >
                                         <Lock className="w-3.5 h-3.5" />
-                                        <span>{user?.role_name === 'Resident' || user?.role === 'Resident' ? 'Submit for Review' : 'Sign'}</span>
+                                        <span>{user?.role_name === 'Resident' || user?.role === 'Resident' ? 'Submit' : 'Sign'}</span>
                                     </button>
                                 </>
                             )}
                             {isPreliminary && !isDirectEditing && (user?.role_name === 'Physician' || user?.role_name === 'CLINICIAN' || user?.role_name === 'Admin' || user?.role === 'admin' || user?.role === 'clinician') && (
                                 <button
                                     onClick={() => setShowCosignModal(true)}
-                                    className="px-2.5 py-1.5 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:shadow-md text-xs font-medium"
-                                    style={{ background: 'linear-gradient(to right, #059669, #10B981)' }}
+                                    className="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-all hover:shadow-md text-xs font-medium"
                                 >
                                     <Sparkles className="w-3.5 h-3.5" />
-                                    <span>Cosign Note</span>
+                                    <span>Cosign</span>
                                 </button>
                             )}
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-1 px-2.5 py-1 bg-white text-primary-600 hover:bg-primary-50 text-[11px] font-bold rounded-full border border-primary-200 transition-all"
+                                className="flex items-center gap-1 px-2.5 py-1.5 bg-white/80 text-slate-600 hover:bg-slate-50 text-xs font-medium rounded-xl border border-slate-200 transition-colors"
                                 title="Print Orders"
                             >
                                 <Printer className="w-3.5 h-3.5" />
-                                <span>Print Orders</span>
                             </button>
-                            <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-neutral-600 hover:bg-neutral-100 rounded-md transition-colors" title="Print Visit Note">
+                            <button onClick={() => setShowPrintModal(true)} className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-xl transition-colors" title="Print Note">
                                 <Printer className="w-3.5 h-3.5" />
                             </button>
                             {!isSigned && (
                                 <button
                                     onClick={() => setShowQuickActions(!showQuickActions)}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md transition-colors text-xs font-medium border ${showQuickActions ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white text-neutral-600 border-gray-200 hover:bg-gray-50'}`}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-colors text-xs font-medium border ${showQuickActions ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white/80 text-slate-600 border-slate-200 hover:bg-slate-50'}`}
                                     title="Toggle Quick Actions Panel"
                                 >
                                     <PanelRight className="w-3.5 h-3.5" />
@@ -2628,21 +2638,42 @@ const VisitNote = () => {
                             {isSigned && !isRetracted && (
                                 <button
                                     onClick={() => setShowRetractModal(true)}
-                                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-red-200 text-red-600 hover:bg-red-50 rounded-md text-xs font-medium transition-colors shadow-sm"
-                                    title="Mark Note as Entered in Error (Retract)"
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/80 border border-red-200 text-red-600 hover:bg-red-50 rounded-xl text-xs font-medium transition-colors"
+                                    title="Retract Note"
                                 >
                                     <AlertCircle className="w-3.5 h-3.5" />
-                                    <span>Retract</span>
                                 </button>
                             )}
                             {isRetracted && (
-                                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 text-red-700 rounded-md text-xs font-bold">
+                                <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-medium">
                                     <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>RETRACTED</span>
+                                    <span>Retracted</span>
                                 </div>
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* Quick Navigation Bar - Sticky */}
+                <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-100 -mx-4 px-4 py-2 mb-4 flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                    {[
+                        { id: 'vitals', label: 'Vitals', icon: Activity },
+                        { id: 'hpi', label: 'HPI', icon: FileText },
+                        { id: 'ros-pe', label: 'ROS/PE', icon: Stethoscope },
+                        { id: 'pamfos', label: 'History', icon: Users },
+                        { id: 'results', label: 'Results', icon: FlaskConical },
+                        { id: 'assessment', label: 'Assessment', icon: ClipboardList },
+                        { id: 'plan', label: 'Plan', icon: CheckCircle2 },
+                    ].map(item => (
+                        <button
+                            key={item.id}
+                            onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors whitespace-nowrap"
+                        >
+                            <item.icon className="w-3.5 h-3.5" />
+                            {item.label}
+                        </button>
+                    ))}
                 </div>
                 {/* Preliminary Banner */}
                 {isPreliminary && (
@@ -2689,8 +2720,8 @@ const VisitNote = () => {
                     <div className={`${showQuickActions && !isLocked ? 'flex-1' : 'w-full'} transition-all duration-300 ${isRetracted && !viewRetractedContent ? 'opacity-40 blur-[1px] pointer-events-none grayscale' : ''}`}>
 
                         {/* Vitals */}
-                        <Section title="Vital Signs" defaultOpen={true}>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <Section title="Vital Signs" defaultOpen={true} id="vitals">
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                                 <div>
                                     <label className="block text-xs font-medium text-neutral-700 mb-1">BP (mmHg)</label>
                                     <div className="flex items-center gap-1">
@@ -2870,31 +2901,29 @@ const VisitNote = () => {
                         </div>
 
                         {/* HPI */}
-                        <Section title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')}>
+                        <Section title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')} id="hpi">
                             <div className="relative">
+                                <span className="absolute top-2 right-2 text-[10px] text-gray-400 font-medium bg-white/80 px-1 rounded">F2 for templates</span>
                                 <textarea ref={hpiRef} value={noteData.hpi}
-                                    disabled={isLocked}
                                     onChange={(e) => {
+                                        setNoteData({ ...noteData, hpi: e.target.value });
                                         handleTextChange(e.target.value, 'hpi');
-                                        handleDotPhraseAutocomplete(e.target.value, 'hpi', hpiRef);
                                     }}
+                                    disabled={isLocked}
                                     onKeyDown={(e) => {
-                                        if (autocompleteState.show && autocompleteState.field === 'hpi') {
+                                        if (e.key === 'F2') {
+                                            e.preventDefault();
+                                            setShowDotPhraseModal(true);
+                                        } else if (autocompleteState.show) {
                                             if (e.key === 'ArrowDown') {
                                                 e.preventDefault();
-                                                setAutocompleteState(prev => ({
-                                                    ...prev,
-                                                    selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1)
-                                                }));
+                                                setAutocompleteState(prev => ({ ...prev, selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1) }));
                                             } else if (e.key === 'ArrowUp') {
                                                 e.preventDefault();
-                                                setAutocompleteState(prev => ({
-                                                    ...prev,
-                                                    selectedIndex: Math.max(prev.selectedIndex - 1, 0)
-                                                }));
-                                            } else if (e.key === 'Enter' && !e.shiftKey) {
-                                                e.preventDefault();
+                                                setAutocompleteState(prev => ({ ...prev, selectedIndex: Math.max(prev.selectedIndex - 1, 0) }));
+                                            } else if (e.key === 'Enter' || e.key === 'Tab') {
                                                 if (autocompleteState.suggestions[autocompleteState.selectedIndex]) {
+                                                    e.preventDefault();
                                                     insertDotPhrase(autocompleteState.suggestions[autocompleteState.selectedIndex].key, autocompleteState);
                                                 }
                                             } else if (e.key === 'Escape') {
@@ -2906,8 +2935,8 @@ const VisitNote = () => {
                                         }
                                     }}
                                     onFocus={() => setActiveTextArea('hpi')}
-                                    rows={6}
-                                    className="w-full px-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-colors text-neutral-900 min-h-[80px]"
+                                    rows={12}
+                                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-primary-100 focus:border-primary-400 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed leading-relaxed resize-y transition-shadow text-slate-800 min-h-[160px] shadow-sm"
                                     placeholder="Type .dotphrase to expand, or press F2 to find [] placeholders..."
                                 />
                                 {autocompleteState.show && autocompleteState.field === 'hpi' && autocompleteState.suggestions.length > 0 && (
@@ -2944,12 +2973,12 @@ const VisitNote = () => {
                         {/* ROS and PE Side by Side */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
                             {/* ROS */}
-                            <Section title="Review of Systems" defaultOpen={true}>
-                                <div className="grid grid-cols-2 gap-1 mb-1.5">
+                            <Section title="Review of Systems" defaultOpen={true} id="ros-pe">
+                                <div className="grid grid-cols-2 gap-2 mb-2">
                                     {Object.keys(noteData.ros).map(system => (
-                                        <label key={system} className="flex items-center space-x-1 cursor-pointer">
-                                            {noteData.ros[system] ? <CheckSquare className="w-3 h-3 text-primary-600" /> : <Square className="w-3 h-3 text-neutral-400" />}
-                                            <span className="text-xs text-neutral-700 capitalize">{system}</span>
+                                        <label key={system} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-transparent hover:border-slate-100">
+                                            {noteData.ros[system] ? <CheckSquare className="w-4 h-4 text-primary-500" /> : <Square className="w-4 h-4 text-slate-300" />}
+                                            <span className="text-xs font-medium text-slate-700 capitalize">{system}</span>
                                             <input type="checkbox" checked={noteData.ros[system]}
                                                 disabled={isLocked}
                                                 onChange={(e) => {
@@ -3061,29 +3090,34 @@ const VisitNote = () => {
                         </div>
 
                         {/* PAMFOS Section - Past Medical, Allergies, Meds, Family, Social/Other */}
-                        <Section title="Patient History (PAMFOS)" defaultOpen={true}>
-                            <div className="bg-white p-1">
-                                <div className="space-y-4">
+                        <Section
+                            title="Patient History (PAMFOS)"
+                            defaultOpen={false}
+                            id="pamfos"
+                            badge={(patientData?.problems?.length || 0) + (patientData?.medications?.length || 0) + (patientData?.allergies?.length || 0)}
+                        >
+                            <div className="bg-white/50 p-1">
+                                <div className="space-y-6">
 
                                     {/* P - Past Medical History */}
                                     <HistoryList
                                         title="Past Medical History"
-                                        icon={<Activity className="w-4 h-4 text-red-600" />}
+                                        icon={<Activity className="w-4 h-4 text-rose-500" />}
                                         items={patientData?.problems || []}
                                         emptyMessage="No active problems"
                                         renderItem={(problem) => (
-                                            <div className="flex justify-between items-start w-full">
+                                            <div className="flex justify-between items-start w-full group/item">
                                                 <div>
-                                                    <span className="font-medium text-gray-900">
+                                                    <span className="font-medium text-slate-800 text-sm">
                                                         {(problem.problem_name || '')
                                                             .replace(/^(\d+(\.\d+)*\.?\s*)+/, '')
                                                             .replace(/&amp;/g, '&')
                                                             .replace(/&#x2f;/gi, '/')
                                                             .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
                                                     </span>
-                                                    {problem.icd10_code && <span className="text-gray-500 ml-2 text-xs">({problem.icd10_code})</span>}
+                                                    {problem.icd10_code && <span className="text-slate-400 ml-2 text-xs">({problem.icd10_code})</span>}
                                                 </div>
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${problem.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${problem.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-50 text-slate-500 border border-slate-100'}`}>
                                                     {problem.status}
                                                 </span>
                                             </div>
@@ -3383,25 +3417,24 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Results / Data Section */}
-                        <Section title="Results / Data" defaultOpen={true}>
+                        <Section title="Results / Data" defaultOpen={true} id="results">
                             {visitDocuments.length === 0 && (
-                                <div className="py-12 border-2 border-dashed border-gray-100 rounded-xl flex flex-col items-center justify-center text-gray-300">
-                                    <FilePlus className="w-10 h-10 mb-3 opacity-20" />
-                                    <p className="text-xs font-bold uppercase tracking-widest opacity-40">No Laboratory or Imaging Findings Linked</p>
-                                    <p className="text-[10px] mt-1 opacity-40">Upload files via the patient chart to see results here.</p>
+                                <div className="py-8 border-2 border-dashed border-slate-100 rounded-xl flex flex-col items-center justify-center text-slate-300">
+                                    <FilePlus className="w-8 h-8 mb-2 opacity-40" />
+                                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">No Results Linked</p>
                                 </div>
                             )}
 
                             {visitDocuments.length > 0 && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {visitDocuments.map(doc => (
-                                        <div key={doc.id} className="relative group">
+                                        <div key={doc.id} className="relative group bg-slate-50 border border-slate-100 p-2 rounded-xl">
                                             <ResultImage doc={doc} />
                                             <div className="flex justify-between items-center mt-2 px-1">
                                                 <div className="flex flex-col">
-                                                    <p className="text-[10px] font-bold text-gray-900 truncate max-w-[200px]">{doc.filename}</p>
-                                                    <p className="text-[8px] text-gray-400 uppercase font-black tracking-tighter">
-                                                        Uploaded {format(new Date(doc.created_at || new Date()), 'MMM d, yyyy')}
+                                                    <p className="text-[11px] font-semibold text-slate-700 truncate max-w-[180px]">{doc.filename}</p>
+                                                    <p className="text-[9px] text-slate-400 font-medium uppercase tracking-wide">
+                                                        {format(new Date(doc.created_at || new Date()), 'MMM d, yyyy')}
                                                     </p>
                                                 </div>
                                                 <button
@@ -3413,7 +3446,7 @@ const VisitNote = () => {
                                                                 .then(() => setVisitDocuments(prev => prev.filter(d => d.id !== doc.id)));
                                                         }
                                                     }}
-                                                    className="p-2 bg-rose-50 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-100 shadow-sm"
+                                                    className="p-1.5 bg-rose-50 text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-100"
                                                     title="Unlink from visit"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -3426,35 +3459,32 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Assessment */}
-                        <Section title="Assessment" defaultOpen={true} isEdited={editedSections.has('assessment')}>
-                            {/* Quick Add block removed */}
-
-                            {/* ICD-10 Search - Show first for easy access */}
+                        <Section title="Assessment" defaultOpen={true} isEdited={editedSections.has('assessment')} id="assessment">
+                            {/* ICD-10 Search - Simple inline search */}
                             {hasPrivilege('search_icd10') && (
-                                <div className="mb-2">
-                                    <button
-                                        onClick={() => setShowICD10Modal(true)}
-                                        className="w-full px-3 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors flex items-center justify-center space-x-1"
-                                    >
-                                        <Search className="w-3.5 h-3.5" />
-                                        <span>Search ICD-10 Codes (Modal)</span>
-                                    </button>
-
-                                    {/* Simple inline search */}
-                                    <div className="relative mt-2">
-                                        <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                                <div className="mb-3 relative">
+                                    <div className="relative group">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary-500 transition-colors" />
                                         <input
                                             id="icd10-quick-search"
                                             type="text"
-                                            placeholder={editingDiagnosisIndex !== null ? `Editing: ${diagnoses[editingDiagnosisIndex]}` : "Quick search: Type diagnosis or code..."}
+                                            placeholder={editingDiagnosisIndex !== null ? `Editing: ${diagnoses[editingDiagnosisIndex]}` : "Search ICD-10 diagnosis..."}
                                             value={icd10Search}
                                             onChange={(e) => {
                                                 setIcd10Search(e.target.value);
                                                 setShowIcd10Search(true);
                                             }}
                                             disabled={isLocked}
-                                            className={`w-full pl-8 pr-2 py-1.5 text-xs border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed transition-colors ${editingDiagnosisIndex !== null ? 'border-primary-500 ring-1 ring-primary-500' : ''}`}
+                                            className={`w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-100 focus:border-primary-400 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed transition-all shadow-sm ${editingDiagnosisIndex !== null ? 'border-primary-500 ring-2 ring-primary-100' : ''}`}
                                         />
+                                        {/* Optional Modal Button Trigger (Small Icon) */}
+                                        <button
+                                            onClick={() => setShowICD10Modal(true)}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                            title="Advanced Search"
+                                        >
+                                            <PanelRight className="w-4 h-4" />
+                                        </button>
                                     </div>
 
                                     {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
@@ -3525,58 +3555,71 @@ const VisitNote = () => {
                         </Section>
 
                         {/* Plan */}
-                        <Section title="Plan" defaultOpen={true} isEdited={editedSections.has('plan')}>
+                        <Section title="Plan" defaultOpen={true} isEdited={editedSections.has('plan')} id="plan">
                             <div className="relative">
                                 {/* Show structured plan preview only when editing and there's structured data */}
                                 {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
-                                    <div className="mb-2 p-2 bg-neutral-50 rounded-md border border-neutral-200">
-                                        <div className="space-y-3">
-                                            {noteData.planStructured.map((item, index) => (
-                                                <div key={index} className="border-b border-neutral-200 last:border-b-0 pb-2 last:pb-0 group">
-                                                    <div className="flex items-center justify-between mb-1">
+                                    <div className="mb-4 space-y-3">
+                                        {noteData.planStructured.map((item, index) => (
+                                            <div key={index} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm transition-shadow hover:shadow-md group">
+                                                <div className="bg-slate-50/80 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center bg-slate-200 text-slate-600 rounded-full text-[10px] font-bold">{index + 1}</span>
+                                                        <span className="font-semibold text-xs text-slate-700 truncate">{item.diagnosis}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
                                                         <button
                                                             onClick={() => {
                                                                 setSelectedDiagnosis(item.diagnosis);
                                                                 setShowOrderModal(true);
                                                             }}
-                                                            className="font-bold underline text-xs text-primary-700 hover:text-primary-900 text-left"
+                                                            className="px-2 py-1 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-medium hover:bg-primary-50 hover:text-primary-600 hover:border-primary-100 transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100"
                                                         >
-                                                            {index + 1}. {item.diagnosis}
+                                                            <Plus className="w-3 h-3" />
+                                                            Add Order
                                                         </button>
                                                         {!isLocked && (
                                                             <button
                                                                 onClick={() => removeFromPlan(index)}
-                                                                className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 transition-all p-1"
+                                                                className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                                title="Remove Diagnosis"
                                                             >
-                                                                <Trash2 className="w-3 h-3" />
+                                                                <Trash2 className="w-3.5 h-3.5" />
                                                             </button>
                                                         )}
                                                     </div>
-                                                    <ul className="ml-4 space-y-0.5">
-                                                        {item.orders.flatMap((order, orderIdx) => {
-                                                            const orderParts = order.split(';').map(part => part.trim()).filter(part => part);
-                                                            return orderParts.map((part, partIdx) => (
-                                                                <li key={`${orderIdx}-${partIdx}`} className="text-xs text-neutral-900 flex items-center group/order">
-                                                                    <span className="mr-2 text-neutral-400">•</span>
-                                                                    <span className="flex-1">{part}</span>
-                                                                    <button
-                                                                        onClick={() => removeFromPlan(index, orderIdx)}
-                                                                        className="opacity-0 group-hover/order:opacity-100 text-neutral-300 hover:text-red-400 transition-all ml-2"
-                                                                    >
-                                                                        <X className="w-2.5 h-2.5" />
-                                                                    </button>
-                                                                </li>
-                                                            ));
-                                                        })}
-                                                    </ul>
                                                 </div>
-                                            ))}
-                                        </div>
+
+                                                <div className="p-3 bg-white">
+                                                    {item.orders.length === 0 ? (
+                                                        <p className="text-[10px] text-slate-400 italic pl-1">No orders entered. Click "Add Order" above.</p>
+                                                    ) : (
+                                                        <ul className="space-y-1.5">
+                                                            {item.orders.flatMap((order, orderIdx) => {
+                                                                const orderParts = order.split(';').map(part => part.trim()).filter(part => part);
+                                                                return orderParts.map((part, partIdx) => (
+                                                                    <li key={`${orderIdx}-${partIdx}`} className="text-xs text-slate-700 flex items-start group/order pl-1">
+                                                                        <div className="mr-2 mt-1.5 w-1 h-1 rounded-full bg-slate-300 group-hover/order:bg-primary-400"></div>
+                                                                        <span className="flex-1 leading-relaxed">{part}</span>
+                                                                        <button
+                                                                            onClick={() => removeFromPlan(index, orderIdx)}
+                                                                            className="opacity-0 group-hover/order:opacity-100 text-slate-300 hover:text-rose-500 transition-all p-0.5"
+                                                                        >
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </li>
+                                                                ));
+                                                            })}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 
                                 {isSigned && (
-                                    <div className="p-2 border border-neutral-200 rounded-md bg-neutral-50 text-xs">
+                                    <div className="p-4 border border-slate-200 rounded-xl bg-slate-50 text-xs leading-relaxed text-slate-700">
                                         <PlanDisplay plan={noteData.plan} />
                                     </div>
                                 )}
@@ -3598,17 +3641,17 @@ const VisitNote = () => {
                                 )}
                             </div>
                             {!isLocked && (
-                                <div className="mt-2 flex space-x-1.5">
+                                <div className="mt-4 flex space-x-2 pt-2 border-t border-slate-100">
                                     {hasPrivilege('order_labs') && (
                                         <button
                                             onClick={() => {
                                                 setOrderModalTab('labs');
                                                 setShowOrderModal(true);
                                             }}
-                                            className="px-2.5 py-1.5 text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white rounded-md shadow-sm transition-all flex items-center gap-1.5"
+                                            className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
-                                            <span>Add Order</span>
+                                            <span>Geneal Lab Order</span>
                                         </button>
                                     )}
                                     <button
@@ -3616,9 +3659,9 @@ const VisitNote = () => {
                                             setOrderModalTab('medications');
                                             setShowOrderModal(true);
                                         }}
-                                        className="px-2.5 py-1.5 text-xs font-medium bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-md border border-neutral-300 transition-colors"
+                                        className="px-3 py-1.5 text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition-colors"
                                     >
-                                        Prescribe Rx
+                                        Prescribe Rx (General)
                                     </button>
                                     {hasPrivilege('create_referrals') && (
                                         <button
@@ -3626,7 +3669,7 @@ const VisitNote = () => {
                                                 setOrderModalTab('referrals');
                                                 setShowOrderModal(true);
                                             }}
-                                            className="px-2.5 py-1.5 text-xs font-medium bg-primary-100 hover:bg-primary-200 text-primary-700 rounded-md border border-neutral-300 transition-colors"
+                                            className="px-3 py-1.5 text-xs font-medium bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg border border-slate-200 transition-colors"
                                         >
                                             Send Referral
                                         </button>
@@ -3637,19 +3680,19 @@ const VisitNote = () => {
 
 
                         {/* Caregiver Training (CTS) */}
-                        <Section title="Caregiver Training Services (CTS)" defaultOpen={false} isEdited={editedSections.has('cts')}>
+                        <Section title="Caregiver Training Services (CTS)" defaultOpen={false} isEdited={editedSections.has('cts')} id="cts">
                             <div className="relative">
                                 <textarea
                                     value={noteData.cts || ''}
                                     onChange={(e) => handleTextChange(e.target.value, 'cts')}
                                     placeholder="Document topic (e.g. Wound Care), time spent, and if telehealth..."
-                                    className="w-full text-xs p-2 border border-neutral-300 rounded-md bg-white focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-h-[60px]"
+                                    className="w-full text-xs p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary-100 focus:border-primary-400 min-h-[80px] transition-all"
                                     disabled={isLocked}
                                 />
                                 {!isSigned && (
-                                    <div className="mt-2 text-xs">
-                                        <label className="block text-neutral-600 font-medium mb-1">Quick Templates:</label>
-                                        <div className="flex flex-wrap gap-1.5">
+                                    <div className="mt-3 text-xs">
+                                        <label className="block text-slate-500 font-medium mb-1.5 uppercase tracking-wide text-[10px]">Quick Templates</label>
+                                        <div className="flex flex-wrap gap-2">
                                             {[
                                                 'CTS: Wound Care Education (15 min)',
                                                 'CTS: Infection Control (10 min)',
@@ -3659,7 +3702,7 @@ const VisitNote = () => {
                                                 <button
                                                     key={template}
                                                     onClick={() => handleTextChange(noteData.cts ? `${noteData.cts}\n${template}` : template, 'cts')}
-                                                    className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border border-neutral-200 rounded text-xs transition-colors"
+                                                    className="px-2.5 py-1.5 bg-white border border-slate-200 hover:border-primary-200 hover:bg-primary-50 text-slate-600 hover:text-primary-700 rounded-lg text-xs transition-all shadow-sm"
                                                 >
                                                     {template}
                                                 </button>
@@ -3671,7 +3714,7 @@ const VisitNote = () => {
                         </Section>
 
                         {/* ASCVD Risk Management */}
-                        <Section title="ASCVD Risk Management" defaultOpen={false} isEdited={editedSections.has('ascvd')}>
+                        <Section title="ASCVD Risk Management" defaultOpen={false} isEdited={editedSections.has('ascvd')} id="ascvd">
                             <div className="relative">
                                 <textarea
                                     value={noteData.ascvd || ''}
