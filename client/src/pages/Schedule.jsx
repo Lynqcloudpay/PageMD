@@ -608,18 +608,8 @@ const Schedule = () => {
         visitMethod: 'office'
     });
 
-    // Adjust default time if startHour changes
-    useEffect(() => {
-        const hour = parseInt(newAppt.time.split(':')[0]);
-        if (hour < startHour || hour > endHour) {
-            const defaultHour = Math.min(Math.max(startHour + 2, startHour), endHour);
-            setNewAppt(prev => ({
-                ...prev,
-                time: `${defaultHour.toString().padStart(2, '0')}:00`
-            }));
-        }
-    }, [startHour, endHour]);
     const [patientSearch, setPatientSearch] = useState('');
+
     const [patientSearchResults, setPatientSearchResults] = useState([]);
     const [showPatientDropdown, setShowPatientDropdown] = useState(false);
     const [searchTimeout, setSearchTimeout] = useState(null);
@@ -656,7 +646,21 @@ const Schedule = () => {
         if (!practiceSettings?.scheduling_end_time) return 19;
         return parseInt(practiceSettings.scheduling_end_time.split(':')[0]);
     }, [practiceSettings]);
+
+    // Adjust default appointment time if it falls outside clinic hours
+    useEffect(() => {
+        const hour = parseInt(newAppt.time.split(':')[0]);
+        if (hour < startHour || hour > endHour) {
+            const defaultHour = Math.min(Math.max(startHour + 2, startHour), endHour);
+            setNewAppt(prev => ({
+                ...prev,
+                time: `${defaultHour.toString().padStart(2, '0')}:00`
+            }));
+        }
+    }, [startHour, endHour]);
+
     const [pendingFollowupId, setPendingFollowupId] = useState(null); // For auto-addressing after reschedule
+
     // Load saved preference from localStorage, default to true if not set
     const [showCancelledAppointments, setShowCancelledAppointments] = useState(() => {
         const saved = localStorage.getItem('schedule_showCancelled');
