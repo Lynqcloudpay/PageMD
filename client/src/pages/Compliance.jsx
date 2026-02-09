@@ -6,6 +6,12 @@ import {
 } from 'lucide-react';
 import { complianceAPI, usersAPI, patientsAPI, auditAPI } from '../services/api';
 import { format } from 'date-fns';
+import { twMerge } from 'tailwind-merge';
+import { clsx } from 'clsx';
+
+function cn(...inputs) {
+    return twMerge(clsx(inputs));
+}
 
 const Compliance = ({ inline = false }) => {
     const [activeTab, setActiveTab] = useState('logs');
