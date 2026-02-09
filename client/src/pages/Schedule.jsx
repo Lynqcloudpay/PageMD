@@ -1299,9 +1299,9 @@ const Schedule = () => {
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Checked In</span>
                                     <span className="text-slate-200">/</span>
-                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400"></span> Room</span>
+                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400"></span> Nurse</span>
                                     <span className="text-slate-200">/</span>
-                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Provider</span>
+                                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Provider <span className="text-[8px] text-slate-300 normal-case tracking-normal ml-0.5">(click dot)</span></span>
                                     <span className="text-slate-200">/</span>
                                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400"></span> Out</span>
                                 </div>

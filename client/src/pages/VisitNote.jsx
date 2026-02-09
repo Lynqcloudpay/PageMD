@@ -2711,8 +2711,10 @@ const VisitNote = () => {
                                     ref={hpiRef}
                                     value={noteData.hpi}
                                     onChange={(e) => {
-                                        setNoteData({ ...noteData, hpi: e.target.value });
-                                        handleTextChange(e.target.value, 'hpi');
+                                        const val = e.target.value;
+                                        setNoteData({ ...noteData, hpi: val });
+                                        handleTextChange(val, 'hpi');
+                                        handleDotPhraseAutocomplete(val, 'hpi', hpiRef);
                                     }}
                                     disabled={isLocked}
                                     onKeyDown={(e) => {
@@ -2783,33 +2785,42 @@ const VisitNote = () => {
                         <div id="ros-pe" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 scroll-mt-32">
                             {/* ROS */}
                             <VisitNoteSection title="Review of Systems" defaultOpen={true} id="ros">
-                                <div className="vn-selection-grid">
-                                    {Object.keys(noteData.ros).map(system => (
-                                        <div
-                                            key={system}
-                                            className={`vn-selection-item ${noteData.ros[system] ? 'active' : ''}`}
-                                            onClick={() => {
-                                                if (isLocked) return;
-                                                const isChecked = !noteData.ros[system];
-                                                const systemName = system.charAt(0).toUpperCase() + system.slice(1);
-                                                const findings = rosFindings[system] || '';
-                                                const newRos = { ...noteData.ros, [system]: isChecked };
-                                                let newRosNotes = noteData.rosNotes || '';
-                                                const findingsLine = `**${systemName}:** ${findings}`;
-                                                if (isChecked) {
-                                                    if (!newRosNotes.includes(`**${systemName}:**`)) {
-                                                        newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {Object.keys(noteData.ros).map(system => {
+                                        const isSelected = noteData.ros[system];
+                                        return (
+                                            <button
+                                                key={system}
+                                                onClick={() => {
+                                                    if (isLocked) return;
+                                                    const isChecked = !noteData.ros[system];
+                                                    const systemName = system.charAt(0).toUpperCase() + system.slice(1);
+                                                    const findings = rosFindings[system] || '';
+                                                    const newRos = { ...noteData.ros, [system]: isChecked };
+                                                    let newRosNotes = noteData.rosNotes || '';
+                                                    const findingsLine = `**${systemName}:** ${findings}`;
+                                                    if (isChecked) {
+                                                        if (!newRosNotes.includes(`**${systemName}:**`)) {
+                                                            newRosNotes = newRosNotes.trim() ? `${newRosNotes}\n${findingsLine}` : findingsLine;
+                                                        }
+                                                    } else {
+                                                        newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
                                                     }
-                                                } else {
-                                                    newRosNotes = newRosNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
-                                                }
-                                                setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
-                                            }}
-                                        >
-                                            {noteData.ros[system] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 opacity-30" />}
-                                            <span className="vn-selection-label">{system}</span>
-                                        </div>
-                                    ))}
+                                                    setNoteData({ ...noteData, ros: newRos, rosNotes: newRosNotes });
+                                                }}
+                                                className={`
+                                                    relative px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5
+                                                    ${isSelected
+                                                        ? 'bg-blue-500 text-white border-blue-400 shadow-md shadow-blue-100 translate-y-[-1px]'
+                                                        : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200 hover:text-blue-600 hover:shadow-sm'
+                                                    }
+                                                `}
+                                            >
+                                                {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                                                {system}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                                 <textarea
                                     value={noteData.rosNotes}
@@ -2849,33 +2860,42 @@ const VisitNote = () => {
 
                             {/* Physical Exam */}
                             <VisitNoteSection title="Physical Examination" defaultOpen={true} id="pe">
-                                <div className="vn-selection-grid">
-                                    {Object.keys(noteData.pe).map(system => (
-                                        <div
-                                            key={system}
-                                            className={`vn-selection-item ${noteData.pe[system] ? 'active' : ''}`}
-                                            onClick={() => {
-                                                if (isLocked) return;
-                                                const isChecked = !noteData.pe[system];
-                                                const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-                                                const findings = peFindings[system] || '';
-                                                const newPe = { ...noteData.pe, [system]: isChecked };
-                                                let newPeNotes = noteData.peNotes || '';
-                                                const findingsLine = `**${systemName}:** ${findings}`;
-                                                if (isChecked) {
-                                                    if (!newPeNotes.includes(`**${systemName}:**`)) {
-                                                        newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {Object.keys(noteData.pe).map(system => {
+                                        const isSelected = noteData.pe[system];
+                                        return (
+                                            <button
+                                                key={system}
+                                                onClick={() => {
+                                                    if (isLocked) return;
+                                                    const isChecked = !noteData.pe[system];
+                                                    const systemName = system.replace(/([A-Z])/g, ' $1').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                                                    const findings = peFindings[system] || '';
+                                                    const newPe = { ...noteData.pe, [system]: isChecked };
+                                                    let newPeNotes = noteData.peNotes || '';
+                                                    const findingsLine = `**${systemName}:** ${findings}`;
+                                                    if (isChecked) {
+                                                        if (!newPeNotes.includes(`**${systemName}:**`)) {
+                                                            newPeNotes = newPeNotes.trim() ? `${newPeNotes}\n${findingsLine}` : findingsLine;
+                                                        }
+                                                    } else {
+                                                        newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
                                                     }
-                                                } else {
-                                                    newPeNotes = newPeNotes.split('\n').filter(line => !line.trim().startsWith(`**${systemName}:**`)).join('\n').trim();
-                                                }
-                                                setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
-                                            }}
-                                        >
-                                            {noteData.pe[system] ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4 opacity-30" />}
-                                            <span className="vn-selection-label">{system.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                        </div>
-                                    ))}
+                                                    setNoteData({ ...noteData, pe: newPe, peNotes: newPeNotes });
+                                                }}
+                                                className={`
+                                                    relative px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5
+                                                    ${isSelected
+                                                        ? 'bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-100 translate-y-[-1px]'
+                                                        : 'bg-white text-slate-400 border-slate-100 hover:border-emerald-200 hover:text-emerald-600 hover:shadow-sm'
+                                                    }
+                                                `}
+                                            >
+                                                {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                                                {system.replace(/([A-Z])/g, ' $1').trim()}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                                 <textarea
                                     value={noteData.peNotes}
