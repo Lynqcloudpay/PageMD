@@ -675,6 +675,26 @@ const PracticeSettingsTab = ({
               <option value="24h">24-hour (Military)</option>
             </select>
           </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Scheduling Start Time</label>
+            <input
+              type="time"
+              value={settings.scheduling_start_time ? settings.scheduling_start_time.substring(0, 5) : '07:00'}
+              onChange={(e) => updateField('scheduling_start_time', e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm appearance-none cursor-pointer transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Scheduling End Time</label>
+            <input
+              type="time"
+              value={settings.scheduling_end_time ? settings.scheduling_end_time.substring(0, 5) : '19:00'}
+              onChange={(e) => updateField('scheduling_end_time', e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm appearance-none cursor-pointer transition-all"
+            />
+          </div>
         </div>
       </div>
 

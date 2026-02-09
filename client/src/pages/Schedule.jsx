@@ -607,6 +607,18 @@ const Schedule = () => {
         date: format(new Date(), 'yyyy-MM-dd'),
         visitMethod: 'office'
     });
+
+    // Adjust default time if startHour changes
+    useEffect(() => {
+        const hour = parseInt(newAppt.time.split(':')[0]);
+        if (hour < startHour || hour > endHour) {
+            const defaultHour = Math.min(Math.max(startHour + 2, startHour), endHour);
+            setNewAppt(prev => ({
+                ...prev,
+                time: `${defaultHour.toString().padStart(2, '0')}:00`
+            }));
+        }
+    }, [startHour, endHour]);
     const [patientSearch, setPatientSearch] = useState('');
     const [patientSearchResults, setPatientSearchResults] = useState([]);
     const [showPatientDropdown, setShowPatientDropdown] = useState(false);
@@ -616,19 +628,34 @@ const Schedule = () => {
     const [modalAppointments, setModalAppointments] = useState([]);
     const [loadingModalAppts, setLoadingModalAppts] = useState(false);
     const [clinicalSettings, setClinicalSettings] = useState(null);
+    const [practiceSettings, setPracticeSettings] = useState(null);
 
-    // Fetch clinical settings (includes max overbooking cap)
+    // Fetch clinical and practice settings
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const response = await settingsAPI.getClinical();
-                setClinicalSettings(response.data);
+                const [clinicalRes, practiceRes] = await Promise.all([
+                    settingsAPI.getClinical(),
+                    settingsAPI.getPractice()
+                ]);
+                setClinicalSettings(clinicalRes.data);
+                setPracticeSettings(practiceRes.data);
             } catch (err) {
-                console.warn('Failed to fetch clinical settings:', err);
+                console.warn('Failed to fetch settings:', err);
             }
         };
         fetchSettings();
     }, []);
+
+    const startHour = useMemo(() => {
+        if (!practiceSettings?.scheduling_start_time) return 7;
+        return parseInt(practiceSettings.scheduling_start_time.split(':')[0]);
+    }, [practiceSettings]);
+
+    const endHour = useMemo(() => {
+        if (!practiceSettings?.scheduling_end_time) return 19;
+        return parseInt(practiceSettings.scheduling_end_time.split(':')[0]);
+    }, [practiceSettings]);
     const [pendingFollowupId, setPendingFollowupId] = useState(null); // For auto-addressing after reschedule
     // Load saved preference from localStorage, default to true if not set
     const [showCancelledAppointments, setShowCancelledAppointments] = useState(() => {
@@ -652,12 +679,15 @@ const Schedule = () => {
         localStorage.setItem('schedule_showCancelled', showCancelledAppointments.toString());
     }, [showCancelledAppointments]);
 
-    // Time slots from 7 AM to 7 PM
-    const timeSlots = [];
-    for (let i = 7; i <= 19; i++) {
-        timeSlots.push(`${i.toString().padStart(2, '0')}:00`);
-        timeSlots.push(`${i.toString().padStart(2, '0')}:30`);
-    }
+    // Dynamic time slots based on practice settings
+    const timeSlots = useMemo(() => {
+        const slots = [];
+        for (let i = startHour; i <= endHour; i++) {
+            slots.push(`${i.toString().padStart(2, '0')}:00`);
+            slots.push(`${i.toString().padStart(2, '0')}:30`);
+        }
+        return slots;
+    }, [startHour, endHour]);
 
     const visibleTimeSlots = useMemo(() => {
         if (timeFilter === 'both') return timeSlots;
@@ -993,8 +1023,8 @@ const Schedule = () => {
     // Calculate appointment position - FIXED for double booking
     const getAppointmentPosition = (appt, providerGroup) => {
         const [hours, minutes] = appt.time.split(':').map(Number);
-        // Each slot is 48px (h-12), starting from 7:00 AM
-        const minutesFromStart = (hours - 7) * 60 + minutes;
+        // Each slot is 48px (h-12), starting from the configured startHour
+        const minutesFromStart = (hours - startHour) * 60 + minutes;
         const topPx = (minutesFromStart / 30) * 48; // 48px per 30 min slot
         // Height based on duration - min 48px for 30min to fit content
         const heightPx = Math.max((appt.duration / 30) * 48, 48);
