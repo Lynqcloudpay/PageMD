@@ -1274,28 +1274,6 @@ const Schedule = () => {
                             </div>
                         </div>
 
-                        {/* Provider Legend */}
-                        {Object.keys(appointmentsByProvider).length > 0 && (
-                            <div className="flex items-center gap-4">
-                                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Providers</span>
-                                <div className="flex items-center gap-2">
-                                    {Object.values(appointmentsByProvider).map((providerGroup) => {
-                                        const isSelected = selectedProviderIds.includes(providerGroup.providerId);
-                                        return (
-                                            <ProviderLegendItem
-                                                key={providerGroup.providerId || 'unknown'}
-                                                providerGroup={providerGroup}
-                                                isSelected={isSelected}
-                                                selectedProviderIds={selectedProviderIds}
-                                                setSelectedProviderIds={setSelectedProviderIds}
-                                                palette={PROVIDER_PALETTE}
-                                                onUpdateColor={(colorIndex) => updateProviderColor(providerGroup.providerId, colorIndex)}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* Schedule Grid */}
@@ -1305,7 +1283,7 @@ const Schedule = () => {
                             <div className="sticky top-0 z-[35] bg-white/95 backdrop-blur-sm border-b border-slate-100">
                                 <div className="flex">
                                     <div className="w-20 flex-shrink-0 border-r border-slate-100 bg-slate-50/30"></div>
-                                    <div className="flex-1 px-4 py-2">
+                                    <div className="flex-1 px-4 py-2 flex items-center justify-between gap-4">
                                         <div className="flex items-center gap-3">
                                             <div className="font-semibold text-xs text-slate-700">
                                                 Provider Schedule
@@ -1314,6 +1292,29 @@ const Schedule = () => {
                                                 {appointments.length} Total
                                             </div>
                                         </div>
+
+                                        {/* Provider Legend - Moved here for horizontal scalability */}
+                                        {Object.keys(appointmentsByProvider).length > 0 && (
+                                            <div className="flex items-center gap-3 overflow-visible">
+                                                <span className="text-[9px] uppercase font-bold tracking-widest text-slate-400 whitespace-nowrap">Clinic Providers</span>
+                                                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                                                    {Object.values(appointmentsByProvider).map((providerGroup) => {
+                                                        const isSelected = selectedProviderIds.includes(providerGroup.providerId);
+                                                        return (
+                                                            <ProviderLegendItem
+                                                                key={providerGroup.providerId || 'unknown'}
+                                                                providerGroup={providerGroup}
+                                                                isSelected={isSelected}
+                                                                selectedProviderIds={selectedProviderIds}
+                                                                setSelectedProviderIds={setSelectedProviderIds}
+                                                                palette={PROVIDER_PALETTE}
+                                                                onUpdateColor={(colorIndex) => updateProviderColor(providerGroup.providerId, colorIndex)}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
