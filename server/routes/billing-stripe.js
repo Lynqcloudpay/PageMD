@@ -12,7 +12,7 @@ const router = express.Router();
  */
 router.get('/preview', authenticate, async (req, res) => {
     try {
-        const clinicId = req.user.clinicId || req.clinic?.id;
+        const clinicId = req.user.clinic_id || req.clinic?.id;
         if (!clinicId) {
             return res.status(400).json({ error: 'Clinic context missing' });
         }
@@ -31,7 +31,7 @@ router.get('/preview', authenticate, async (req, res) => {
  */
 router.post('/portal', authenticate, async (req, res) => {
     try {
-        const clinicId = req.user.clinicId || req.clinic?.id;
+        const clinicId = req.user.clinic_id || req.clinic?.id;
         if (!clinicId) {
             return res.status(400).json({ error: 'Clinic context missing' });
         }
@@ -68,7 +68,7 @@ router.post('/portal', authenticate, async (req, res) => {
  */
 router.post('/create-checkout-session', authenticate, async (req, res) => {
     try {
-        const clinicId = req.user.clinicId || req.clinic?.id;
+        const clinicId = req.user.clinic_id || req.clinic?.id;
 
         if (!clinicId) {
             return res.status(400).json({ error: 'Clinic context missing' });
@@ -97,7 +97,7 @@ router.post('/create-checkout-session', authenticate, async (req, res) => {
  */
 router.post('/sync', authenticate, async (req, res) => {
     try {
-        const clinicId = req.user.clinicId || req.clinic?.id;
+        const clinicId = req.user.clinic_id || req.clinic?.id;
         if (!clinicId) {
             return res.status(400).json({ error: 'Clinic context missing' });
         }
@@ -151,7 +151,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
  */
 router.get('/status', authenticate, async (req, res) => {
     try {
-        const clinicId = req.user.clinicId || req.clinic?.id;
+        const clinicId = req.user.clinic_id || req.clinic?.id;
 
         // Get database status
         const { rows } = await pool.controlPool.query(
