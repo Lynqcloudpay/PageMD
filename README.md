@@ -107,6 +107,15 @@ See `QUICK_SETUP.md` for detailed instructions.
 - Comprehensive audit logging
 - HIPAA-focused security measures
 
+## Maintenance & Recovery
+
+- **Clinical Archives**: Deleted clinic data is automatically encrypted and stored in `server/archives/`.
+- **Data Recovery**: Use the utility script to decrypt HIPAA archives:
+  ```bash
+  node server/scripts/decrypt-archive.js --file ./path/to/backup.enc --out ./recovered.sql
+  ```
+- **Backup Location**: Production archives are isolated from git but protected during deployments via `deploy-fast.sh`.
+
 ## License
 
 MIT
