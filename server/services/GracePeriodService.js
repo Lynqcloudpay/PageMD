@@ -32,7 +32,7 @@ class GracePeriodService {
         // Find clinics that are NOT active (phase > 0 or have a grace_start_at)
         // or clinics that just missed a payment (past_due/unpaid but phase is still 0)
         const res = await pool.controlPool.query(`
-            SELECT id, display_name, status, is_read_only, billing_locked, 
+            SELECT id, display_name, slug, schema_name, status, is_read_only, billing_locked, 
                    stripe_subscription_status, billing_grace_phase, billing_grace_start_at,
                    billing_manual_override
               FROM clinics
@@ -191,13 +191,19 @@ class GracePeriodService {
      * Send phase-specific dunning emails.
      */
     async sendDunningEmail(clinic, phase, days = null) {
-        // Find clinic admin email
+        // Find clinic admin email - must use the correct schema
+        const schema = clinic.schema_name;
+        if (!schema) {
+            console.warn(`[GracePeriodService] No schema_name found for clinic ${clinic.display_name}. Cannot send email.`);
+            return;
+        }
+
         const adminRes = await pool.controlPool.query(`
             SELECT email, first_name 
-              FROM users 
-             WHERE clinic_id = $1 AND role = 'admin' AND status = 'active'
+              FROM ${schema}.users 
+             WHERE role = 'admin' AND status = 'active'
              LIMIT 1
-        `, [clinic.id]);
+        `);
 
         const admin = adminRes.rows[0];
         if (!admin) {
