@@ -74,8 +74,8 @@ router.post('/create-checkout-session', authenticate, async (req, res) => {
             return res.status(400).json({ error: 'Clinic context missing' });
         }
 
-        const successUrl = `${process.env.FRONTEND_URL || process.env.APP_BASE_URL}/settings/billing?session_id={CHECKOUT_SESSION_ID}`;
-        const cancelUrl = `${process.env.FRONTEND_URL || process.env.APP_BASE_URL}/settings/billing`;
+        const successUrl = `${process.env.FRONTEND_URL || process.env.APP_BASE_URL}/admin-settings?tab=billing&payment=success&session_id={CHECKOUT_SESSION_ID}`;
+        const cancelUrl = `${process.env.FRONTEND_URL || process.env.APP_BASE_URL}/admin-settings?tab=billing&payment=cancelled`;
 
         const session = await stripeService.createCheckoutSession(
             clinicId,

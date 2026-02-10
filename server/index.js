@@ -116,7 +116,13 @@ app.use(helmet({
     },
   },
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use((req, res, next) => {
+  // Stripe webhooks need the raw body for signature verification
+  if (req.originalUrl === '/api/billing/stripe/webhook') {
+    return next();
+  }
+  express.json({ limit: '10mb' })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(sanitizeInput);
 
