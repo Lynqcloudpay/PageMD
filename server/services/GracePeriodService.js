@@ -201,7 +201,7 @@ class GracePeriodService {
         const adminRes = await pool.controlPool.query(`
             SELECT email, first_name 
               FROM ${schema}.users 
-             WHERE role = 'admin' AND status = 'active'
+             WHERE role ILIKE 'admin' AND status = 'active'
              LIMIT 1
         `);
 
