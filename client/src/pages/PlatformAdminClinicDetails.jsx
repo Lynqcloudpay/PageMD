@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap, Users } from 'lucide-react';
+import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap, Users, TrendingUp } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall }) => {
@@ -992,8 +992,8 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
                                         </td>
                                         <td className="px-3 py-2">
                                             <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${log.event_type === 'email_sent' ? 'bg-blue-50 text-blue-600' :
-                                                    log.event_type === 'phase_escalated' ? 'bg-red-50 text-red-600' :
-                                                        'bg-slate-100 text-slate-600'
+                                                log.event_type === 'phase_escalated' ? 'bg-red-50 text-red-600' :
+                                                    'bg-slate-100 text-slate-600'
                                                 }`}>
                                                 {log.event_type.replace(/_/g, ' ')}
                                             </span>
@@ -1017,6 +1017,33 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
     );
 };
 
+const CollapsibleCard = ({ title, icon: Icon, children, defaultOpen = true, badge }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden mb-6">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    {Icon && <Icon className="w-5 h-5 text-indigo-500" />}
+                    <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">{title}</h2>
+                    {badge && <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold ml-2">{badge}</span>}
+                </div>
+                <div className={`p-1.5 rounded-lg border border-slate-100 bg-white transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+                    <ChevronRight className="w-4 h-4 text-slate-400 rotate-90" />
+                </div>
+            </button>
+            {isOpen && (
+                <div className="px-6 pb-6 animate-in slide-in-from-top-2 duration-200">
+                    <div className="h-px bg-slate-50 mb-6 -mx-6" />
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+};
+
 const PlatformAdminClinicDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -1027,6 +1054,8 @@ const PlatformAdminClinicDetails = () => {
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [controlsUpdating, setControlsUpdating] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [activeTab, setActiveTab] = useState('overview');
+    const [impersonating, setImpersonating] = useState(false);
 
     useEffect(() => {
         loadClinic();
@@ -1090,6 +1119,21 @@ const PlatformAdminClinicDetails = () => {
         }
     };
 
+    const handleMasterTakeover = async () => {
+        const reason = prompt('Reason for clinic-wide takeover (required for audit):');
+        if (!reason) return;
+
+        setImpersonating(true);
+        try {
+            const { impersonateUrl } = await apiCall('POST', `/clinics/${id}/impersonate`, { reason });
+            window.open(impersonateUrl, '_blank');
+        } catch (err) {
+            alert(err.response?.data?.error || 'Takeover failed');
+        } finally {
+            setImpersonating(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -1113,445 +1157,253 @@ const PlatformAdminClinicDetails = () => {
 
     const { clinic, usage, recent_payments } = clinicData;
 
+    const sections = [
+        { id: 'overview', label: 'Overview', icon: Building2 },
+        { id: 'personnel', label: 'Personnel', icon: Users },
+        { id: 'billing', label: 'Billing & Dunning', icon: CreditCard },
+        { id: 'governance', label: 'Governance & Audit', icon: Shield },
+        { id: 'integrations', label: 'Onboarding & Integrations', icon: Zap },
+    ];
+
     return (
-        <div className="min-h-screen bg-slate-50/80">
-            {/* Background */}
+        <div className="min-h-screen bg-[#F8FAFC] flex flex-col lg:flex-row">
+            {/* High-Density Sidebar */}
+            <aside className="w-full lg:w-64 bg-white border-r border-slate-200 shrink-0 lg:h-screen lg:sticky lg:top-0 transition-all duration-300">
+                <div className="p-6">
+                    <button
+                        onClick={() => navigate('/platform-admin/clinics')}
+                        className="flex items-center gap-2 text-slate-400 hover:text-slate-600 mb-8 transition-colors text-xs font-semibold group uppercase tracking-widest"
+                    >
+                        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                        Back to List
+                    </button>
 
-            <div className="max-w-[1400px] mx-auto px-6 py-6">
-                <button
-                    onClick={() => navigate('/platform-admin/clinics')}
-                    className="flex items-center gap-1.5 text-blue-500 hover:text-blue-600 mb-4 transition-colors text-xs font-medium group"
-                >
-                    <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-                    Back to Clinics
-                </button>
+                    <div className="space-y-1">
+                        {sections.map((sec) => (
+                            <button
+                                key={sec.id}
+                                onClick={() => setActiveTab(sec.id)}
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === sec.id
+                                    ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100'
+                                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                                    }`}
+                            >
+                                <sec.icon className={`w-4 h-4 ${activeTab === sec.id ? 'text-indigo-500' : ''}`} />
+                                {sec.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-                {/* Header Card */}
-                <div className="bg-white border border-slate-100 rounded-xl p-5 mb-5 shadow-sm">
-                    <div className="flex flex-col md:flex-row md:items-start gap-4">
-                        {clinic.logo_url ? (
-                            <img
-                                src={clinic.logo_url}
-                                alt={`${clinic.display_name} logo`}
-                                className="w-14 h-14 rounded-xl object-cover border border-slate-100 shrink-0 bg-white"
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                    e.target.nextSibling.style.display = 'flex';
-                                }}
-                            />
-                        ) : null}
-                        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 items-center justify-center text-white font-bold text-xl shrink-0 ${clinic.logo_url ? 'hidden' : 'flex'}`}>
-                            {clinic.display_name?.[0]}
+                <div className="mt-auto p-6 border-t border-slate-50">
+                    <div className="p-4 bg-red-50/50 rounded-2xl border border-red-100 mb-4">
+                        <h3 className="text-[10px] font-black text-red-900 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            Danger Zone
+                        </h3>
+                        <button
+                            disabled={deleting}
+                            onClick={handleDeleteClinic}
+                            className="w-full text-left text-[10px] text-red-600 font-bold hover:underline"
+                        >
+                            {deleting ? 'Deleting...' : 'Delete Clinic'}
+                        </button>
+                    </div>
+                    <p className="text-[9px] text-slate-400 font-mono text-center">v{clinic.emr_version} • {clinic.slug}</p>
+                </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <main className="flex-1 min-w-0 h-screen overflow-y-auto scroll-smooth">
+                {/* Header Strip */}
+                <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 px-8 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-indigo-200">
+                            {clinic.logo_url ? (
+                                <img src={clinic.logo_url} className="w-full h-full rounded-xl object-cover" />
+                            ) : clinic.display_name?.[0]}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                                <h1 className="text-lg font-semibold text-slate-800 tracking-tight">{clinic.display_name}</h1>
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${clinic.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                    clinic.status === 'suspended' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                        'bg-slate-50 text-slate-500 border-slate-100'
-                                    }`}>
+                        <div>
+                            <h1 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                {clinic.display_name}
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border ${clinic.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                     {clinic.status}
                                 </span>
-                            </div>
-                            <p className="text-xs text-slate-400 flex items-center gap-2 mb-2">
-                                Clinic Entity
-                                {clinic.plan_name && (
-                                    <span className="bg-blue-50 text-blue-600 text-[9px] px-1.5 py-0.5 rounded border border-blue-100 font-semibold">
-                                        {clinic.plan_name}
-                                    </span>
-                                )}
+                            </h1>
+                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest leading-none mt-1">
+                                {clinic.slug} • {clinicData?.billing?.currentTier || 'Solo'} Tier
                             </p>
-
-                            <div className="flex flex-wrap items-center gap-2 text-[10px]">
-                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100 text-slate-500 font-mono">
-                                    {clinic.slug}
-                                </span>
-                                <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded border border-blue-100 text-blue-600 font-semibold">
-                                    {clinicData?.billing?.currentTier || 'Solo'} Tier
-                                </span>
-                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100 text-slate-500">
-                                    {Array.isArray(clinic.compliance_zones) && clinic.compliance_zones.length > 0 ? clinic.compliance_zones.join(', ') : 'HIPAA'}
-                                </span>
-                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100 text-slate-500">
-                                    v{clinic.emr_version || '1.0.0'}
-                                </span>
-                                <span className="text-slate-400">
-                                    Go-Live: {clinic.go_live_date ? new Date(clinic.go_live_date).toLocaleDateString() : 'TBD'}
-                                </span>
-                                <span className="text-slate-300">·</span>
-                                <span className="text-slate-400">
-                                    Since {new Date(clinic.created_at).toLocaleDateString()}
-                                </span>
-                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                    {/* Main Info */}
-                    <div className="lg:col-span-2 space-y-5">
-
-                        {/* Billing & Payment Status */}
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Billing & Payments</h2>
-                                </div>
-                                <span className="text-[9px] text-slate-400">Stripe</span>
-                            </div>
-                            <ClinicBillingStatus clinicId={id} apiCall={apiCall} />
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleMasterTakeover}
+                            disabled={impersonating}
+                            className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-black shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                        >
+                            <Zap className={`w-3.5 h-3.5 ${impersonating ? 'animate-pulse' : ''}`} />
+                            {impersonating ? 'Preparing...' : 'Platform Takeover'}
+                        </button>
+                        <div className="h-8 w-px bg-slate-100 hidden md:block" />
+                        <div className="flex items-center gap-1.5 p-1 bg-slate-50 rounded-lg border border-slate-100">
+                            {[
+                                { status: 'active', icon: CheckCircle, color: 'text-emerald-500' },
+                                { status: 'suspended', icon: AlertTriangle, color: 'text-amber-500' },
+                                { status: 'deactivated', icon: XCircle, color: 'text-slate-400' }
+                            ].map((s) => (
+                                <button
+                                    key={s.status}
+                                    onClick={() => handleStatusChange(s.status)}
+                                    disabled={statusUpdating || clinic.status === s.status}
+                                    className={`p-1.5 rounded-md transition-all ${clinic.status === s.status ? 'bg-white shadow-sm ring-1 ring-slate-200/50' : 'opacity-40 hover:opacity-100'}`}
+                                    title={`Set as ${s.status}`}
+                                >
+                                    <s.icon className={`w-3.5 h-3.5 ${clinic.status === s.status ? s.color : 'text-slate-400'}`} />
+                                </button>
+                            ))}
                         </div>
+                    </div>
+                </header>
 
-                        {/* Growth & Referrals */}
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Growth & Referrals</h2>
+                <div className="p-8 pb-20">
+                    <div className="max-w-5xl mx-auto">
+                        {activeTab === 'overview' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="lg:col-span-2 space-y-2">
+                                    <CollapsibleCard title="Growth & Referrals" icon={TrendingUp} defaultOpen={true}>
+                                        <ClinicGrowthOverview growth={clinicData.growth} billing={clinicData.billing} />
+                                    </CollapsibleCard>
+                                    <CollapsibleCard title="Onboarding Checklist" icon={Zap} defaultOpen={false}>
+                                        <ClinicOnboardingManager tenantId={clinic.slug} apiCall={apiCall} />
+                                    </CollapsibleCard>
                                 </div>
-                                <span className="text-[9px] text-slate-400">Staircase</span>
-                            </div>
-                            <ClinicGrowthOverview growth={clinicData.growth} billing={clinicData.billing} />
-                        </div>
-
-                        {/* Clinic Personnel */}
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <Shield className="w-3.5 h-3.5 text-slate-400" />
-                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Personnel</h2>
-                                </div>
-                                <span className="text-[9px] text-slate-400">Users & Roles</span>
-                            </div>
-                            <ClinicPersonnelManager clinicId={id} clinicSlug={clinic.slug} apiCall={apiCall} />
-                        </div>
-
-                        {/* Role Governance */}
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <Shield className="w-3.5 h-3.5 text-slate-400" />
-                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Role Governance</h2>
-                                </div>
-                                <span className="text-[9px] text-slate-400">Template Drift</span>
-                            </div>
-                            <DriftManager clinicId={id} apiCall={apiCall} />
-                        </div>
-
-                        {/* Platform Audit Trail */}
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <Activity className="w-3.5 h-3.5 text-slate-400" />
-                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Audit Trail</h2>
-                                </div>
-                                <span className="text-[9px] text-slate-400">Events</span>
-                            </div>
-                            <PlatformAuditTrail clinicId={id} apiCall={apiCall} />
-                        </div>
-
-                        {/* Onboarding & Integrations */}
-                        <div id="setup" className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm scroll-mt-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                    <Zap className="w-3.5 h-3.5 text-slate-400" />
-                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Onboarding & Integrations</h2>
-                                </div>
-                                <span className="text-[9px] text-slate-400">Setup</span>
-                            </div>
-                            <ClinicOnboardingManager tenantId={clinic.slug} apiCall={apiCall} />
-                        </div>
-
-                        {/* Metrics & Activity */}
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Activity className="w-3.5 h-3.5 text-slate-400" />
-                                <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Recent Activity</h2>
-                            </div>
-                            {usage && usage.length > 0 ? (
-                                <div className="space-y-2">
-                                    {usage.map((metric, i) => (
-                                        <div key={i} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-white transition-all">
-                                            <span className="text-xs text-slate-600">System Event</span>
-                                            <div className="text-right">
-                                                <span className="text-[10px] text-slate-400">{new Date(metric.metric_date).toLocaleDateString()}</span>
-                                                <span className="text-[10px] font-mono text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded ml-2">{JSON.stringify(metric.details)}</span>
+                                <div className="space-y-6">
+                                    <ClinicFeatureManager clinicId={id} currentFeatures={clinic.enabled_features} apiCall={apiCall} onUpdate={loadClinic} />
+                                    <div className="p-6 bg-white border border-slate-100 rounded-3xl shadow-sm">
+                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 font-mono">Clinic Entity Meta</h3>
+                                        <div className="space-y-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase">Schema (Tenant ID)</label>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        value={clinic.slug}
+                                                        readOnly
+                                                        className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-mono font-bold text-slate-500"
+                                                    />
+                                                    <button onClick={() => navigator.clipboard.writeText(clinic.slug)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                                                        <Key className="w-3.5 h-3.5 text-slate-400" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase">Go-Live Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={clinic.go_live_date ? new Date(clinic.go_live_date).toISOString().split('T')[0] : ''}
+                                                    onChange={(e) => handleControlChange({ go_live_date: e.target.value })}
+                                                    className="w-full bg-white border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-indigo-600 outline-none focus:ring-2 ring-indigo-500/20"
+                                                />
                                             </div>
                                         </div>
-                                    ))}
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="text-center py-6 text-slate-400 text-xs italic">No recent activity.</div>
-                            )}
-                        </div>
-
-                        {/* Payment History */}
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <div className="flex items-center gap-2 mb-3">
-                                <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                                <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Billing History</h2>
                             </div>
-                            {recent_payments && recent_payments.length > 0 ? (
-                                <table className="w-full text-xs">
-                                    <thead>
-                                        <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50">
-                                            <th className="pb-2 text-left font-medium">Date</th>
-                                            <th className="pb-2 text-left font-medium">Amount</th>
-                                            <th className="pb-2 text-right font-medium">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {recent_payments.map((payment, i) => (
-                                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="py-2 text-slate-500">{new Date(payment.created_at).toLocaleDateString()}</td>
-                                                <td className="py-2 font-mono text-slate-700">${payment.amount}</td>
-                                                <td className="py-2 text-right">
-                                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-semibold border ${payment.status === 'succeeded' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                        )}
+
+                        {activeTab === 'personnel' && (
+                            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <CollapsibleCard title="Clinical Personnel" icon={Users} badge={`${users?.length || 0} Registered`}>
+                                    <ClinicPersonnelManager clinicId={id} clinicSlug={clinic.slug} apiCall={apiCall} />
+                                </CollapsibleCard>
+                            </div>
+                        )}
+
+                        {activeTab === 'billing' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <CollapsibleCard title="Subscription Status" icon={CreditCard}>
+                                    <ClinicBillingStatus clinicId={id} apiCall={apiCall} />
+                                </CollapsibleCard>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <CollapsibleCard title="Payment History" icon={Clock} defaultOpen={false}>
+                                        <div className="space-y-2">
+                                            {recent_payments?.map((payment, i) => (
+                                                <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                                    <div>
+                                                        <p className="text-xs font-bold text-slate-700">${payment.amount}</p>
+                                                        <p className="text-[10px] text-slate-400 font-mono">{new Date(payment.created_at).toLocaleDateString()}</p>
+                                                    </div>
+                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${payment.status === 'succeeded' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
                                                         {payment.status}
                                                     </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <div className="text-center py-6 text-slate-400 text-xs italic">No payment history.</div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Sidebar Actions */}
-                    <div className="space-y-5">
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                                <Settings className="w-3.5 h-3.5 text-slate-400" />
-                                Actions
-                            </h2>
-                            <div className="space-y-3">
-                                {clinic.status !== 'active' && (
-                                    <button
-                                        disabled={statusUpdating || deleting}
-                                        onClick={() => handleStatusChange('active')}
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl text-white font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
-                                    >
-                                        <CheckCircle className="w-5 h-5" />
-                                        Activate Clinic
-                                    </button>
-                                )}
-
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
-                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <Shield className="w-3.5 h-3.5" />
-                                        Kill Switches
-                                    </h3>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-slate-700">Read-Only Mode</span>
-                                        <button
-                                            onClick={() => handleControlChange({ is_read_only: !clinic.is_read_only })}
-                                            disabled={controlsUpdating}
-                                            className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ease-in-out ${clinic.is_read_only ? 'bg-red-500 shadow-inner' : 'bg-slate-300'}`}
-                                        >
-                                            <div
-                                                className="w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out"
-                                                style={{ transform: clinic.is_read_only ? 'translateX(1.5rem)' : 'translateX(0)' }}
-                                            ></div>
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-slate-700">Lock Billing</span>
-                                        <button
-                                            onClick={() => handleControlChange({ billing_locked: !clinic.billing_locked })}
-                                            disabled={controlsUpdating}
-                                            className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ease-in-out ${clinic.billing_locked ? 'bg-amber-500 shadow-inner' : 'bg-slate-300'}`}
-                                        >
-                                            <div
-                                                className="w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out"
-                                                style={{ transform: clinic.billing_locked ? 'translateX(1.5rem)' : 'translateX(0)' }}
-                                            ></div>
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-slate-700">Lock Prescribing</span>
-                                        <button
-                                            onClick={() => handleControlChange({ prescribing_locked: !clinic.prescribing_locked })}
-                                            disabled={controlsUpdating}
-                                            className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ease-in-out ${clinic.prescribing_locked ? 'bg-purple-500 shadow-inner' : 'bg-slate-300'}`}
-                                        >
-                                            <div
-                                                className="w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ease-in-out"
-                                                style={{ transform: clinic.prescribing_locked ? 'translateX(1.5rem)' : 'translateX(0)' }}
-                                            ></div>
-                                        </button>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 italic">Changes take effect immediately for all users.</p>
-                                </div>
-
-                                <ClinicFeatureManager
-                                    clinicId={id}
-                                    currentFeatures={clinic.enabled_features}
-                                    apiCall={apiCall}
-                                    onUpdate={loadClinic}
-                                />
-
-                                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50 space-y-4">
-                                    <h3 className="text-xs font-black text-indigo-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                        <Settings className="w-3.5 h-3.5" />
-                                        Platform Configuration
-                                    </h3>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">EMR Version</label>
-                                        <select
-                                            value={clinic.emr_version || '1.0.0'}
-                                            onChange={(e) => handleControlChange({ emr_version: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
-                                        >
-                                            <option value="1.0.0">v1.0.0 (Legacy)</option>
-                                            <option value="2.0.0">v2.0.0 (Current)</option>
-                                            <option value="2.1.0-alpha">v2.1.0-alpha</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Billing Tier (Auto-Calculated)</label>
-                                        <div className="w-full bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-lg px-3 py-2 text-xs font-bold flex items-center justify-between">
-                                            <span>{clinicData?.billing?.currentTier || 'Solo'}</span>
-                                            <span className="text-indigo-200 text-[10px]">
-                                                {clinicData?.billing?.totalBillingSeats || 1} seat{(clinicData?.billing?.totalBillingSeats || 1) !== 1 ? 's' : ''}
-                                            </span>
+                                                </div>
+                                            ))}
+                                            {(!recent_payments || recent_payments.length === 0) && <p className="text-xs text-slate-400 italic text-center py-4">No payment history.</p>}
                                         </div>
-                                        <p className="text-[9px] text-slate-400 italic">Based on {clinicData?.billing?.physicalSeats || 1} physical + {clinicData?.billing?.ghostSeats || 0} ghost seats</p>
-                                    </div>
+                                    </CollapsibleCard>
 
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Compliance Zones</label>
-                                        <input
-                                            type="text"
-                                            placeholder="HIPAA, GDPR, etc."
-                                            defaultValue={Array.isArray(clinic.compliance_zones) ? clinic.compliance_zones.join(', ') : clinic.compliance_zones}
-                                            onBlur={(e) => {
-                                                const zones = e.target.value.split(',').map(s => s.trim()).filter(s => s);
-                                                handleControlChange({ compliance_zones: zones });
-                                            }}
-                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
-                                        />
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Go-Live Date</label>
-                                        <input
-                                            type="date"
-                                            value={clinic.go_live_date ? new Date(clinic.go_live_date).toISOString().split('T')[0] : ''}
-                                            onChange={(e) => handleControlChange({ go_live_date: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-indigo-500"
-                                        />
-                                    </div>
-                                </div>
-
-                                {clinic.status !== 'suspended' && (
-                                    <button
-                                        disabled={statusUpdating || deleting}
-                                        onClick={() => handleStatusChange('suspended')}
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-white border border-amber-200 hover:bg-amber-50 rounded-xl text-amber-600 font-bold transition-all active:scale-[0.98] disabled:opacity-50"
-                                    >
-                                        <AlertTriangle className="w-5 h-5" />
-                                        Suspend Clinic
-                                    </button>
-                                )}
-
-                                {clinic.status !== 'deactivated' && (
-                                    <button
-                                        disabled={statusUpdating || deleting}
-                                        onClick={() => handleStatusChange('deactivated')}
-                                        className="w-full flex items-center justify-center gap-2 p-4 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 font-bold transition-all active:scale-[0.98] disabled:opacity-50"
-                                    >
-                                        <XCircle className="w-5 h-5" />
-                                        Deactivate
-                                    </button>
-                                )}
-
-                                <div className="pt-6 mt-6 border-t border-slate-100">
-                                    <div className="p-4 bg-red-50/50 rounded-2xl border border-red-100">
-                                        <h3 className="text-xs font-black text-red-900 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                            <AlertCircle className="w-3.5 h-3.5" />
-                                            Danger Zone
-                                        </h3>
-                                        <p className="text-[10px] text-red-700/70 mb-4 leading-relaxed">
-                                            Deleting a clinic is irreversible. All data including patient records will be permanently destroyed.
-                                        </p>
-                                        <button
-                                            disabled={statusUpdating || deleting}
-                                            onClick={handleDeleteClinic}
-                                            className="w-full flex items-center justify-center gap-2 p-3 bg-red-100 hover:bg-red-200 border border-red-200 rounded-xl text-red-600 text-sm font-bold transition-all duration-200"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            {deleting ? 'Deleting...' : 'Permanently Delete'}
-                                        </button>
-                                    </div>
+                                    <CollapsibleCard title="Automated Dunning Logs" icon={Activity}>
+                                        <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                            <ClinicDunningLog clinicId={id} apiCall={apiCall} />
+                                        </div>
+                                    </CollapsibleCard>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                            <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">
-                                Contact Information
-                            </h2>
-                            <div className="space-y-3">
-                                <div className="flex items-start gap-2.5 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
-                                        <Mail className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Email Address</p>
-                                        <p className="text-sm font-semibold text-slate-700 break-all">{clinic.contact_email || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-500 shrink-0">
-                                        <Activity className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Phone Number</p>
-                                        <p className="text-sm font-semibold text-slate-700">{clinic.contact_phone || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-500 shrink-0">
-                                        <Zap className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">EMR Version</p>
-                                        <select
-                                            value={clinic.emr_version}
-                                            onChange={(e) => handleControlChange({ emr_version: e.target.value })}
-                                            className="text-xs font-bold text-slate-700 bg-transparent border-none p-0 focus:ring-0 cursor-pointer"
-                                        >
-                                            <option value="1.0.0">1.0.0 (Stable)</option>
-                                            <option value="1.1.0-beta">1.1.0 (Beta)</option>
-                                            <option value="2.0.0">2.0.0 (Next Gen)</option>
-                                        </select>
-                                    </div>
-                                </div>
+                        {activeTab === 'governance' && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <CollapsibleCard title="Role Governance & Drift" icon={Shield}>
+                                    <DriftManager clinicId={id} apiCall={apiCall} />
+                                </CollapsibleCard>
 
-                                <div className="flex items-start gap-3 p-3 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white shrink-0">
-                                        <Shield className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold text-indigo-400 mb-0.5">Billing Tier</p>
-                                        <p className="text-sm font-black text-indigo-700">{clinicData?.billing?.currentTier || 'Solo'}</p>
-                                        <p className="text-[9px] text-indigo-400">Auto-calculated from {clinicData?.billing?.totalBillingSeats || 1} billing seats</p>
-                                    </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <CollapsibleCard title="Clinical Safety Kill-Switches" icon={AlertCircle}>
+                                        <div className="space-y-4">
+                                            {[
+                                                { label: 'Read-Only Mode', key: 'is_read_only', color: 'bg-red-500', desc: 'Disables writes in tenant schema' },
+                                                { label: 'Lock Billing', key: 'billing_locked', color: 'bg-amber-500', desc: 'Prevents automated plan updates' },
+                                                { label: 'Lock Prescribing', key: 'prescribing_locked', color: 'bg-indigo-500', desc: 'Disables DoseSpot API' }
+                                            ].map((sw) => (
+                                                <div key={sw.key} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group transition-all hover:border-slate-200">
+                                                    <div>
+                                                        <span className="text-xs font-black text-slate-700 block">{sw.label}</span>
+                                                        <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">{sw.desc}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleControlChange({ [sw.key]: !clinic[sw.key] })}
+                                                        disabled={controlsUpdating}
+                                                        className={`w-12 h-6 rounded-full p-1 transition-all duration-300 ${clinic[sw.key] ? sw.color : 'bg-slate-300'}`}
+                                                    >
+                                                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${clinic[sw.key] ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CollapsibleCard>
+
+                                    <CollapsibleCard title="Platform Level Audit" icon={Activity} defaultOpen={false}>
+                                        <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                            <PlatformAuditTrail clinicId={id} apiCall={apiCall} />
+                                        </div>
+                                    </CollapsibleCard>
                                 </div>
                             </div>
-                        </div>
+                        )}
+
+                        {activeTab === 'integrations' && (
+                            <div className="bg-white border border-slate-100 rounded-3xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <h2 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 mb-8">
+                                    <Zap className="w-4 h-4 text-orange-500" />
+                                    Integration Pipeline
+                                </h2>
+                                <ClinicOnboardingManager tenantId={clinic.slug} apiCall={apiCall} />
+                            </div>
+                        )}
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

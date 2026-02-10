@@ -409,6 +409,67 @@ router.patch('/clinics/:id/status', verifySuperAdmin, async (req, res) => {
 });
 
 /**
+ * POST /api/super/clinics/:id/impersonate
+ * Generate a one-time impersonation token for a clinic admin.
+ */
+router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        if (!reason) {
+            return res.status(400).json({ error: 'Reason for impersonation is required for auditing.' });
+        }
+
+        // 1. Find the clinic and a target admin
+        const clinicRes = await pool.controlPool.query('SELECT schema_name, display_name FROM clinics WHERE id = $1', [id]);
+        if (clinicRes.rows.length === 0) return res.status(404).json({ error: 'Clinic not found' });
+
+        const { schema_name, display_name } = clinicRes.rows[0];
+
+        // 2. Find an active admin user in that clinic
+        const userRes = await pool.controlPool.query(`
+            SELECT id FROM ${schema_name}.users 
+            WHERE role ILIKE 'admin' AND status = 'active'
+            LIMIT 1
+        `);
+
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: 'No active admin found in this clinic to impersonate.' });
+        }
+
+        const targetUserId = userRes.rows[0].id;
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        // 3. Store in token table
+        await pool.controlPool.query(`
+            INSERT INTO platform_impersonation_tokens 
+            (admin_id, target_clinic_id, target_user_id, token, reason, expires_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        `, [req.platformAdmin.id, id, targetUserId, token, reason, expiresAt]);
+
+        // 4. Log the audit event
+        await pool.controlPool.query(`
+            INSERT INTO audit_logs (admin_id, action, target_type, target_id, details)
+            VALUES ($1, $2, $3, $4, $5)
+        `, [req.platformAdmin.id, 'IMPERSONATION_TOKEN_GENERATED', 'clinic', id, JSON.stringify({ reason, targetUserId, clinicName: display_name })]);
+
+        res.json({
+            token,
+            targetUserId,
+            expiresAt,
+            impersonateUrl: `/auth/impersonate?token=${token}`
+        });
+
+    } catch (error) {
+        console.error('[SuperAdmin] Impersonation generation failed:', error);
+        res.status(500).json({ error: 'Failed to generate impersonation token' });
+    }
+});
+
+/**
  * PATCH /api/super/clinics/:id/controls
  * Update individual kill switches and metadata
  */

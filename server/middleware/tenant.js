@@ -254,8 +254,10 @@ const resolveTenant = async (req, res, next) => {
 
         // Enforcement: Read-Only Kill Switch
         const mutableMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
-        // Respect manual override: If manual override is active, we don't enforce read-only/locked status
-        const isActuallyReadOnly = tenantInfo.is_read_only && !tenantInfo.billing_manual_override;
+        // The columns is_read_only and billing_locked are the source of truth.
+        // If billing_manual_override is TRUE, the automated dunning script won't touch them, 
+        // allowing absolute manual control.
+        const isActuallyReadOnly = tenantInfo.is_read_only;
 
         if (isActuallyReadOnly && mutableMethods.includes(req.method)) {
             // Allow login/logout even in read-only mode
@@ -285,8 +287,8 @@ const resolveTenant = async (req, res, next) => {
             logo_url: tenantInfo.logo_url,
             address: [tenantInfo.address_line1, tenantInfo.address_line2, `${tenantInfo.city || ''} ${tenantInfo.state || ''} ${tenantInfo.zip || ''}`.trim()].filter(Boolean).join('\n'),
             phone: tenantInfo.phone,
-            is_read_only: tenantInfo.is_read_only && !tenantInfo.billing_manual_override,
-            billing_locked: tenantInfo.billing_locked && !tenantInfo.billing_manual_override,
+            is_read_only: tenantInfo.is_read_only,
+            billing_locked: tenantInfo.billing_locked,
             prescribing_locked: tenantInfo.prescribing_locked,
             billing_manual_override: tenantInfo.billing_manual_override,
             enabled_features: tenantInfo.enabled_features || {}
