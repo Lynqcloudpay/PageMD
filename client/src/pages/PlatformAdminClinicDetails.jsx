@@ -857,138 +857,99 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
         }
     };
 
-    if (loading) return <div className="text-slate-400 text-sm animate-pulse p-4">Loading billing status...</div>;
+    if (loading) return <div className="text-slate-400 text-xs animate-pulse p-3">Loading billing…</div>;
     if (!billing) return null;
 
     const { clinic, events, stripeInvoices = [], totals } = billing;
-    const hasActiveSubscription = clinic.stripe_subscription_status === 'active';
-
-    // Use stripe invoices if available, otherwise local events
+    const isActive = clinic.stripe_subscription_status === 'active';
     const displayInvoices = stripeInvoices.length > 0 ? stripeInvoices : [];
 
-    const statusColor = (s) => {
-        if (s === 'paid' || s === 'completed') return 'bg-emerald-100 text-emerald-700';
-        if (s === 'open') return 'bg-amber-100 text-amber-700';
-        if (s === 'void' || s === 'uncollectible' || s === 'failed') return 'bg-red-100 text-red-700';
-        return 'bg-slate-100 text-slate-600';
+    const statusPill = (s) => {
+        if (s === 'paid' || s === 'completed') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+        if (s === 'open') return 'bg-amber-50 text-amber-600 border-amber-100';
+        if (s === 'void' || s === 'uncollectible' || s === 'failed') return 'bg-red-50 text-red-600 border-red-100';
+        return 'bg-slate-50 text-slate-500 border-slate-100';
     };
 
     return (
         <div className="space-y-3">
-            {/* Payment Status Banner — Compact */}
-            <div className={`p-3 rounded-xl relative overflow-hidden ${hasActiveSubscription
-                ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-md shadow-emerald-200/30'
-                : 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-200/30'
-                }`}>
-                <div className="absolute top-0 right-0 opacity-10">
-                    <CreditCard className="w-20 h-20 -mr-6 -mt-6" />
-                </div>
-                <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-2">
-                        <div>
-                            <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest mb-0.5">Payment Status</p>
-                            <p className="text-lg font-black">{hasActiveSubscription ? '✓ Paid & Active' : '⚠ No Active Subscription'}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest mb-0.5">Total Revenue</p>
-                            <p className="text-lg font-black">${totals.totalRevenueDollars}</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/20">
-                        <div className="text-center">
-                            <p className="text-sm font-black">{displayInvoices.length || totals.paymentCount}</p>
-                            <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Payments</p>
-                        </div>
-                        <div className="text-center border-x border-white/20">
-                            <p className="text-sm font-black capitalize">{clinic.stripe_subscription_status || 'None'}</p>
-                            <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Sub Status</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-sm font-black">{clinic.billing_locked ? 'Locked' : 'Unlocked'}</p>
-                            <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Access</p>
-                        </div>
-                    </div>
-                    {clinic.last_payment_at && (
-                        <div className="mt-2 pt-2 border-t border-white/20 text-center">
-                            <p className="text-[9px] text-white/70">Last Payment: <span className="font-bold text-white">{new Date(clinic.last_payment_at).toLocaleString()}</span></p>
-                        </div>
-                    )}
-                </div>
+            {/* Status Summary — Inline */}
+            <div className="flex items-center gap-3 flex-wrap">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                    {isActive ? 'Active' : clinic.stripe_subscription_status || 'None'}
+                </span>
+                <span className="text-xs text-slate-500">
+                    Revenue: <span className="font-semibold text-slate-700">${totals.totalRevenueDollars}</span>
+                </span>
+                <span className="text-xs text-slate-400">·</span>
+                <span className="text-xs text-slate-500">
+                    {displayInvoices.length || totals.paymentCount} payments
+                </span>
+                <span className="text-xs text-slate-400">·</span>
+                <span className="text-xs text-slate-500">
+                    {clinic.billing_locked ? <span className="text-amber-600">Locked</span> : 'Unlocked'}
+                </span>
+                {clinic.last_payment_at && (
+                    <>
+                        <span className="text-xs text-slate-400">·</span>
+                        <span className="text-[10px] text-slate-400">
+                            Last: {new Date(clinic.last_payment_at).toLocaleDateString()}
+                        </span>
+                    </>
+                )}
             </div>
 
-            {/* Payment History Table — Uses Stripe invoices when available */}
-            <div className="overflow-hidden border border-slate-100 rounded-xl bg-white shadow-sm">
-                <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Activity className="w-3 h-3" />
-                        Payment History
-                    </h3>
-                </div>
-                <table className="w-full text-[11px] text-left">
-                    <thead className="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-wider">
-                        <tr>
-                            <th className="px-3 py-2">Date</th>
-                            <th className="px-3 py-2">Description</th>
-                            <th className="px-3 py-2 text-center">Amount</th>
-                            <th className="px-3 py-2 text-center">Status</th>
-                            <th className="px-3 py-2 text-right">Invoice</th>
+            {/* Payment History */}
+            <div className="border border-slate-100 rounded-lg overflow-hidden">
+                <table className="w-full text-[11px]">
+                    <thead>
+                        <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50 bg-slate-50/50">
+                            <th className="px-3 py-2 text-left font-medium">Date</th>
+                            <th className="px-3 py-2 text-left font-medium">Description</th>
+                            <th className="px-3 py-2 text-right font-medium">Amount</th>
+                            <th className="px-3 py-2 text-center font-medium">Status</th>
+                            <th className="px-3 py-2 text-right font-medium">Invoice</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                         {displayInvoices.length > 0 ? displayInvoices.map((inv) => (
                             <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-3 py-2 text-slate-600 font-medium">
+                                <td className="px-3 py-2 text-slate-500">
                                     {inv.date ? new Date(inv.date).toLocaleDateString() : '—'}
                                 </td>
-                                <td className="px-3 py-2 text-slate-700 font-medium">
-                                    {inv.description}
-                                </td>
-                                <td className="px-3 py-2 text-center font-mono font-bold text-slate-800">
-                                    ${inv.amountDollars}
-                                </td>
+                                <td className="px-3 py-2 text-slate-600 font-medium">{inv.description}</td>
+                                <td className="px-3 py-2 text-right font-mono text-slate-700">${inv.amountDollars}</td>
                                 <td className="px-3 py-2 text-center">
-                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${statusColor(inv.status)}`}>
+                                    <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(inv.status)}`}>
                                         {inv.status}
                                     </span>
                                 </td>
                                 <td className="px-3 py-2 text-right">
                                     {inv.invoiceUrl ? (
-                                        <a
-                                            href={inv.invoiceUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-indigo-500 hover:text-indigo-700 font-bold text-[9px] uppercase tracking-wider hover:underline"
-                                        >
+                                        <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer"
+                                            className="text-blue-500 hover:text-blue-600 text-[9px] font-medium hover:underline">
                                             View →
                                         </a>
-                                    ) : (
-                                        <span className="text-slate-300">—</span>
-                                    )}
+                                    ) : <span className="text-slate-300">—</span>}
                                 </td>
                             </tr>
                         )) : events.length > 0 ? events.map((event, i) => (
                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-3 py-2 text-slate-600 font-medium">
-                                    {new Date(event.created_at).toLocaleDateString()}
-                                </td>
+                                <td className="px-3 py-2 text-slate-500">{new Date(event.created_at).toLocaleDateString()}</td>
                                 <td className="px-3 py-2">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${event.event_type === 'payment_succeeded' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                                        <span className="font-bold text-slate-700">{event.event_type}</span>
-                                    </div>
+                                    <span className="text-slate-600 font-medium">{event.event_type.replace(/_/g, ' ')}</span>
                                 </td>
-                                <td className="px-3 py-2 text-center font-mono font-bold text-slate-800">
-                                    ${(event.amount_total / 100).toFixed(2)}
-                                </td>
+                                <td className="px-3 py-2 text-right font-mono text-slate-700">${(event.amount_total / 100).toFixed(2)}</td>
                                 <td className="px-3 py-2 text-center">
-                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${statusColor(event.status)}`}>
+                                    <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(event.status)}`}>
                                         {event.status}
                                     </span>
                                 </td>
                                 <td className="px-3 py-2 text-right text-slate-300">—</td>
                             </tr>
                         )) : (
-                            <tr><td colSpan="5" className="px-3 py-4 text-center text-slate-400 italic text-[11px]">No payment events recorded yet.</td></tr>
+                            <tr><td colSpan="5" className="px-3 py-4 text-center text-slate-400 italic text-[10px]">No payment events recorded yet.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -1094,238 +1055,200 @@ const PlatformAdminClinicDetails = () => {
     const { clinic, usage, recent_payments } = clinicData;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 relative overflow-hidden">
-            {/* Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-blue-200/30 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-indigo-200/20 rounded-full blur-3xl"></div>
-            </div>
+        <div className="min-h-screen bg-slate-50/80">
+            {/* Background */}
 
-            <div className="relative z-10 max-w-[1400px] mx-auto px-6 py-8">
+            <div className="max-w-[1400px] mx-auto px-6 py-6">
                 <button
                     onClick={() => navigate('/platform-admin/clinics')}
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-6 transition-colors text-sm font-medium group"
+                    className="flex items-center gap-1.5 text-blue-500 hover:text-blue-600 mb-4 transition-colors text-xs font-medium group"
                 >
-                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                    <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
                     Back to Clinics
                 </button>
 
                 {/* Header Card */}
-                <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-8 mb-8 shadow-xl shadow-slate-200/50 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-6">
-                        <span className={`px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider border shadow-sm ${clinic.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                            clinic.status === 'suspended' ? 'bg-amber-50 text-amber-600 border-amber-100' :
-                                'bg-slate-50 text-slate-500 border-slate-100'
-                            }`}>
-                            {clinic.status}
-                        </span>
-                    </div>
-
-                    <div className="flex flex-col md:flex-row md:items-start gap-8 relative z-10">
+                <div className="bg-white border border-slate-100 rounded-xl p-5 mb-5 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-start gap-4">
                         {clinic.logo_url ? (
                             <img
                                 src={clinic.logo_url}
                                 alt={`${clinic.display_name} logo`}
-                                className="w-24 h-24 rounded-[2rem] object-cover shadow-lg shadow-blue-500/10 border border-slate-100 shrink-0 bg-white"
+                                className="w-14 h-14 rounded-xl object-cover border border-slate-100 shrink-0 bg-white"
                                 onError={(e) => {
                                     e.target.style.display = 'none';
                                     e.target.nextSibling.style.display = 'flex';
                                 }}
                             />
                         ) : null}
-                        <div className={`w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 items-center justify-center text-white font-black text-4xl shadow-lg shadow-blue-500/25 shrink-0 ${clinic.logo_url ? 'hidden' : 'flex'}`}>
+                        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 items-center justify-center text-white font-bold text-xl shrink-0 ${clinic.logo_url ? 'hidden' : 'flex'}`}>
                             {clinic.display_name?.[0]}
                         </div>
-                        <div className="space-y-3">
-                            <div>
-                                <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-1">{clinic.display_name}</h1>
-                                <p className="text-slate-500 font-medium flex items-center gap-2">
-                                    Platform Clinic Entity
-                                    {clinic.plan_name && (
-                                        <span className="bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-full uppercase font-black tracking-widest">
-                                            {clinic.plan_name} Plan
-                                        </span>
-                                    )}
-                                </p>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-4 text-sm">
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Clinic Slug">
-                                    <Database className="w-4 h-4 text-blue-500" />
-                                    <span className="font-mono text-xs">{clinic.slug}</span>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                                <h1 className="text-lg font-semibold text-slate-800 tracking-tight">{clinic.display_name}</h1>
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${clinic.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                    clinic.status === 'suspended' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                                        'bg-slate-50 text-slate-500 border-slate-100'
+                                    }`}>
+                                    {clinic.status}
                                 </span>
-                                <span className="flex items-center gap-2 bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 font-bold" title="Billing Tier">
-                                    <Building2 className="w-4 h-4 text-indigo-500" />
+                            </div>
+                            <p className="text-xs text-slate-400 flex items-center gap-2 mb-2">
+                                Clinic Entity
+                                {clinic.plan_name && (
+                                    <span className="bg-blue-50 text-blue-600 text-[9px] px-1.5 py-0.5 rounded border border-blue-100 font-semibold">
+                                        {clinic.plan_name}
+                                    </span>
+                                )}
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100 text-slate-500 font-mono">
+                                    {clinic.slug}
+                                </span>
+                                <span className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded border border-blue-100 text-blue-600 font-semibold">
                                     {clinicData?.billing?.currentTier || 'Solo'} Tier
                                 </span>
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Compliance Zone">
-                                    <Shield className="w-4 h-4 text-emerald-500" />
-                                    {Array.isArray(clinic.compliance_zones) && clinic.compliance_zones.length > 0 ? clinic.compliance_zones.join(', ') : 'HIPAA (Default)'}
+                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100 text-slate-500">
+                                    {Array.isArray(clinic.compliance_zones) && clinic.compliance_zones.length > 0 ? clinic.compliance_zones.join(', ') : 'HIPAA'}
                                 </span>
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="EMR Version">
-                                    <Zap className="w-4 h-4 text-orange-500" />
+                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-100 text-slate-500">
                                     v{clinic.emr_version || '1.0.0'}
                                 </span>
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-600 font-medium" title="Go-Live Date">
-                                    <Activity className="w-4 h-4 text-slate-400" />
+                                <span className="text-slate-400">
                                     Go-Live: {clinic.go_live_date ? new Date(clinic.go_live_date).toLocaleDateString() : 'TBD'}
                                 </span>
-                                <span className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 text-slate-400 font-medium">
-                                    <Clock className="w-4 h-4" />
-                                    Provisioned {new Date(clinic.created_at).toLocaleDateString()}
+                                <span className="text-slate-300">·</span>
+                                <span className="text-slate-400">
+                                    Since {new Date(clinic.created_at).toLocaleDateString()}
                                 </span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                     {/* Main Info */}
-                    <div className="lg:col-span-2 space-y-8">
+                    <div className="lg:col-span-2 space-y-5">
 
-                        {/* Billing & Payment Status — Compact card */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl p-4 shadow-md shadow-slate-200/30">
+                        {/* Billing & Payment Status */}
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-200">
-                                        <CreditCard className="w-4 h-4 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-sm font-bold text-slate-800 tracking-tight">Billing & Payments</h2>
-                                        <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest leading-none mt-0.5">Stripe Integration</p>
-                                    </div>
+                                    <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Billing & Payments</h2>
                                 </div>
-                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter">Revenue</span>
+                                <span className="text-[9px] text-slate-400">Stripe</span>
                             </div>
                             <ClinicBillingStatus clinicId={id} apiCall={apiCall} />
                         </div>
 
-                        {/* Growth & Referrals Section */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-cyan-500/10 transition-colors"></div>
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-cyan-500 flex items-center justify-center shadow-lg shadow-cyan-200">
-                                        <Users className="w-5 h-5 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-lg font-bold text-slate-800 tracking-tight">Growth & Referral Loop</h2>
-                                        <p className="text-[10px] font-bold text-cyan-600 uppercase tracking-widest leading-none mt-1">Staircase Discount Stats</p>
-                                    </div>
+                        {/* Growth & Referrals */}
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Users className="w-3.5 h-3.5 text-slate-400" />
+                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Growth & Referrals</h2>
                                 </div>
-                                <span className="text-xs font-bold text-cyan-600 bg-cyan-50 px-2 py-1 rounded-lg border border-cyan-100 uppercase tracking-tighter">Viral Engine</span>
+                                <span className="text-[9px] text-slate-400">Staircase</span>
                             </div>
                             <ClinicGrowthOverview growth={clinicData.growth} billing={clinicData.billing} />
                         </div>
 
                         {/* Clinic Personnel */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                    <Shield className="w-5 h-5 text-indigo-500" />
-                                    Authorized Personnel
-                                </h2>
-                                <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg">Users & Roles</span>
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Shield className="w-3.5 h-3.5 text-slate-400" />
+                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Personnel</h2>
+                                </div>
+                                <span className="text-[9px] text-slate-400">Users & Roles</span>
                             </div>
                             <ClinicPersonnelManager clinicId={id} clinicSlug={clinic.slug} apiCall={apiCall} />
                         </div>
 
-                        {/* Role Governance (New Phase 2 Section) */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                                    <Shield className="w-6 h-6 text-indigo-500" />
-                                    Role Governance
-                                </h2>
-                                <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg">Template Drift</span>
+                        {/* Role Governance */}
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Shield className="w-3.5 h-3.5 text-slate-400" />
+                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Role Governance</h2>
+                                </div>
+                                <span className="text-[9px] text-slate-400">Template Drift</span>
                             </div>
                             <DriftManager clinicId={id} apiCall={apiCall} />
                         </div>
 
                         {/* Platform Audit Trail */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-slate-500/10 transition-colors"></div>
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                                    <Activity className="w-6 h-6 text-slate-400" />
-                                    Platform Audit Trail
-                                </h2>
-                                <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">Critical Events</span>
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Activity className="w-3.5 h-3.5 text-slate-400" />
+                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Audit Trail</h2>
+                                </div>
+                                <span className="text-[9px] text-slate-400">Events</span>
                             </div>
                             <PlatformAuditTrail clinicId={id} apiCall={apiCall} />
                         </div>
 
-                        {/* Onboarding & Integration Setup (New Section) */}
-                        <div id="setup" className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-lg shadow-slate-200/40 relative overflow-hidden group scroll-mt-8">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-indigo-500/10 transition-colors"></div>
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3 mb-1">
-                                        <Zap className="w-7 h-7 text-indigo-500" />
-                                        Clinic Onboarding & Integrations
-                                    </h2>
-                                    <p className="text-slate-500 text-sm font-medium">Tenant-safe technical setup for clinical operations</p>
+                        {/* Onboarding & Integrations */}
+                        <div id="setup" className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm scroll-mt-8">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Zap className="w-3.5 h-3.5 text-slate-400" />
+                                    <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Onboarding & Integrations</h2>
                                 </div>
-                                <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">Setup Wizard</span>
+                                <span className="text-[9px] text-slate-400">Setup</span>
                             </div>
                             <ClinicOnboardingManager tenantId={clinic.slug} apiCall={apiCall} />
                         </div>
 
                         {/* Metrics & Activity */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40">
-                            <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-blue-500" />
-                                Recent Activity
-                            </h2>
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Activity className="w-3.5 h-3.5 text-slate-400" />
+                                <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Recent Activity</h2>
+                            </div>
                             {usage && usage.length > 0 ? (
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     {usage.map((metric, i) => (
-                                        <div key={i} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:border-blue-100 hover:shadow-md transition-all">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                                    <Activity className="w-4 h-4" />
-                                                </div>
-                                                <span className="text-sm font-medium text-slate-700">System Event</span>
-                                            </div>
+                                        <div key={i} className="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg border border-slate-100 hover:bg-white transition-all">
+                                            <span className="text-xs text-slate-600">System Event</span>
                                             <div className="text-right">
-                                                <div className="text-xs font-bold text-slate-400">{new Date(metric.metric_date).toLocaleDateString()}</div>
-                                                <div className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-1">{JSON.stringify(metric.details)}</div>
+                                                <span className="text-[10px] text-slate-400">{new Date(metric.metric_date).toLocaleDateString()}</span>
+                                                <span className="text-[10px] font-mono text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded ml-2">{JSON.stringify(metric.details)}</span>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                                    <Activity className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                    <p className="text-slate-400 text-sm font-medium">No recent activity recorded.</p>
-                                </div>
+                                <div className="text-center py-6 text-slate-400 text-xs italic">No recent activity.</div>
                             )}
                         </div>
 
                         {/* Payment History */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40">
-                            <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                <CreditCard className="w-5 h-5 text-emerald-500" />
-                                Billing History
-                            </h2>
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <div className="flex items-center gap-2 mb-3">
+                                <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                                <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Billing History</h2>
+                            </div>
                             {recent_payments && recent_payments.length > 0 ? (
-                                <table className="w-full text-left text-sm">
+                                <table className="w-full text-xs">
                                     <thead>
-                                        <tr className="text-slate-400 border-b border-slate-100">
-                                            <th className="pb-3 pl-4 font-semibold">Date</th>
-                                            <th className="pb-3 font-semibold">Amount</th>
-                                            <th className="pb-3 pr-4 text-right font-semibold">Status</th>
+                                        <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50">
+                                            <th className="pb-2 text-left font-medium">Date</th>
+                                            <th className="pb-2 text-left font-medium">Amount</th>
+                                            <th className="pb-2 text-right font-medium">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
                                         {recent_payments.map((payment, i) => (
-                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                                <td className="py-4 pl-4 text-slate-600">{new Date(payment.created_at).toLocaleDateString()}</td>
-                                                <td className="py-4 text-slate-900 font-bold">${payment.amount}</td>
-                                                <td className="py-4 pr-4 text-right">
-                                                    <span className={`inline-block text-xs px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider ${payment.status === 'succeeded' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'
-                                                        }`}>
+                                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="py-2 text-slate-500">{new Date(payment.created_at).toLocaleDateString()}</td>
+                                                <td className="py-2 font-mono text-slate-700">${payment.amount}</td>
+                                                <td className="py-2 text-right">
+                                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-semibold border ${payment.status === 'succeeded' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
                                                         {payment.status}
                                                     </span>
                                                 </td>
@@ -1334,19 +1257,16 @@ const PlatformAdminClinicDetails = () => {
                                     </tbody>
                                 </table>
                             ) : (
-                                <div className="text-center py-12 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                                    <CreditCard className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                    <p className="text-slate-400 text-sm font-medium">No payment history available.</p>
-                                </div>
+                                <div className="text-center py-6 text-slate-400 text-xs italic">No payment history.</div>
                             )}
                         </div>
                     </div>
 
                     {/* Sidebar Actions */}
-                    <div className="space-y-6">
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40">
-                            <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-                                <Settings className="w-5 h-5 text-slate-400" />
+                    <div className="space-y-5">
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                <Settings className="w-3.5 h-3.5 text-slate-400" />
                                 Actions
                             </h2>
                             <div className="space-y-3">
@@ -1517,13 +1437,13 @@ const PlatformAdminClinicDetails = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40">
-                            <h2 className="text-xs font-black text-slate-400 mb-4 uppercase tracking-wider">
+                        <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                            <h2 className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">
                                 Contact Information
                             </h2>
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-500 shrink-0">
+                            <div className="space-y-3">
+                                <div className="flex items-start gap-2.5 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
                                         <Mail className="w-4 h-4" />
                                     </div>
                                     <div>

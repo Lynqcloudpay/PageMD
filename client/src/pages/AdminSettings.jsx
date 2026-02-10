@@ -1340,10 +1340,25 @@ const BillingSettingsTab = () => {
     }
   };
 
+  const openPortal = async () => {
+    try {
+      setRedirecting(true);
+      const response = await billingAPI.stripe.openPortal();
+      if (response.data.url) {
+        window.location.href = response.data.url;
+      }
+    } catch (error) {
+      console.error('Error opening portal:', error);
+      alert('Failed to open billing portal. Please try again.');
+    } finally {
+      setRedirecting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+        <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
       </div>
     );
   }
@@ -1351,289 +1366,204 @@ const BillingSettingsTab = () => {
   const billing = billingInfo?.billing || {};
   const status = billingInfo?.stripe_subscription_status || 'none';
   const hasSubscription = status === 'active' || billingInfo?.stripe_subscription_id;
+  const isActive = status === 'active';
   const currentTierName = billing.tier || 'Trial';
 
   const ALL_TIERS = [
-    { name: 'Solo', range: '1 MD', rate: '$399', desc: 'Single physician practice' },
-    { name: 'Partner', range: '2–3 MDs', rate: '$299', desc: 'Small group practice' },
-    { name: 'Professional', range: '4–5 MDs', rate: '$249', desc: 'Mid-size practice' },
-    { name: 'Premier', range: '6–8 MDs', rate: '$199', desc: 'Growing practice group' },
-    { name: 'Elite', range: '9–10 MDs', rate: '$149', desc: 'Large group practice' },
-    { name: 'Enterprise', range: '11+ MDs', rate: '$99', desc: 'Enterprise operations' },
+    { name: 'Solo', range: '1', rate: 399 },
+    { name: 'Partner', range: '2–3', rate: 299 },
+    { name: 'Professional', range: '4–5', rate: 249 },
+    { name: 'Premier', range: '6–8', rate: 199 },
+    { name: 'Elite', range: '9–10', rate: 149 },
+    { name: 'Enterprise', range: '11+', rate: 99 },
   ];
 
   const invoices = billingHistory?.invoices || [];
 
-  const statusColor = (s) => {
-    if (s === 'paid') return 'bg-emerald-100 text-emerald-700';
-    if (s === 'open') return 'bg-amber-100 text-amber-700';
-    if (s === 'void' || s === 'uncollectible') return 'bg-red-100 text-red-700';
-    return 'bg-slate-100 text-slate-600';
+  const statusPill = (s) => {
+    if (s === 'paid') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+    if (s === 'open') return 'bg-amber-50 text-amber-600 border-amber-100';
+    if (s === 'void' || s === 'uncollectible') return 'bg-red-50 text-red-600 border-red-100';
+    return 'bg-slate-50 text-slate-500 border-slate-100';
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
-            <DollarSign className="w-4 h-4 text-slate-500" />
+    <div className="space-y-5 max-w-4xl">
+      {/* Subscription Overview — Compact */}
+      <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+              <CreditCard className="w-3.5 h-3.5 text-blue-500" />
+            </div>
+            <h2 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Subscription</h2>
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Subscription & Billing</h2>
-        </div>
-        {hasSubscription && (
           <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-            status === 'active' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
+            isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-100"
           )}>
-            <div className={cn("w-1.5 h-1.5 rounded-full", status === 'active' ? "bg-emerald-500" : "bg-rose-500")} />
-            {status}
+            <div className={cn("w-1.5 h-1.5 rounded-full", isActive ? "bg-emerald-400" : "bg-slate-300")} />
+            {isActive ? 'Active' : status === 'none' ? 'No Subscription' : status}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Dynamic Billing Hero Card */}
-      <div className="relative overflow-hidden rounded-[2rem]" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%)' }}>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjAzIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-50" />
-
-        <div className="relative p-8">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-[10px] font-bold text-indigo-200 uppercase tracking-[0.2em] mb-1">Current Billing Tier</div>
-              <h3 className="text-4xl font-black text-white tracking-tight">{currentTierName}</h3>
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] font-bold text-indigo-200 uppercase tracking-[0.2em] mb-1">Monthly Total</div>
-              <div className="text-4xl font-black text-white tracking-tight">${billing.monthlyTotal || 0}</div>
-            </div>
+        {/* Summary Row */}
+        <div className="flex items-end justify-between mb-4 pb-4 border-b border-slate-50">
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Current Tier</p>
+            <p className="text-lg font-semibold text-slate-800">{currentTierName}</p>
           </div>
-
-          {/* Cost Equation Box */}
-          <div className="mt-6 p-5 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10">
-            <div className="text-[9px] font-bold text-indigo-200 uppercase tracking-[0.2em] mb-3">Average Cost Equation</div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-indigo-100">
-                <span>Virtual Total ({billing.totalSeats || 0} seats)</span>
-                <span className="font-mono font-bold">${billing.virtualTotal || 0}</span>
-              </div>
-              <div className="flex justify-between text-sm text-indigo-100">
-                <span>Effective Rate</span>
-                <span className="font-mono font-bold">${billing.effectiveRate || 0}/MD</span>
-              </div>
-              <div className="h-px bg-white/20 my-2" />
-              <div className="flex justify-between text-base text-white font-bold">
-                <span>{billing.physicalSeats || 0} MDs × ${billing.effectiveRate || 0}</span>
-                <span className="font-mono">${billing.monthlyTotal || 0}</span>
-              </div>
-            </div>
+          <div className="text-right">
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">Monthly Total</p>
+            <p className="text-lg font-semibold text-slate-800">${billing.monthlyTotal || 0}</p>
           </div>
+        </div>
 
-          {/* Seat Counts */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/10">
-              <div className="text-3xl font-black text-white">{billing.physicalSeats || 0}</div>
-              <div className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest mt-1">Physical</div>
-            </div>
-            <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/10">
-              <div className="text-3xl font-black text-emerald-300">{billing.ghostSeats || 0}</div>
-              <div className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest mt-1">Ghost</div>
-            </div>
-            <div className="text-center p-4 bg-white/5 rounded-2xl border border-white/10">
-              <div className="text-3xl font-black text-white">{billing.totalSeats || 0}</div>
-              <div className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest mt-1">Total Seats</div>
-            </div>
+        {/* Billing Breakdown — Compact Stats */}
+        <div className="grid grid-cols-5 gap-3 mb-4">
+          <div className="bg-slate-50/80 rounded-lg p-2.5 text-center">
+            <p className="text-sm font-semibold text-slate-700">{billing.physicalSeats || 0}</p>
+            <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Physical</p>
           </div>
+          <div className="bg-slate-50/80 rounded-lg p-2.5 text-center">
+            <p className="text-sm font-semibold text-teal-600">{billing.ghostSeats || 0}</p>
+            <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Ghost</p>
+          </div>
+          <div className="bg-slate-50/80 rounded-lg p-2.5 text-center">
+            <p className="text-sm font-semibold text-slate-700">{billing.totalSeats || 0}</p>
+            <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Total</p>
+          </div>
+          <div className="bg-slate-50/80 rounded-lg p-2.5 text-center">
+            <p className="text-sm font-semibold text-slate-700">${billing.virtualTotal || 0}</p>
+            <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Virtual</p>
+          </div>
+          <div className="bg-slate-50/80 rounded-lg p-2.5 text-center">
+            <p className="text-sm font-semibold text-slate-700">${billing.effectiveRate || 0}</p>
+            <p className="text-[9px] text-slate-400 uppercase tracking-wider mt-0.5">Per MD</p>
+          </div>
+        </div>
+
+        {/* Equation Summary */}
+        <div className="bg-blue-50/50 border border-blue-100/40 rounded-lg px-3.5 py-2.5 flex items-center justify-between text-xs text-slate-600 mb-4">
+          <span>{billing.physicalSeats || 0} MDs × ${billing.effectiveRate || 0}/mo</span>
+          <span className="font-semibold text-slate-800">${billing.monthlyTotal || 0}/mo</span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {hasSubscription ? (
+            <button
+              onClick={openPortal}
+              disabled={redirecting}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-medium hover:bg-slate-700 transition-colors disabled:opacity-50"
+            >
+              {redirecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+              Manage Billing
+            </button>
+          ) : (
+            <button
+              onClick={handleUpgrade}
+              disabled={redirecting}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {redirecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+              Setup Payment
+            </button>
+          )}
+          {hasSubscription && (
+            <button
+              onClick={openPortal}
+              disabled={redirecting}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              View Invoices
+            </button>
+          )}
+          {billingInfo?.current_period_end && (
+            <span className="ml-auto text-[10px] text-slate-400">
+              Renews {new Date(billingInfo.current_period_end).toLocaleDateString()}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {hasSubscription ? (
-          <button
-            onClick={async () => {
-              try {
-                setRedirecting(true);
-                const response = await billingAPI.stripe.openPortal();
-                if (response.data.url) {
-                  window.location.href = response.data.url;
-                }
-              } catch (error) {
-                console.error('Error opening portal:', error);
-                alert('Failed to open billing portal. Please try again.');
-              } finally {
-                setRedirecting(false);
-              }
-            }}
-            disabled={redirecting}
-            className="p-6 bg-slate-900 text-white rounded-[2rem] shadow-xl transition-all hover:bg-slate-800 disabled:opacity-50 flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-4">
-              <CreditCard className="w-6 h-6 text-indigo-400" />
-              <div className="text-left">
-                <div className="text-sm font-bold">Manage Billing</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider">Powered by Stripe</div>
-              </div>
-            </div>
-            {redirecting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            )}
-          </button>
-        ) : (
-          <button
-            onClick={handleUpgrade}
-            disabled={redirecting}
-            className="p-6 bg-slate-900 text-white rounded-[2rem] shadow-xl transition-all hover:bg-slate-800 disabled:opacity-50 flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-4">
-              <CreditCard className="w-6 h-6 text-indigo-400" />
-              <div className="text-left">
-                <div className="text-sm font-bold">Setup Payment</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider">Powered by Stripe</div>
-              </div>
-            </div>
-            {redirecting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            )}
-          </button>
-        )}
-
-        {hasSubscription && (
-          <button
-            onClick={async () => {
-              try {
-                setRedirecting(true);
-                const response = await billingAPI.stripe.openPortal();
-                if (response.data.url) {
-                  window.location.href = response.data.url;
-                }
-              } catch (error) {
-                console.error('Error opening portal:', error);
-                alert('Failed to open billing portal. Please try again.');
-              } finally {
-                setRedirecting(false);
-              }
-            }}
-            disabled={redirecting}
-            className="p-6 bg-white border border-slate-100 text-slate-900 rounded-[2rem] shadow-sm transition-all hover:border-indigo-200 hover:bg-indigo-50/30 disabled:opacity-50 flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-4">
-              <FileText className="w-6 h-6 text-indigo-500" />
-              <div className="text-left">
-                <div className="text-sm font-bold">View Invoices</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider">Payment History</div>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 group-hover:text-indigo-500 transition-all" />
-          </button>
-        )}
-
-        {billingInfo?.current_period_end && (
-          <div className="p-6 bg-white border border-slate-100 rounded-[2rem] flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Activity className="w-6 h-6 text-indigo-400" />
-              <div>
-                <div className="text-sm font-bold text-slate-800">Next Billing Date</div>
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider">Auto-renews</div>
-              </div>
-            </div>
-            <div className="text-lg font-bold text-slate-900">
-              {new Date(billingInfo.current_period_end).toLocaleDateString()}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Billing History */}
+      {/* Payment History */}
       {invoices.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5" />
-            Payment History
-          </h3>
-          <div className="overflow-hidden border border-slate-100 rounded-2xl bg-white shadow-sm">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50/80 text-slate-400 font-bold uppercase tracking-wider">
-                <tr>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Description</th>
-                  <th className="px-4 py-3 text-center">Amount</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-right">Invoice</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {invoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-4 py-3 text-slate-600 font-medium">
-                      {inv.date ? new Date(inv.date).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700 font-medium">
-                      {inv.description}
-                    </td>
-                    <td className="px-4 py-3 text-center font-mono font-bold text-slate-800">
-                      ${inv.amountDollars}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${statusColor(inv.status)}`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {inv.invoiceUrl ? (
-                        <a
-                          href={inv.invoiceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-500 hover:text-indigo-700 font-bold text-[10px] uppercase tracking-wider hover:underline"
-                        >
-                          View →
-                        </a>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-50 flex items-center gap-2">
+            <Activity className="w-3.5 h-3.5 text-slate-400" />
+            <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment History</h3>
           </div>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-50">
+                <th className="px-4 py-2.5 text-left font-medium">Date</th>
+                <th className="px-4 py-2.5 text-left font-medium">Description</th>
+                <th className="px-4 py-2.5 text-right font-medium">Amount</th>
+                <th className="px-4 py-2.5 text-center font-medium">Status</th>
+                <th className="px-4 py-2.5 text-right font-medium">Invoice</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-2.5 text-slate-500">
+                    {inv.date ? new Date(inv.date).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-600 font-medium">{inv.description}</td>
+                  <td className="px-4 py-2.5 text-right font-mono text-slate-700">${inv.amountDollars}</td>
+                  <td className="px-4 py-2.5 text-center">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-semibold border ${statusPill(inv.status)}`}>
+                      {inv.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    {inv.invoiceUrl ? (
+                      <a
+                        href={inv.invoiceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-600 text-[10px] font-medium hover:underline"
+                      >
+                        View →
+                      </a>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Staircase Tiers Info — All 6 tiers */}
-      <div className="space-y-4">
-        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] px-1">Pricing Tiers (Volume Discount)</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {/* Pricing Tiers — Compact Strip */}
+      <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+        <h3 className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Volume Pricing Tiers</h3>
+        <div className="grid grid-cols-6 gap-2">
           {ALL_TIERS.map((tier) => (
             <div
               key={tier.name}
               className={cn(
-                "p-5 rounded-2xl border transition-all",
+                "rounded-lg p-2.5 text-center border transition-all",
                 currentTierName === tier.name
-                  ? "bg-indigo-50/50 border-indigo-200 ring-2 ring-indigo-600/5 shadow-lg"
-                  : "bg-white border-slate-100 hover:border-slate-200"
+                  ? "bg-blue-50 border-blue-200 ring-1 ring-blue-100"
+                  : "bg-slate-50/50 border-slate-100 hover:border-slate-200"
               )}
             >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">{tier.name}</span>
-                {currentTierName === tier.name && (
-                  <span className="px-1.5 py-0.5 bg-indigo-600 text-white rounded-md text-[7px] font-black uppercase">Active</span>
-                )}
-              </div>
-              <div className="mb-2">
-                <div className="text-2xl font-black text-slate-900">{tier.rate}<span className="text-sm font-medium text-slate-400">/mo</span></div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">Per Physician / Month</div>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <Check className="w-3 h-3 text-emerald-500" />
-                  <span className="text-[10px] text-slate-600 font-medium">{tier.range} Support</span>
-                </div>
-                <div className="text-[9px] text-slate-400">{tier.desc}</div>
-              </div>
+              <p className={cn(
+                "text-[10px] font-semibold uppercase tracking-wider mb-1",
+                currentTierName === tier.name ? "text-blue-600" : "text-slate-500"
+              )}>
+                {tier.name}
+              </p>
+              <p className="text-sm font-semibold text-slate-800">${tier.rate}</p>
+              <p className="text-[9px] text-slate-400 mt-0.5">{tier.range} MDs</p>
+              {currentTierName === tier.name && (
+                <span className="inline-block mt-1 px-1.5 py-0.5 bg-blue-500 text-white rounded text-[7px] font-semibold uppercase">Current</span>
+              )}
             </div>
           ))}
         </div>
@@ -1641,17 +1571,13 @@ const BillingSettingsTab = () => {
 
       {/* ACH Nudge */}
       {(billing.totalSeats || 0) > 5 && (
-        <div className="p-6 bg-amber-50/50 border border-amber-100/30 rounded-[2rem] flex items-start gap-4">
-          <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-amber-100/50 shrink-0">
-            <Zap className="w-5 h-5 text-amber-500" />
-          </div>
+        <div className="flex items-start gap-3 p-4 bg-amber-50/50 border border-amber-100/50 rounded-xl">
+          <Zap className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
           <div>
-            <h4 className="text-[11px] font-bold text-amber-800 uppercase tracking-widest">Recommended: ACH Billing</h4>
-            <p className="text-sm text-amber-700/70 mt-1 leading-relaxed max-w-lg">
-              Since you have {billing.totalSeats} physicians, we recommend switching to ACH payments. This eliminates credit card processing fees and provides more stable billing for institutional accounts.
-            </p>
-            <button className="mt-4 text-[10px] font-bold text-amber-800 uppercase tracking-widest underline decoration-amber-200 hover:decoration-amber-500 transition-all">
-              Contact Treasury to Switch
+            <p className="text-xs font-medium text-amber-800">Consider ACH billing for {billing.totalSeats} seats</p>
+            <p className="text-[11px] text-amber-600/70 mt-0.5 leading-relaxed">Eliminates credit card processing fees — ideal for larger practices.</p>
+            <button className="mt-2 text-[10px] font-medium text-amber-700 underline decoration-amber-200 hover:decoration-amber-400 transition-all">
+              Contact Treasury
             </button>
           </div>
         </div>

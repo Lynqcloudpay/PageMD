@@ -154,6 +154,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 /**
  * GET /api/billing/stripe/status
  * Returns current subscription status and billing breakdown for the clinic.
+ * Syncs live from Stripe if a customer ID exists.
  */
 router.get('/status', authenticate, async (req, res) => {
     try {
@@ -165,11 +166,41 @@ router.get('/status', authenticate, async (req, res) => {
             [clinicId]
         );
 
+        const dbRow = rows[0] || { stripe_subscription_status: 'none' };
+
+        // If we have a Stripe customer, check for any active subscription live
+        if (dbRow.stripe_customer_id) {
+            try {
+                const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+                const subscriptions = await stripe.subscriptions.list({
+                    customer: dbRow.stripe_customer_id,
+                    status: 'active',
+                    limit: 1,
+                });
+                if (subscriptions.data.length > 0) {
+                    const sub = subscriptions.data[0];
+                    dbRow.stripe_subscription_id = sub.id;
+                    dbRow.stripe_subscription_status = sub.status;
+                    dbRow.current_period_end = sub.current_period_end
+                        ? new Date(sub.current_period_end * 1000).toISOString()
+                        : dbRow.current_period_end;
+
+                    // Also update DB so it stays in sync
+                    await pool.controlPool.query(
+                        `UPDATE clinics SET stripe_subscription_id = $1, stripe_subscription_status = $2, current_period_end = $3 WHERE id = $4`,
+                        [sub.id, sub.status, dbRow.current_period_end, clinicId]
+                    );
+                }
+            } catch (stripeErr) {
+                console.warn('[Stripe] Live status check failed, using DB value:', stripeErr.message);
+            }
+        }
+
         // Get calculated billing
         const billing = await stripeService.calculateMonthlyTotal(clinicId);
 
         res.json({
-            ...(rows[0] || { stripe_subscription_status: 'none' }),
+            ...dbRow,
             billing
         });
     } catch (error) {
