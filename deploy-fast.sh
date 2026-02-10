@@ -152,6 +152,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "📈 Running Dunning Logs Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-dunning-logs.js || echo "⚠️ Warning: Dunning logs migration failed."
 
+  echo "Sparkles Project Echo Activation..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/activate-echo.js || echo "⚠️ Warning: Echo activation failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF

@@ -191,7 +191,8 @@ function getAllAdminPermissions() {
     'users:manage', 'roles:manage', 'permissions:manage',
     'billing:view', 'billing:create', 'billing:edit', 'claims:submit',
     'reports:view', 'settings:edit', 'admin:access', 'audit:view',
-    'patient_flags:create', 'patient_flags:resolve', 'patient_flags:manage_types'
+    'patient_flags:create', 'patient_flags:resolve', 'patient_flags:manage_types',
+    'ai.echo'
   ];
 }
 
