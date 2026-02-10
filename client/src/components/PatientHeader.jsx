@@ -439,7 +439,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-6 py-5 border-b border-white/30 flex items-center justify-between bg-gradient-to-br from-blue-50/80 via-white/70 to-indigo-50/60 backdrop-blur-sm text-slate-900 relative z-20 rounded-t-2xl">
+                <div className="px-6 py-5 border-b border-white/30 flex items-center justify-between bg-gradient-to-br from-blue-50/80 via-white/70 to-indigo-50/60 backdrop-blur-sm text-slate-900 relative z-50 rounded-t-2xl">
                     {/* Decorative Background Elements - Clipped in own container */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-t-2xl">
                         {/* Decorative Bubbles */}
@@ -626,7 +626,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 </div>
 
                 {/* Detail Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-slate-50/50 border-t border-white/30 rounded-b-2xl overflow-hidden">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-slate-50/50 border-t border-white/30 rounded-b-2xl relative z-10">
                     {/* Contact */}
                     <div className="bg-white/60 backdrop-blur-sm p-2 px-4 border-r border-white/30">
                         <InfoItem icon={Phone} label="Contact" color="text-blue-500">

@@ -1533,7 +1533,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
-            <div className="w-full px-4">
+            <div className="w-full px-4 relative z-[60]">
                 <PatientHeader
                     patient={patient}
                     onUpdate={refreshPatientData}
@@ -3296,7 +3296,7 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
                 </div>
             )}
             {/* Echo AI Clinical Assistant */}
-            {patient && hasPrivilege('ai.echo') && (
+            {patient && (hasPrivilege('ai.echo') || isAdmin() || (user?.role && ['physician', 'np', 'pa'].includes(user.role.toLowerCase()))) && (
                 <EchoPanel
                     patientId={id}
                     patientName={patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() : null}
