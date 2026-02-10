@@ -2,15 +2,18 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const pool = require('../db');
 
 /**
- * PRICING TIERS (Staircase Model)
+ * PRICING TIERS (Staircase Model) - Source of Truth: growth.js / PricingPage.jsx
  * The effective rate decreases as the clinic grows.
  * Ghost seats (from referrals) count toward the tier but are not billed.
  */
-const PRICING_TIERS = {
-    SOLO_RATE: 399,       // First seat (1 MD)
-    PARTNER_RATE: 299,    // Seats 2-10
-    ENTERPRISE_RATE: 99,  // Seats 11+
-};
+const TIERS = [
+    { name: 'Solo', min: 1, max: 1, rate: 399 },
+    { name: 'Partner', min: 2, max: 3, rate: 299 },
+    { name: 'Professional', min: 4, max: 5, rate: 249 },
+    { name: 'Premier', min: 6, max: 8, rate: 199 },
+    { name: 'Elite', min: 9, max: 10, rate: 149 },
+    { name: 'Enterprise', min: 11, max: 999, rate: 99 },
+];
 
 /**
  * StripeService handles platform-level subscription management for clinics.
@@ -26,11 +29,13 @@ class StripeService {
      * 4. Final charge = effective rate × physical seats only
      * 
      * Example: 2 physical + 5 ghost = 7 total seats
-     * - Seat 1: $399
-     * - Seats 2-7: 6 × $299 = $1794
-     * - Total virtual cost: $2193
-     * - Effective rate: $2193 / 7 = $313.29
-     * - Final charge: 2 × $313.29 = $627 (rounded)
+     * - Seat 1: $399 (Solo)
+     * - Seats 2-3: 2 × $299 = $598 (Partner)
+     * - Seats 4-5: 2 × $249 = $498 (Professional)
+     * - Seats 6-7: 2 × $199 = $398 (Premier)
+     * - Total virtual cost: $1893
+     * - Effective rate: $1893 / 7 = $270.43
+     * - Final charge: 2 × $270.43 = $541 (rounded)
      */
     async calculateMonthlyTotal(clinicId) {
         const counts = await this._getSeatCounts(clinicId);
@@ -49,15 +54,11 @@ class StripeService {
         }
 
         // Calculate cumulative staircase cost for ALL virtual seats
+        // Uses the same TIERS array as growth.js for consistency
         let virtualTotal = 0;
         for (let i = 1; i <= totalSeats; i++) {
-            if (i === 1) {
-                virtualTotal += PRICING_TIERS.SOLO_RATE;
-            } else if (i <= 10) {
-                virtualTotal += PRICING_TIERS.PARTNER_RATE;
-            } else {
-                virtualTotal += PRICING_TIERS.ENTERPRISE_RATE;
-            }
+            const tier = TIERS.find(t => i >= t.min && i <= t.max) || TIERS[TIERS.length - 1];
+            virtualTotal += tier.rate;
         }
 
         // Calculate effective rate (averaged across all seats)
@@ -66,10 +67,9 @@ class StripeService {
         // Final charge is effective rate × physical seats only
         const monthlyTotal = Math.round(effectiveRate * counts.physicalSeats);
 
-        // Determine display tier name
-        let tier = 'Solo';
-        if (totalSeats >= 11) tier = 'Enterprise';
-        else if (totalSeats >= 2) tier = 'Partner';
+        // Determine display tier name from current seat count
+        const currentTier = TIERS.find(t => totalSeats >= t.min && totalSeats <= t.max) || TIERS[TIERS.length - 1];
+        const tier = currentTier.name;
 
         return {
             physicalSeats: counts.physicalSeats,
@@ -215,10 +215,15 @@ class StripeService {
              AND UPPER(role) IN ('CLINICIAN', 'PHYSICIAN', 'DOCTOR', 'NP', 'PROVIDER', 'PA', 'NURSE PRACTITIONER')`);
         const physicalSeats = parseInt(userRes.rows[0].count) || 1;
 
-        // Count successful referrals in public schema
+        // Count ghost seats: active referrals + churned referrals still in grace period
+        // Must match growth.js logic exactly
         const referralRes = await pool.controlPool.query(`
             SELECT count(*) FROM public.clinic_referrals 
-             WHERE referrer_clinic_id = $1 AND status = 'active'`, [clinicId]);
+             WHERE referrer_clinic_id = $1 
+             AND (
+                status = 'active' 
+                OR (status = 'churned' AND grace_period_expires_at > NOW())
+             )`, [clinicId]);
         const ghostSeats = parseInt(referralRes.rows[0].count) || 0;
 
         return { physicalSeats, ghostSeats };

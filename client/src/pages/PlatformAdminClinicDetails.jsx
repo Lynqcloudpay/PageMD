@@ -864,90 +864,90 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
     const hasActiveSubscription = clinic.stripe_subscription_status === 'active';
 
     return (
-        <div className="space-y-6">
-            {/* Payment Status Banner */}
-            <div className={`p-5 rounded-2xl relative overflow-hidden ${hasActiveSubscription
-                ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-xl shadow-emerald-200/50'
-                : 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-xl shadow-amber-200/50'
+        <div className="space-y-3">
+            {/* Payment Status Banner — Compact */}
+            <div className={`p-3 rounded-xl relative overflow-hidden ${hasActiveSubscription
+                ? 'bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-md shadow-emerald-200/30'
+                : 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-200/30'
                 }`}>
                 <div className="absolute top-0 right-0 opacity-10">
-                    <CreditCard className="w-32 h-32 -mr-10 -mt-10" />
+                    <CreditCard className="w-20 h-20 -mr-6 -mt-6" />
                 </div>
                 <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-2">
                         <div>
-                            <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-1">Payment Status</p>
-                            <p className="text-2xl font-black">{hasActiveSubscription ? '✓ Paid & Active' : '⚠ No Active Subscription'}</p>
+                            <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest mb-0.5">Payment Status</p>
+                            <p className="text-lg font-black">{hasActiveSubscription ? '✓ Paid & Active' : '⚠ No Active Subscription'}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-1">Total Revenue</p>
-                            <p className="text-2xl font-black">${totals.totalRevenueDollars}</p>
+                            <p className="text-[9px] font-bold text-white/70 uppercase tracking-widest mb-0.5">Total Revenue</p>
+                            <p className="text-lg font-black">${totals.totalRevenueDollars}</p>
                         </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/20">
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/20">
                         <div className="text-center">
-                            <p className="text-lg font-black">{totals.paymentCount}</p>
-                            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Payments</p>
+                            <p className="text-sm font-black">{totals.paymentCount}</p>
+                            <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Payments</p>
                         </div>
                         <div className="text-center border-x border-white/20">
-                            <p className="text-lg font-black">{clinic.stripe_subscription_status || 'None'}</p>
-                            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Sub Status</p>
+                            <p className="text-sm font-black capitalize">{clinic.stripe_subscription_status || 'None'}</p>
+                            <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Sub Status</p>
                         </div>
                         <div className="text-center">
-                            <p className="text-lg font-black">{clinic.billing_locked ? 'Locked' : 'Unlocked'}</p>
-                            <p className="text-[9px] font-bold text-white/70 uppercase tracking-wider">Access</p>
+                            <p className="text-sm font-black">{clinic.billing_locked ? 'Locked' : 'Unlocked'}</p>
+                            <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Access</p>
                         </div>
                     </div>
                     {clinic.last_payment_at && (
-                        <div className="mt-4 pt-3 border-t border-white/20 text-center">
-                            <p className="text-[10px] text-white/70">Last Payment: <span className="font-bold text-white">{new Date(clinic.last_payment_at).toLocaleString()}</span></p>
+                        <div className="mt-2 pt-2 border-t border-white/20 text-center">
+                            <p className="text-[9px] text-white/70">Last Payment: <span className="font-bold text-white">{new Date(clinic.last_payment_at).toLocaleString()}</span></p>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Payment History Table */}
-            <div className="overflow-hidden border border-slate-100 rounded-2xl bg-white shadow-sm">
-                <div className="p-4 bg-slate-50 border-b border-slate-100">
-                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                        <Activity className="w-3.5 h-3.5" />
+            {/* Payment History Table — Compact */}
+            <div className="overflow-hidden border border-slate-100 rounded-xl bg-white shadow-sm">
+                <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
+                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Activity className="w-3 h-3" />
                         Payment History
                     </h3>
                 </div>
-                <table className="w-full text-xs text-left">
+                <table className="w-full text-[11px] text-left">
                     <thead className="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-wider">
                         <tr>
-                            <th className="px-4 py-3">Event</th>
-                            <th className="px-4 py-3 text-center">Amount</th>
-                            <th className="px-4 py-3 text-center">Status</th>
-                            <th className="px-4 py-3 text-right">Date</th>
+                            <th className="px-3 py-2">Event</th>
+                            <th className="px-3 py-2 text-center">Amount</th>
+                            <th className="px-3 py-2 text-center">Status</th>
+                            <th className="px-3 py-2 text-right">Date</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                         {events.length > 0 ? events.map((event, i) => (
                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${event.event_type === 'payment_succeeded' ? 'bg-emerald-500' : 'bg-red-500'
+                                <td className="px-3 py-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${event.event_type === 'payment_succeeded' ? 'bg-emerald-500' : 'bg-red-500'
                                             }`}></div>
                                         <span className="font-bold text-slate-700">{event.event_type}</span>
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 text-center font-mono font-bold text-slate-800">
+                                <td className="px-3 py-2 text-center font-mono font-bold text-slate-800">
                                     ${(event.amount_total / 100).toFixed(2)}
                                 </td>
-                                <td className="px-4 py-3 text-center">
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${event.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'
+                                <td className="px-3 py-2 text-center">
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${event.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'
                                         }`}>
                                         {event.status}
                                     </span>
                                 </td>
-                                <td className="px-4 py-3 text-right text-slate-500 font-mono">
+                                <td className="px-3 py-2 text-right text-slate-500 font-mono">
                                     {new Date(event.created_at).toLocaleString()}
                                 </td>
                             </tr>
                         )) : (
-                            <tr><td colSpan="4" className="px-4 py-8 text-center text-slate-400 italic">No payment events recorded yet.</td></tr>
+                            <tr><td colSpan="4" className="px-3 py-4 text-center text-slate-400 italic text-[11px]">No payment events recorded yet.</td></tr>
                         )}
                     </tbody>
                 </table>
@@ -1142,6 +1142,23 @@ const PlatformAdminClinicDetails = () => {
                     {/* Main Info */}
                     <div className="lg:col-span-2 space-y-8">
 
+                        {/* Billing & Payment Status — Compact card */}
+                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl p-4 shadow-md shadow-slate-200/30">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-200">
+                                        <CreditCard className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-sm font-bold text-slate-800 tracking-tight">Billing & Payments</h2>
+                                        <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest leading-none mt-0.5">Stripe Integration</p>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter">Revenue</span>
+                            </div>
+                            <ClinicBillingStatus clinicId={id} apiCall={apiCall} />
+                        </div>
+
                         {/* Growth & Referrals Section */}
                         <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40 relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-cyan-500/10 transition-colors"></div>
@@ -1158,23 +1175,6 @@ const PlatformAdminClinicDetails = () => {
                                 <span className="text-xs font-bold text-cyan-600 bg-cyan-50 px-2 py-1 rounded-lg border border-cyan-100 uppercase tracking-tighter">Viral Engine</span>
                             </div>
                             <ClinicGrowthOverview growth={clinicData.growth} billing={clinicData.billing} />
-                        </div>
-
-                        {/* Billing & Payment Status */}
-                        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-slate-200/40">
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-200">
-                                        <CreditCard className="w-5 h-5 text-white" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-lg font-bold text-slate-800 tracking-tight">Billing & Payments</h2>
-                                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest leading-none mt-1">Stripe Integration</p>
-                                    </div>
-                                </div>
-                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 uppercase tracking-tighter">Revenue</span>
-                            </div>
-                            <ClinicBillingStatus clinicId={id} apiCall={apiCall} />
                         </div>
 
                         {/* Clinic Personnel */}
