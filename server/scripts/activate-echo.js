@@ -3,86 +3,81 @@ const path = require('path');
 const pool = require('../db');
 
 /**
- * Project Echo Activation Script
+ * Project Echo Activation Script (Fixed for Governance Schema)
  * 
  * 1. Runs the foundation SQL (tables, indexes, audit trail)
- * 2. Injects the 'ai.echo' privilege into the platform
- * 3. Assigns 'ai.echo' to basic Clinician roles
+ * 2. Injects the 'ai.echo' privilege into the platform templates
+ * 3. Syncs the privilege to all active clinic schemas
  */
 async function activateEcho() {
     console.log('🚀 Starting Echo AI Activation...');
 
     try {
         // 1. Run Schema Migration
+        // Note: The migration file uses "CREATE TABLE IF NOT EXISTS"
         const schemaPath = path.join(__dirname, '../migrations/20260210_echo_foundation.sql');
         const schemaSql = fs.readFileSync(schemaPath, 'utf8');
 
         console.log('📦 Creating Echo database tables...');
+        // We run this against the main pool which defaults to PUBLIC schema
         await pool.query(schemaSql);
         console.log('✅ Base schema created.');
 
-        // 2. Inject Privilege (Platform Level)
-        console.log('🛡️  Registering ai.echo privilege...');
+        // 2. Inject Privilege into Platform Governance
+        console.log('🛡️  Registering ai.echo in platform governance...');
 
-        // Add to main privileges table (per-tenant)
-        const clinics = await pool.controlPool.query("SELECT schema_name FROM clinics WHERE status = 'active'");
-        for (const clinic of clinics.rows) {
-            try {
-                await pool.controlPool.query(`
-                    INSERT INTO ${clinic.schema_name}.privileges (name, description, category)
-                    VALUES ($1, $2, $3)
-                    ON CONFLICT (name) DO UPDATE SET description = $2, category = $3
-                `, ['ai.echo', 'Access to Echo AI Clinical Assistant', 'AI']);
-            } catch (pErr) {
-                console.warn(`  ⚠️ Failed to inject privilege into ${clinic.schema_name}:`, pErr.message);
+        // Find Physician and Admin templates
+        const templatesRes = await pool.controlPool.query(
+            "SELECT id, role_key FROM platform_role_templates WHERE role_key IN ('CLINIC_ADMIN', 'PHYSICIAN', 'NURSE_PRACTITIONER', 'PHYSICIAN_ASSISTANT')"
+        );
+
+        if (templatesRes.rows.length === 0) {
+            console.warn('⚠️  No platform role templates found. Skipping template assignment.');
+        } else {
+            for (const tpl of templatesRes.rows) {
+                try {
+                    await pool.controlPool.query(`
+                        INSERT INTO platform_role_template_privileges (template_id, privilege_name)
+                        VALUES ($1, $2)
+                        ON CONFLICT DO NOTHING
+                    `, [tpl.id, 'ai.echo']);
+                    console.log(`   ✅ Assigned to ${tpl.role_key}`);
+                } catch (tplErr) {
+                    console.warn(`   ⚠️ Could not assign to ${tpl.role_key}:`, tplErr.message);
+                }
             }
         }
 
-        // Add to platform templates (Global)
-        const echoPrivRes = await pool.controlPool.query(
-            "INSERT INTO platform_privileges (name, description, category) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING RETURNING id",
-            ['ai.echo', 'Access to Echo AI Clinical Assistant', 'AI']
-        );
+        // 3. Inject Privilege into each Clinic Schema
+        console.log('🔄 Syncing ai.echo into all active tenant schemas...');
+        const clinics = await pool.controlPool.query("SELECT id, schema_name FROM clinics WHERE status = 'active'");
 
-        const privId = echoPrivRes.rows.length > 0
-            ? echoPrivRes.rows[0].id
-            : (await pool.controlPool.query("SELECT id FROM platform_privileges WHERE name = 'ai.echo'")).rows[0].id;
-
-        // Assign to Clinician and Admin templates
-        const templates = await pool.controlPool.query(
-            "SELECT id FROM platform_role_templates WHERE role_key IN ('CLINICIAN', 'ADMIN', 'NP_PA', 'PHYSICIAN')"
-        );
-
-        for (const tpl of templates.rows) {
-            await pool.controlPool.query(`
-                INSERT INTO platform_role_privileges (role_template_id, privilege_id)
-                VALUES ($1, $2)
-                ON CONFLICT DO NOTHING
-            `, [tpl.id, privId]);
-        }
-
-        console.log('✅ Privileges registered and assigned to templates.');
-
-        // 3. Sync Existing Roles (Tenant Level)
-        console.log('🔄 Syncing clinic roles for all active tenants...');
-        // We'll give it to all existing 'Clinical' roles as a baseline
         for (const clinic of clinics.rows) {
+            const schema = clinic.schema_name;
             try {
-                // Find clinical roles in this clinic
-                const rolesRes = await pool.controlPool.query(`
-                    SELECT id FROM ${clinic.schema_name}.roles 
-                    WHERE name ILIKE '%Clinician%' OR name ILIKE '%Physician%' OR name ILIKE '%Admin%'
+                // Ensure the privilege exists in the tenant's privilege list
+                await pool.controlPool.query(`
+                    INSERT INTO ${schema}.privileges (name, description, category)
+                    VALUES ($1, $2, $3)
+                    ON CONFLICT (name) DO UPDATE SET description = $2, category = $3
+                `, ['ai.echo', 'Access to Echo AI Clinical Assistant', 'AI']);
+
+                // Assign to roles that are linked to Physician or Admin templates
+                await pool.controlPool.query(`
+                    INSERT INTO ${schema}.role_privileges (role_id, privilege_id)
+                    SELECT r.id, p.id 
+                    FROM ${schema}.roles r
+                    JOIN ${schema}.privileges p ON p.name = 'ai.echo'
+                    WHERE r.name ILIKE '%Physician%' 
+                       OR r.name ILIKE '%Clinician%' 
+                       OR r.name ILIKE '%Admin%'
+                       OR r.name ILIKE '%Practitioner%'
+                    ON CONFLICT DO NOTHING
                 `);
 
-                for (const role of rolesRes.rows) {
-                    await pool.controlPool.query(`
-                        INSERT INTO ${clinic.schema_name}.role_privileges (role_id, privilege_id)
-                        SELECT $1, id FROM ${clinic.schema_name}.privileges WHERE name = 'ai.echo'
-                        ON CONFLICT DO NOTHING
-                    `, [role.id]);
-                }
-            } catch (syncErr) {
-                console.warn(`  ⚠️ Sync failed for ${clinic.schema_name}:`, syncErr.message);
+                console.log(`   ✅ Synced for schema: ${schema}`);
+            } catch (clinicErr) {
+                console.warn(`   ⚠️ Sync failed for ${schema}:`, clinicErr.message);
             }
         }
 
