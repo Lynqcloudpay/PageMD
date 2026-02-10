@@ -342,6 +342,7 @@ router.get('/clinics/:id/billing', verifySuperAdmin, async (req, res) => {
         res.json({
             clinic,
             events: eventsRes.rows,
+            dunningLogs: dunningLogsRes.rows,
             stripeInvoices,
             totals: {
                 totalRevenue: totalsRes.rows[0].total_revenue,

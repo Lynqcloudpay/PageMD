@@ -919,59 +919,99 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
                 )}
             </div>
 
-            {/* Payment History */}
-            <div className="border border-slate-100 rounded-lg overflow-hidden">
-                <table className="w-full text-[11px]">
-                    <thead>
-                        <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50 bg-slate-50/50">
-                            <th className="px-3 py-2 text-left font-medium">Date</th>
-                            <th className="px-3 py-2 text-left font-medium">Description</th>
-                            <th className="px-3 py-2 text-right font-medium">Amount</th>
-                            <th className="px-3 py-2 text-center font-medium">Status</th>
-                            <th className="px-3 py-2 text-right font-medium">Invoice</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                        {displayInvoices.length > 0 ? displayInvoices.map((inv) => (
-                            <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-3 py-2 text-slate-500">
-                                    {inv.date ? new Date(inv.date).toLocaleDateString() : '—'}
-                                </td>
-                                <td className="px-3 py-2 text-slate-600 font-medium">{inv.description}</td>
-                                <td className="px-3 py-2 text-right font-mono text-slate-700">${inv.amountDollars}</td>
-                                <td className="px-3 py-2 text-center">
-                                    <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(inv.status)}`}>
-                                        {inv.status}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                    {inv.invoiceUrl ? (
-                                        <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer"
-                                            className="text-blue-500 hover:text-blue-600 text-[9px] font-medium hover:underline">
-                                            View →
-                                        </a>
-                                    ) : <span className="text-slate-300">—</span>}
-                                </td>
-                            </tr>
-                        )) : events.length > 0 ? events.map((event, i) => (
-                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-3 py-2 text-slate-500">{new Date(event.created_at).toLocaleDateString()}</td>
-                                <td className="px-3 py-2">
-                                    <span className="text-slate-600 font-medium">{event.event_type.replace(/_/g, ' ')}</span>
-                                </td>
-                                <td className="px-3 py-2 text-right font-mono text-slate-700">${(event.amount_total / 100).toFixed(2)}</td>
-                                <td className="px-3 py-2 text-center">
-                                    <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(event.status)}`}>
-                                        {event.status}
-                                    </span>
-                                </td>
-                                <td className="px-3 py-2 text-right text-slate-300">—</td>
-                            </tr>
-                        )) : (
-                            <tr><td colSpan="5" className="px-3 py-4 text-center text-slate-400 italic text-[10px]">No payment events recorded yet.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+            {/* History Tabs (Two Columns) */}
+            <div className="grid grid-cols-2 gap-4">
+                {/* 1. Payment History */}
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-1 px-1">
+                        <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                        <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment History</h3>
+                    </div>
+                    <div className="border border-slate-100 rounded-lg overflow-hidden bg-white">
+                        <table className="w-full text-[11px]">
+                            <thead>
+                                <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50 bg-slate-50/50">
+                                    <th className="px-3 py-2 text-left font-medium">Date</th>
+                                    <th className="px-3 py-2 text-left font-medium">Event</th>
+                                    <th className="px-3 py-2 text-right font-medium">Amount</th>
+                                    <th className="px-3 py-2 text-center font-medium">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {displayInvoices.length > 0 ? displayInvoices.map((inv) => (
+                                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-3 py-2 text-slate-500">{inv.date ? new Date(inv.date).toLocaleDateString() : '—'}</td>
+                                        <td className="px-3 py-2 text-slate-600 font-medium truncate max-w-[120px]">{inv.description}</td>
+                                        <td className="px-3 py-2 text-right font-mono text-slate-700">${inv.amountDollars}</td>
+                                        <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(inv.status)}`}>
+                                                {inv.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )) : events.length > 0 ? events.map((event, i) => (
+                                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-3 py-2 text-slate-500">{new Date(event.created_at).toLocaleDateString()}</td>
+                                        <td className="px-3 py-2 font-medium text-slate-600">{event.event_type.replace(/_/g, ' ')}</td>
+                                        <td className="px-3 py-2 text-right font-mono text-slate-700">${(event.amount_total / 100).toFixed(2)}</td>
+                                        <td className="px-3 py-2 text-center">
+                                            <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(event.status)}`}>
+                                                {event.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan="4" className="px-3 py-4 text-center text-slate-400 italic text-[10px]">No payment events recorded.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* 2. Dunning History (Log) */}
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2 mb-1 px-1">
+                        <Activity className="w-3.5 h-3.5 text-slate-400" />
+                        <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Dunning & Email Log</h3>
+                    </div>
+                    <div className="border border-slate-100 rounded-lg overflow-hidden bg-white">
+                        <table className="w-full text-[11px]">
+                            <thead>
+                                <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50 bg-slate-50/50">
+                                    <th className="px-3 py-2 text-left font-medium">Timestamp</th>
+                                    <th className="px-3 py-2 text-left font-medium">Event</th>
+                                    <th className="px-3 py-2 text-center font-medium">Phases</th>
+                                    <th className="px-3 py-2 text-left font-medium">Details</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {billing.dunningLogs && billing.dunningLogs.length > 0 ? billing.dunningLogs.map((log) => (
+                                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-3 py-2 text-slate-500 whitespace-nowrap">
+                                            {new Date(log.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${log.event_type === 'email_sent' ? 'bg-blue-50 text-blue-600' :
+                                                    log.event_type === 'phase_escalated' ? 'bg-red-50 text-red-600' :
+                                                        'bg-slate-100 text-slate-600'
+                                                }`}>
+                                                {log.event_type.replace(/_/g, ' ')}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-center text-slate-400 text-[9px]">
+                                            {log.previous_phase} → {log.current_phase}
+                                        </td>
+                                        <td className="px-3 py-2 text-slate-500 truncate max-w-[200px]" title={JSON.stringify(log.details)}>
+                                            {log.details?.email_type || log.details?.message || 'Details…'}
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan="4" className="px-3 py-4 text-center text-slate-400 italic text-[10px]">No dunning logs recorded.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     );

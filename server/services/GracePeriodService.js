@@ -55,6 +55,20 @@ class GracePeriodService {
     }
 
     /**
+     * Log a dunning event to the database.
+     */
+    async logEvent(clinicId, eventType, prevPhase, currPhase, details) {
+        try {
+            await pool.controlPool.query(`
+                INSERT INTO clinic_dunning_logs (clinic_id, event_type, previous_phase, current_phase, details)
+                VALUES ($1, $2, $3, $4, $5)
+            `, [clinicId, eventType, prevPhase, currPhase, JSON.stringify(details)]);
+        } catch (err) {
+            console.error('[GracePeriodService] Failed to log dunning event:', err);
+        }
+    }
+
+    /**
      * Evaluate a single clinic's status and escalate if needed.
      */
     async evaluateClinic(clinic) {
@@ -66,7 +80,7 @@ class GracePeriodService {
         if (clinic.stripe_subscription_status === 'active') {
             if (currentPhase !== GracePeriodService.PHASES.ACTIVE) {
                 console.log(`[GracePeriodService] Clinic ${clinic.display_name} is now ACTIVE. Resetting grace period.`);
-                await this.resetClinic(clinic.id);
+                await this.resetClinic(clinic.id, currentPhase);
             }
             return;
         }
@@ -79,6 +93,7 @@ class GracePeriodService {
                 "UPDATE clinics SET billing_grace_start_at = $1, billing_grace_phase = 1 WHERE id = $2",
                 [graceStart, clinic.id]
             );
+            await this.logEvent(clinic.id, 'phase_initialized', 0, 1, { message: 'First payment failure detected' });
             await this.sendDunningEmail(clinic, 1);
             return;
         }
@@ -99,7 +114,7 @@ class GracePeriodService {
 
         // 4. If phase needs to change or it's a specific milestone for reminder emails
         if (targetPhase !== currentPhase) {
-            await this.escalateToPhase(clinic, targetPhase);
+            await this.escalateToPhase(clinic, targetPhase, currentPhase);
         } else {
             // Check for intermediate reminder emails (Day 7, 14)
             if (targetPhase === GracePeriodService.PHASES.WARNING) {
@@ -113,7 +128,7 @@ class GracePeriodService {
     /**
      * Escalate clinic to a new phase and apply side effects.
      */
-    async escalateToPhase(clinic, phase) {
+    async escalateToPhase(clinic, phase, prevPhase) {
         console.log(`[GracePeriodService] Escalating clinic ${clinic.display_name} to Phase ${phase}`);
 
         let is_read_only = clinic.is_read_only;
@@ -147,13 +162,17 @@ class GracePeriodService {
             [phase, is_read_only, billing_locked, status, clinic.id]
         );
 
+        await this.logEvent(clinic.id, 'phase_escalated', prevPhase, phase, {
+            days_elapsed: Math.floor((new Date() - new Date(clinic.billing_grace_start_at)) / (1000 * 60 * 60 * 24))
+        });
+
         await this.sendDunningEmail(clinic, phase);
     }
 
     /**
      * Reset grace period data when clinic becomes active again.
      */
-    async resetClinic(clinicId) {
+    async resetClinic(clinicId, prevPhase) {
         await pool.controlPool.query(`
             UPDATE clinics 
                SET billing_grace_phase = 0,
@@ -164,6 +183,8 @@ class GracePeriodService {
              WHERE id = $1`,
             [clinicId]
         );
+
+        await this.logEvent(clinicId, 'grace_period_reset', prevPhase, 0, { message: 'Full payment received' });
     }
 
     /**
@@ -187,19 +208,30 @@ class GracePeriodService {
         console.log(`[GracePeriodService] Sending Phase ${phase} email to ${admin.email} (Days: ${days || 'N/A'})`);
 
         try {
+            let emailType = '';
             if (phase === GracePeriodService.PHASES.WARNING) {
                 if (days === 7 || days === 14) {
                     await emailService.sendBillingReminder(admin.email, admin.first_name, clinic.display_name, days);
+                    emailType = `reminder_day_${days}`;
                 } else {
                     await emailService.sendBillingWarning(admin.email, admin.first_name, clinic.display_name, 15);
+                    emailType = 'initial_warning';
                 }
             } else if (phase === GracePeriodService.PHASES.READ_ONLY) {
                 await emailService.sendBillingReadOnlyNotice(admin.email, admin.first_name, clinic.display_name);
+                emailType = 'read_only_notice';
             } else if (phase === GracePeriodService.PHASES.LOCKED) {
                 await emailService.sendBillingLockoutNotice(admin.email, admin.first_name, clinic.display_name);
+                emailType = 'lockout_notice';
             } else if (phase === GracePeriodService.PHASES.TERMINATED) {
                 await emailService.sendBillingTerminationNotice(admin.email, admin.first_name, clinic.display_name);
+                emailType = 'termination_notice';
             }
+
+            await this.logEvent(clinic.id, 'email_sent', phase, phase, {
+                email_type: emailType,
+                recipient: admin.email
+            });
         } catch (err) {
             console.error(`[GracePeriodService] Email delivery failed:`, err.message);
         }
