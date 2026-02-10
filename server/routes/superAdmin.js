@@ -125,6 +125,9 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
         const clinic = await pool.controlPool.query(`
         SELECT
         c.*,
+        c.billing_grace_phase,
+        c.billing_grace_start_at,
+        c.billing_manual_override,
             NULL as subscription_status,
             NULL as billing_cycle,
             NULL as current_period_start,
@@ -281,7 +284,8 @@ router.get('/clinics/:id/billing', verifySuperAdmin, async (req, res) => {
             SELECT 
                 id, display_name, slug,
                 stripe_customer_id, stripe_subscription_id, stripe_subscription_status,
-                current_period_end, billing_locked, last_payment_at, status
+                current_period_end, billing_locked, last_payment_at, status,
+                billing_grace_phase, billing_grace_start_at, billing_manual_override
             FROM clinics WHERE id = $1
         `, [id]);
 
@@ -439,6 +443,7 @@ router.patch('/clinics/:id/controls', verifySuperAdmin, async (req, res) => {
             is_read_only: 'boolean',
             billing_locked: 'boolean',
             prescribing_locked: 'boolean',
+            billing_manual_override: 'boolean',
             emr_version: 'string',
             tenant_type: 'string',
             compliance_zones: 'object', // for JSONB

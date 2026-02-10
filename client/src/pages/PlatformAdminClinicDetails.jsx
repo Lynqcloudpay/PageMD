@@ -873,28 +873,47 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
 
     return (
         <div className="space-y-3">
-            {/* Status Summary — Inline */}
+            {/* Billing Status & Controls */}
             <div className="flex items-center gap-3 flex-wrap">
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                     {isActive ? 'Active' : clinic.stripe_subscription_status || 'None'}
                 </span>
+
+                {clinic.billing_grace_phase > 0 && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-[9px] font-bold">
+                        <AlertCircle className="w-3 h-3" />
+                        PHASE {clinic.billing_grace_phase}
+                    </span>
+                )}
+
                 <span className="text-xs text-slate-500">
                     Revenue: <span className="font-semibold text-slate-700">${totals.totalRevenueDollars}</span>
                 </span>
+
                 <span className="text-xs text-slate-400">·</span>
-                <span className="text-xs text-slate-500">
-                    {displayInvoices.length || totals.paymentCount} payments
-                </span>
-                <span className="text-xs text-slate-400">·</span>
-                <span className="text-xs text-slate-500">
-                    {clinic.billing_locked ? <span className="text-amber-600">Locked</span> : 'Unlocked'}
-                </span>
-                {clinic.last_payment_at && (
+
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Dunning Override:</span>
+                    <button
+                        onClick={async () => {
+                            if (!confirm(`Are you sure you want to ${clinic.billing_manual_override ? 'DISABLE' : 'ENABLE'} manual override? This will ${clinic.billing_manual_override ? 'RE-ENABLE' : 'BYPASS'} automated lockout for this clinic.`)) return;
+                            try {
+                                await apiCall('PATCH', `/clinics/${clinicId}/controls`, { billing_manual_override: !clinic.billing_manual_override });
+                                loadBilling();
+                            } catch (err) { alert('Failed to update override'); }
+                        }}
+                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors ${clinic.billing_manual_override ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}
+                    >
+                        {clinic.billing_manual_override ? 'ON' : 'OFF'}
+                    </button>
+                </div>
+
+                {clinic.billing_grace_start_at && (
                     <>
                         <span className="text-xs text-slate-400">·</span>
-                        <span className="text-[10px] text-slate-400">
-                            Last: {new Date(clinic.last_payment_at).toLocaleDateString()}
+                        <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
+                            Grace Started: {new Date(clinic.billing_grace_start_at).toLocaleDateString()}
                         </span>
                     </>
                 )}

@@ -230,14 +230,14 @@ const resolveTenant = async (req, res, next) => {
         } else if (lookupSchema) {
             // We already found the schema by email
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked, enabled_features FROM clinics WHERE schema_name = $1 AND status = \'active\'',
+                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked, enabled_features, billing_manual_override FROM clinics WHERE schema_name = $1 AND status = \'active\'',
                 [lookupSchema]
             );
             tenantInfo = result.rows[0];
         } else {
             // Find by slug
             const result = await pool.controlPool.query(
-                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked, enabled_features FROM clinics WHERE slug = $1',
+                'SELECT id, slug, schema_name, display_name, logo_url, address_line1, address_line2, city, state, zip, phone, status, is_read_only, billing_locked, prescribing_locked, enabled_features, billing_manual_override FROM clinics WHERE slug = $1',
                 [slug]
             );
             tenantInfo = result.rows[0];
@@ -254,7 +254,10 @@ const resolveTenant = async (req, res, next) => {
 
         // Enforcement: Read-Only Kill Switch
         const mutableMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
-        if (tenantInfo.is_read_only && mutableMethods.includes(req.method)) {
+        // Respect manual override: If manual override is active, we don't enforce read-only/locked status
+        const isActuallyReadOnly = tenantInfo.is_read_only && !tenantInfo.billing_manual_override;
+
+        if (isActuallyReadOnly && mutableMethods.includes(req.method)) {
             // Allow login/logout even in read-only mode
             if (!req.path.includes('/auth/login') && !req.path.includes('/auth/logout')) {
                 return res.status(423).json({
@@ -282,9 +285,10 @@ const resolveTenant = async (req, res, next) => {
             logo_url: tenantInfo.logo_url,
             address: [tenantInfo.address_line1, tenantInfo.address_line2, `${tenantInfo.city || ''} ${tenantInfo.state || ''} ${tenantInfo.zip || ''}`.trim()].filter(Boolean).join('\n'),
             phone: tenantInfo.phone,
-            is_read_only: tenantInfo.is_read_only,
-            billing_locked: tenantInfo.billing_locked,
+            is_read_only: tenantInfo.is_read_only && !tenantInfo.billing_manual_override,
+            billing_locked: tenantInfo.billing_locked && !tenantInfo.billing_manual_override,
             prescribing_locked: tenantInfo.prescribing_locked,
+            billing_manual_override: tenantInfo.billing_manual_override,
             enabled_features: tenantInfo.enabled_features || {}
         };
 

@@ -1,5 +1,6 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const pool = require('../db');
+const gracePeriodService = require('./GracePeriodService');
 
 /**
  * PRICING TIERS (Staircase Model) - Source of Truth: growth.js / PricingPage.jsx
@@ -324,7 +325,19 @@ class StripeService {
 
         if (clinicId) {
             console.error(`[Stripe] Payment failed for clinic ${clinicId}`);
-            // Optionally notify the clinic or lock billing
+
+            // Initiate/Evaluate Grace Period
+            try {
+                const clinicRes = await pool.controlPool.query(
+                    "SELECT * FROM clinics WHERE id = $1",
+                    [clinicId]
+                );
+                if (clinicRes.rows[0]) {
+                    await gracePeriodService.evaluateClinic(clinicRes.rows[0]);
+                }
+            } catch (err) {
+                console.error(`[Stripe] Failed to trigger grace period for ${clinicId}:`, err.message);
+            }
         }
     }
 }

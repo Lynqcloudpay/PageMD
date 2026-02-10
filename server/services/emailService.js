@@ -284,6 +284,105 @@ class EmailService {
     }
 
     /**
+     * Dunning: Send Phase 1 Initial Warning
+     */
+    async sendBillingWarning(email, name, clinicName, graceDays = 15) {
+        const subject = `Action Required: Payment Failed for ${clinicName}`;
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 40px; border: 1px solid #e2e8f0; border-radius: 16px;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="https://pagemdemr.com/logo.png" alt="PageMD" height="40">
+                </div>
+                <h2 style="color: #0f172a;">Hi ${name},</h2>
+                <p style="font-size: 16px; line-height: 1.6;">We were unable to process your subscription payment for <strong>${clinicName}</strong>. This is often due to an expired card or changed billing details.</p>
+                
+                <div style="background-color: #eff6ff; border-radius: 12px; padding: 24px; margin: 24px 0; border-left: 4px solid #2563eb;">
+                    <p style="margin: 0; font-weight: 600; color: #1e40af;">Grace Period Active</p>
+                    <p style="margin: 8px 0 0 0; color: #1e40af;">Your account is in a <strong>${graceDays}-day grace period</strong>. Your services will remain fully active during this time.</p>
+                </div>
+
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://admin.pagemdemr.com/admin-settings?tab=practice" style="background: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Update Payment Method</a>
+                </div>
+
+                <p style="font-size: 14px; color: #64748b;">If payment is not received within 15 days, your account will move to Read-Only mode to ensure patient data remains accessible while modifications are disabled.</p>
+            </div>
+        `;
+        return this._send(email, subject, html);
+    }
+
+    /**
+     * Dunning: Send Billing Reminder (Day 7/14)
+     */
+    async sendBillingReminder(email, name, clinicName, daysElapsed) {
+        const subject = `Reminder: Payment for ${clinicName} is Overdue`;
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 40px; border: 1px solid #e2e8f0; border-radius: 16px;">
+                <h2 style="color: #0f172a;">Payment Reminder</h2>
+                <p style="font-size: 16px; line-height: 1.6;">Hi ${name}, just a friendly reminder that we still haven't received your subscription payment for ${clinicName}. It has been ${daysElapsed} days since the initial failure.</p>
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://admin.pagemdemr.com/admin-settings?tab=practice" style="background: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Resolve Now</a>
+                </div>
+            </div>
+        `;
+        return this._send(email, subject, html);
+    }
+
+    /**
+     * Dunning: Phase 2 Read-Only Notice (Day 16)
+     */
+    async sendBillingReadOnlyNotice(email, name, clinicName) {
+        const subject = `Urgent: ${clinicName} Account Moved to Read-Only Mode`;
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 40px; border: 1px solid #e2e8f0; border-radius: 16px;">
+                <h2 style="color: #dc2626;">Account Now Read-Only</h2>
+                <p style="font-size: 16px; line-height: 1.6;">Hi ${name}, your 15-day full access grace period has expired for ${clinicName}.</p>
+                <p style="font-size: 16px; line-height: 1.6;">Your account has been moved to <strong>Read-Only Mode</strong>. You can still view patient charts and export data, but creating new records or scheduling is disabled until payment is resolved.</p>
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://admin.pagemdemr.com/admin-settings?tab=practice" style="background: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Unlock Account</a>
+                </div>
+            </div>
+        `;
+        return this._send(email, subject, html);
+    }
+
+    /**
+     * Dunning: Phase 3 Lockdown Notice (Day 31)
+     */
+    async sendBillingLockoutNotice(email, name, clinicName) {
+        const subject = `Critical: ${clinicName} Service Interrupted`;
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 40px; border: 1px solid #e2e8f0; border-radius: 16px;">
+                <h2 style="color: #991b1b;">Service Suspended</h2>
+                <p style="font-size: 16px; line-height: 1.6;">Hi ${name}, it has been 30 days since your payment failed. Your access to PageMD has been locked.</p>
+                <p style="font-size: 16px; line-height: 1.6;">To restore service immediately, please update your payment details below. Your data is protected and will be available once the account is reactivated.</p>
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://admin.pagemdemr.com/admin-settings?tab=practice" style="background: #2563eb; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Restore Service</a>
+                </div>
+            </div>
+        `;
+        return this._send(email, subject, html);
+    }
+
+    /**
+     * Dunning: Phase 4 Termination Notice (Day 46)
+     */
+    async sendBillingTerminationNotice(email, name, clinicName) {
+        const subject = `Notice of Service Termination: ${clinicName}`;
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; padding: 40px; border: 1px solid #e2e8f0; border-radius: 16px;">
+                <h2 style="color: #0f172a;">Service Terminated</h2>
+                <p style="font-size: 16px; line-height: 1.6;">Hi ${name}, we have terminated your subscription for ${clinicName} due to prolonged non-payment (+45 days).</p>
+                <p style="font-size: 16px; line-height: 1.6;">Your clinical data will be retained for 90 days for HIPAA compliance. You can still access your data for export purposes via the platform link below.</p>
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://admin.pagemdemr.com/admin-settings" style="background: #475569; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Access Export Portal</a>
+                </div>
+            </div>
+        `;
+        return this._send(email, subject, html);
+    }
+
+    /**
      * Send Guest Access Link for Telehealth
      * Magic link for patients who can't log into the portal
      */

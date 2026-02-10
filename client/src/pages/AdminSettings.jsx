@@ -15,7 +15,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Settings, Building2, Users, Shield, Stethoscope, Mail,
-  ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, CheckCircle2, Check,
+  ToggleLeft, ToggleRight, Save, Loader2, AlertCircle, AlertTriangle, CheckCircle2, Check,
   DollarSign, Database, Activity, Lock, Globe, Clock, Bell,
   Eye, EyeOff, Server, Zap, Upload, ShieldCheck, Gift, ChevronRight, RefreshCw,
   CreditCard, FileText
@@ -1389,6 +1389,38 @@ const BillingSettingsTab = () => {
 
   return (
     <div className="space-y-5 max-w-4xl">
+      {/* Dunning / Grace Period Banner */}
+      {billingInfo?.billing_grace_phase > 0 && (
+        <div className={cn(
+          "p-4 rounded-xl border flex gap-3 items-start",
+          billingInfo.billing_grace_phase === 1 ? "bg-amber-50 border-amber-100 text-amber-800" :
+            billingInfo.billing_grace_phase === 2 ? "bg-orange-50 border-orange-100 text-orange-800" :
+              "bg-red-50 border-red-100 text-red-800"
+        )}>
+          <div className="mt-0.5">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold">
+              {billingInfo.billing_grace_phase === 1 && "Payment Grace Period Active"}
+              {billingInfo.billing_grace_phase === 2 && "Account in Read-Only Mode"}
+              {billingInfo.billing_grace_phase === 3 && "Account Strictly Locked"}
+            </p>
+            <p className="text-xs mt-1 leading-relaxed opacity-90">
+              {billingInfo.billing_grace_phase === 1 && "We encountered an issue with your payment. Your services remain fully active until day 15."}
+              {billingInfo.billing_grace_phase === 2 && "Modifications are disabled. You can still view patient charts and export data."}
+              {billingInfo.billing_grace_phase === 3 && "Full lockout. Please update payment immediately to restore clinical services."}
+            </p>
+            <button
+              onClick={openPortal}
+              className="mt-3 px-3 py-1.5 bg-white border border-current rounded-lg text-[10px] font-bold uppercase transition-transform active:scale-95"
+            >
+              Update Payment Details
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Subscription Overview — Compact */}
       <div className="bg-white border border-slate-100 rounded-xl p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
@@ -1489,55 +1521,57 @@ const BillingSettingsTab = () => {
       </div>
 
       {/* Payment History */}
-      {invoices.length > 0 && (
-        <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-50 flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-slate-400" />
-            <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment History</h3>
-          </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-50">
-                <th className="px-4 py-2.5 text-left font-medium">Date</th>
-                <th className="px-4 py-2.5 text-left font-medium">Description</th>
-                <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-                <th className="px-4 py-2.5 text-center font-medium">Status</th>
-                <th className="px-4 py-2.5 text-right font-medium">Invoice</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-2.5 text-slate-500">
-                    {inv.date ? new Date(inv.date).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-600 font-medium">{inv.description}</td>
-                  <td className="px-4 py-2.5 text-right font-mono text-slate-700">${inv.amountDollars}</td>
-                  <td className="px-4 py-2.5 text-center">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-semibold border ${statusPill(inv.status)}`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    {inv.invoiceUrl ? (
-                      <a
-                        href={inv.invoiceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-600 text-[10px] font-medium hover:underline"
-                      >
-                        View →
-                      </a>
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </td>
+      {
+        invoices.length > 0 && (
+          <div className="bg-white border border-slate-100 rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-50 flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-slate-400" />
+              <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment History</h3>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-50">
+                  <th className="px-4 py-2.5 text-left font-medium">Date</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Description</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Amount</th>
+                  <th className="px-4 py-2.5 text-center font-medium">Status</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Invoice</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-4 py-2.5 text-slate-500">
+                      {inv.date ? new Date(inv.date).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-600 font-medium">{inv.description}</td>
+                    <td className="px-4 py-2.5 text-right font-mono text-slate-700">${inv.amountDollars}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-semibold border ${statusPill(inv.status)}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {inv.invoiceUrl ? (
+                        <a
+                          href={inv.invoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-500 hover:text-blue-600 text-[10px] font-medium hover:underline"
+                        >
+                          View →
+                        </a>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      }
 
       {/* Pricing Tiers — Compact Strip */}
       <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
@@ -1570,22 +1604,53 @@ const BillingSettingsTab = () => {
       </div>
 
       {/* ACH Nudge */}
-      {(billing.totalSeats || 0) > 5 && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50/50 border border-amber-100/50 rounded-xl">
-          <Zap className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-xs font-medium text-amber-800">Consider ACH billing for {billing.totalSeats} seats</p>
-            <p className="text-[11px] text-amber-600/70 mt-0.5 leading-relaxed">Eliminates credit card processing fees — ideal for larger practices.</p>
-            <button className="mt-2 text-[10px] font-medium text-amber-700 underline decoration-amber-200 hover:decoration-amber-400 transition-all">
-              Contact Treasury
-            </button>
+      {
+        (billing.totalSeats || 0) > 5 && (
+          <div className="flex items-start gap-3 p-4 bg-amber-50/50 border border-amber-100/50 rounded-xl">
+            <Zap className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-medium text-amber-800">Consider ACH billing for {billing.totalSeats} seats</p>
+              <p className="text-[11px] text-amber-600/70 mt-0.5 leading-relaxed">Eliminates credit card processing fees — ideal for larger practices.</p>
+              <button className="mt-2 text-[10px] font-medium text-amber-700 underline decoration-amber-200 hover:decoration-amber-400 transition-all">
+                Contact Treasury
+              </button>
+            </div>
+          </div>
+        )
+      }
+
+      {/* Policy Documentation */}
+      <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <ShieldCheck className="w-4 h-4 text-slate-400" />
+          <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Grace Period & Termination Policy</h3>
+        </div>
+        <div className="grid grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">1. Duning Cycle (45 Days)</p>
+              <ul className="text-[11px] text-slate-500 space-y-2 leading-relaxed">
+                <li><span className="text-slate-700 font-medium">Days 1-15 (Warning):</span> Full system access but banners are shown. Stripe smart-retries active.</li>
+                <li><span className="text-slate-700 font-medium">Days 16-30 (Degraded):</span> Read-Only mode. View/Export charts only.</li>
+                <li><span className="text-slate-700 font-medium">Days 31-45 (Locked):</span> Full lockout. HIPAA data retention active.</li>
+              </ul>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-slate-700 mb-1.5">2. Termination & Data Retention</p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                After 45 days of non-payment, subscriptions are automatically canceled. However, per HIPAA compliance, clinical records are retained for a minimum of 90 days. An export-only portal remains accessible during this window.
+              </p>
+            </div>
+            <div className="pt-2">
+              <p className="text-[10px] text-slate-400 italic">Effective Jan 1, 2026. Standard across all tiers.</p>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
 
 export default AdminSettings;
-
-

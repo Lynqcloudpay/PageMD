@@ -19,6 +19,7 @@ const ordersetRoutes = require('./routes/ordersets');
 const icd10HierarchyRoutes = require('./routes/icd10-hierarchy');
 const { resolveTenant } = require('./middleware/tenant');
 const flagService = require('./services/flagService');
+const gracePeriodService = require('./services/GracePeriodService');
 
 // Commercial API Platform imports
 const oauthRoutes = require('./routes/oauth');
@@ -417,8 +418,28 @@ app.use((err, req, res, next) => {
 let server;
 if (require.main === module) {
   server = app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`[Server] 🚀 PageMD EMR API running on port ${PORT}`); // Modified log
     console.log(`📡 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+
+    // Initialize Background Tasks
+    console.log('[Server] ⚙️  Starting autonomous background task scheduler...'); // Added log
+
+    // 1. Daily Grace Period & Dunning Escalations (Run immediately then every 24h)
+    const RUN_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+
+    const runDunning = async () => {
+      try {
+        await gracePeriodService.processEscalations();
+      } catch (err) {
+        console.error('[Scheduler] Grace period escalation failed:', err.message);
+      }
+    };
+
+    // Run on startup (with 5 min delay to let system settle)
+    setTimeout(runDunning, 5 * 60 * 1000);
+
+    // Set daily interval
+    setInterval(runDunning, RUN_INTERVAL);
 
     // Start background services
     (async () => {

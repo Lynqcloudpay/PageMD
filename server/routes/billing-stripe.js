@@ -162,7 +162,7 @@ router.get('/status', authenticate, async (req, res) => {
 
         // Get database status
         const { rows } = await pool.controlPool.query(
-            'SELECT stripe_customer_id, stripe_subscription_status, stripe_subscription_id, current_period_end, billing_locked, last_payment_at FROM clinics WHERE id = $1',
+            'SELECT stripe_customer_id, stripe_subscription_status, stripe_subscription_id, current_period_end, billing_locked, last_payment_at, billing_grace_phase, billing_grace_start_at FROM clinics WHERE id = $1',
             [clinicId]
         );
 
