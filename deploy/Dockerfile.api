@@ -2,12 +2,12 @@ FROM node:18-alpine
 
 # Install build dependencies in one layer
 RUN apk add --no-cache --virtual .build-deps \
-    python3 \
-    make \
-    g++ && \
-    apk add --no-cache \
-    postgresql-client && \
-    rm -rf /var/cache/apk/*
+  python3 \
+  make \
+  g++ && \
+  apk add --no-cache \
+  postgresql-client && \
+  rm -rf /var/cache/apk/*
 
 # Create app directory
 WORKDIR /app
@@ -25,9 +25,9 @@ RUN apk del .build-deps
 # Copy application code
 COPY . ./
 
-# Create directories for logs and uploads
-RUN mkdir -p /app/logs /app/uploads && \
-    chown -R node:node /app
+# Create directories for logs, uploads, and archives
+RUN mkdir -p /app/logs /app/uploads /app/archives && \
+  chown -R node:node /app
 
 # Switch to non-root user
 USER node
