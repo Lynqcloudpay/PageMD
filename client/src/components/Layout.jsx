@@ -20,6 +20,7 @@ import SupportModal from './SupportModal';
 import BreakTheGlassModal from './BreakTheGlassModal';
 import AlertBell from './AlertBell';
 import DemoBanner from './DemoBanner';
+import EchoPanel from './EchoPanel';
 import { cn } from '../lib/utils';
 import SidebarItem from './ui/SidebarItem';
 
@@ -539,7 +540,7 @@ const Layout = ({ children }) => {
                         sidebarCollapsed ? "ml-[6.5rem]" : "ml-[19.5rem]"
                     )}
                 >
-                    <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_15px_40px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col relative">
+                    <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_15px_40px_rgba(0,0,0,0.08)] border border-slate-100 flex flex-col relative overflow-hidden">
                         {/* Header inside the bubble */}
                         <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-40">
                             <div className="flex-1 overflow-hidden">
@@ -568,23 +569,32 @@ const Layout = ({ children }) => {
                     </div>
                 </main>
 
-                {/* Floating Help Button */}
-                <button
-                    onClick={() => setShowSupportModal(true)}
-                    className="fixed bottom-4 right-4 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all z-50 flex items-center justify-center group opacity-70 hover:opacity-100"
-                    title="Report an Issue (Shift+?)"
-                >
-                    <HelpCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                </button>
-
-                {/* Support Modal */}
-                <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
+                {/* Support Modal placeholder - moved to bottom */}
 
                 {/* Privacy Enforcement Modal */}
                 <BreakTheGlassModal />
 
                 {/* Mobile Menu */}
                 <MobileMenu />
+
+                {/* Echo AI - Global Overlay (Only on Patient Routes) */}
+                {location.pathname.includes('/patient/') && (
+                    <EchoPanel
+                        patientId={location.pathname.split('/')[2]}
+                        patientName={null} // Will be fetched/derived in Snapshot or Context
+                    />
+                )}
+
+                {/* Global Floating Actions */}
+                <button
+                    onClick={() => setShowSupportModal(true)}
+                    className="fixed bottom-[4.5rem] right-6 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all z-[9999] flex items-center justify-center group opacity-80 hover:opacity-100"
+                    title="Report an Issue (Shift+?)"
+                >
+                    <HelpCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                </button>
+
+                <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
             </div>
         </div>
     );

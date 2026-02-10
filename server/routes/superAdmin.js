@@ -1771,4 +1771,48 @@ router.get('/scopes', verifySuperAdmin, async (req, res) => {
     });
 });
 
+// ═══════════════════════════════════════════════════════════════
+// ARCHIVE MANAGEMENT (HIPAA COLD STORAGE)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/super/archives
+ * List all available clinic archives
+ */
+router.get('/archives', verifySuperAdmin, async (req, res) => {
+    try {
+        const archives = await require('../services/archivalService').listArchives();
+        res.json(archives);
+    } catch (error) {
+        console.error('[SuperAdmin] Failed to list archives:', error);
+        res.status(500).json({ error: 'Failed to retrieve archives' });
+    }
+});
+
+/**
+ * GET /api/super/archives/:filename
+ * Download a specific archive file
+ */
+router.get('/archives/:filename', verifySuperAdmin, async (req, res) => {
+    try {
+        const { filename } = req.params;
+        const archivalService = require('../services/archivalService');
+
+        // Security: Ensure filename is safe and exists
+        const readStream = archivalService.getArchiveReadStream(filename);
+
+        // Set headers for download
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'application/gzip');
+
+        readStream.pipe(res);
+    } catch (error) {
+        console.error(`[SuperAdmin] Failed to download archive ${req.params.filename}:`, error);
+        if (error.message === 'Archive not found') {
+            return res.status(404).json({ error: 'Archive not found' });
+        }
+        res.status(500).json({ error: 'Failed to download archive' });
+    }
+});
+
 module.exports = router;

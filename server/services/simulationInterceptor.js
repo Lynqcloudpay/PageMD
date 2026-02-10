@@ -8,13 +8,9 @@ const pool = require('../db');
 const isSandboxMode = () => {
     try {
         const client = pool.dbStorage.getStore();
-        // In our implementation, sandbox accounts are routed to schema 'sandbox_...'
-        const isSandbox = client && client.tenantSchema && client.tenantSchema.startsWith('sandbox_');
-
-        // Debug log if we are in sandbox
-        if (isSandbox) {
-            // Only log once in a while or per-operation in simulate()
-        }
+        // 🚨 CRITICAL FIX: Only treat as sandbox if it's an actual auto-provisioned demo schema
+        // prefix 'sandbox_' is used for ephemeral demos. Standard tenants use 'tenant_'.
+        const isSandbox = client && client.tenantSchema && client.tenantSchema.toLowerCase().startsWith('sandbox_');
 
         return !!isSandbox;
     } catch (e) {

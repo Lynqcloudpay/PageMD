@@ -1,6 +1,7 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const tenantSchemaSQL = require('../config/tenantSchema');
+const archivalService = require('./archivalService');
 
 // The Control Pool connects to the main platform database
 const controlPool = new Pool({
@@ -153,6 +154,18 @@ class TenantManager {
 
             const { schema_name, slug } = result.rows[0];
 
+            // --- HIPAA ARCHIVAL (Option C) ---
+            // Create a compressed, encrypted dump of the schema before we drop it.
+            // If this fails, we catch it and abort to avoid un-archived deletion.
+            console.log(`[TenantManager] Initiating HIPAA archival for clinic ${clinicId}...`);
+            try {
+                const archivePath = await archivalService.createClinicArchive(clinicId, schema_name);
+                console.log(`[TenantManager] Archival successful: ${archivePath}`);
+            } catch (archiveError) {
+                console.error('[TenantManager] ❌ Archival FAILED. Aborting deprovisioning to prevent un-archived data loss.');
+                throw new Error(`Clinic deletion aborted: Failure during HIPAA archival phase. ${archiveError.message}`);
+            }
+
             // 2. Drop the Physical Schema
             // Security: schema_name is stored in our trusted control_db and validated on creation.
             if (schema_name && schema_name.startsWith('tenant_')) {
@@ -162,10 +175,23 @@ class TenantManager {
             // 2b. Clean up Global User Lookup
             await client.query('DELETE FROM platform_user_lookup WHERE clinic_id = $1', [clinicId]);
 
-            // Explicitly delete related records that might otherwise be SET NULL
+            // Explicitly delete related records that might otherwise be SET NULL or block deletion via RESTRICT
+            await client.query('DELETE FROM clinic_referrals WHERE referrer_clinic_id = $1 OR referred_clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM clinic_subscriptions WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM clinic_settings WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM platform_billing_events WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM platform_impersonation_tokens WHERE target_clinic_id = $1', [clinicId]);
             await client.query('DELETE FROM payment_history WHERE clinic_id = $1', [clinicId]);
             await client.query('DELETE FROM platform_support_tickets WHERE clinic_id = $1', [clinicId]);
             await client.query('DELETE FROM support_tickets WHERE clinic_id = $1', [clinicId]);
+
+            // Additional legacy/public dependencies
+            await client.query('DELETE FROM documents WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM referrals WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM messages WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM portal_appointment_requests WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM portal_messages WHERE clinic_id = $1', [clinicId]);
+            await client.query('DELETE FROM portal_message_threads WHERE clinic_id = $1', [clinicId]);
 
             // 3. Delete Clinic Record
             await client.query('DELETE FROM clinics WHERE id = $1', [clinicId]);

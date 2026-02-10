@@ -53,14 +53,16 @@ class AuditService {
             } = event;
 
             const {
-                userId = '00000000-0000-0000-0000-000000000000',
+                userId: rawUserId,
                 role = 'system',
-                actorType = (userId && userId !== '00000000-0000-0000-0000-000000000000') ? 'user' : 'system',
+                actorType = (rawUserId && rawUserId !== '00000000-0000-0000-0000-000000000000') ? 'user' : 'system',
                 tenantId,
                 ip,
                 userAgent,
                 requestId
             } = context;
+
+            const userId = rawUserId || '00000000-0000-0000-0000-000000000000';
 
             // 1. Get the hash of the latest record (Optional/Draft logic)
             let previousHash = 'GENESIS_HASH';

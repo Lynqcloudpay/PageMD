@@ -36,7 +36,6 @@ import { usePatientTabs } from '../context/PatientTabsContext';
 import SpecialtyTracker from '../components/SpecialtyTracker';
 import MessagingModal from '../components/MessagingModal';
 import { useAuth } from '../context/AuthContext';
-import EchoPanel from '../components/EchoPanel';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -1533,7 +1532,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
-            <div className="w-full px-4 relative z-[60]">
+            <div className="w-full px-4 relative z-10">
                 <PatientHeader
                     patient={patient}
                     onUpdate={refreshPatientData}
@@ -1562,7 +1561,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 />
 
                 {/* Quick Navigation Bar - Neutralized */}
-                <div className="px-6 py-2.5 bg-white/70 backdrop-blur-md border-b border-white/50 mb-6 shadow-lg shadow-slate-200/20 sticky top-0 z-[5] rounded-b-2xl mx-2">
+                <div className="px-6 py-2.5 bg-white/70 backdrop-blur-md border-b border-white/50 mb-6 shadow-lg shadow-slate-200/20 sticky top-0 z-5 rounded-b-2xl mx-2">
                     <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-hide">
                             <button
@@ -3295,13 +3294,7 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
                     </div>
                 </div>
             )}
-            {/* Echo AI Clinical Assistant */}
-            {patient && (hasPrivilege('ai.echo') || isAdmin() || (user?.role && ['physician', 'np', 'pa'].includes(user.role.toLowerCase()))) && (
-                <EchoPanel
-                    patientId={id}
-                    patientName={patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() : null}
-                />
-            )}
+            {/* Echo logic moved to Layout.jsx */}
         </div>
     );
 };

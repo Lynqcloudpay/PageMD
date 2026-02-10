@@ -228,7 +228,7 @@ export default function EchoPanel({ patientId, patientName }) {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-[9999] w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 
+                className="fixed bottom-6 right-6 z-[9999] w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 
                            rounded-full shadow-lg shadow-blue-500/25 flex items-center justify-center 
                            hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 
                            transition-all duration-200 group"

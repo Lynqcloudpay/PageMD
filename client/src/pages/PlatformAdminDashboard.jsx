@@ -312,6 +312,15 @@ const PlatformAdminDashboard = () => {
                                 <p className="text-sm font-bold text-slate-800 mb-1">System Settings</p>
                                 <p className="text-[11px] text-slate-500">Configuration</p>
                             </button>
+
+                            <button
+                                onClick={() => handleNavigation('/platform-admin/archives')}
+                                className="group p-5 rounded-xl bg-gradient-to-br from-cyan-50 to-cyan-100/50 border border-cyan-200/60 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-500/10 transition-all"
+                            >
+                                <Database className="w-10 h-10 text-cyan-600 mb-3" />
+                                <p className="text-sm font-bold text-slate-800 mb-1">Archives</p>
+                                <p className="text-[11px] text-slate-500">HIPAA backups</p>
+                            </button>
                         </div>
                     </div>
 

@@ -416,7 +416,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
         .slice(0, 2);
 
     return (
-        <div className="flex flex-col gap-0 mb-4 relative">
+        <div className="flex flex-col gap-0 mb-4 relative z-[1000]">
             {/* Acknowledgment Modal */}
             {showAckModal && (
                 <FlagAcknowledgmentModal
@@ -425,7 +425,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 />
             )}
 
-            <div className="bg-white/60 backdrop-blur-md border border-white/50 shadow-xl shadow-slate-200/30 rounded-2xl">
+            <div className="bg-white/60 backdrop-blur-md border border-white/50 shadow-xl shadow-slate-200/30 rounded-2xl overflow-visible">
                 {/* Flags Manager Panel */}
                 {isFlagsPanelOpen && (
                     <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
@@ -439,7 +439,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-6 py-5 border-b border-white/30 flex items-center justify-between bg-gradient-to-br from-blue-50/80 via-white/70 to-indigo-50/60 backdrop-blur-sm text-slate-900 relative z-50 rounded-t-2xl">
+                <div className="px-6 py-5 border-b border-white/30 flex items-center justify-between bg-gradient-to-br from-blue-50/80 via-white/70 to-indigo-50/60 backdrop-blur-sm text-slate-900 relative z-20 rounded-t-2xl">
                     {/* Decorative Background Elements - Clipped in own container */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-t-2xl">
                         {/* Decorative Bubbles */}
@@ -556,7 +556,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                         className="fixed inset-0 z-[90]"
                                         onClick={() => setIsPortalMenuOpen(false)}
                                     />
-                                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] py-2 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[999] py-2 animate-in fade-in zoom-in-95 duration-200">
                                         <div className="px-4 py-2 mb-1">
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Portal Management</p>
                                         </div>

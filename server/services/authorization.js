@@ -111,7 +111,8 @@ function getDefaultPermissionsForRole(role) {
     'patients:view_chart',
     'patients:view_demographics',
     'schedule:view',
-    'prescriptions:view'
+    'prescriptions:view',
+    'ai.echo'
   ];
 
   const clinicianPerms = [

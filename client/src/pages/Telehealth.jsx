@@ -25,6 +25,13 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave, isSandbox }) => {
   const callFrameRef = useRef(null);
 
   useEffect(() => {
+    // 🛡️ SIMULATION MODE: Bypass Daily.co script
+    if (isSandbox) {
+      setIsLoading(false);
+      setConnectionStatus('In Visit');
+      return;
+    }
+
     // Load Daily.co script
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/@daily-co/daily-js';
@@ -69,7 +76,7 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave, isSandbox }) => {
         script.parentNode.removeChild(script);
       }
     };
-  }, [roomUrl, userName, onLeave]);
+  }, [roomUrl, userName, onLeave, isSandbox]);
 
   const [connectionStatus, setConnectionStatus] = useState('Disconnected');
   const [participantCount, setParticipantCount] = useState(1); // Provider themselves
@@ -100,14 +107,27 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave, isSandbox }) => {
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4">
           <div className="bg-blue-600/90 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse" />
-            <span className="text-xs font-black tracking-widest uppercase">Simulated Video Call</span>
-            <div className="w-1 h-1 bg-white/30 rounded-full" />
-            <span className="text-[10px] opacity-80">Sandbox Mode Only</span>
+            <span className="text-xs font-black tracking-widest uppercase">Video Connected</span>
           </div>
         </div>
       )}
 
-      <div ref={frameRef} className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden" />
+      {isSandbox ? (
+        <div className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative">
+          <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[2px] z-10" />
+          <div className="flex flex-col items-center gap-4 z-20">
+            <div className="w-24 h-24 rounded-full bg-white shadow-xl flex items-center justify-center animate-pulse">
+              <User className="w-10 h-10 text-slate-300" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-700">Simulated Patient</h3>
+              <p className="text-slate-500 text-sm">Video feed simulated for sandbox</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div ref={frameRef} className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden" />
+      )}
 
       {isSandbox && (
         <div className="absolute inset-0 pointer-events-none border-4 border-blue-500/20 rounded-2xl z-50">
@@ -198,6 +218,10 @@ const Telehealth = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // No-op local sandbox detection; rely on server response 'isSimulated' flag
+  // to toggle Daily.co vs Simulated view.
+  // Previous logic incorrectly flagged live clinics with 'sandbox' in their name.
+
   // --- NEW: Workspace Tabs ---
   const WORKSPACE_TABS = ['chart', 'note', 'info'];
 
@@ -205,6 +229,7 @@ const Telehealth = () => {
   const [loading, setLoading] = useState(true);
   const [activeCall, setActiveCall] = useState(null);
   const [roomUrl, setRoomUrl] = useState(null);
+  const [isSimulated, setIsSimulated] = useState(false);
   const [creatingRoom, setCreatingRoom] = useState(null); const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState('note'); // default to note during visit
@@ -632,6 +657,7 @@ const Telehealth = () => {
 
         if (response.data.success) {
           setRoomUrl(response.data.roomUrl);
+          setIsSimulated(response.data.isSimulated || false);
           setActiveCall({ ...appt, roomName: response.data.roomName });
           setDuration(0);
         }
@@ -652,6 +678,7 @@ const Telehealth = () => {
   const handleCloseWorkspace = useCallback(async () => {
     setActiveCall(null);
     setRoomUrl(null);
+    setIsSimulated(false);
     setDuration(0);
     setActiveEncounter(null);
     setNote({
@@ -922,7 +949,7 @@ const Telehealth = () => {
                   roomUrl={roomUrl}
                   userName={providerName}
                   onLeave={handleEndCall}
-                  isSandbox={user?.isSandbox}
+                  isSandbox={isSimulated}
                 />
               </div>
             ) : (
