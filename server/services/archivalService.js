@@ -111,14 +111,31 @@ class ArchivalService {
             const files = await fs.promises.readdir(this.archiveDir);
             const archives = [];
 
+            // Regex to parse: archive_tenant_[slug]_[uuid]_[timestamp].sql.gz.enc
+            // Example: archive_tenant_test_002d3183-866a-4d08-887e-76d8d21cbe0f_2026-02-10T21-45-27-578Z.sql.gz.enc
+            const archiveRegex = /archive_(tenant_[^_]+)_([a-f0-9-]+)_([\d-]+T[\d-]+Z)\.sql\.gz\.enc/;
+
             for (const file of files) {
                 if (file.endsWith('.enc')) {
                     const filePath = path.join(this.archiveDir, file);
                     const stats = await fs.promises.stat(filePath);
+
+                    const match = file.match(archiveRegex);
+                    const schemaName = match ? match[1] : 'unknown';
+                    const clinicId = match ? match[2] : 'unknown';
+                    const archiveTimestamp = match ? match[3].replace(/-/g, ':') : stats.birthtime;
+
+                    // Extract a readable slug (e.g. tenant_test -> test)
+                    const clinicSlug = schemaName.startsWith('tenant_') ? schemaName.replace('tenant_', '') : schemaName;
+
                     archives.push({
                         filename: file,
                         size: stats.size,
                         created_at: stats.birthtime,
+                        archive_timestamp: archiveTimestamp,
+                        clinic_id: clinicId,
+                        clinic_slug: clinicSlug,
+                        schema_name: schemaName,
                         path: filePath
                     });
                 }

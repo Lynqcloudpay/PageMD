@@ -23,3 +23,12 @@ yarn-error.log*
 dist/
 build/
 client/build/
+client/dist/
+
+# clinical data (HIPAA)
+server/archives/*
+!server/archives/.gitkeep
+server/uploads/*
+!server/uploads/.gitkeep
+server/logs/*
+!server/logs/.gitkeep

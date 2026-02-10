@@ -22,7 +22,7 @@ const PlatformAdminArchives = () => {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={() => navigate('/platform-admin')}
+                                onClick={() => navigate('/platform-admin/dashboard')}
                                 className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors"
                             >
                                 <ChevronLeft className="w-5 h-5 text-slate-500" />

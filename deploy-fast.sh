@@ -56,7 +56,14 @@ echo "🔍 Verifying files on server..."
 ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST "ls -la $DIR/deploy/static/index.html"
 # 3. Sync Server Files
 echo "📤 Syncing server files to server..."
-rsync -av --delete -e "ssh -i $KEY_PATH -o StrictHostKeyChecking=no" "$PROJECT_ROOT/server/" "$USER@$HOST:$DIR/server/"
+# EXTREMELY IMPORTANT: We MUST exclude archives, uploads, and logs from --delete!
+# Otherwise, we will wipe all cold storage backups and patient uploads on every deploy.
+rsync -av --delete \
+  --exclude 'archives/' \
+  --exclude 'uploads/' \
+  --exclude 'logs/' \
+  -e "ssh -i $KEY_PATH -o StrictHostKeyChecking=no" \
+  "$PROJECT_ROOT/server/" "$USER@$HOST:$DIR/server/"
 
 # 4. Server-side API build & restart
 echo "⚙️  Updating server code and restarting API..."
