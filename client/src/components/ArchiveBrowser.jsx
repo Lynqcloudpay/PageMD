@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiCall } from '../../utils/api';
+import { api } from '../services/api';
 import { HiDownload, HiSearch, HiArchive } from 'react-icons/hi';
 import { format } from 'date-fns';
 
@@ -16,7 +16,8 @@ const ArchiveBrowser = () => {
     const fetchArchives = async () => {
         try {
             setLoading(true);
-            const data = await apiCall('/super/archives');
+            const response = await api.get('/super/archives');
+            const data = response.data;
             // Ensure data is an array
             if (Array.isArray(data)) {
                 setArchives(data);
