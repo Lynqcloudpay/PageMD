@@ -3296,7 +3296,7 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
                 </div>
             )}
             {/* Echo AI Clinical Assistant */}
-            {patient && (
+            {patient && hasPrivilege('ai.echo') && (
                 <EchoPanel
                     patientId={id}
                     patientName={patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() : null}

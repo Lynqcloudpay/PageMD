@@ -99,7 +99,7 @@ function EchoTrendChart({ visualization }) {
             </svg>
             {clinicalContext?.recommendation && (
                 <p className={`text-[10px] mt-1 ${clinicalContext.severity === 'high' ? 'text-red-600 font-medium' :
-                        clinicalContext.severity === 'moderate' ? 'text-amber-600' : 'text-slate-500'
+                    clinicalContext.severity === 'moderate' ? 'text-amber-600' : 'text-slate-500'
                     }`}>
                     {clinicalContext.recommendation}
                 </p>
@@ -228,7 +228,7 @@ export default function EchoPanel({ patientId, patientName }) {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 
+                className="fixed bottom-6 right-6 z-[9999] w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 
                            rounded-full shadow-lg shadow-blue-500/25 flex items-center justify-center 
                            hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 
                            transition-all duration-200 group"
@@ -240,7 +240,7 @@ export default function EchoPanel({ patientId, patientName }) {
     }
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 w-[400px] max-h-[600px] flex flex-col
+        <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-h-[600px] flex flex-col
                         bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200/60
                         overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
 
@@ -318,10 +318,10 @@ export default function EchoPanel({ patientId, patientName }) {
                             </div>
                         )}
                         <div className={`max-w-[85%] ${msg.role === 'user'
-                                ? 'bg-blue-500 text-white rounded-2xl rounded-br-md px-3 py-2'
-                                : msg.isError
-                                    ? 'bg-red-50 text-red-700 rounded-2xl rounded-bl-md px-3 py-2 border border-red-100'
-                                    : 'bg-slate-50 text-slate-700 rounded-2xl rounded-bl-md px-3 py-2 border border-slate-100'
+                            ? 'bg-blue-500 text-white rounded-2xl rounded-br-md px-3 py-2'
+                            : msg.isError
+                                ? 'bg-red-50 text-red-700 rounded-2xl rounded-bl-md px-3 py-2 border border-red-100'
+                                : 'bg-slate-50 text-slate-700 rounded-2xl rounded-bl-md px-3 py-2 border border-slate-100'
                             }`}>
                             <div className="text-[12px] leading-relaxed whitespace-pre-wrap">
                                 {msg.content}

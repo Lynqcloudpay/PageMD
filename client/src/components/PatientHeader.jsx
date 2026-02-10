@@ -439,7 +439,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-6 py-5 border-b border-white/30 flex items-center justify-between bg-gradient-to-br from-blue-50/80 via-white/70 to-indigo-50/60 backdrop-blur-sm text-slate-900 relative rounded-t-2xl">
+                <div className="px-6 py-5 border-b border-white/30 flex items-center justify-between bg-gradient-to-br from-blue-50/80 via-white/70 to-indigo-50/60 backdrop-blur-sm text-slate-900 relative z-20 rounded-t-2xl">
                     {/* Decorative Background Elements - Clipped in own container */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-t-2xl">
                         {/* Decorative Bubbles */}
