@@ -240,6 +240,10 @@ app.use('/fhir', resolveTenant, fhirR4Routes);
 const aiGatewayRoutes = require('./routes/aiGateway');
 app.use('/ai/v1', resolveTenant, aiGatewayRoutes);
 
+// Echo AI Clinical Assistant
+const echoRoutes = require('./routes/echo');
+app.use('/api/echo', resolveTenant, echoRoutes);
+
 // ============================================================================
 
 

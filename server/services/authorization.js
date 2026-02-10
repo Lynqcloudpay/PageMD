@@ -139,7 +139,8 @@ function getDefaultPermissionsForRole(role) {
     'patient_flags:create',
     'patient_flags:resolve',
     'notes:view',
-    'audit:view'
+    'audit:view',
+    'ai.echo'
   ];
 
   const nursePerms = [

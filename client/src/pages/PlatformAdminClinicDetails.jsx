@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap, Users, TrendingUp, X } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
+import { twMerge } from 'tailwind-merge';
+import { clsx } from 'clsx';
+
+function cn(...inputs) {
+    return twMerge(clsx(inputs));
+}
 
 const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall, users, setUsers }) => {
     const [loading, setLoading] = useState(true);
@@ -989,17 +995,27 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
 
     return (
         <div className="flex items-center gap-3 flex-wrap">
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                {isActive ? 'Active' : clinic.stripe_subscription_status || 'None'}
+            <span className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors",
+                clinic.billing_grace_phase === 1 ? "bg-amber-50 text-amber-600 border-amber-100" :
+                    clinic.billing_grace_phase === 2 ? "bg-orange-50 text-orange-600 border-orange-100" :
+                        (clinic.billing_grace_phase === 3 || clinic.status === 'suspended') ? "bg-red-50 text-red-600 border-red-100" :
+                            isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                "bg-slate-50 text-slate-500 border-slate-100"
+            )}>
+                <span className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    clinic.billing_grace_phase === 1 ? "bg-amber-400" :
+                        clinic.billing_grace_phase === 2 ? "bg-orange-400" :
+                            (clinic.billing_grace_phase === 3 || clinic.status === 'suspended') ? "bg-red-400" :
+                                isActive ? "bg-emerald-400" :
+                                    "bg-slate-300"
+                )} />
+                {clinic.billing_grace_phase === 1 ? 'Grace Period' :
+                    clinic.billing_grace_phase === 2 ? 'Read-Only' :
+                        (clinic.billing_grace_phase === 3 || clinic.status === 'suspended') ? 'Suspended' :
+                            isActive ? 'Active' : clinic.stripe_subscription_status || 'None'}
             </span>
-
-            {clinic.billing_grace_phase > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-[9px] font-bold">
-                    <AlertCircle className="w-3 h-3" />
-                    PHASE {clinic.billing_grace_phase}
-                </span>
-            )}
 
             <span className="text-xs text-slate-500">
                 Revenue: <span className="font-semibold text-slate-700">${totals.totalRevenueDollars}</span>
@@ -1249,8 +1265,18 @@ const PlatformAdminClinicDetails = () => {
                         <div>
                             <h1 className="text-base font-black text-slate-800 tracking-tight flex items-center gap-2">
                                 {clinic.display_name}
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter border ${clinic.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                                    {clinic.status}
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter border transition-colors",
+                                    clinic.billing_grace_phase === 1 ? "bg-amber-50 text-amber-600 border-amber-100" :
+                                        clinic.billing_grace_phase === 2 ? "bg-orange-50 text-orange-600 border-orange-100" :
+                                            (clinic.billing_grace_phase === 3 || clinic.status === 'suspended') ? "bg-red-50 text-red-600 border-red-100" :
+                                                clinic.status === 'active' ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                                                    "bg-slate-50 text-slate-500 border-slate-100"
+                                )}>
+                                    {clinic.billing_grace_phase === 1 ? 'Grace Period' :
+                                        clinic.billing_grace_phase === 2 ? 'Read-Only' :
+                                            (clinic.billing_grace_phase === 3 || clinic.status === 'suspended') ? 'Suspended' :
+                                                clinic.status}
                                 </span>
                             </h1>
                             <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest leading-none mt-1">

@@ -1431,11 +1431,26 @@ const BillingSettingsTab = () => {
             <h2 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Subscription</h2>
           </div>
           <div className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border",
-            isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-100"
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors",
+            billingInfo?.billing_grace_phase === 1 ? "bg-amber-50 text-amber-600 border-amber-100" :
+              billingInfo?.billing_grace_phase === 2 ? "bg-orange-50 text-orange-600 border-orange-100" :
+                (billingInfo?.billing_grace_phase === 3 || status === 'suspended') ? "bg-red-50 text-red-600 border-red-100" :
+                  isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
+                    "bg-slate-50 text-slate-500 border-slate-100"
           )}>
-            <div className={cn("w-1.5 h-1.5 rounded-full", isActive ? "bg-emerald-400" : "bg-slate-300")} />
-            {isActive ? 'Active' : status === 'none' ? 'No Subscription' : status}
+            <div className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              billingInfo?.billing_grace_phase === 1 ? "bg-amber-400" :
+                billingInfo?.billing_grace_phase === 2 ? "bg-orange-400" :
+                  (billingInfo?.billing_grace_phase === 3 || status === 'suspended') ? "bg-red-400" :
+                    isActive ? "bg-emerald-400" :
+                      "bg-slate-300"
+            )} />
+            {billingInfo?.billing_grace_phase === 1 ? 'Grace Period' :
+              billingInfo?.billing_grace_phase === 2 ? 'Read-Only' :
+                (billingInfo?.billing_grace_phase === 3 || status === 'suspended') ? 'Suspended' :
+                  isActive ? 'Active' :
+                    status === 'none' ? 'No Subscription' : status}
           </div>
         </div>
 

@@ -36,6 +36,7 @@ import { usePatientTabs } from '../context/PatientTabsContext';
 import SpecialtyTracker from '../components/SpecialtyTracker';
 import MessagingModal from '../components/MessagingModal';
 import { useAuth } from '../context/AuthContext';
+import EchoPanel from '../components/EchoPanel';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -3293,6 +3294,13 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
                         </div>
                     </div>
                 </div>
+            )}
+            {/* Echo AI Clinical Assistant */}
+            {patient && (
+                <EchoPanel
+                    patientId={id}
+                    patientName={patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.trim() : null}
+                />
             )}
         </div>
     );
