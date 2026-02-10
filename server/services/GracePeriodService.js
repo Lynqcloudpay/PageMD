@@ -145,6 +145,7 @@ class GracePeriodService {
             case GracePeriodService.PHASES.LOCKED:
                 is_read_only = true;
                 billing_locked = true;
+                status = 'suspended'; // Fully suspend the clinic account
                 break;
             case GracePeriodService.PHASES.TERMINATED:
                 status = 'deactivated'; // Mark clinic itself as deactivated
@@ -214,30 +215,37 @@ class GracePeriodService {
         console.log(`[GracePeriodService] Sending Phase ${phase} email to ${admin.email} (Days: ${days || 'N/A'})`);
 
         try {
+            let emailResult = { sent: false };
             let emailType = '';
+
             if (phase === GracePeriodService.PHASES.WARNING) {
                 if (days === 7 || days === 14) {
-                    await emailService.sendBillingReminder(admin.email, admin.first_name, clinic.display_name, days);
+                    emailResult = await emailService.sendBillingReminder(admin.email, admin.first_name, clinic.display_name, days);
                     emailType = `reminder_day_${days}`;
                 } else {
-                    await emailService.sendBillingWarning(admin.email, admin.first_name, clinic.display_name, 15);
+                    emailResult = await emailService.sendBillingWarning(admin.email, admin.first_name, clinic.display_name, 15);
                     emailType = 'initial_warning';
                 }
             } else if (phase === GracePeriodService.PHASES.READ_ONLY) {
-                await emailService.sendBillingReadOnlyNotice(admin.email, admin.first_name, clinic.display_name);
+                emailResult = await emailService.sendBillingReadOnlyNotice(admin.email, admin.first_name, clinic.display_name);
                 emailType = 'read_only_notice';
             } else if (phase === GracePeriodService.PHASES.LOCKED) {
-                await emailService.sendBillingLockoutNotice(admin.email, admin.first_name, clinic.display_name);
+                emailResult = await emailService.sendBillingLockoutNotice(admin.email, admin.first_name, clinic.display_name);
                 emailType = 'lockout_notice';
             } else if (phase === GracePeriodService.PHASES.TERMINATED) {
-                await emailService.sendBillingTerminationNotice(admin.email, admin.first_name, clinic.display_name);
+                emailResult = await emailService.sendBillingTerminationNotice(admin.email, admin.first_name, clinic.display_name);
                 emailType = 'termination_notice';
             }
 
-            await this.logEvent(clinic.id, 'email_sent', phase, phase, {
-                email_type: emailType,
-                recipient: admin.email
-            });
+            if (emailType) {
+                await this.logEvent(clinic.id, 'email_sent', phase, phase, {
+                    email_type: emailType,
+                    recipient: admin.email,
+                    subject: emailResult.subject,
+                    body_html: emailResult.html,
+                    sent_success: emailResult.sent
+                });
+            }
         } catch (err) {
             console.error(`[GracePeriodService] Email delivery failed:`, err.message);
         }

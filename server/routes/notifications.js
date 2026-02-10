@@ -210,6 +210,53 @@ router.get('/', async (req, res) => {
                 });
             }
         }
+
+
+        // ---------------------------------------------------------
+        // 3.4. Dunning / Grace Period Alerts
+        // ---------------------------------------------------------
+        try {
+            const dunningRes = await pool.controlPool.query(`
+                SELECT event_type, current_phase, created_at, details
+                FROM clinic_dunning_logs 
+                WHERE clinic_id = $1 
+                AND event_type IN ('phase_escalated', 'payment_failed')
+                AND created_at > NOW() - INTERVAL '7 days'
+                ORDER BY created_at DESC LIMIT 1
+            `, [clinicId]);
+
+            if (dunningRes.rows.length > 0) {
+                const log = dunningRes.rows[0];
+                let msg = 'We detected an issue with your payment.';
+                let severity = 'warning';
+                let title = 'Billing Notice';
+
+                if (log.current_phase === 1) {
+                    msg = 'Your payment failed. You are in a 15-day grace period.';
+                } else if (log.current_phase === 2) {
+                    msg = 'Urgent: Payment overdue. Account is Read-Only.';
+                    severity = 'error';
+                } else if (log.current_phase >= 3) {
+                    msg = 'Critical: Account locked due to outstanding balance.';
+                    severity = 'error';
+                    title = 'Account Locked';
+                }
+
+                alerts.push({
+                    id: `dunning-${log.current_phase}-${new Date(log.created_at).getTime()}`,
+                    type: 'billing',
+                    severity: severity,
+                    title: title,
+                    message: msg,
+                    createdAt: log.created_at,
+                    actionUrl: '/admin-settings?tab=practice',
+                    dismissible: true
+                });
+            }
+        } catch (err) {
+            console.error('[Notifications] Failed to load dunning alerts:', err);
+        }
+
         // ---------------------------------------------------------
         // 3.5. Required Audit (Mock/Placeholder Logic for now)
         // ---------------------------------------------------------

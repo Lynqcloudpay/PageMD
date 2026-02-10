@@ -149,8 +149,18 @@ router.get('/clinics/:id', verifySuperAdmin, async (req, res) => {
         // Stubbed recent usage metrics
         const usage = [];
 
-        // Stubbed payment history
-        const payments = [];
+        // Fetch real payment history for the overview
+        const paymentsRes = await pool.controlPool.query(`
+            SELECT * FROM platform_billing_events 
+            WHERE clinic_id = $1 
+            ORDER BY created_at DESC 
+            LIMIT 5
+        `, [id]);
+        const payments = paymentsRes.rows.map(p => ({
+            amount: (p.amount_total / 100).toFixed(2),
+            status: p.status,
+            created_at: p.created_at
+        }));
 
         // 3. Growth Stats (Referrals & Ghost Seats)
         const ghostRes = await pool.controlPool.query(`
@@ -338,6 +348,12 @@ router.get('/clinics/:id/billing', verifySuperAdmin, async (req, res) => {
                 console.error('[SuperAdmin] Failed to fetch Stripe invoices:', stripeErr.message);
             }
         }
+        // Get dunning logs
+        const dunningLogsRes = await pool.controlPool.query(`
+            SELECT * FROM clinic_dunning_logs 
+            WHERE clinic_id = $1 
+            ORDER BY created_at DESC
+        `, [id]);
 
         res.json({
             clinic,
@@ -991,53 +1007,6 @@ router.get('/dashboard', verifySuperAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error fetching dashboard:', error);
         res.status(500).json({ error: 'Failed to fetch dashboard data' });
-    }
-});
-
-/**
- * POST /api/super/clinics/:id/impersonate
- * Generate a short-lived impersonation token for a clinic user
- */
-router.post('/clinics/:id/impersonate', verifySuperAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { userId, reason } = req.body;
-
-        if (!reason) {
-            return res.status(400).json({ error: 'Access reason is required for audit' });
-        }
-
-        // 1. Verify target user is NOT another platform admin (unless specifically allowed)
-        // We check against the super_admins table
-        const targetAdminCheck = await pool.controlPool.query('SELECT id FROM super_admins WHERE id = $1', [userId]);
-        if (targetAdminCheck.rows.length > 0) {
-            return res.status(403).json({ error: 'Cannot impersonate another Platform Administrator' });
-        }
-
-        // 2. Generate a secure random token
-        const crypto = require('crypto');
-        const token = crypto.randomBytes(32).toString('hex');
-
-        // 3. Create impersonation record
-        await pool.controlPool.query(`
-            INSERT INTO platform_impersonation_tokens
-            (admin_id, target_clinic_id, target_user_id, token, reason, expires_at)
-        VALUES($1, $2, $3, $4, $5, NOW() + INTERVAL '15 minutes')
-            `, [req.platformAdmin.id, id, userId, token, reason]);
-
-        // 4. Log the "Break Glass" event
-        // 4. Log the "Break Glass" event
-        await AuditService.log(null, 'impersonation_initiated', id, {
-            targetUserId: userId,
-            reason,
-            adminEmail: req.platformAdmin.email,
-            expiresAt: new Date(Date.now() + 15 * 60000).toISOString()
-        });
-
-        res.json({ token });
-    } catch (error) {
-        console.error('Error initiating impersonation:', error);
-        res.status(500).json({ error: 'Failed to initiate impersonation session' });
     }
 });
 

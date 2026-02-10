@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap, Users, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Building2, Activity, CreditCard, Shield, Settings, AlertTriangle, CheckCircle, XCircle, Trash2, Key, UserX, UserCheck, Mail, Clock, ChevronRight, AlertCircle, Database, Eye, Zap, Users, TrendingUp, X } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
-const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall }) => {
-    const [users, setUsers] = useState([]);
+const ClinicPersonnelManager = ({ clinicId, clinicSlug, apiCall, users, setUsers }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -838,6 +837,131 @@ const PlatformAuditTrail = ({ clinicId, apiCall }) => {
 };
 
 
+const ClinicDunningLog = ({ clinicId, apiCall }) => {
+    const [logs, setLogs] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedEmail, setSelectedEmail] = useState(null);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await apiCall('GET', `/clinics/${clinicId}/billing`);
+                setLogs(data.dunningLogs || []);
+            } catch (err) {
+                console.error('Failed to load dunning logs:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [clinicId]);
+
+    if (loading) return <div className="text-slate-400 text-xs animate-pulse p-3">Loading logs...</div>;
+
+    return (
+        <>
+            {selectedEmail && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelectedEmail(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                            <div>
+                                <h3 className="font-bold text-slate-800 text-sm">{selectedEmail.subject}</h3>
+                                <p className="text-xs text-slate-500">Sent to: {selectedEmail.recipient}</p>
+                            </div>
+                            <button onClick={() => setSelectedEmail(null)} className="p-1 hover:bg-slate-200 rounded-full"><X className="w-4 h-4 text-slate-500" /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 bg-white">
+                            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <table className="w-full text-[11px]">
+                <thead>
+                    <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50 bg-slate-50/50">
+                        <th className="px-3 py-2 text-left font-medium">Timestamp</th>
+                        <th className="px-3 py-2 text-left font-medium">Event</th>
+                        <th className="px-3 py-2 text-center font-medium">Phases</th>
+                        <th className="px-3 py-2 text-left font-medium">Details</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                    {logs.length > 0 ? logs.map((log) => {
+                        let detailsObj = log.details;
+                        if (typeof log.details === 'string') {
+                            try { detailsObj = JSON.parse(log.details); } catch (e) { detailsObj = { raw: log.details }; }
+                        }
+
+                        const isEmail = log.event_type === 'email_sent';
+                        const subject = detailsObj?.subject;
+                        const bodyHtml = detailsObj?.body_html;
+                        const recipient = detailsObj?.recipient;
+
+                        const detailText = isEmail ? (subject || 'Email Sent') : (detailsObj?.message || detailsObj?.reason || (detailsObj ? JSON.stringify(detailsObj) : 'No details'));
+                        const triggeredBy = detailsObj?.triggered_by || 'System';
+
+                        return (
+                            <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group">
+                                <td className="px-4 py-3 text-slate-500 whitespace-nowrap align-top">
+                                    <div className="font-medium text-slate-700">
+                                        {new Date(log.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                    </div>
+                                    <div className="text-[9px] text-slate-400">
+                                        {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                </td>
+                                <td className="px-3 py-3 align-top">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider ${log.event_type === 'email_sent' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
+                                        log.event_type === 'phase_escalated' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                            log.event_type === 'payment_failed' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                                'bg-slate-100 text-slate-500 border border-slate-200'
+                                        }`}>
+                                        {log.event_type.replace(/_/g, ' ')}
+                                    </span>
+                                </td>
+                                <td className="px-3 py-3 text-center align-top">
+                                    <div className="flex items-center justify-center gap-1.5 text-[10px] font-medium text-slate-600 bg-white border border-slate-100 px-2 py-0.5 rounded shadow-sm">
+                                        <span className="text-slate-400">P{log.previous_phase}</span>
+                                        <span className="text-slate-300">→</span>
+                                        <span className={log.current_phase > log.previous_phase ? 'text-rose-500 font-bold' : 'text-emerald-500 font-bold'}>
+                                            P{log.current_phase}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-3 py-3 text-slate-600 text-[10px] leading-relaxed align-top">
+                                    <div className="font-medium text-slate-800 mb-0.5 flex items-center gap-2">
+                                        {detailText}
+                                        {isEmail && bodyHtml && (
+                                            <button
+                                                onClick={() => setSelectedEmail({ subject, body_html: bodyHtml, recipient })}
+                                                className="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition-colors uppercase font-bold"
+                                            >
+                                                View
+                                            </button>
+                                        )}
+                                    </div>
+                                    {isEmail && recipient && (
+                                        <div className="text-[9px] text-slate-400">To: {recipient}</div>
+                                    )}
+                                    {triggeredBy && !isEmail && (
+                                        <div className="text-[9px] text-slate-400 flex items-center gap-1">
+                                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                                            Triggered by: <span className="font-semibold text-slate-500">{triggeredBy}</span>
+                                        </div>
+                                    )}
+                                </td>
+                            </tr>
+                        );
+                    }) : (
+                        <tr><td colSpan="4" className="px-3 py-4 text-center text-slate-400 italic text-[10px]">No logs recorded.</td></tr>
+                    )}
+                </tbody>
+            </table>
+        </>
+    );
+};
+
 const ClinicBillingStatus = ({ clinicId, apiCall }) => {
     const [billing, setBilling] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -857,162 +981,56 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
         }
     };
 
-    if (loading) return <div className="text-slate-400 text-xs animate-pulse p-3">Loading billing…</div>;
-    if (!billing) return null;
+    if (loading) return <div className="text-slate-400 text-xs animate-pulse p-3">Loading billing...</div>;
+    if (!billing || !billing.clinic) return <div className="text-[10px] text-slate-400 italic p-4 text-center">No subscription metadata found for this clinic.</div>;
 
-    const { clinic, events, stripeInvoices = [], totals } = billing;
+    const { clinic, totals } = billing;
     const isActive = clinic.stripe_subscription_status === 'active';
-    const displayInvoices = stripeInvoices.length > 0 ? stripeInvoices : [];
-
-    const statusPill = (s) => {
-        if (s === 'paid' || s === 'completed') return 'bg-emerald-50 text-emerald-600 border-emerald-100';
-        if (s === 'open') return 'bg-amber-50 text-amber-600 border-amber-100';
-        if (s === 'void' || s === 'uncollectible' || s === 'failed') return 'bg-red-50 text-red-600 border-red-100';
-        return 'bg-slate-50 text-slate-500 border-slate-100';
-    };
 
     return (
-        <div className="space-y-3">
-            {/* Billing Status & Controls */}
-            <div className="flex items-center gap-3 flex-wrap">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                    {isActive ? 'Active' : clinic.stripe_subscription_status || 'None'}
-                </span>
+        <div className="flex items-center gap-3 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${isActive ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                {isActive ? 'Active' : clinic.stripe_subscription_status || 'None'}
+            </span>
 
-                {clinic.billing_grace_phase > 0 && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-[9px] font-bold">
-                        <AlertCircle className="w-3 h-3" />
-                        PHASE {clinic.billing_grace_phase}
+            {clinic.billing_grace_phase > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 border border-red-100 rounded-full text-[9px] font-bold">
+                    <AlertCircle className="w-3 h-3" />
+                    PHASE {clinic.billing_grace_phase}
+                </span>
+            )}
+
+            <span className="text-xs text-slate-500">
+                Revenue: <span className="font-semibold text-slate-700">${totals.totalRevenueDollars}</span>
+            </span>
+
+            <span className="text-xs text-slate-400">·</span>
+
+            <div className="flex items-center gap-2">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold">Dunning Override:</span>
+                <button
+                    onClick={async () => {
+                        if (!confirm(`Are you sure you want to ${clinic.billing_manual_override ? 'DISABLE' : 'ENABLE'} manual override? This will ${clinic.billing_manual_override ? 'RE-ENABLE' : 'BYPASS'} automated lockout for this clinic.`)) return;
+                        try {
+                            await apiCall('PATCH', `/clinics/${clinicId}/controls`, { billing_manual_override: !clinic.billing_manual_override });
+                            loadBilling();
+                        } catch (err) { alert('Failed to update override'); }
+                    }}
+                    className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors ${clinic.billing_manual_override ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}
+                >
+                    {clinic.billing_manual_override ? 'ON' : 'OFF'}
+                </button>
+            </div>
+
+            {clinic.billing_grace_start_at && (
+                <>
+                    <span className="text-xs text-slate-400">·</span>
+                    <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
+                        Grace Started: {new Date(clinic.billing_grace_start_at).toLocaleDateString()}
                     </span>
-                )}
-
-                <span className="text-xs text-slate-500">
-                    Revenue: <span className="font-semibold text-slate-700">${totals.totalRevenueDollars}</span>
-                </span>
-
-                <span className="text-xs text-slate-400">·</span>
-
-                <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-400 uppercase font-semibold">Dunning Override:</span>
-                    <button
-                        onClick={async () => {
-                            if (!confirm(`Are you sure you want to ${clinic.billing_manual_override ? 'DISABLE' : 'ENABLE'} manual override? This will ${clinic.billing_manual_override ? 'RE-ENABLE' : 'BYPASS'} automated lockout for this clinic.`)) return;
-                            try {
-                                await apiCall('PATCH', `/clinics/${clinicId}/controls`, { billing_manual_override: !clinic.billing_manual_override });
-                                loadBilling();
-                            } catch (err) { alert('Failed to update override'); }
-                        }}
-                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border transition-colors ${clinic.billing_manual_override ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-400 border-slate-200'}`}
-                    >
-                        {clinic.billing_manual_override ? 'ON' : 'OFF'}
-                    </button>
-                </div>
-
-                {clinic.billing_grace_start_at && (
-                    <>
-                        <span className="text-xs text-slate-400">·</span>
-                        <span className="text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded">
-                            Grace Started: {new Date(clinic.billing_grace_start_at).toLocaleDateString()}
-                        </span>
-                    </>
-                )}
-            </div>
-
-            {/* History Tabs (Two Columns) */}
-            <div className="grid grid-cols-2 gap-4">
-                {/* 1. Payment History */}
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 mb-1 px-1">
-                        <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                        <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Payment History</h3>
-                    </div>
-                    <div className="border border-slate-100 rounded-lg overflow-hidden bg-white">
-                        <table className="w-full text-[11px]">
-                            <thead>
-                                <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50 bg-slate-50/50">
-                                    <th className="px-3 py-2 text-left font-medium">Date</th>
-                                    <th className="px-3 py-2 text-left font-medium">Event</th>
-                                    <th className="px-3 py-2 text-right font-medium">Amount</th>
-                                    <th className="px-3 py-2 text-center font-medium">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {displayInvoices.length > 0 ? displayInvoices.map((inv) => (
-                                    <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-3 py-2 text-slate-500">{inv.date ? new Date(inv.date).toLocaleDateString() : '—'}</td>
-                                        <td className="px-3 py-2 text-slate-600 font-medium truncate max-w-[120px]">{inv.description}</td>
-                                        <td className="px-3 py-2 text-right font-mono text-slate-700">${inv.amountDollars}</td>
-                                        <td className="px-3 py-2 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(inv.status)}`}>
-                                                {inv.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                )) : events.length > 0 ? events.map((event, i) => (
-                                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-3 py-2 text-slate-500">{new Date(event.created_at).toLocaleDateString()}</td>
-                                        <td className="px-3 py-2 font-medium text-slate-600">{event.event_type.replace(/_/g, ' ')}</td>
-                                        <td className="px-3 py-2 text-right font-mono text-slate-700">${(event.amount_total / 100).toFixed(2)}</td>
-                                        <td className="px-3 py-2 text-center">
-                                            <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[8px] font-semibold border ${statusPill(event.status)}`}>
-                                                {event.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan="4" className="px-3 py-4 text-center text-slate-400 italic text-[10px]">No payment events recorded.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* 2. Dunning History (Log) */}
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 mb-1 px-1">
-                        <Activity className="w-3.5 h-3.5 text-slate-400" />
-                        <h3 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Dunning & Email Log</h3>
-                    </div>
-                    <div className="border border-slate-100 rounded-lg overflow-hidden bg-white">
-                        <table className="w-full text-[11px]">
-                            <thead>
-                                <tr className="text-[9px] text-slate-400 uppercase tracking-wider border-b border-slate-50 bg-slate-50/50">
-                                    <th className="px-3 py-2 text-left font-medium">Timestamp</th>
-                                    <th className="px-3 py-2 text-left font-medium">Event</th>
-                                    <th className="px-3 py-2 text-center font-medium">Phases</th>
-                                    <th className="px-3 py-2 text-left font-medium">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {billing.dunningLogs && billing.dunningLogs.length > 0 ? billing.dunningLogs.map((log) => (
-                                    <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                                        <td className="px-3 py-2 text-slate-500 whitespace-nowrap">
-                                            {new Date(log.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                        </td>
-                                        <td className="px-3 py-2">
-                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${log.event_type === 'email_sent' ? 'bg-blue-50 text-blue-600' :
-                                                log.event_type === 'phase_escalated' ? 'bg-red-50 text-red-600' :
-                                                    'bg-slate-100 text-slate-600'
-                                                }`}>
-                                                {log.event_type.replace(/_/g, ' ')}
-                                            </span>
-                                        </td>
-                                        <td className="px-3 py-2 text-center text-slate-400 text-[9px]">
-                                            {log.previous_phase} → {log.current_phase}
-                                        </td>
-                                        <td className="px-3 py-2 text-slate-500 truncate max-w-[200px]" title={JSON.stringify(log.details)}>
-                                            {log.details?.email_type || log.details?.message || 'Details…'}
-                                        </td>
-                                    </tr>
-                                )) : (
-                                    <tr><td colSpan="4" className="px-3 py-4 text-center text-slate-400 italic text-[10px]">No dunning logs recorded.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 };
@@ -1056,6 +1074,7 @@ const PlatformAdminClinicDetails = () => {
     const [deleting, setDeleting] = useState(false);
     const [activeTab, setActiveTab] = useState('overview');
     const [impersonating, setImpersonating] = useState(false);
+    const [users, setUsers] = useState([]);
 
     useEffect(() => {
         loadClinic();
@@ -1063,8 +1082,12 @@ const PlatformAdminClinicDetails = () => {
 
     const loadClinic = async () => {
         try {
-            const data = await apiCall('GET', `/clinics/${id}`);
+            const [data, usersData] = await Promise.all([
+                apiCall('GET', `/clinics/${id}`),
+                apiCall('GET', `/clinics/${id}/users`)
+            ]);
             setClinicData(data);
+            setUsers(usersData);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to load clinic details');
         } finally {
@@ -1314,7 +1337,7 @@ const PlatformAdminClinicDetails = () => {
                         {activeTab === 'personnel' && (
                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <CollapsibleCard title="Clinical Personnel" icon={Users} badge={`${users?.length || 0} Registered`}>
-                                    <ClinicPersonnelManager clinicId={id} clinicSlug={clinic.slug} apiCall={apiCall} />
+                                    <ClinicPersonnelManager clinicId={id} clinicSlug={clinic.slug} apiCall={apiCall} users={users} setUsers={setUsers} />
                                 </CollapsibleCard>
                             </div>
                         )}
@@ -1326,7 +1349,7 @@ const PlatformAdminClinicDetails = () => {
                                 </CollapsibleCard>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <CollapsibleCard title="Payment History" icon={Clock} defaultOpen={false}>
+                                    <CollapsibleCard title="Payment History" icon={Clock} defaultOpen={true}>
                                         <div className="space-y-2">
                                             {recent_payments?.map((payment, i) => (
                                                 <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
@@ -1343,7 +1366,7 @@ const PlatformAdminClinicDetails = () => {
                                         </div>
                                     </CollapsibleCard>
 
-                                    <CollapsibleCard title="Automated Dunning Logs" icon={Activity}>
+                                    <CollapsibleCard title="Automated Dunning Logs" icon={Activity} defaultOpen={true}>
                                         <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                             <ClinicDunningLog clinicId={id} apiCall={apiCall} />
                                         </div>

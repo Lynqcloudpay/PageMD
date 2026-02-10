@@ -54,16 +54,19 @@ rsync -av --delete -e "ssh -i $KEY_PATH -o StrictHostKeyChecking=no" "$LOCAL_DIS
 # Verify files reached the server
 echo "🔍 Verifying files on server..."
 ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST "ls -la $DIR/deploy/static/index.html"
+# 3. Sync Server Files
+echo "📤 Syncing server files to server..."
+rsync -av --delete -e "ssh -i $KEY_PATH -o StrictHostKeyChecking=no" "$PROJECT_ROOT/server/" "$USER@$HOST:$DIR/server/"
 
-# 3. Server-side API build & restart
+# 4. Server-side API build & restart
 echo "⚙️  Updating server code and restarting API..."
 ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   set -e
   cd $DIR
   
-  echo "⬇️  Pulling latest changes..."
-  git fetch origin
-  git reset --hard origin/main
+  # echo "⬇️  Pulling latest changes..."
+  # git fetch origin
+  # git reset --hard origin/main
   
   cd deploy
   
@@ -145,6 +148,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
 
   echo "⚙️  Running Billing Grace Period Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-billing-grace-period.js || echo "⚠️ Warning: Billing grace period migration failed."
+
+  echo "📈 Running Dunning Logs Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-dunning-logs.js || echo "⚠️ Warning: Dunning logs migration failed."
 
   echo "🧹 Cleanup..."
   docker image prune -f

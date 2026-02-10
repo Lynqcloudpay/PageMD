@@ -425,7 +425,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 />
             )}
 
-            <div className="bg-white/60 backdrop-blur-md border border-white/50 shadow-xl shadow-slate-200/30 rounded-2xl overflow-hidden">
+            <div className="bg-white/60 backdrop-blur-md border border-white/50 shadow-xl shadow-slate-200/30 rounded-2xl">
                 {/* Flags Manager Panel */}
                 {isFlagsPanelOpen && (
                     <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
