@@ -12,20 +12,19 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const pool = process.env.DATABASE_URL
-    ? new Pool({
-        connectionString: process.env.DATABASE_URL.replace('db:5432', 'localhost:5432'), // Local dev fix
-        ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
-            ? false
-            : { rejectUnauthorized: false },
-    })
+    ?new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
+        ? false
+        : { rejectUnauthorized: false },
+})
     : new Pool({
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 5432,
-        database: process.env.DB_NAME || 'emr_db',
-        user: process.env.DB_USER || 'emr_user',
-        password: process.env.DB_PASSWORD || 'password',
-    });
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    database: process.env.DB_NAME || 'emr_db',
+    user: process.env.DB_USER || 'emr_user',
+    password: process.env.DB_PASSWORD || 'password',
+});
 
 async function migrate() {
     const client = await pool.connect();
