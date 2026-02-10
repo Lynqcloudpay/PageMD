@@ -541,11 +541,11 @@ const Layout = ({ children }) => {
                 >
                     <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_15px_40px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col relative">
                         {/* Header inside the bubble */}
-                        <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative">
+                        <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-40">
                             <div className="flex-1 overflow-hidden">
                                 <PatientTabs />
                             </div>
-                            <div className="flex items-center gap-2 px-4 flex-shrink-0">
+                            <div className="flex items-center gap-2 px-4 flex-shrink-0 overflow-visible">
                                 <AlertBell />
                             </div>
                         </div>

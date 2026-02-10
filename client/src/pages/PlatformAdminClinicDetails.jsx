@@ -860,8 +860,18 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
     if (loading) return <div className="text-slate-400 text-sm animate-pulse p-4">Loading billing status...</div>;
     if (!billing) return null;
 
-    const { clinic, events, totals } = billing;
+    const { clinic, events, stripeInvoices = [], totals } = billing;
     const hasActiveSubscription = clinic.stripe_subscription_status === 'active';
+
+    // Use stripe invoices if available, otherwise local events
+    const displayInvoices = stripeInvoices.length > 0 ? stripeInvoices : [];
+
+    const statusColor = (s) => {
+        if (s === 'paid' || s === 'completed') return 'bg-emerald-100 text-emerald-700';
+        if (s === 'open') return 'bg-amber-100 text-amber-700';
+        if (s === 'void' || s === 'uncollectible' || s === 'failed') return 'bg-red-100 text-red-700';
+        return 'bg-slate-100 text-slate-600';
+    };
 
     return (
         <div className="space-y-3">
@@ -886,7 +896,7 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
                     </div>
                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/20">
                         <div className="text-center">
-                            <p className="text-sm font-black">{totals.paymentCount}</p>
+                            <p className="text-sm font-black">{displayInvoices.length || totals.paymentCount}</p>
                             <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Payments</p>
                         </div>
                         <div className="text-center border-x border-white/20">
@@ -906,7 +916,7 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
                 </div>
             </div>
 
-            {/* Payment History Table — Compact */}
+            {/* Payment History Table — Uses Stripe invoices when available */}
             <div className="overflow-hidden border border-slate-100 rounded-xl bg-white shadow-sm">
                 <div className="px-3 py-2 bg-slate-50 border-b border-slate-100">
                     <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -917,19 +927,53 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
                 <table className="w-full text-[11px] text-left">
                     <thead className="bg-slate-50/50 text-slate-400 font-bold uppercase tracking-wider">
                         <tr>
-                            <th className="px-3 py-2">Event</th>
+                            <th className="px-3 py-2">Date</th>
+                            <th className="px-3 py-2">Description</th>
                             <th className="px-3 py-2 text-center">Amount</th>
                             <th className="px-3 py-2 text-center">Status</th>
-                            <th className="px-3 py-2 text-right">Date</th>
+                            <th className="px-3 py-2 text-right">Invoice</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                        {events.length > 0 ? events.map((event, i) => (
+                        {displayInvoices.length > 0 ? displayInvoices.map((inv) => (
+                            <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-3 py-2 text-slate-600 font-medium">
+                                    {inv.date ? new Date(inv.date).toLocaleDateString() : '—'}
+                                </td>
+                                <td className="px-3 py-2 text-slate-700 font-medium">
+                                    {inv.description}
+                                </td>
+                                <td className="px-3 py-2 text-center font-mono font-bold text-slate-800">
+                                    ${inv.amountDollars}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${statusColor(inv.status)}`}>
+                                        {inv.status}
+                                    </span>
+                                </td>
+                                <td className="px-3 py-2 text-right">
+                                    {inv.invoiceUrl ? (
+                                        <a
+                                            href={inv.invoiceUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-indigo-500 hover:text-indigo-700 font-bold text-[9px] uppercase tracking-wider hover:underline"
+                                        >
+                                            View →
+                                        </a>
+                                    ) : (
+                                        <span className="text-slate-300">—</span>
+                                    )}
+                                </td>
+                            </tr>
+                        )) : events.length > 0 ? events.map((event, i) => (
                             <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                <td className="px-3 py-2 text-slate-600 font-medium">
+                                    {new Date(event.created_at).toLocaleDateString()}
+                                </td>
                                 <td className="px-3 py-2">
                                     <div className="flex items-center gap-1.5">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${event.event_type === 'payment_succeeded' ? 'bg-emerald-500' : 'bg-red-500'
-                                            }`}></div>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${event.event_type === 'payment_succeeded' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                                         <span className="font-bold text-slate-700">{event.event_type}</span>
                                     </div>
                                 </td>
@@ -937,17 +981,14 @@ const ClinicBillingStatus = ({ clinicId, apiCall }) => {
                                     ${(event.amount_total / 100).toFixed(2)}
                                 </td>
                                 <td className="px-3 py-2 text-center">
-                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${event.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'
-                                        }`}>
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase ${statusColor(event.status)}`}>
                                         {event.status}
                                     </span>
                                 </td>
-                                <td className="px-3 py-2 text-right text-slate-500 font-mono">
-                                    {new Date(event.created_at).toLocaleString()}
-                                </td>
+                                <td className="px-3 py-2 text-right text-slate-300">—</td>
                             </tr>
                         )) : (
-                            <tr><td colSpan="4" className="px-3 py-4 text-center text-slate-400 italic text-[11px]">No payment events recorded yet.</td></tr>
+                            <tr><td colSpan="5" className="px-3 py-4 text-center text-slate-400 italic text-[11px]">No payment events recorded yet.</td></tr>
                         )}
                     </tbody>
                 </table>

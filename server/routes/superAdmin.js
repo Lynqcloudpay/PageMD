@@ -289,7 +289,9 @@ router.get('/clinics/:id/billing', verifySuperAdmin, async (req, res) => {
             return res.status(404).json({ error: 'Clinic not found' });
         }
 
-        // Get payment history
+        const clinic = clinicRes.rows[0];
+
+        // Get local payment history
         const eventsRes = await pool.controlPool.query(`
             SELECT * FROM platform_billing_events 
             WHERE clinic_id = $1 
@@ -297,7 +299,7 @@ router.get('/clinics/:id/billing', verifySuperAdmin, async (req, res) => {
             LIMIT 50
         `, [id]);
 
-        // Calculate totals
+        // Calculate totals from local events
         const totalsRes = await pool.controlPool.query(`
             SELECT 
                 COALESCE(SUM(amount_total), 0) as total_revenue,
@@ -306,9 +308,37 @@ router.get('/clinics/:id/billing', verifySuperAdmin, async (req, res) => {
             WHERE clinic_id = $1 AND event_type = 'payment_succeeded'
         `, [id]);
 
+        // Also pull real Stripe invoices if customer exists
+        let stripeInvoices = [];
+        if (clinic.stripe_customer_id) {
+            try {
+                const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+                const invoices = await stripe.invoices.list({
+                    customer: clinic.stripe_customer_id,
+                    limit: 50,
+                });
+                stripeInvoices = invoices.data.map(inv => ({
+                    id: inv.id,
+                    date: inv.created ? new Date(inv.created * 1000).toISOString() : null,
+                    amount: inv.amount_paid || inv.total || 0,
+                    amountDollars: ((inv.amount_paid || inv.total || 0) / 100).toFixed(2),
+                    status: inv.status,
+                    paid: inv.status === 'paid',
+                    invoiceUrl: inv.hosted_invoice_url,
+                    invoicePdf: inv.invoice_pdf,
+                    description: inv.description || 'Subscription invoice',
+                    periodStart: inv.period_start ? new Date(inv.period_start * 1000).toISOString() : null,
+                    periodEnd: inv.period_end ? new Date(inv.period_end * 1000).toISOString() : null,
+                }));
+            } catch (stripeErr) {
+                console.error('[SuperAdmin] Failed to fetch Stripe invoices:', stripeErr.message);
+            }
+        }
+
         res.json({
-            clinic: clinicRes.rows[0],
+            clinic,
             events: eventsRes.rows,
+            stripeInvoices,
             totals: {
                 totalRevenue: totalsRes.rows[0].total_revenue,
                 totalRevenueDollars: (totalsRes.rows[0].total_revenue / 100).toFixed(2),
