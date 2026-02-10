@@ -143,6 +143,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "⚙️  Running Scheduling Hours Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-scheduling-hours.js || echo "⚠️ Warning: Scheduling hours migration failed."
 
+  echo "⚙️  Running Billing Grace Period Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-billing-grace-period.js || echo "⚠️ Warning: Billing grace period migration failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF
