@@ -23,6 +23,7 @@ async function runMigrationForSchema(client, schema) {
     console.log(`  Updating users table in ${schema}...`);
     await client.query(`
         ALTER TABLE users
+        ALTER COLUMN password_hash DROP NOT NULL,
         ADD COLUMN IF NOT EXISTS invite_token UUID UNIQUE,
         ADD COLUMN IF NOT EXISTS invite_expires_at TIMESTAMP WITH TIME ZONE,
         ADD COLUMN IF NOT EXISTS reset_token UUID UNIQUE,
