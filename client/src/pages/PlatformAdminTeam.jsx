@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Search, Plus, Shield, Mail, Calendar, CheckCircle, XCircle, Lock, Edit2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Users, Search, Plus, Shield, Mail, Calendar, CheckCircle, XCircle, Lock, Edit2, UserPlus, Trash2 } from 'lucide-react';
 import { usePlatformAdmin } from '../context/PlatformAdminContext';
 
 const PlatformAdminTeam = () => {
@@ -19,6 +19,8 @@ const PlatformAdminTeam = () => {
     const [success, setSuccess] = useState('');
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deletingUser, setDeletingUser] = useState(null);
 
     useEffect(() => {
         loadTeam();
@@ -55,20 +57,27 @@ const PlatformAdminTeam = () => {
 
     const handleUpdateUser = async (e) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
-
         try {
             await apiCall('PATCH', `/platform-auth/team/${editingUser.id}`, {
                 role: editingUser.role,
                 is_active: editingUser.is_active
             });
-            setSuccess(`User ${editingUser.first_name} updated successfully!`);
             setShowEditModal(false);
             setEditingUser(null);
             loadTeam();
         } catch (err) {
-            setError(err.response?.data?.error || 'Failed to update user');
+            setError(err.message);
+        }
+    };
+
+    const handleDeleteUser = async () => {
+        try {
+            await apiCall('DELETE', `/platform-auth/team/${deletingUser.id}`);
+            setShowDeleteModal(false);
+            setDeletingUser(null);
+            loadTeam();
+        } catch (err) {
+            setError(err.message);
         }
     };
 
@@ -188,15 +197,30 @@ const PlatformAdminTeam = () => {
                                                 {new Date(user.created_at).toLocaleDateString()}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingUser({ ...user });
-                                                        setShowEditModal(true);
-                                                    }}
-                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingUser({ ...user });
+                                                            setShowEditModal(true);
+                                                        }}
+                                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                        title="Edit User"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" />
+                                                    </button>
+                                                    {user.id !== currentAdmin.id && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setDeletingUser(user);
+                                                                setShowDeleteModal(true);
+                                                            }}
+                                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                                            title="Delete User"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -419,6 +443,41 @@ const PlatformAdminTeam = () => {
                                 Save Changes
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-8 relative animate-in fade-in zoom-in duration-200">
+                        <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6 text-red-600">
+                            <Trash2 className="w-8 h-8" />
+                        </div>
+
+                        <div className="text-center mb-8">
+                            <h2 className="text-xl font-black text-slate-800">Remove Team Member?</h2>
+                            <p className="text-sm text-slate-500 font-medium mt-2">
+                                Are you sure you want to remove <span className="text-slate-800 font-bold">{deletingUser?.first_name} {deletingUser?.last_name}</span>? This action cannot be undone.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setDeletingUser(null);
+                                }}
+                                className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm uppercase tracking-wider"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteUser}
+                                className="flex-1 py-3 px-4 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all text-sm uppercase tracking-wider shadow-lg shadow-red-500/25"
+                            >
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

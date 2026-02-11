@@ -112,6 +112,28 @@ const verifyToken = (req, res, next) => {
 };
 
 /**
+ * Middleware to check if user has a specific privilege
+ */
+const checkPrivilege = (privilege) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        // Admin user (by username or role) has all privileges
+        if (req.user.username === 'admin' || req.user.role === 'admin') {
+            return next();
+        }
+
+        const privileges = req.user.privileges || [];
+        if (!privileges.includes(privilege)) {
+            return res.status(403).json({ error: `Forbidden: Requires ${privilege.replace('_', ' ')} permission` });
+        }
+        next();
+    };
+};
+
+/**
  * POST /api/sales/auth/login
  * Login for sales team members
  */
@@ -140,7 +162,7 @@ router.post('/auth/login', async (req, res) => {
 
         // Generate token
         const token = jwt.sign(
-            { id: user.id, username: user.username },
+            { id: user.id, username: user.username, role: user.role, privileges: user.privileges || [] },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -151,7 +173,9 @@ router.post('/auth/login', async (req, res) => {
             user: {
                 id: user.id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                role: user.role,
+                privileges: user.privileges || []
             }
         });
 
@@ -224,9 +248,9 @@ router.patch('/auth/profile', verifyToken, async (req, res) => {
  * Create a new sales team user (Protected)
  * Now uses invitation-based flow.
  */
-router.post('/auth/create-user', verifyToken, async (req, res) => {
+router.post('/auth/create-user', verifyToken, checkPrivilege('manage_team'), async (req, res) => {
     try {
-        const { username, email } = req.body;
+        const { username, email, role, privileges } = req.body;
 
         if (!username || !email) {
             return res.status(400).json({ error: 'Username and email required' });
@@ -243,9 +267,9 @@ router.post('/auth/create-user', verifyToken, async (req, res) => {
         const inviteExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
         await pool.query(
-            `INSERT INTO sales_team_users (username, email, invite_token, invite_expires_at, is_active) 
-       VALUES ($1, $2, $3, $4, false)`,
-            [username, email, inviteToken, inviteExpiresAt]
+            `INSERT INTO sales_team_users (username, email, role, privileges, invite_token, invite_expires_at, is_active) 
+       VALUES ($1, $2, $3, $4, $5, $6, false)`,
+            [username, email, role || 'seller', JSON.stringify(privileges || []), inviteToken, inviteExpiresAt]
         );
 
         // Send Email
@@ -346,11 +370,79 @@ router.post('/auth/redeem-invite', async (req, res) => {
  */
 router.get('/users', verifyToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, username, email, created_at, last_login FROM sales_team_users ORDER BY username');
+        const result = await pool.query('SELECT id, username, email, role, privileges, created_at, last_login, is_active FROM sales_team_users ORDER BY username');
         res.json({ users: result.rows });
     } catch (error) {
         console.error('Fetch users error:', error);
         res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+/**
+ * PATCH /api/sales/auth/users/:id
+ * Update sales team user (Protected)
+ */
+router.patch('/auth/users/:id', verifyToken, checkPrivilege('manage_team'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role, privileges, is_active } = req.body;
+
+        const updates = [];
+        const params = [id];
+        let paramCount = 1;
+
+        if (role) {
+            paramCount++;
+            updates.push(`role = $${paramCount}`);
+            params.push(role);
+        }
+
+        if (privileges) {
+            paramCount++;
+            updates.push(`privileges = $${paramCount}`);
+            params.push(JSON.stringify(privileges));
+        }
+
+        if (typeof is_active === 'boolean') {
+            paramCount++;
+            updates.push(`is_active = $${paramCount}`);
+            params.push(is_active);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ error: 'No updates provided' });
+        }
+
+        await pool.query(
+            `UPDATE sales_team_users SET ${updates.join(', ')} WHERE id = $1`,
+            params
+        );
+
+        res.json({ success: true, message: 'User updated successfully' });
+    } catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({ error: 'Failed to update user' });
+    }
+});
+
+/**
+ * DELETE /api/sales/auth/users/:id
+ * Delete sales team user (Protected)
+ */
+router.delete('/auth/users/:id', verifyToken, checkPrivilege('manage_team'), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Prevent self-deletion
+        if (id == req.user.id) {
+            return res.status(400).json({ error: 'Cannot delete your own account' });
+        }
+
+        await pool.query('DELETE FROM sales_team_users WHERE id = $1', [id]);
+        res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({ error: 'Failed to delete user' });
     }
 });
 
@@ -959,7 +1051,7 @@ router.get('/verify/:token', async (req, res) => {
  * GET /api/sales/inquiries
  * Get all sales inquiries (PROTECTED)
  */
-router.get('/inquiries', verifyToken, async (req, res) => {
+router.get('/inquiries', verifyToken, checkPrivilege('manage_leads'), async (req, res) => {
     try {
         console.log('[SALES] Fetching inquiries. Query:', req.query);
         const { status, limit = 50, offset = 0 } = req.query;
@@ -974,6 +1066,12 @@ router.get('/inquiries', verifyToken, async (req, res) => {
                 WHERE 1=1
         `;
         const params = [];
+
+        // Apply global pipeline restriction
+        if (req.user.username !== 'admin' && req.user.role !== 'admin' && !(req.user.privileges || []).includes('view_global_pipeline')) {
+            query += ` AND i.claimed_by = $${params.length + 1}`;
+            params.push(req.user.id);
+        }
 
         if (status) {
             params.push(status);
@@ -1933,7 +2031,7 @@ router.post('/inquiries/:id/claim', verifyToken, async (req, res) => {
  * GET /api/sales/master-schedule
  * Get all demos for manager view (PROTECTED)
  */
-router.get('/master-schedule', verifyToken, async (req, res) => {
+router.get('/master-schedule', verifyToken, checkPrivilege('view_master_schedule'), async (req, res) => {
     try {
         // Determine access level
         const userRes = await pool.query('SELECT role FROM sales_team_users WHERE id = $1', [req.user.id]);
@@ -2258,7 +2356,7 @@ VALUES($1, 'demo_cancelled_seller', $2, $3)
  * DELETE /api/sales/inquiries/:id
  * Permanent deletion of a lead (Admin only)
  */
-router.delete('/inquiries/:id', verifyToken, async (req, res) => {
+router.delete('/inquiries/:id', verifyToken, checkPrivilege('delete_leads'), async (req, res) => {
     try {
         const { id } = req.params;
         const adminId = req.user.id;

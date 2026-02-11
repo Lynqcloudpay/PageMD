@@ -6,7 +6,7 @@ import {
     TrendingUp, UserPlus, Eye, EyeOff, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
     Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
-    CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare, Trophy, HelpCircle, Timer, DollarSign, Wallet, CircleDashed, UserMinus, RotateCcw
+    CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare, Trophy, HelpCircle, Timer, DollarSign, Wallet, CircleDashed, UserMinus, RotateCcw, Trash2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -24,6 +24,21 @@ import {
     parseISO,
     isToday
 } from 'date-fns';
+
+const DEFAULT_PRIVILEGES = {
+    admin: ['manage_leads', 'manage_demos', 'manage_team', 'view_master_schedule', 'view_global_pipeline', 'delete_leads'],
+    sales_manager: ['manage_leads', 'manage_demos', 'manage_team', 'view_master_schedule', 'view_global_pipeline'],
+    seller: ['manage_leads', 'manage_demos']
+};
+
+const ALL_PRIVILEGES = [
+    { id: 'manage_leads', label: 'Manage Leads' },
+    { id: 'manage_demos', label: 'Manage Demos' },
+    { id: 'manage_team', label: 'Manage Team & Settings' },
+    { id: 'view_master_schedule', label: 'View Master Schedule' },
+    { id: 'view_global_pipeline', label: 'View Global Pipeline' },
+    { id: 'delete_leads', label: 'Delete Leads' }
+];
 
 const SalesAdmin = () => {
     // Auth State
@@ -57,7 +72,7 @@ const SalesAdmin = () => {
     const [passMsg, setPassMsg] = useState({ text: '', type: '' });
 
     // Create User Form
-    const [userForm, setUserForm] = useState({ username: '', password: '', email: '' });
+    const [userForm, setUserForm] = useState({ username: '', email: '', role: 'seller', privileges: DEFAULT_PRIVILEGES.seller });
     const [userMsg, setUserMsg] = useState({ text: '', type: '' });
 
     // Profile Form
@@ -150,7 +165,11 @@ const SalesAdmin = () => {
     };
 
     const baseUrl = import.meta.env.VITE_API_URL || '/api';
-    const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'sales_manager';
+    const isAdmin = currentUser?.username === 'admin' || currentUser?.role === 'admin' || (currentUser?.privileges || []).includes('manage_team');
+
+    // Edit User State
+    const [editingUser, setEditingUser] = useState(null);
+    const [showEditUserModal, setShowEditUserModal] = useState(false);
 
     // --- Authentication ---
 
@@ -719,10 +738,49 @@ const SalesAdmin = () => {
             if (!response.ok) throw new Error(data.error);
 
             setUserMsg({ text: 'User created successfully', type: 'success' });
-            setUserForm({ username: '', password: '', email: '' });
+            setUserForm({ username: '', email: '', role: 'seller', privileges: DEFAULT_PRIVILEGES.seller });
             fetchTeamUsers();
         } catch (err) {
             setUserMsg({ text: err.message, type: 'error' });
+        }
+    };
+
+    const handleUpdateUser = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await authenticatedFetch(`/sales/auth/users/${editingUser.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    role: editingUser.role,
+                    privileges: editingUser.privileges,
+                    is_active: editingUser.is_active
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            setShowEditUserModal(false);
+            setEditingUser(null);
+            fetchTeamUsers();
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const handleDeleteUser = async (userId) => {
+        if (!window.confirm('Are you sure you want to delete this user? This cannot be undone.')) return;
+        try {
+            const response = await authenticatedFetch(`/sales/auth/users/${userId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            fetchTeamUsers();
+        } catch (err) {
+            alert(err.message);
         }
     };
 
@@ -2483,7 +2541,7 @@ const SalesAdmin = () => {
                                         Security
                                     </div>
                                 </button>
-                                {(currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') && (
+                                {(isAdmin) && (
                                     <button
                                         onClick={() => setSettingsTab('users')}
                                         className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
@@ -2632,6 +2690,36 @@ const SalesAdmin = () => {
                                                     />
                                                 </div>
                                                 <div className="col-span-2">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Role & Access</label>
+                                                    <select
+                                                        value={userForm.role}
+                                                        onChange={(e) => setUserForm({
+                                                            ...userForm,
+                                                            role: e.target.value,
+                                                            privileges: DEFAULT_PRIVILEGES[e.target.value] || []
+                                                        })}
+                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm mb-4"
+                                                    >
+                                                        <option value="seller">Seller (Sales Rep)</option>
+                                                        <option value="sales_manager">Sales Manager</option>
+                                                        <option value="admin">Administrator</option>
+                                                    </select>
+
+                                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Privileges for {userForm.role.replace('_', ' ')}</p>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {ALL_PRIVILEGES.map(priv => (
+                                                                <label key={priv.id} className="flex items-center gap-2 text-xs text-slate-600">
+                                                                    <div className={`w-4 h-4 rounded flex items-center justify-center ${userForm.privileges.includes(priv.id) ? 'bg-blue-600 text-white' : 'bg-slate-200'}`}>
+                                                                        {userForm.privileges.includes(priv.id) && <CheckCircle2 className="w-3 h-3" />}
+                                                                    </div>
+                                                                    {priv.label}
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-span-2">
                                                     <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-700 flex items-start gap-2 mb-2">
                                                         <Shield className="w-4 h-4 mt-0.5 shrink-0" />
                                                         <p>An invitation will be sent to this email address to set up their password securely.</p>
@@ -2661,18 +2749,52 @@ const SalesAdmin = () => {
                                             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
                                                 <div className="divide-y divide-slate-100">
                                                     {teamUsers.map(user => (
-                                                        <div key={user.id} className="p-4 flex items-center justify-between">
+                                                        <div key={user.id} className="p-4 flex items-center justify-between group hover:bg-slate-50 transition-colors">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase ${user.role === 'admin' ? 'bg-purple-100 text-purple-600' : user.role === 'sales_manager' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
                                                                     {user.username.substring(0, 2)}
                                                                 </div>
                                                                 <div>
-                                                                    <div className="font-medium text-slate-800">{user.username}</div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="font-medium text-slate-800">{user.username}</div>
+                                                                        <div className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${user.role === 'admin' ? 'bg-purple-50 text-purple-600' : user.role === 'sales_manager' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                                            {user.role ? user.role.replace('_', ' ') : 'Seller'}
+                                                                        </div>
+                                                                        {!user.is_active && <div className="text-[9px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase">Inactive</div>}
+                                                                    </div>
                                                                     <div className="text-xs text-slate-500">{user.email}</div>
                                                                 </div>
                                                             </div>
-                                                            <div className="text-xs text-slate-400">
-                                                                Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="text-xs text-slate-400 hidden sm:block">
+                                                                    Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
+                                                                </div>
+
+                                                                {/* Actions */}
+                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setEditingUser({
+                                                                                ...user,
+                                                                                privileges: user.privileges || DEFAULT_PRIVILEGES[user.role || 'seller'] || []
+                                                                            });
+                                                                            setShowEditUserModal(true);
+                                                                        }}
+                                                                        className="p-1.5 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
+                                                                        title="Edit Permissions"
+                                                                    >
+                                                                        <Settings className="w-4 h-4" />
+                                                                    </button>
+                                                                    {user.id !== currentUser.id && (
+                                                                        <button
+                                                                            onClick={() => handleDeleteUser(user.id)}
+                                                                            className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-colors"
+                                                                            title="Remove User"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -3811,6 +3933,113 @@ const SalesAdmin = () => {
                     </div>
                 )
             }
+
+            {/* Edit User Modal */}
+            {showEditUserModal && editingUser && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={() => setShowEditUserModal(false)}
+                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <XCircle className="w-6 h-6" />
+                        </button>
+
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
+                                <Users className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800">Edit Team Member</h2>
+                                <p className="text-sm text-slate-500 font-medium">Manage permissions for {editingUser.username}</p>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleUpdateUser} className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2 sm:col-span-1">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Role</label>
+                                    <select
+                                        value={editingUser.role || 'seller'}
+                                        onChange={(e) => setEditingUser({
+                                            ...editingUser,
+                                            role: e.target.value,
+                                            privileges: DEFAULT_PRIVILEGES[e.target.value] || []
+                                        })}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                    >
+                                        <option value="seller">Seller (Sales Rep)</option>
+                                        <option value="sales_manager">Sales Manager</option>
+                                        <option value="admin">Administrator</option>
+                                    </select>
+                                </div>
+                                <div className="col-span-2 sm:col-span-1">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Account Status</label>
+                                    <select
+                                        value={editingUser.is_active ? 'active' : 'inactive'}
+                                        onChange={(e) => setEditingUser({
+                                            ...editingUser,
+                                            is_active: e.target.value === 'active'
+                                        })}
+                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                    >
+                                        <option value="active">Active</option>
+                                        <option value="inactive">Suspended</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Privileges & Permissions</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {ALL_PRIVILEGES.map(priv => (
+                                        <label key={priv.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-slate-100 hover:border-blue-200 cursor-pointer transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={(editingUser.privileges || []).includes(priv.id)}
+                                                onChange={(e) => {
+                                                    const currentPrivs = editingUser.privileges || [];
+                                                    let newPrivs;
+                                                    if (e.target.checked) {
+                                                        newPrivs = [...currentPrivs, priv.id];
+                                                    } else {
+                                                        newPrivs = currentPrivs.filter(p => p !== priv.id);
+                                                    }
+                                                    setEditingUser({ ...editingUser, privileges: newPrivs });
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span className="text-sm font-medium text-slate-600">{priv.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                {editingUser.role === 'admin' && (
+                                    <p className="text-[10px] text-amber-600 mt-3 font-medium flex items-center gap-1">
+                                        <Shield className="w-3 h-3" />
+                                        Note: Administrators implicitly have all privileges.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditUserModal(false)}
+                                    className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm uppercase tracking-wider"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-3 px-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all text-sm uppercase tracking-wider shadow-lg shadow-slate-200"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div >
     );
 };

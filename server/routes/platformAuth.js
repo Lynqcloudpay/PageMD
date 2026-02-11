@@ -451,4 +451,74 @@ router.post('/change-password', async (req, res) => {
     }
 });
 
+/**
+ * DELETE /api/platform-auth/team/:id
+ * Delete platform admin user (Super Admin only)
+ */
+router.delete('/team/:id', async (req, res) => {
+    try {
+        const token = req.headers['x-platform-token'];
+        if (!token) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+
+        // Verify super admin
+        const authCheck = await pool.controlPool.query(
+            `SELECT sa.id, sa.email FROM platform_admin_sessions pas
+       JOIN super_admins sa ON pas.admin_id = sa.id
+       WHERE pas.token = $1 AND pas.expires_at > NOW() AND sa.role = 'super_admin'`,
+            [token]
+        );
+
+        if (authCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Super Admin access required' });
+        }
+
+        const callerAdminId = authCheck.rows[0].id;
+        const callerEmail = authCheck.rows[0].email;
+        const { id } = req.params;
+
+        // Prevent self-deletion
+        if (id === callerAdminId) {
+            return res.status(400).json({ error: 'Cannot delete your own account' });
+        }
+
+        // Get admin to be deleted for logging
+        const targetAdmin = await pool.controlPool.query(
+            'SELECT email FROM super_admins WHERE id = $1',
+            [id]
+        );
+
+        if (targetAdmin.rows.length === 0) {
+            return res.status(404).json({ error: 'Admin user not found' });
+        }
+
+        const targetEmail = targetAdmin.rows[0].email;
+
+        // Delete sessions first
+        await pool.controlPool.query(
+            'DELETE FROM platform_admin_sessions WHERE admin_id = $1',
+            [id]
+        );
+
+        // Delete admin
+        await pool.controlPool.query(
+            'DELETE FROM super_admins WHERE id = $1',
+            [id]
+        );
+
+        // Log the deletion
+        await pool.controlPool.query(
+            `INSERT INTO platform_audit_logs (super_admin_id, action, details)
+       VALUES ($1, $2, $3)`,
+            [callerAdminId, 'delete_team_member', JSON.stringify({ deleted_email: targetEmail, caller_email: callerEmail })]
+        );
+
+        res.json({ success: true, message: 'Team member removed successfully' });
+    } catch (error) {
+        console.error('Delete admin error:', error);
+        res.status(500).json({ error: 'Failed to delete team member' });
+    }
+});
+
 module.exports = router;
