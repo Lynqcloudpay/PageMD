@@ -44,14 +44,26 @@ const SetupPassword = () => {
         verifyToken();
     }, [location]);
 
+    const getPasswordRequirements = () => {
+        const containsName = user && (
+            (user.firstName && password.toLowerCase().includes(user.firstName.toLowerCase())) ||
+            (user.lastName && password.toLowerCase().includes(user.lastName.toLowerCase())) ||
+            (user.email && password.toLowerCase().includes(user.email.split('@')[0].toLowerCase()))
+        );
+
+        return [
+            { label: '12+ Characters', met: password.length >= 12 },
+            { label: 'Uppercase Letter', met: /[A-Z]/.test(password) },
+            { label: 'Number', met: /[0-9]/.test(password) },
+            { label: 'Special Character', met: /[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(password) },
+            { label: 'No personal info (Name/Email)', met: password.length > 0 && !containsName },
+            { label: 'Passwords Match', met: password.length > 0 && password === confirmPassword }
+        ];
+    };
+
     const validatePassword = () => {
-        const errors = [];
-        if (password.length < 8) errors.push('8+ characters');
-        if (!/[A-Z]/.test(password)) errors.push('Uppercase');
-        if (!/[a-z]/.test(password)) errors.push('Lowercase');
-        if (!/[0-9]/.test(password)) errors.push('Number');
-        if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(password)) errors.push('Special char');
-        return errors;
+        const reqs = getPasswordRequirements();
+        return reqs.filter(r => !r.met).map(r => r.label);
     };
 
     const handleSubmit = async (e) => {
@@ -60,12 +72,7 @@ const SetupPassword = () => {
 
         const passErrors = validatePassword();
         if (passErrors.length > 0) {
-            setError(`Missing: ${passErrors.join(', ')}`);
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setError('Passwords do not match.');
+            setError(`Missing requirements: ${passErrors.join(', ')}`);
             return;
         }
 
@@ -94,6 +101,8 @@ const SetupPassword = () => {
             </div>
         );
     }
+
+    const requirements = getPasswordRequirements();
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
@@ -124,97 +133,81 @@ const SetupPassword = () => {
                     ) : (
                         <>
                             {error ? (
-                                <div className="text-center p-6 space-y-4">
-                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-2">
-                                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                <div className="text-center p-4 mb-4 bg-red-50 rounded-xl border border-red-100">
+                                    <div className="flex items-center gap-2 text-red-700 mb-1">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
+                                        <span className="text-sm font-bold">Action Required</span>
                                     </div>
-                                    <h3 className="text-xl font-bold text-slate-900">Link Invalid</h3>
-                                    <p className="text-slate-600 text-sm">{error}</p>
+                                    <p className="text-red-600 text-xs text-left">{error}</p>
+                                </div>
+                            ) : null}
+
+                            <form className="space-y-6" onSubmit={handleSubmit}>
+                                <div>
+                                    <label htmlFor="password" title="Required: 12+ characters, uppercase, lowercase, number, special character" className="block text-sm font-medium text-slate-700">
+                                        New Password
+                                    </label>
+                                    <div className="mt-1">
+                                        <input
+                                            id="password"
+                                            type="password"
+                                            required
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="block w-full appearance-none rounded-xl border border-slate-200 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="confirmPassword" title="Must match password" className="block text-sm font-medium text-slate-700">
+                                        Confirm Password
+                                    </label>
+                                    <div className="mt-1">
+                                        <input
+                                            id="confirmPassword"
+                                            type="password"
+                                            required
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            className="block w-full appearance-none rounded-xl border border-slate-200 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-50 p-4 rounded-xl space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Security Requirements</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] text-slate-600">
+                                        {requirements.map((req, idx) => (
+                                            <div key={idx} className={`flex items-center gap-1.5 font-medium transition-colors duration-200 ${req.met ? 'text-green-600' : 'text-slate-500'}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-green-500 scale-110 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'}`} />
+                                                {req.label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
                                     <button
-                                        onClick={() => navigate('/login')}
-                                        className="mt-4 text-blue-600 font-semibold hover:text-blue-500"
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="flex w-full justify-center rounded-xl border border-transparent bg-blue-600 py-3 px-4 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0"
                                     >
-                                        Return to Login
+                                        {submitting ? (
+                                            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        ) : (
+                                            'Set Password & Log In'
+                                        )}
                                     </button>
                                 </div>
-                            ) : (
-                                <form className="space-y-6" onSubmit={handleSubmit}>
-                                    <div>
-                                        <label htmlFor="password" title="Required: 8+ characters, uppercase, lowercase, number, special character" className="block text-sm font-medium text-slate-700">
-                                            New Password
-                                        </label>
-                                        <div className="mt-1">
-                                            <input
-                                                id="password"
-                                                type="password"
-                                                required
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                className="block w-full appearance-none rounded-xl border border-slate-200 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
-                                                placeholder="••••••••"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="confirmPassword" title="Must match password" className="block text-sm font-medium text-slate-700">
-                                            Confirm Password
-                                        </label>
-                                        <div className="mt-1">
-                                            <input
-                                                id="confirmPassword"
-                                                type="password"
-                                                required
-                                                value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                                className="block w-full appearance-none rounded-xl border border-slate-200 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
-                                                placeholder="••••••••"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-slate-50 p-4 rounded-xl space-y-1">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Password Requirements</p>
-                                        <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
-                                            <div className="flex items-center gap-1.5 font-medium">
-                                                <div className={`w-1 h-1 rounded-full ${password.length >= 8 ? 'bg-green-500' : 'bg-slate-300'}`} />
-                                                8+ Characters
-                                            </div>
-                                            <div className="flex items-center gap-1.5 font-medium">
-                                                <div className={`w-1 h-1 rounded-full ${(password.length > 0 && /[A-Z]/.test(password)) ? 'bg-green-500' : 'bg-slate-300'}`} />
-                                                Uppercase Letter
-                                            </div>
-                                            <div className="flex items-center gap-1.5 font-medium">
-                                                <div className={`w-1 h-1 rounded-full ${(password.length > 0 && /[0-9]/.test(password)) ? 'bg-green-500' : 'bg-slate-300'}`} />
-                                                Number
-                                            </div>
-                                            <div className="flex items-center gap-1.5 font-medium">
-                                                <div className={`w-1 h-1 rounded-full ${(password.length > 0 && /[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(password)) ? 'bg-green-500' : 'bg-slate-300'}`} />
-                                                Special Character
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <button
-                                            type="submit"
-                                            disabled={submitting}
-                                            className="flex w-full justify-center rounded-xl border border-transparent bg-blue-600 py-3 px-4 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0"
-                                        >
-                                            {submitting ? (
-                                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                            ) : (
-                                                'Set Password & Log In'
-                                            )}
-                                        </button>
-                                    </div>
-                                </form>
-                            )}
+                            </form>
                         </>
                     )}
                 </div>

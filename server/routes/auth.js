@@ -366,6 +366,11 @@ router.post('/redeem-token', [
 
     const { token, password, type = 'invite' } = req.body;
 
+    const verification = await userService.verifyToken(token, type);
+    if (!verification.valid) {
+      return res.status(400).json({ error: verification.error });
+    }
+
     // Validate password strength with user context
     const passwordErrors = validatePassword(password, {
       firstName: verification.user.first_name,
