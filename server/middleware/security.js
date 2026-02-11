@@ -88,20 +88,6 @@ const validatePassword = (password, userContext = {}) => {
     errors.push('Password must contain at least one special character');
   }
 
-  // Check for contextual information
-  if (userContext.firstName && password.toLowerCase().includes(userContext.firstName.toLowerCase())) {
-    errors.push('Password must not contain your first name');
-  }
-  if (userContext.lastName && password.toLowerCase().includes(userContext.lastName.toLowerCase())) {
-    errors.push('Password must not contain your last name');
-  }
-  if (userContext.email) {
-    const emailPrefix = userContext.email.split('@')[0];
-    if (password.toLowerCase().includes(emailPrefix.toLowerCase()) && emailPrefix.length > 3) {
-      errors.push('Password must not contain your email prefix');
-    }
-  }
-
   // Check for common weak passwords
   const commonPasswords = ['password', 'password123', 'admin', '12345678', 'qwerty', 'pagemd', 'pagemd123'];
   if (commonPasswords.some(weak => password.toLowerCase().includes(weak))) {
