@@ -14,17 +14,29 @@ const PlatformAdminProfile = () => {
     const [message, setMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(false);
 
+    const getPasswordRequirements = () => {
+        return [
+            { label: '12+ Characters', met: passwords.new.length >= 12 },
+            { label: 'Uppercase Letter', met: /[A-Z]/.test(passwords.new) },
+            { label: 'Lowercase Letter', met: /[a-z]/.test(passwords.new) },
+            { label: 'Number', met: /[0-9]/.test(passwords.new) },
+            { label: 'Special Character', met: /[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(passwords.new) },
+            { label: 'Passwords Match', met: passwords.new.length > 0 && passwords.new === passwords.confirm }
+        ];
+    };
+
+    const validatePassword = () => {
+        const reqs = getPasswordRequirements();
+        return reqs.filter(r => !r.met).map(r => r.label);
+    };
+
     const handleUpdatePassword = async (e) => {
         e.preventDefault();
         setMessage({ type: '', text: '' });
 
-        if (passwords.new !== passwords.confirm) {
-            setMessage({ type: 'error', text: 'New passwords do not match' });
-            return;
-        }
-
-        if (passwords.new.length < 8) {
-            setMessage({ type: 'error', text: 'Password must be at least 8 characters' });
+        const passErrors = validatePassword();
+        if (passErrors.length > 0) {
+            setMessage({ type: 'error', text: `Missing requirements: ${passErrors.join(', ')}` });
             return;
         }
 
@@ -127,8 +139,19 @@ const PlatformAdminProfile = () => {
                                     value={passwords.new}
                                     onChange={e => setPasswords({ ...passwords, new: e.target.value })}
                                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all placeholder-slate-400"
-                                    placeholder="At least 8 characters"
+                                    placeholder="Enter new password"
                                 />
+
+                                <div className="mt-3 grid grid-cols-1 gap-2 p-3 bg-slate-100/50 rounded-xl border border-slate-200/50">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                        {getPasswordRequirements().map((req, idx) => (
+                                            <div key={idx} className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight transition-colors duration-200 ${req.met ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-emerald-500 scale-110 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-300'}`} />
+                                                {req.label}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
 
                             <div>

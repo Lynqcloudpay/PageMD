@@ -31,24 +31,20 @@ const Profile = () => {
     }
   }, [message]);
 
-  const validatePassword = (password) => {
-    const errors = [];
-    if (password.length < 8) {
-      errors.push('Password must be at least 8 characters');
-    }
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-    if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      errors.push('Password must contain at least one special character');
-    }
-    return errors;
+  const getPasswordRequirements = () => {
+    return [
+      { label: '12+ Characters', met: newPassword.length >= 12 },
+      { label: 'Uppercase Letter', met: /[A-Z]/.test(newPassword) },
+      { label: 'Lowercase Letter', met: /[a-z]/.test(newPassword) },
+      { label: 'Number', met: /[0-9]/.test(newPassword) },
+      { label: 'Special Character', met: /[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(newPassword) },
+      { label: 'Passwords Match', met: newPassword.length > 0 && newPassword === confirmPassword }
+    ];
+  };
+
+  const validatePassword = () => {
+    const reqs = getPasswordRequirements();
+    return reqs.filter(r => !r.met).map(r => r.label);
   };
 
   const handlePasswordChange = async (e) => {
@@ -57,7 +53,7 @@ const Profile = () => {
     setPasswordErrors([]);
 
     // Validate new password
-    const errors = validatePassword(newPassword);
+    const errors = validatePassword();
     if (errors.length > 0) {
       setPasswordErrors(errors);
       return;
@@ -78,7 +74,7 @@ const Profile = () => {
       // Note: The API endpoint expects the user ID and new password
       // We'll need to verify current password first (this would ideally be a separate endpoint)
       await usersAPI.updatePassword(currentUser.id, newPassword);
-      
+
       setMessage({ type: 'success', text: 'Password changed successfully!' });
       setCurrentPassword('');
       setNewPassword('');
@@ -157,11 +153,10 @@ const Profile = () => {
         </div>
 
         {message.text && (
-          <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${
-            message.type === 'success' 
-              ? 'bg-green-50 text-green-800 border border-green-200' 
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
+          <div className={`mb-4 p-4 rounded-lg flex items-center gap-2 ${message.type === 'success'
+            ? 'bg-green-50 text-green-800 border border-green-200'
+            : 'bg-red-50 text-red-800 border border-red-200'
+            }`}>
             {message.type === 'success' ? (
               <CheckCircle2 className="w-5 h-5" />
             ) : (
@@ -251,15 +246,16 @@ const Profile = () => {
           </div>
 
           {/* Password Requirements */}
-          <div className="bg-soft-gray/50 p-4 rounded-lg">
-            <p className="text-sm font-medium text-deep-gray mb-2">Password Requirements:</p>
-            <ul className="text-sm text-deep-gray/70 space-y-1">
-              <li>• At least 8 characters</li>
-              <li>• At least one uppercase letter (A-Z)</li>
-              <li>• At least one lowercase letter (a-z)</li>
-              <li>• At least one number (0-9)</li>
-              <li>• At least one special character (!@#$%^&*)</li>
-            </ul>
+          <div className="bg-slate-50 p-4 rounded-xl space-y-1 mt-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Security Requirements</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] text-slate-600">
+              {getPasswordRequirements().map((req, idx) => (
+                <div key={idx} className={`flex items-center gap-1.5 font-medium transition-colors duration-200 ${req.met ? 'text-green-600' : 'text-slate-500'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-green-500 scale-110 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'}`} />
+                  {req.label}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Error Messages */}

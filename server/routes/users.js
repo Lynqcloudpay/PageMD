@@ -99,7 +99,7 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', requireAdmin, [
   body('email').isEmail().normalizeEmail(),
-  body('password').optional({ checkFalsy: true }).isLength({ min: 8 }),
+  body('password').optional({ checkFalsy: true }).isLength({ min: 12 }),
   // Validation needs to be flexible or check the coalesced values later. 
   // For now, we'll relax these check here and rely on manual check or DB constraints 
   // to avoid complex conditional validation logic in express-validator
@@ -364,7 +364,7 @@ router.put('/:id', [
  * Update password (admin or self)
  */
 router.put('/:id/password', [
-  body('password').isLength({ min: 8 }),
+  body('password').isLength({ min: 12 }),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);

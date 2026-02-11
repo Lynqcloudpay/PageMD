@@ -517,8 +517,8 @@ router.post('/change-password', async (req, res) => {
             return res.status(400).json({ error: 'Current and new passwords required' });
         }
 
-        if (newPassword.length < 8) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        if (newPassword.length < 12) {
+            return res.status(400).json({ error: 'Password must be at least 12 characters' });
         }
 
         // Get admin

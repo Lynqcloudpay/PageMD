@@ -63,6 +63,7 @@ const SetupPassword = () => {
         return [
             { label: '12+ Characters', met: password.length >= 12 },
             { label: 'Uppercase Letter', met: /[A-Z]/.test(password) },
+            { label: 'Lowercase Letter', met: /[a-z]/.test(password) },
             { label: 'Number', met: /[0-9]/.test(password) },
             { label: 'Special Character', met: /[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(password) },
             { label: 'Passwords Match', met: password.length > 0 && password === confirmPassword }
