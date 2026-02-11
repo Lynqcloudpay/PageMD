@@ -928,7 +928,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                     <input
                       type="checkbox"
                       id="adminPrivileges"
-                      checked={isAdmin}
+                      checked={formData.isAdmin === true || formData.isAdmin === "true" || isAdmin}
                       onChange={(e) => {
                         // Grant/revoke admin privileges WITHOUT changing the role
                         setFormData({
@@ -1185,7 +1185,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.password ? 'border-red-300' : 'border-gray-300'
                         }`}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Min 8 chars, uppercase, lowercase, number, special character</p>
+                    <p className="text-xs text-gray-500 mt-1">8+ chars, Uppercase, Lowercase, Number, Symbol</p>
                     {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
                   </div>
 
@@ -1662,7 +1662,7 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
                   <input
                     type="checkbox"
                     id="editAdminPrivileges"
-                    checked={isAdmin}
+                    checked={formData.isAdmin === true || formData.isAdmin === "true" || isAdmin}
                     onChange={(e) => {
                       // Grant/revoke admin privileges WITHOUT changing the role
                       setFormData({ ...formData, isAdmin: e.target.checked });
