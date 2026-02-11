@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import { patientFlagsAPI } from '../services/api';
 
@@ -19,8 +20,8 @@ const FlagAcknowledgmentModal = ({ flags, onAcknowledged }) => {
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    return createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="bg-red-600 p-6 text-white text-center">
                     <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30 shadow-inner">
@@ -60,7 +61,8 @@ const FlagAcknowledgmentModal = ({ flags, onAcknowledged }) => {
                     </p>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.getElementById('modal-root') || document.body
     );
 };
 
