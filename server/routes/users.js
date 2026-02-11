@@ -11,8 +11,8 @@ const { authenticate, logAudit } = require('../middleware/auth');
 const { requireAdmin, requirePrivilege } = require('../middleware/authorization');
 const userService = require('../services/userService');
 const roleService = require('../services/roleService');
-const EmailService = require('../services/emailService');
-const emailService = new EmailService();
+const emailService = require('../services/emailService');
+// const emailService = new EmailService();
 const { validatePassword } = require('../middleware/security');
 
 const router = express.Router();

@@ -8,8 +8,8 @@ const { validatePassword } = require('../middleware/security');
 const { body, validationResult } = require('express-validator');
 const passwordService = require('../services/passwordService');
 const userService = require('../services/userService');
-const EmailService = require('../services/emailService');
-const emailService = new EmailService();
+const emailService = require('../services/emailService');
+// const emailService = new EmailService();
 
 const router = express.Router();
 
