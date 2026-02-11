@@ -268,8 +268,8 @@ class UserService {
       firstName,
       lastName,
       roleId,
-      oldRoleFormat, // Old role column
-      password ? 'active' : 'inactive', // New users are inactive until password is set
+      oldRoleFormat,
+      password ? 'active' : 'inactive',
       professionalType || null,
       npi || null,
       licenseNumber || null,
@@ -277,13 +277,19 @@ class UserService {
       deaNumber || null,
       taxonomyCode || null,
       credentials || null,
-      isAdminValue, // is_admin flag (secondary to role_id)
+      isAdminValue,
       inviteToken,
       inviteExpiresAt
     ]);
 
+    const createdUser = result.rows[0];
 
-    // Create platform lookup entry for multi-tenant login resolution
+    // Record initial password history if provided
+    if (passwordHash) {
+      await this.recordPasswordHistory(createdUser.id, passwordHash);
+    }
+
+    // Create platform lookup entry
     try {
       const schemaRes = await pool.query('SELECT current_schema()');
       const currentSchema = schemaRes.rows[0].current_schema;
@@ -384,6 +390,9 @@ class UserService {
        WHERE id = $2`,
       [passwordHash, userId]
     );
+
+    // Record password history
+    await this.recordPasswordHistory(userId, passwordHash);
 
     return { success: true, email: verification.user.email };
   }
@@ -487,6 +496,8 @@ class UserService {
       'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
       [passwordHash, userId]
     );
+    // Record password history
+    await this.recordPasswordHistory(userId, passwordHash);
   }
 
   /**
@@ -623,6 +634,53 @@ class UserService {
       valid: validLength,
       error: validLength ? null : 'License number must be between 5 and 25 characters'
     };
+  }
+
+  /**
+   * Check if a password matches the recent history for a user
+   * @param {number} userId - User ID
+   * @param {string} newPassword - Plain text new password
+   * @returns {Promise<boolean>} True if password exists in recent history
+   */
+  async checkPasswordHistory(userId, newPassword) {
+    try {
+      const history = await pool.query(
+        'SELECT password_hash FROM password_history WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10',
+        [userId]
+      );
+
+      for (const row of history.rows) {
+        const match = await passwordService.verifyPassword(row.password_hash, newPassword);
+        if (match) return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Password history check failed:', error);
+      return false; // Fail safe
+    }
+  }
+
+  /**
+   * Record a new password in history
+   * @param {number} userId - User ID
+   * @param {string} passwordHash - Hashed password
+   */
+  async recordPasswordHistory(userId, passwordHash) {
+    try {
+      await pool.query(
+        'INSERT INTO password_history (user_id, password_hash) VALUES ($1, $2)',
+        [userId, passwordHash]
+      );
+
+      // Keep only last 10 entries per user
+      await pool.query(
+        'DELETE FROM password_history WHERE id IN (SELECT id FROM password_history WHERE user_id = $1 ORDER BY created_at DESC OFFSET 10)',
+        [userId]
+      );
+    } catch (error) {
+      console.error('Failed to record password history:', error);
+    }
   }
 }
 

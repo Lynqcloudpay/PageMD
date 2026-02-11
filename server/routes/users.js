@@ -140,7 +140,11 @@ router.post('/', requireAdmin, [
 
     // Validate password strength ONLY if password is provided
     if (password) {
-      const passwordErrors = validatePassword(password);
+      const passwordErrors = validatePassword(password, {
+        firstName: firstNameFinal,
+        lastName: lastNameFinal,
+        email
+      });
       if (passwordErrors.length > 0) {
         return res.status(400).json({ error: 'Password validation failed', details: passwordErrors });
       }
@@ -376,12 +380,27 @@ router.put('/:id/password', [
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
 
+    const targetUser = await userService.getUserById(id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     const { password } = req.body;
 
-    // Validate password strength
-    const passwordErrors = validatePassword(password);
+    // Validate password strength with context
+    const passwordErrors = validatePassword(password, {
+      firstName: targetUser.first_name,
+      lastName: targetUser.last_name,
+      email: targetUser.email
+    });
     if (passwordErrors.length > 0) {
       return res.status(400).json({ error: 'Password validation failed', details: passwordErrors });
+    }
+
+    // Check Password History
+    const isReusable = await userService.checkPasswordHistory(id, password);
+    if (isReusable) {
+      return res.status(400).json({ error: 'Password cannot be one of your last 10 passwords' });
     }
 
     await userService.updatePassword(id, password);

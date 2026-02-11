@@ -67,12 +67,13 @@ const sanitizeInput = (req, res, next) => {
 };
 
 // HIPAA-compliant password policy validation
-// Minimum 8 characters, uppercase, lowercase, digit, symbol
-const validatePassword = (password) => {
+// Minimum 12 characters, uppercase, lowercase, digit, symbol
+// Blocks contextual information (names, email)
+const validatePassword = (password, userContext = {}) => {
   const errors = [];
 
-  if (!password || password.length < 8) {
-    errors.push('Password must be at least 8 characters long');
+  if (!password || password.length < 12) {
+    errors.push('Password must be at least 12 characters long');
   }
   if (!/[A-Z]/.test(password)) {
     errors.push('Password must contain at least one uppercase letter');
@@ -87,8 +88,22 @@ const validatePassword = (password) => {
     errors.push('Password must contain at least one special character');
   }
 
+  // Check for contextual information
+  if (userContext.firstName && password.toLowerCase().includes(userContext.firstName.toLowerCase())) {
+    errors.push('Password must not contain your first name');
+  }
+  if (userContext.lastName && password.toLowerCase().includes(userContext.lastName.toLowerCase())) {
+    errors.push('Password must not contain your last name');
+  }
+  if (userContext.email) {
+    const emailPrefix = userContext.email.split('@')[0];
+    if (password.toLowerCase().includes(emailPrefix.toLowerCase()) && emailPrefix.length > 3) {
+      errors.push('Password must not contain your email prefix');
+    }
+  }
+
   // Check for common weak passwords
-  const commonPasswords = ['password', 'password123', 'admin', '12345678', 'qwerty'];
+  const commonPasswords = ['password', 'password123', 'admin', '12345678', 'qwerty', 'pagemd', 'pagemd123'];
   if (commonPasswords.some(weak => password.toLowerCase().includes(weak))) {
     errors.push('Password is too common or weak');
   }

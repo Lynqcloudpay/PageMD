@@ -30,7 +30,7 @@ router.post('/register', [
     const { email, password, firstName, lastName, role } = req.body;
 
     // Validate password strength - OpenEMR style
-    const passwordErrors = validatePassword(password);
+    const passwordErrors = validatePassword(password, { firstName, lastName, email });
     if (passwordErrors.length > 0) {
       return res.status(400).json({ error: 'Password validation failed', details: passwordErrors });
     }
@@ -366,10 +366,20 @@ router.post('/redeem-token', [
 
     const { token, password, type = 'invite' } = req.body;
 
-    // Validate password strength again just in case
-    const passwordErrors = validatePassword(password);
+    // Validate password strength with user context
+    const passwordErrors = validatePassword(password, {
+      firstName: verification.user.first_name,
+      lastName: verification.user.last_name,
+      email: verification.user.email
+    });
     if (passwordErrors.length > 0) {
       return res.status(400).json({ error: 'Password validation failed', details: passwordErrors });
+    }
+
+    // Check Password History
+    const isReusable = await userService.checkPasswordHistory(verification.user.id, password);
+    if (isReusable) {
+      return res.status(400).json({ error: 'Password cannot be one of your last 10 passwords' });
     }
 
     const result = await userService.redeemToken(token, type, password);

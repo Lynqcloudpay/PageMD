@@ -165,6 +165,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "🛡️  Running Auth Token Migration (Invitations)..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/20260211_add_auth_tokens.js || echo "⚠️ Warning: Auth token migration failed."
 
+  echo "🛡️  Running Password History Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/20260211_password_history.js || echo "⚠️ Warning: Password history migration failed."
+
   echo "🌱 Seeding System Control Records..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/seed-control.js || echo "⚠️ Warning: System seeding failed."
 
