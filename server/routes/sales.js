@@ -135,17 +135,18 @@ const checkPrivilege = (privilege) => {
 
 /**
  * POST /api/sales/auth/login
- * Login for sales team members
+ * Login for sales team members via Email
  */
 router.post('/auth/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { email, password } = req.body;
 
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password required' });
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password required' });
         }
 
-        const result = await pool.query('SELECT * FROM sales_team_users WHERE username = $1', [username]);
+        // Find user by email (case insensitive)
+        const result = await pool.query('SELECT * FROM sales_team_users WHERE LOWER(email) = LOWER($1)', [email]);
         const user = result.rows[0];
 
         if (!user) {
@@ -157,12 +158,16 @@ router.post('/auth/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
+        if (!user.is_active) {
+            return res.status(403).json({ error: 'Account is inactive. Please contact administrator.' });
+        }
+
         // Update last login
         await pool.query('UPDATE sales_team_users SET last_login = NOW() WHERE id = $1', [user.id]);
 
         // Generate token
         const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role, privileges: user.privileges || [] },
+            { id: user.id, username: user.username, email: user.email, role: user.role, privileges: user.privileges || [] },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -182,6 +187,120 @@ router.post('/auth/login', async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+/**
+ * POST /api/sales/auth/forgot-password
+ * Send password reset email
+ */
+router.post('/auth/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email required' });
+
+        const result = await pool.query('SELECT * FROM sales_team_users WHERE LOWER(email) = LOWER($1)', [email]);
+        const user = result.rows[0];
+
+        if (!user) {
+            // Return success even if not found to prevent enumeration
+            return res.json({ success: true, message: 'If account exists, reset instructions sent.' });
+        }
+
+        // Generate token
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 3600000); // 1 hour
+
+        await pool.query(
+            'UPDATE sales_team_users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3',
+            [token, expires, user.id]
+        );
+
+        // Send Email
+        const emailService = require('../services/emailService');
+        const resetLink = `${process.env.FRONTEND_URL || 'https://pagemdemr.com'}/reset-password?token=${token}&type=sales_reset`;
+
+        // Use generic user invitation temporarily or create specific template
+        await emailService.sendUserInvitation(user.email, user.username, resetLink);
+
+        res.json({ success: true, message: 'Reset instructions sent.' });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ error: 'Request failed' });
+    }
+});
+
+/**
+ * GET /api/sales/auth/verify-reset/:token
+ * Verify password reset token for sales user
+ */
+router.get('/auth/verify-reset/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const result = await pool.query(
+            'SELECT email, username, reset_password_expires FROM sales_team_users WHERE reset_password_token = $1',
+            [token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Invalid or already used reset link' });
+        }
+
+        const user = result.rows[0];
+        if (new Date() > new Date(user.reset_password_expires)) {
+            return res.status(400).json({ error: 'Reset link has expired' });
+        }
+
+        res.json({
+            valid: true,
+            user: {
+                email: user.email,
+                firstName: user.username,
+                lastName: ''
+            }
+        });
+    } catch (error) {
+        console.error('Verify reset error:', error);
+        res.status(500).json({ error: 'Failed to verify reset token' });
+    }
+});
+
+/**
+ * POST /api/sales/auth/reset-password
+ * Reset password with token
+ */
+router.post('/auth/reset-password', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) return res.status(400).json({ error: 'Token and password required' });
+
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        const result = await pool.query(
+            'SELECT * FROM sales_team_users WHERE reset_password_token = $1 AND reset_password_expires > NOW()',
+            [token]
+        );
+        const user = result.rows[0];
+
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        await pool.query(
+            'UPDATE sales_team_users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2',
+            [hash, user.id]
+        );
+
+        res.json({ success: true, message: 'Password reset successfully' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Reset failed' });
     }
 });
 

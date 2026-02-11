@@ -102,6 +102,119 @@ router.post('/logout', async (req, res) => {
 });
 
 /**
+ * POST /api/platform-auth/forgot-password
+ * Send password reset email for platform admin
+ */
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email required' });
+
+        const result = await pool.controlPool.query('SELECT * FROM super_admins WHERE LOWER(email) = LOWER($1)', [email]);
+        const user = result.rows[0];
+
+        if (!user) {
+            // Return success even if not found to prevent enumeration
+            return res.json({ success: true, message: 'If account exists, reset instructions sent.' });
+        }
+
+        // Generate token
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 3600000); // 1 hour
+
+        await pool.controlPool.query(
+            'UPDATE super_admins SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3',
+            [token, expires, user.id]
+        );
+
+        // Send Email
+        const emailService = require('../services/emailService');
+        const resetLink = `${process.env.FRONTEND_URL || 'https://pagemdemr.com'}/reset-password?token=${token}&type=platform_reset`;
+
+        // Use generic user invitation temporarily or create specific template
+        await emailService.sendUserInvitation(user.email, user.first_name, resetLink);
+
+        res.json({ success: true, message: 'Reset instructions sent.' });
+    } catch (error) {
+        console.error('Platform Forgot password error:', error);
+        res.status(500).json({ error: 'Request failed' });
+    }
+});
+
+/**
+ * GET /api/platform-auth/verify-reset/:token
+ * Verify password reset token for platform admin
+ */
+router.get('/verify-reset/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const result = await pool.controlPool.query(
+            'SELECT email, first_name, last_name, reset_password_expires FROM super_admins WHERE reset_password_token = $1',
+            [token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Invalid or already used reset link' });
+        }
+
+        const user = result.rows[0];
+        if (new Date() > new Date(user.reset_password_expires)) {
+            return res.status(400).json({ error: 'Reset link has expired' });
+        }
+
+        res.json({
+            valid: true,
+            user: {
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name
+            }
+        });
+    } catch (error) {
+        console.error('Verify platform reset error:', error);
+        res.status(500).json({ error: 'Failed to verify reset token' });
+    }
+});
+
+/**
+ * POST /api/platform-auth/reset-password
+ * Reset password with token for platform admin
+ */
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) return res.status(400).json({ error: 'Token and password required' });
+
+        if (password.length < 12) {
+            return res.status(400).json({ error: 'Password must be at least 12 characters' });
+        }
+
+        const result = await pool.controlPool.query(
+            'SELECT * FROM super_admins WHERE reset_password_token = $1 AND reset_password_expires > NOW()',
+            [token]
+        );
+        const user = result.rows[0];
+
+        if (!user) {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+
+        const hash = await bcrypt.hash(password, 10);
+
+        await pool.controlPool.query(
+            'UPDATE super_admins SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2',
+            [hash, user.id]
+        );
+
+        res.json({ success: true, message: 'Password reset successfully' });
+    } catch (error) {
+        console.error('Platform Reset password error:', error);
+        res.status(500).json({ error: 'Reset failed' });
+    }
+});
+
+/**
  * GET /api/platform-auth/me
  * Get current admin user info
  */

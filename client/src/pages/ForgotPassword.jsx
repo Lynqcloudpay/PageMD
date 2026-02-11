@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
 const ForgotPassword = () => {
+    const location = useLocation();
+    const type = location.state?.type; // 'sales' or 'platform' or undefined (default)
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
@@ -15,7 +17,11 @@ const ForgotPassword = () => {
         setError(null);
 
         try {
-            const response = await axios.post('/api/auth/forgot-password', { email });
+            let endpoint = '/api/auth/forgot-password';
+            if (type === 'sales') endpoint = '/api/sales/auth/forgot-password';
+            if (type === 'platform') endpoint = '/api/platform-auth/forgot-password';
+
+            const response = await axios.post(endpoint, { email });
             setMessage(response.data.message);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to process request. Please try again.');
@@ -100,7 +106,10 @@ const ForgotPassword = () => {
                     )}
 
                     <div className="mt-6 text-center">
-                        <Link to="/login" className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200">
+                        <Link
+                            to={type === 'sales' ? '/sales-admin' : type === 'platform' ? '/platform-admin/login' : '/login'}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
+                        >
                             Back to Sign In
                         </Link>
                     </div>

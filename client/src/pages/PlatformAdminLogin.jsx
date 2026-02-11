@@ -121,6 +121,16 @@ const PlatformAdminLogin = () => {
                                 <LogIn className="w-5 h-5" />
                                 <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
                             </button>
+
+                            <div className="text-center">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/forgot-password', { state: { type: 'platform' } })}
+                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
                         </form>
 
                         {/* Footer */}

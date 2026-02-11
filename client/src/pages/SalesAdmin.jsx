@@ -182,7 +182,7 @@ const SalesAdmin = () => {
             const response = await fetch(`${baseUrl}/sales/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ email: username, password })
             });
 
             const data = await response.json();
@@ -1031,13 +1031,13 @@ const SalesAdmin = () => {
 
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
                                 <input
-                                    type="text"
+                                    type="email"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Enter username"
+                                    placeholder="your.email@pagemd.com"
                                     required
                                 />
                             </div>
@@ -1077,6 +1077,12 @@ const SalesAdmin = () => {
                                 {authLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
                                 Sign In
                             </button>
+
+                            <div className="text-center mt-4">
+                                <Link to="/forgot-password" state={{ type: 'sales' }} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                    Forgot Password?
+                                </Link>
+                            </div>
                         </form>
 
                         <div className="mt-6 text-center">

@@ -37,8 +37,12 @@ const SetupPassword = () => {
                 let endpoint = '';
                 if (typeParam === 'platform') {
                     endpoint = `/api/platform-auth/verify-invite/${tokenParam}`;
+                } else if (typeParam === 'platform_reset') {
+                    endpoint = `/api/platform-auth/verify-reset/${tokenParam}`;
                 } else if (typeParam === 'sales') {
                     endpoint = `/api/sales/auth/verify-invite/${tokenParam}`;
+                } else if (typeParam === 'sales_reset') {
+                    endpoint = `/api/sales/auth/verify-reset/${tokenParam}`;
                 } else {
                     endpoint = `/api/auth/verify-token?token=${tokenParam}&type=${typeParam === 'reset' ? 'reset' : 'invite'}`;
                 }
@@ -87,8 +91,12 @@ const SetupPassword = () => {
 
             if (type === 'platform') {
                 endpoint = '/api/platform-auth/redeem-invite';
+            } else if (type === 'platform_reset') {
+                endpoint = '/api/platform-auth/reset-password';
             } else if (type === 'sales') {
                 endpoint = '/api/sales/auth/redeem-invite';
+            } else if (type === 'sales_reset') {
+                endpoint = '/api/sales/auth/reset-password';
             } else {
                 endpoint = '/api/auth/redeem-token';
                 payload.type = type === 'reset' ? 'reset' : 'invite';
@@ -98,8 +106,8 @@ const SetupPassword = () => {
             setSuccess(true);
             setTimeout(() => {
                 // Determine redirect path
-                if (type === 'platform') navigate('/platform-admin');
-                else if (type === 'sales') navigate('/sales-admin');
+                if (type === 'platform' || type === 'platform_reset') navigate('/platform-admin');
+                else if (type === 'sales' || type === 'sales_reset') navigate('/sales-admin');
                 else navigate('/login');
             }, 3000);
         } catch (err) {
