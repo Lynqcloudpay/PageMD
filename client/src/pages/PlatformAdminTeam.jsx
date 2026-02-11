@@ -17,6 +17,8 @@ const PlatformAdminTeam = () => {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingUser, setEditingUser] = useState(null);
 
     useEffect(() => {
         loadTeam();
@@ -48,6 +50,25 @@ const PlatformAdminTeam = () => {
             }
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to create user');
+        }
+    };
+
+    const handleUpdateUser = async (e) => {
+        e.preventDefault();
+        setError('');
+        setSuccess('');
+
+        try {
+            await apiCall('PATCH', `/platform-auth/team/${editingUser.id}`, {
+                role: editingUser.role,
+                is_active: editingUser.is_active
+            });
+            setSuccess(`User ${editingUser.first_name} updated successfully!`);
+            setShowEditModal(false);
+            setEditingUser(null);
+            loadTeam();
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to update user');
         }
     };
 
@@ -148,6 +169,11 @@ const PlatformAdminTeam = () => {
                                                         <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
                                                         <span className="text-xs text-emerald-600 font-bold">Active</span>
                                                     </div>
+                                                ) : user.invite_token ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.4)] animate-pulse"></div>
+                                                        <span className="text-xs text-blue-600 font-bold">Invited</span>
+                                                    </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-2 h-2 rounded-full bg-slate-400"></div>
@@ -162,7 +188,13 @@ const PlatformAdminTeam = () => {
                                                 {new Date(user.created_at).toLocaleDateString()}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingUser({ ...user });
+                                                        setShowEditModal(true);
+                                                    }}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                >
                                                     <Edit2 className="w-4 h-4" />
                                                 </button>
                                             </td>
@@ -293,6 +325,98 @@ const PlatformAdminTeam = () => {
                                 className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-purple-500/25 transition-all mt-4 active:scale-[0.98]"
                             >
                                 Create Staff Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Edit User Modal */}
+            {showEditModal && editingUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                    <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 relative animate-in fade-in zoom-in duration-200">
+                        <button
+                            onClick={() => {
+                                setShowEditModal(false);
+                                setEditingUser(null);
+                            }}
+                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <XCircle className="w-6 h-6" />
+                        </button>
+
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                <Edit2 className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-slate-800">Edit Team Member</h2>
+                                <p className="text-sm text-slate-500 font-medium">{editingUser.email}</p>
+                            </div>
+                        </div>
+
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 font-semibold flex items-center gap-2">
+                                <XCircle className="w-4 h-4 shrink-0" />
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleUpdateUser} className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Role Assignment</label>
+                                <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                                    {roles.map((role) => (
+                                        <label
+                                            key={role.value}
+                                            className={`flex items-start p-3 rounded-xl border cursor-pointer transition-all ${editingUser.role === role.value
+                                                ? 'bg-blue-50 border-blue-200 shadow-sm'
+                                                : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                                                }`}
+                                        >
+                                            <div className="relative flex items-center mt-0.5">
+                                                <input
+                                                    type="radio"
+                                                    name="edit-role"
+                                                    value={role.value}
+                                                    checked={editingUser.role === role.value}
+                                                    onChange={e => setEditingUser({ ...editingUser, role: e.target.value })}
+                                                    className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 "
+                                                />
+                                            </div>
+                                            <div className="ml-3">
+                                                <div className={`text-sm font-bold ${editingUser.role === role.value ? 'text-blue-700' : 'text-slate-700'}`}>
+                                                    {role.label}
+                                                </div>
+                                                <div className="text-[11px] text-slate-500 font-medium">{role.desc}</div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div>
+                                    <p className="text-sm font-bold text-slate-700">Account Status</p>
+                                    <p className="text-xs text-slate-500 font-medium">{editingUser.is_active ? 'Active' : 'Inactive'}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingUser({ ...editingUser, is_active: !editingUser.is_active })}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${editingUser.is_active ? 'bg-emerald-500' : 'bg-slate-300'
+                                        }`}
+                                >
+                                    <span
+                                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editingUser.is_active ? 'translate-x-6' : 'translate-x-1'
+                                            }`}
+                                    />
+                                </button>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/25 transition-all mt-4 active:scale-[0.98]"
+                            >
+                                Save Changes
                             </button>
                         </form>
                     </div>

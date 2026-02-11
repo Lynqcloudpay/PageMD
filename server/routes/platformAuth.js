@@ -183,8 +183,8 @@ router.post('/register', async (req, res) => {
 
         // Create new admin with invite token
         const result = await pool.controlPool.query(
-            `INSERT INTO super_admins (email, first_name, last_name, role, created_by, invite_token, invite_expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO super_admins (email, first_name, last_name, role, created_by, invite_token, invite_expires_at, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, false)
        RETURNING id, email, first_name, last_name, role, created_at`,
             [email, firstName, lastName, role, createdBy, inviteToken, inviteExpiresAt]
         );
@@ -315,7 +315,7 @@ router.get('/team', async (req, res) => {
 
         // Get all admins
         const result = await pool.controlPool.query(
-            `SELECT id, email, first_name, last_name, role, is_active, last_login_at, created_at
+            `SELECT id, email, first_name, last_name, role, is_active, invite_token, last_login_at, created_at
        FROM super_admins
        ORDER BY created_at DESC`
         );
