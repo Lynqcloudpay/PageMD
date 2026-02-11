@@ -11,6 +11,8 @@ const { authenticate, logAudit } = require('../middleware/auth');
 const { requireAdmin, requirePrivilege } = require('../middleware/authorization');
 const userService = require('../services/userService');
 const roleService = require('../services/roleService');
+const EmailService = require('../services/emailService');
+const emailService = new EmailService();
 const { validatePassword } = require('../middleware/security');
 
 const router = express.Router();
@@ -97,7 +99,7 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', requireAdmin, [
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 8 }),
+  body('password').optional({ checkFalsy: true }).isLength({ min: 8 }),
   // Validation needs to be flexible or check the coalesced values later. 
   // For now, we'll relax these check here and rely on manual check or DB constraints 
   // to avoid complex conditional validation logic in express-validator
@@ -136,10 +138,12 @@ router.post('/', requireAdmin, [
       return res.status(400).json({ error: 'Role ID is required' });
     }
 
-    // Validate password strength
-    const passwordErrors = validatePassword(password);
-    if (passwordErrors.length > 0) {
-      return res.status(400).json({ error: 'Password validation failed', details: passwordErrors });
+    // Validate password strength ONLY if password is provided
+    if (password) {
+      const passwordErrors = validatePassword(password);
+      if (passwordErrors.length > 0) {
+        return res.status(400).json({ error: 'Password validation failed', details: passwordErrors });
+      }
     }
 
     // Validate NPI if provided
@@ -219,11 +223,28 @@ router.post('/', requireAdmin, [
       isAdmin: isAdminFinal === true || isAdminFinal === 'true'
     });
 
+    // Handle Invitation Email if no password provided
+    if (!password && user.invite_token) {
+      try {
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.get('host');
+        // Invitation link points to the setup-password page on the frontend
+        const inviteLink = `${protocol}://${host}/setup-password?token=${user.invite_token}`;
+
+        await emailService.sendUserInvitation(user.email, user.first_name, inviteLink);
+        console.log(`[Users] Invitation email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error('[Users] Failed to send invitation email:', emailError);
+        // We still created the user, so we should probably mention this in the response
+        user.emailError = 'User created but invitation email failed to send';
+      }
+    }
+
     req.logAuditEvent({
       action: 'USER_CREATED',
       entityType: 'User',
       entityId: user.id,
-      details: { email: user.email, roleId: roleIdFinal }
+      details: { email: user.email, roleId: roleIdFinal, invited: !password }
     });
 
     res.status(201).json(user);

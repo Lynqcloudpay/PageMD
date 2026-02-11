@@ -10,6 +10,7 @@
 
 const pool = require('../db');
 const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 const passwordService = require('./passwordService');
 const stripeService = require('./stripeService');
 
@@ -205,13 +206,23 @@ class UserService {
       isAdmin
     } = userData;
 
-    // Validate required fields
-    if (!email || !password || !firstName || !lastName || !roleId) {
+    // Validate required fields (password is optional now for invitation flow)
+    if (!email || !firstName || !lastName || !roleId) {
       throw new Error('Missing required fields');
     }
 
-    // Hash password with Argon2id (HIPAA-compliant)
-    const passwordHash = await passwordService.hashPassword(password);
+    // Hash password if provided, otherwise generate invitation token
+    let passwordHash = null;
+    let inviteToken = null;
+    let inviteExpiresAt = null;
+
+    if (password) {
+      passwordHash = await passwordService.hashPassword(password);
+    } else {
+      // Invitation Flow
+      inviteToken = uuidv4();
+      inviteExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+    }
 
     // Check if email exists
     const existing = await this.getUserByEmail(email);
@@ -244,10 +255,11 @@ class UserService {
       INSERT INTO users (
         email, password_hash, first_name, last_name, role_id, role, status,
         professional_type, npi, license_number, license_state,
-        dea_number, taxonomy_code, credentials, is_admin, date_created
+        dea_number, taxonomy_code, credentials, is_admin, date_created,
+        invite_token, invite_expires_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP)
-      RETURNING id, email, first_name, last_name, status, role_id, is_admin, date_created
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP, $16, $17)
+      RETURNING id, email, first_name, last_name, status, role_id, is_admin, date_created, invite_token, invite_expires_at
     `;
 
     const result = await pool.query(query, [
@@ -257,7 +269,7 @@ class UserService {
       lastName,
       roleId,
       oldRoleFormat, // Old role column
-      'active',
+      password ? 'active' : 'inactive', // New users are inactive until password is set
       professionalType || null,
       npi || null,
       licenseNumber || null,
@@ -265,7 +277,9 @@ class UserService {
       deaNumber || null,
       taxonomyCode || null,
       credentials || null,
-      isAdminValue // is_admin flag (secondary to role_id)
+      isAdminValue, // is_admin flag (secondary to role_id)
+      inviteToken,
+      inviteExpiresAt
     ]);
 
 
@@ -297,6 +311,81 @@ class UserService {
     }
 
     return result.rows[0];
+  }
+
+  /**
+   * Generate Password Reset Token
+   */
+  async generateResetToken(email) {
+    const user = await this.getUserByEmail(email);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const resetToken = uuidv4();
+    const resetExpiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour for reset
+
+    await pool.query(
+      'UPDATE users SET reset_token = $1, reset_expires_at = $2 WHERE id = $3',
+      [resetToken, resetExpiresAt, user.id]
+    );
+
+    return resetToken;
+  }
+
+  /**
+   * Verify Auth Token (Invite or Reset)
+   */
+  async verifyToken(token, type = 'invite') {
+    const tokenCol = type === 'invite' ? 'invite_token' : 'reset_token';
+    const expiryCol = type === 'invite' ? 'invite_expires_at' : 'reset_expires_at';
+
+    const query = `
+      SELECT id, email, first_name, last_name, ${expiryCol} as expires_at
+      FROM users
+      WHERE ${tokenCol} = $1
+    `;
+
+    const result = await pool.query(query, [token]);
+
+    if (result.rows.length === 0) {
+      return { valid: false, error: 'Token is invalid or has already been used' };
+    }
+
+    const { expires_at } = result.rows[0];
+    if (new Date() > new Date(expires_at)) {
+      return { valid: false, error: 'Token has expired' };
+    }
+
+    return { valid: true, user: result.rows[0] };
+  }
+
+  /**
+   * Redeem Token (Set Password)
+   */
+  async redeemToken(token, type = 'invite', newPassword) {
+    const verification = await this.verifyToken(token, type);
+    if (!verification.valid) {
+      throw new Error(verification.error);
+    }
+
+    const userId = verification.user.id;
+    const passwordHash = await passwordService.hashPassword(newPassword);
+
+    const tokenCol = type === 'invite' ? 'invite_token' : 'reset_token';
+    const expiryCol = type === 'invite' ? 'invite_expires_at' : 'reset_expires_at';
+
+    await pool.query(
+      `UPDATE users 
+       SET password_hash = $1, 
+           status = 'active', 
+           ${tokenCol} = NULL, 
+           ${expiryCol} = NULL 
+       WHERE id = $2`,
+      [passwordHash, userId]
+    );
+
+    return { success: true, email: verification.user.email };
   }
 
   /**

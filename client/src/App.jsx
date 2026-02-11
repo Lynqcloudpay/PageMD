@@ -63,6 +63,8 @@ const SalesAdmin = React.lazy(() => import('./pages/SalesAdmin'));
 const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
 const VerifyDemo = React.lazy(() => import('./pages/VerifyDemo'));
 const DemoConfirmation = React.lazy(() => import('./pages/DemoConfirmation'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const SetupPassword = React.lazy(() => import('./pages/SetupPassword'));
 
 const PortalLogin = React.lazy(() => import('./portal/PortalLogin'));
 const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
@@ -206,6 +208,9 @@ function App() {
                                                         <Route path="/portal/reset-password" element={<PortalResetPassword />} />
                                                         <Route path="/portal/telehealth" element={<PortalTelehealth />} />
                                                         <Route path="/visit/guest" element={<GuestVisitPage />} />
+                                                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                                                        <Route path="/setup-password" element={<SetupPassword />} />
+                                                        <Route path="/reset-password" element={<SetupPassword />} />
                                                         <Route path="/portal/dashboard" element={<PortalDashboard />} />
                                                         <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
                                                         <Route path="/dashboard" element={

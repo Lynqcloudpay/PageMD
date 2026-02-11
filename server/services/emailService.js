@@ -81,6 +81,35 @@ class EmailService {
     }
 
     /**
+     * Send User Invitation (Staff/Admin)
+     */
+    async sendUserInvitation(email, userName, inviteLink) {
+        const subject = `Invitation to join PageMD EMR`;
+        const html = `
+            <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="text-align: center; margin-bottom: 32px;">
+                    <img src="https://pagemdemr.com/logo.png" alt="PageMD" width="164" height="48" style="height: 48px; width: auto; border: 0;">
+                </div>
+                <h2 style="color: #2563eb; text-align: center;">Welcome to the Team, ${userName}!</h2>
+                <p style="font-size: 16px; line-height: 1.6; text-align: center;">You have been invited to join PageMD EMR as a staff member.</p>
+                <p style="font-size: 16px; line-height: 1.6;">PageMD is your mission control for clinical excellence. Click the button below to set up your password and access your account.</p>
+                <div style="margin: 40px 0; text-align: center;">
+                    <a href="${inviteLink}" style="background-color: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);">
+                        Set Up Your Account
+                    </a>
+                </div>
+                <p style="font-size: 14px; color: #64748b; margin-top: 40px;">Or copy and paste this link into your browser:</p>
+                <p style="font-size: 12px; color: #3b82f6; word-break: break-all;">${inviteLink}</p>
+                <p style="font-size: 14px; color: #64748b;">This invitation link will expire in 48 hours for your security.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 40px 0;" />
+                <p style="font-size: 12px; color: #94a3b8; text-align: center;">© ${new Date().getFullYear()} PageMD EMR. All rights reserved.</p>
+            </div>
+        `;
+
+        return this._send(email, subject, html);
+    }
+
+    /**
      * Send Password Reset
      */
     async sendPasswordReset(email, resetLink) {

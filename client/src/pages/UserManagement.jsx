@@ -505,7 +505,6 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       formData.lastName ||
       formData.email ||
       formData.username ||
-      formData.password ||
       formData.phone ||
       formData.npi ||
       formData.licenseNumber ||
@@ -563,10 +562,8 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     } else if (activeTab === 'settings') {
       if (!formData.roleId) newErrors.roleId = 'Role is required';
 
-      // Password validation
-      if (!formData.password) {
-        newErrors.password = 'Password is required';
-      } else {
+      // Password validation (Optional for invitation flow)
+      if (formData.password) {
         const passErrors = [];
         if (formData.password.length < 8) passErrors.push('8+ characters');
         if (!/[A-Z]/.test(formData.password)) passErrors.push('Uppercase');
@@ -577,10 +574,10 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
         if (passErrors.length > 0) {
           newErrors.password = `Missing: ${passErrors.join(', ')}`;
         }
-      }
 
-      if (formData.password && formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
+        if (formData.password !== formData.confirmPassword) {
+          newErrors.confirmPassword = 'Passwords do not match';
+        }
       }
     }
 
@@ -616,28 +613,24 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     e.preventDefault();
     setErrors({});
 
-    // Validation
-    if (!formData.username && !formData.email) {
-      setErrors({ username: 'Username or email is required' });
-      return;
-    }
+    // Password validation (comprehensive) - Only if provided
+    if (formData.password) {
+      if (formData.password !== formData.confirmPassword) {
+        setErrors({ confirmPassword: 'Passwords do not match' });
+        return;
+      }
 
-    if (formData.password !== formData.confirmPassword) {
-      setErrors({ confirmPassword: 'Passwords do not match' });
-      return;
-    }
+      const passErrors = [];
+      if (formData.password.length < 8) passErrors.push('8+ characters');
+      if (!/[A-Z]/.test(formData.password)) passErrors.push('Uppercase');
+      if (!/[a-z]/.test(formData.password)) passErrors.push('Lowercase');
+      if (!/[0-9]/.test(formData.password)) passErrors.push('Number');
+      if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) passErrors.push('Special char');
 
-    // Password validation (comprehensive)
-    const passErrors = [];
-    if (formData.password.length < 8) passErrors.push('8+ characters');
-    if (!/[A-Z]/.test(formData.password)) passErrors.push('Uppercase');
-    if (!/[a-z]/.test(formData.password)) passErrors.push('Lowercase');
-    if (!/[0-9]/.test(formData.password)) passErrors.push('Number');
-    if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) passErrors.push('Special char');
-
-    if (passErrors.length > 0) {
-      setErrors({ password: `Password must include: ${passErrors.join(', ')}` });
-      return;
+      if (passErrors.length > 0) {
+        setErrors({ password: `Password must include: ${passErrors.join(', ')}` });
+        return;
+      }
     }
 
     // Healthcare provider validation
@@ -1170,15 +1163,15 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
               )}
 
               <div className="border-t border-gray-200 pt-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-4">Password</h4>
+                <h4 className="text-sm font-semibold text-gray-900 mb-1">Password & Access</h4>
+                <p className="text-xs text-gray-500 mb-4 italic">Leave blank to send an email invitation for the user to set their own password.</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password <span className="text-red-500">*</span>
+                      Password
                     </label>
                     <input
                       type="password"
-                      required
                       minLength={8}
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -1191,11 +1184,10 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Confirm Password <span className="text-red-500">*</span>
+                      Confirm Password
                     </label>
                     <input
                       type="password"
-                      required
                       minLength={8}
                       value={formData.confirmPassword}
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
@@ -1258,11 +1250,11 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Creating User...</span>
+                    <span>Processing...</span>
                   </>
                 ) : (
                   <>
-                    <span>Create User Account</span>
+                    <span>{!formData.password ? 'Send Staff Invitation' : 'Create User Account'}</span>
                   </>
                 )}
               </button>

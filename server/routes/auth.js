@@ -7,6 +7,9 @@ const { requireAdmin } = require('../middleware/authorization');
 const { validatePassword } = require('../middleware/security');
 const { body, validationResult } = require('express-validator');
 const passwordService = require('../services/passwordService');
+const userService = require('../services/userService');
+const EmailService = require('../services/emailService');
+const emailService = new EmailService();
 
 const router = express.Router();
 
@@ -277,6 +280,107 @@ router.post('/login', [
       error: 'Login failed',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Request a password reset email
+ */
+router.post('/forgot-password', [
+  body('email').isEmail().normalizeEmail(),
+], async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Check if user exists (fail silently for security if we want, but usually better UX to confirm)
+    const user = await userService.getUserByEmail(email);
+    if (!user) {
+      // For security, we don't necessarily want to leak that the email doesn't exist
+      // But in internal systems, it's often more helpful to be explicit
+      return res.json({
+        message: 'If an account exists with this email, a reset link has been sent.'
+      });
+    }
+
+    const resetToken = await userService.generateResetToken(email);
+
+    // Generate reset link
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    const resetLink = `${protocol}://${host}/reset-password?token=${resetToken}`;
+
+    await emailService.sendPasswordReset(email, resetLink);
+
+    res.json({ message: 'If an account exists with this email, a reset link has been sent.' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+/**
+ * GET /api/auth/verify-token
+ * Verify the validity of an invitation or reset token
+ */
+router.get('/verify-token', async (req, res) => {
+  try {
+    const { token, type } = req.query;
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+
+    const verification = await userService.verifyToken(token, type || 'invite');
+    if (!verification.valid) {
+      return res.status(400).json({ error: verification.error });
+    }
+
+    res.json({
+      valid: true,
+      user: {
+        firstName: verification.user.first_name,
+        lastName: verification.user.last_name,
+        email: verification.user.email
+      }
+    });
+  } catch (error) {
+    console.error('Verify token error:', error);
+    res.status(500).json({ error: 'Failed to verify token' });
+  }
+});
+
+/**
+ * POST /api/auth/redeem-token
+ * Set a new password using a valid token
+ */
+router.post('/redeem-token', [
+  body('token').notEmpty(),
+  body('password').isLength({ min: 8 }),
+  body('type').optional().isIn(['invite', 'reset']),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { token, password, type = 'invite' } = req.body;
+
+    // Validate password strength again just in case
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ error: 'Password validation failed', details: passwordErrors });
+    }
+
+    const result = await userService.redeemToken(token, type, password);
+
+    res.json({
+      success: true,
+      message: type === 'invite' ? 'Account activated successfully!' : 'Password reset successfully!'
+    });
+  } catch (error) {
+    console.error('Redeem token error:', error);
+    res.status(400).json({ error: error.message || 'Failed to redeem token' });
   }
 });
 

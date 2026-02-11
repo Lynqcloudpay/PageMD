@@ -161,8 +161,11 @@ const Login = () => {
                     <div className="mt-8 text-center text-sm">
                         <p className="text-slate-400 font-medium">
                             Forgot your password?{' '}
-                            <button className="text-blue-600 hover:text-blue-700 font-black transition-colors underline decoration-blue-500/20 hover:decoration-blue-500">
-                                Contact Administrator
+                            <button
+                                onClick={() => navigate('/forgot-password')}
+                                className="text-blue-600 hover:text-blue-700 font-black transition-colors underline decoration-blue-500/20 hover:decoration-blue-500"
+                            >
+                                Reset it here
                             </button>
                         </p>
                     </div>
