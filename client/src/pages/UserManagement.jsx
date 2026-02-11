@@ -462,6 +462,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showManualPassword, setShowManualPassword] = useState(false);
 
   // Determine role type (moved before step calculation)
   const selectedRole = roles?.find(r => r.id === formData.roleId);
@@ -1162,43 +1163,66 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                 </div>
               )}
 
-              <div className="border-t border-gray-200 pt-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-1">Password & Access</h4>
-                <p className="text-xs text-gray-500 mb-4 italic">Leave blank to send an email invitation for the user to set their own password.</p>
-                <div className="grid grid-cols-2 gap-4">
+              <div className="border-t border-gray-200 pt-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      minLength={8}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.password ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">8+ chars, Uppercase, Lowercase, Number, Symbol</p>
-                    {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
+                    <h4 className="text-sm font-semibold text-gray-900 mb-1">Password & Access</h4>
+                    <p className="text-xs text-gray-500 italic">By default, a secure invitation email will be sent for the user to set their own password.</p>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Confirm Password
-                    </label>
+                  <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl hover:bg-slate-50 transition-colors">
                     <input
-                      type="password"
-                      minLength={8}
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                        }`}
+                      type="checkbox"
+                      checked={showManualPassword}
+                      onChange={(e) => {
+                        setShowManualPassword(e.target.checked);
+                        if (!e.target.checked) {
+                          setFormData({ ...formData, password: '', confirmPassword: '' });
+                        }
+                      }}
+                      className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
                     />
-                    {errors.confirmPassword && (
-                      <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
-                    )}
-                  </div>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Set Manually</span>
+                  </label>
                 </div>
+
+                {showManualPassword && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Password <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required={showManualPassword}
+                        minLength={8}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.password ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">8+ chars, Uppercase, Lowercase, Number, Symbol</p>
+                      {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Confirm Password <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required={showManualPassword}
+                        minLength={8}
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                          }`}
+                      />
+                      {errors.confirmPassword && (
+                        <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
