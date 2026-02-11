@@ -35,15 +35,23 @@ async function runMigrationForSchema(client, schema) {
 async function migrate() {
     const client = await pool.connect();
     try {
-        // Find all tenant schemas
-        const schemasResult = await client.query(`
-            SELECT schema_name 
-            FROM information_schema.schemata 
-            WHERE schema_name LIKE 'tenant_%' OR schema_name = 'public'
-        `);
+        // Find all tenant schemas from the clinics table first
+        let schemas = ['public'];
+        try {
+            const clinicsResult = await client.query(`SELECT DISTINCT schema_name FROM clinics WHERE schema_name IS NOT NULL`);
+            const clinicSchemas = clinicsResult.rows.map(r => r.schema_name);
+            schemas = [...new Set([...schemas, ...clinicSchemas])];
+        } catch (e) {
+            console.warn('Could not fetch schemas from clinics table, falling back to pattern search:', e.message);
+            const schemasResult = await client.query(`
+                SELECT schema_name 
+                FROM information_schema.schemata 
+                WHERE schema_name LIKE 'tenant_%' OR schema_name = 'public'
+            `);
+            schemas = schemasResult.rows.map(r => r.schema_name);
+        }
 
-        const schemas = schemasResult.rows.map(r => r.schema_name);
-        console.log(`Found schemas: ${schemas.join(', ')}`);
+        console.log(`Found schemas to migrate: ${schemas.join(', ')}`);
 
         for (const schema of schemas) {
             try {
