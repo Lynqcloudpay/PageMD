@@ -97,13 +97,15 @@ const resolveTenant = async (req, res, next) => {
         }
     }
 
-    // D. Recognition by Portal Token (for Invitations/Registration/Guest Access)
+    // D. Recognition by Token (Staff Invitations/Reset or Portal Invitations/Registration/Guest Access)
+    const isStaffVerify = req.path.includes('/auth/verify-token');
+    const isStaffRedeem = req.path.includes('/auth/redeem-token');
     const isPortalInviteVerify = req.path.includes('/portal/auth/invite/');
     const isPortalRegister = req.path === '/portal/auth/register' || req.path === '/api/portal/auth/register';
     const isIntakePublic = req.path.includes('/intake/public/');
     const isGuestVisit = req.path.includes('/visit/guest');
 
-    if (!slug && !lookupSchema && (isPortalInviteVerify || isPortalRegister || isIntakePublic || isGuestVisit)) {
+    if (!slug && !lookupSchema && (isStaffVerify || isStaffRedeem || isPortalInviteVerify || isPortalRegister || isIntakePublic || isGuestVisit)) {
         try {
             const crypto = require('crypto');
             let token = null;
@@ -112,11 +114,11 @@ const resolveTenant = async (req, res, next) => {
                 token = req.path.split('/').pop();
             } else if (isIntakePublic) {
                 token = req.params.token || req.path.split('/').pop();
-            } else if (isGuestVisit) {
-                // For guest visits, token can be in query (GET) or body (POST verify-dob/join)
+            } else if (isGuestVisit || isStaffVerify || isStaffRedeem) {
+                // Tokens can be in query (GET) or body (POST)
                 token = req.query.token || (req.body ? req.body.token : null);
             } else {
-                token = req.body ? req.body.token : null;
+                token = (req.body ? req.body.token : null) || req.query.token;
             }
 
             if (token) {
@@ -141,13 +143,21 @@ const resolveTenant = async (req, res, next) => {
                         } else if (isGuestVisit) {
                             tableToCheck = 'guest_access_tokens';
                             colToCheck = 'token_hash';
+                        } else if (isStaffVerify || isStaffRedeem) {
+                            tableToCheck = 'users';
+                            // Staff tokens are stored as UUID strings in DB, not hashes
+                            colToCheck = req.query.type === 'reset' || (req.body && req.body.type === 'reset') ? 'reset_token' : 'invite_token';
                         }
 
                         // CRITICAL FIX: Do NOT check expiration here.
                         // If the token is valid but expired, we still need to resolve the tenant.
+                        const queryStr = (isStaffVerify || isStaffRedeem)
+                            ? `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck}::text = $1`
+                            : `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck} = $1`;
+
                         const check = await pool.controlPool.query(
-                            `SELECT 1 FROM ${schema}.${tableToCheck} WHERE ${colToCheck} = $1`,
-                            [tokenHash]
+                            queryStr,
+                            [isStaffVerify || isStaffRedeem ? token : tokenHash]
                         );
 
                         if (check.rows.length > 0) {
@@ -192,7 +202,7 @@ const resolveTenant = async (req, res, next) => {
     // Default Fallback (Legacy Support)
     if (!slug && !lookupSchema) {
         // Public endpoints that don't need tenant schema can pass through
-        if (req.path.includes('/verify-token') || req.path.includes('/sales/inquiry')) {
+        if (req.path.includes('/sales/inquiry')) {
             return next();
         }
 
