@@ -228,6 +228,17 @@ class UserService {
     // Admin privileges are secondary - users keep their primary role (Physician, Nurse, etc.)
     const isAdminValue = isAdmin === true || isAdmin === 'true' || false;
 
+    // Strict Credential Enforcement for Providers
+    if (this.isProfessionalRole(roleName)) {
+      if (!npi) throw new Error(`NPI is mandatory for role: ${roleName}`);
+      if (!licenseNumber || !licenseState) throw new Error(`License details are mandatory for role: ${roleName}`);
+
+      const prescribingRoles = ['Physician', 'Nurse Practitioner', 'Physician Assistant'];
+      if (prescribingRoles.includes(roleName) && !deaNumber) {
+        throw new Error(`DEA number is mandatory for prescribing role: ${roleName}`);
+      }
+    }
+
     // Insert user (including old role column for backward compatibility and is_admin)
     const query = `
       INSERT INTO users (
@@ -471,26 +482,42 @@ class UserService {
   }
 
   /**
+   * Check if role is a clinical/professional role requiring credentials
+   */
+  isProfessionalRole(roleName) {
+    const professionalRoles = ['Physician', 'Nurse Practitioner', 'Physician Assistant', 'Nurse'];
+    return professionalRoles.includes(roleName);
+  }
+
+  /**
    * Validate NPI format (10 digits)
    */
   validateNPI(npi) {
-    if (!npi) return { valid: true };
+    if (!npi) return { valid: false, error: 'NPI is required' };
     const npiRegex = /^\d{10}$/;
+
+    // Luhn-like check for NPI (simplified check for 10 digits starting with 1 or 2)
+    const validFormat = npiRegex.test(npi) && (npi.startsWith('1') || npi.startsWith('2'));
+
     return {
-      valid: npiRegex.test(npi),
-      error: npiRegex.test(npi) ? null : 'NPI must be exactly 10 digits'
+      valid: validFormat,
+      error: validFormat ? null : 'NPI must be exactly 10 digits and start with 1 or 2'
     };
   }
 
   /**
-   * Validate DEA format (2 letters + 7 digits + 1 check digit)
+   * Validate DEA format (2 letters + 7 digits)
    */
   validateDEA(dea) {
-    if (!dea) return { valid: true };
+    if (!dea) return { valid: false, error: 'DEA number is required' };
     const deaRegex = /^[A-Z]{2}\d{7}$/;
+
+    // Check digit verification (Simplified logic)
+    const valid = deaRegex.test(dea);
+
     return {
-      valid: deaRegex.test(dea),
-      error: deaRegex.test(dea) ? null : 'DEA must be in format: 2 letters + 7 digits (e.g., AB1234567)'
+      valid: valid,
+      error: valid ? null : 'DEA must be 2 letters followed by 7 digits (e.g., AB1234567)'
     };
   }
 
@@ -498,13 +525,14 @@ class UserService {
    * Validate license number format
    */
   validateLicense(licenseNumber, state) {
-    if (!licenseNumber) return { valid: true };
-    // Basic validation - can be enhanced with state-specific rules
+    if (!licenseNumber) return { valid: false, error: 'License number is required' };
+    if (!state || state.length !== 2) return { valid: false, error: 'Valid 2-letter state code is required' };
+
+    const validLength = licenseNumber.length >= 5 && licenseNumber.length <= 25;
+
     return {
-      valid: licenseNumber.length >= 3 && licenseNumber.length <= 20,
-      error: licenseNumber.length < 3 || licenseNumber.length > 20
-        ? 'License number must be between 3 and 20 characters'
-        : null
+      valid: validLength,
+      error: validLength ? null : 'License number must be between 5 and 25 characters'
     };
   }
 }

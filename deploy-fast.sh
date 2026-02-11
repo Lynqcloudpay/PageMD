@@ -162,6 +162,9 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "Sparkles Project Echo Activation..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/activate-echo.js || echo "⚠️ Warning: Echo activation failed."
 
+  echo "🌱 Seeding System Control Records..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/seed-control.js || echo "⚠️ Warning: System seeding failed."
+
   echo "🧹 Cleanup..."
   docker image prune -f
 EOF

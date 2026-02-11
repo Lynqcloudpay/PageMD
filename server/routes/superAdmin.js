@@ -76,9 +76,11 @@ router.get('/clinics', verifySuperAdmin, async (req, res) => {
             LEFT JOIN platform_support_tickets st ON c.id = st.clinic_id
             LEFT JOIN clinic_setup_checklist csc ON c.slug = csc.tenant_id
         `;
-
         const conditions = [];
         const params = [];
+
+        // Exclude system sandbox demo clinic from the list
+        conditions.push("c.slug != 'demo' AND c.id != '60456326-868d-4e21-942a-fd35190ed4fc'");
 
         if (req.query.tenant_type) {
             conditions.push(`c.tenant_type = $${params.length + 1}`);

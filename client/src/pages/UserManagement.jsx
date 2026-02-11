@@ -548,39 +548,38 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     } else if (activeTab === 'credentials' && isHealthcareProvider) {
       const role = roles.find(r => r.id === formData.roleId);
       if (role && role.name !== 'Medical Assistant' && !formData.credentials) {
-        newErrors.credentials = 'Credentials are required';
+        newErrors.credentials = 'Professional credentials required (e.g. MD, NP)';
       }
-      if (!formData.npi) newErrors.npi = 'NPI is required';
+      if (!formData.npi || !/^\d{10}$/.test(formData.npi)) newErrors.npi = 'Valid 10-digit NPI is required';
       if (!formData.licenseNumber) newErrors.licenseNumber = 'License number is required';
-      if (!formData.licenseState) newErrors.licenseState = 'License state is required';
+      if (!formData.licenseState || formData.licenseState.length !== 2) newErrors.licenseState = '2-letter state code is required';
       if (canPrescribe) {
-        if (!formData.deaNumber) newErrors.deaNumber = 'DEA number is required';
+        if (!formData.deaNumber || !/^[A-Z]{2}\d{7}$/.test(formData.deaNumber)) newErrors.deaNumber = 'Valid DEA required (e.g. AB1234567)';
         if (!formData.taxonomyCode) newErrors.taxonomyCode = 'Taxonomy code is required';
       }
       if ((role?.name === 'Physician' || role?.name === 'Nurse Practitioner') && !formData.specialty) {
-        newErrors.specialty = 'Specialty is required';
+        newErrors.specialty = 'Professional specialty is required';
       }
     } else if (activeTab === 'settings') {
       if (!formData.roleId) newErrors.roleId = 'Role is required';
+
+      // Password validation
       if (!formData.password) {
         newErrors.password = 'Password is required';
       } else {
-        // Comprehensive password validation
-        if (formData.password.length < 8) {
-          newErrors.password = 'Password must be at least 8 characters';
-        } else if (!/[A-Z]/.test(formData.password)) {
-          newErrors.password = 'Password must contain at least one uppercase letter';
-        } else if (!/[a-z]/.test(formData.password)) {
-          newErrors.password = 'Password must contain at least one lowercase letter';
-        } else if (!/[0-9]/.test(formData.password)) {
-          newErrors.password = 'Password must contain at least one number';
-        } else if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) {
-          newErrors.password = 'Password must contain at least one special character';
+        const passErrors = [];
+        if (formData.password.length < 8) passErrors.push('8+ characters');
+        if (!/[A-Z]/.test(formData.password)) passErrors.push('Uppercase');
+        if (!/[a-z]/.test(formData.password)) passErrors.push('Lowercase');
+        if (!/[0-9]/.test(formData.password)) passErrors.push('Number');
+        if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) passErrors.push('Special char');
+
+        if (passErrors.length > 0) {
+          newErrors.password = `Missing: ${passErrors.join(', ')}`;
         }
       }
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password';
-      } else if (formData.password !== formData.confirmPassword) {
+
+      if (formData.password && formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match';
       }
     }
@@ -629,24 +628,15 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
     }
 
     // Password validation (comprehensive)
-    if (formData.password.length < 8) {
-      setErrors({ password: 'Password must be at least 8 characters long' });
-      return;
-    }
-    if (!/[A-Z]/.test(formData.password)) {
-      setErrors({ password: 'Password must contain at least one uppercase letter' });
-      return;
-    }
-    if (!/[a-z]/.test(formData.password)) {
-      setErrors({ password: 'Password must contain at least one lowercase letter' });
-      return;
-    }
-    if (!/[0-9]/.test(formData.password)) {
-      setErrors({ password: 'Password must contain at least one number' });
-      return;
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) {
-      setErrors({ password: 'Password must contain at least one special character' });
+    const passErrors = [];
+    if (formData.password.length < 8) passErrors.push('8+ characters');
+    if (!/[A-Z]/.test(formData.password)) passErrors.push('Uppercase');
+    if (!/[a-z]/.test(formData.password)) passErrors.push('Lowercase');
+    if (!/[0-9]/.test(formData.password)) passErrors.push('Number');
+    if (!/[!@#$%^&*(),.?":{}|<>_+\-=\[\]\\;',./]/.test(formData.password)) passErrors.push('Special char');
+
+    if (passErrors.length > 0) {
+      setErrors({ password: `Password must include: ${passErrors.join(', ')}` });
       return;
     }
 

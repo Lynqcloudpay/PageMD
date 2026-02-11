@@ -176,6 +176,24 @@ router.post('/', requireAdmin, [
       return res.status(400).json({ error: 'Invalid role' });
     }
 
+    // Enforce Professional Credentials based on Role
+    const isProfessional = userService.isProfessionalRole(role.name);
+    if (isProfessional) {
+      if (!npi) return res.status(400).json({ error: `NPI is mandatory for ${role.name} accounts.` });
+
+      const licenseNumberFinal = license_number || licenseNumber;
+      const licenseStateFinal = license_state || licenseState;
+      if (!licenseNumberFinal || !licenseStateFinal) {
+        return res.status(400).json({ error: `Professional License and State are mandatory for ${role.name} accounts.` });
+      }
+
+      const prescribingRoles = ['Physician', 'Nurse Practitioner', 'Physician Assistant'];
+      const deaNumberFinal = dea_number || deaNumber;
+      if (prescribingRoles.includes(role.name) && !deaNumberFinal) {
+        return res.status(400).json({ error: `DEA Number is mandatory for prescribing role: ${role.name}` });
+      }
+    }
+
     // Check if trying to grant admin privileges (only existing admins can grant admin privileges)
     const isAdminFinal = is_admin || isAdmin;
     if (isAdminFinal === true || isAdminFinal === 'true') {
@@ -243,6 +261,23 @@ router.put('/:id', [
     if (!isAdmin) {
       delete updates.roleId;
       delete updates.status;
+    }
+
+    // Role-based credential enforcement on update
+    if (updates.roleId && isAdmin) {
+      const newRole = await roleService.getRoleById(updates.roleId);
+      if (newRole && userService.isProfessionalRole(newRole.name)) {
+        const npiValue = updates.npi || (await userService.getUserById(id))?.npi;
+        if (!npiValue) {
+          return res.status(400).json({ error: `NPI is mandatory for ${newRole.name} accounts.` });
+        }
+
+        // Similarly for license
+        const licenseValue = updates.licenseNumber || (await userService.getUserById(id))?.license_number;
+        if (!licenseValue) {
+          return res.status(400).json({ error: `Professional License is mandatory for ${newRole.name} accounts.` });
+        }
+      }
     }
 
     // Validate NPI if provided
