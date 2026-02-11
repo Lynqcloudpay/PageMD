@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     UserPlus, Search, Filter, QrCode, Send, Mail, Phone, Clock,
     CheckCircle, AlertCircle, Eye, MoreVertical, Copy, RefreshCw,
-    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key, ShieldOff, ChevronDown, ChevronUp, Calendar, ArrowRight, Notebook
+    Check, X, ChevronRight, User, ExternalLink, Smartphone, Shield, Key, ShieldOff, ChevronDown, ChevronUp, Calendar, ArrowRight
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { format, parseISO, isValid } from 'date-fns';
