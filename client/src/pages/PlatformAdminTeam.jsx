@@ -13,7 +13,6 @@ const PlatformAdminTeam = () => {
         firstName: '',
         lastName: '',
         email: '',
-        password: '',
         role: 'support'
     });
     const [error, setError] = useState('');
@@ -44,7 +43,7 @@ const PlatformAdminTeam = () => {
             if (response.success) {
                 setSuccess(`User ${newUser.firstName} created successfully!`);
                 setShowAddModal(false);
-                setNewUser({ firstName: '', lastName: '', email: '', password: '', role: 'support' });
+                setNewUser({ firstName: '', lastName: '', email: '', role: 'support' });
                 loadTeam();
             }
         } catch (err) {
@@ -249,20 +248,12 @@ const PlatformAdminTeam = () => {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Password</label>
-                                <div className="relative">
-                                    <Lock className="absolute left-4 top-2.5 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="password"
-                                        required
-                                        minLength={8}
-                                        value={newUser.password}
-                                        onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
-                                    />
+                            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 text-xs text-purple-700 flex items-start gap-3">
+                                <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="font-semibold">Secure Invitation Flow</p>
+                                    <p className="mt-1 opacity-80">This team member will receive an email invitation to set up their own secure password. Direct password assignment is disabled for security compliance.</p>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1 font-medium ml-1">Must be at least 8 characters</p>
                             </div>
 
                             <div>

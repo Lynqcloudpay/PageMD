@@ -30,7 +30,26 @@ async function runMigrationForSchema(client, schema) {
         ADD COLUMN IF NOT EXISTS reset_expires_at TIMESTAMP WITH TIME ZONE;
     `);
 
-    console.log(`✅ Users table in ${schema} updated.`);
+    // If public schema, also update administrative tables
+    if (schema === 'public') {
+        console.log('  Updating super_admins table in public...');
+        await client.query(`
+            ALTER TABLE super_admins
+            ALTER COLUMN password_hash DROP NOT NULL,
+            ADD COLUMN IF NOT EXISTS invite_token UUID UNIQUE,
+            ADD COLUMN IF NOT EXISTS invite_expires_at TIMESTAMP WITH TIME ZONE;
+        `);
+
+        console.log('  Updating sales_team_users table in public...');
+        await client.query(`
+            ALTER TABLE sales_team_users
+            ALTER COLUMN password_hash DROP NOT NULL,
+            ADD COLUMN IF NOT EXISTS invite_token UUID UNIQUE,
+            ADD COLUMN IF NOT EXISTS invite_expires_at TIMESTAMP WITH TIME ZONE;
+        `);
+    }
+
+    console.log(`✅ Tables in ${schema} updated.`);
 }
 
 async function migrate() {

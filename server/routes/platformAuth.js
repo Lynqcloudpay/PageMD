@@ -138,12 +138,13 @@ router.get('/me', async (req, res) => {
 /**
  * POST /api/platform-auth/register
  * Register new platform admin (requires existing Super Admin)
+ * Now uses invitation-based flow.
  */
 router.post('/register', async (req, res) => {
     try {
         // Verify requestor is a super admin
-        const token = req.headers['x-platform-token'];
-        if (!token) {
+        const tokenToken = req.headers['x-platform-token'];
+        if (!tokenToken) {
             return res.status(401).json({ error: 'Authentication required' });
         }
 
@@ -151,7 +152,7 @@ router.post('/register', async (req, res) => {
             `SELECT sa.id, sa.role FROM platform_admin_sessions pas
        JOIN super_admins sa ON pas.admin_id = sa.id
        WHERE pas.token = $1 AND pas.expires_at > NOW() AND sa.role = 'super_admin'`,
-            [token]
+            [tokenToken]
         );
 
         if (authCheck.rows.length === 0) {
@@ -159,15 +160,11 @@ router.post('/register', async (req, res) => {
         }
 
         const createdBy = authCheck.rows[0].id;
-        const { email, password, firstName, lastName, role = 'support' } = req.body;
+        const { email, firstName, lastName, role = 'support' } = req.body;
 
         // Validate input
-        if (!email || !password || !firstName || !lastName) {
+        if (!email || !firstName || !lastName) {
             return res.status(400).json({ error: 'All fields required' });
-        }
-
-        if (password.length < 8) {
-            return res.status(400).json({ error: 'Password must be at least 8 characters' });
         }
 
         // Check if email already exists
@@ -180,22 +177,28 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ error: 'Email already registered' });
         }
 
-        // Hash password
-        const passwordHash = await bcrypt.hash(password, 10);
+        // Generate invitation token
+        const inviteToken = uuidv4();
+        const inviteExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
-        // Create new admin
+        // Create new admin with invite token
         const result = await pool.controlPool.query(
-            `INSERT INTO super_admins (email, password_hash, first_name, last_name, role, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO super_admins (email, first_name, last_name, role, created_by, invite_token, invite_expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, email, first_name, last_name, role, created_at`,
-            [email, passwordHash, firstName, lastName, role, createdBy]
+            [email, firstName, lastName, role, createdBy, inviteToken, inviteExpiresAt]
         );
+
+        // Send Email
+        const emailService = require('../services/emailService');
+        const setupLink = `${process.env.FRONTEND_URL || 'https://pagemdemr.com'}/setup-password?token=${inviteToken}&type=platform`;
+        await emailService.sendUserInvitation(email, `${firstName} ${lastName}`, setupLink);
 
         // Log the registration
         await pool.controlPool.query(
             `INSERT INTO platform_audit_logs (super_admin_id, action, details)
        VALUES ($1, $2, $3)`,
-            [createdBy, 'admin_user_created', JSON.stringify({ newUserId: result.rows[0].id, email, role })]
+            [createdBy, 'admin_user_invited', JSON.stringify({ newUserId: result.rows[0].id, email, role })]
         );
 
         res.status(201).json({
@@ -205,6 +208,85 @@ router.post('/register', async (req, res) => {
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ error: 'Registration failed' });
+    }
+});
+
+/**
+ * GET /api/platform-auth/verify-invite/:token
+ * Verify platform admin invitation token
+ */
+router.get('/verify-invite/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const result = await pool.controlPool.query(
+            'SELECT email, first_name, last_name, invite_expires_at FROM super_admins WHERE invite_token = $1',
+            [token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Invalid or already used invitation link' });
+        }
+
+        const user = result.rows[0];
+        if (new Date() > new Date(user.invite_expires_at)) {
+            return res.status(400).json({ error: 'Invitation link has expired' });
+        }
+
+        res.json({
+            valid: true,
+            user: {
+                email: user.email,
+                firstName: user.first_name,
+                lastName: user.last_name
+            }
+        });
+    } catch (error) {
+        console.error('Verify invite error:', error);
+        res.status(500).json({ error: 'Failed to verify invitation' });
+    }
+});
+
+/**
+ * POST /api/platform-auth/redeem-invite
+ * Set password and activate platform admin account
+ */
+router.post('/redeem-invite', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token and password required' });
+        }
+
+        if (password.length < 12) {
+            return res.status(400).json({ error: 'Password must be at least 12 characters' });
+        }
+
+        // Find user
+        const result = await pool.controlPool.query(
+            'SELECT id, email FROM super_admins WHERE invite_token = $1',
+            [token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Invalid or expired invitation' });
+        }
+
+        const adminId = result.rows[0].id;
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Update user
+        await pool.controlPool.query(
+            `UPDATE super_admins 
+       SET password_hash = $1, invite_token = NULL, invite_expires_at = NULL, is_active = true, updated_at = NOW() 
+       WHERE id = $2`,
+            [passwordHash, adminId]
+        );
+
+        res.json({ success: true, message: 'Account activated successfully' });
+    } catch (error) {
+        console.error('Redeem invite error:', error);
+        res.status(500).json({ error: 'Activation failed' });
     }
 });
 

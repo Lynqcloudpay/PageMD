@@ -6,7 +6,7 @@ const SetupPassword = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [token, setToken] = useState('');
-    const [type, setType] = useState('invite');
+    const [type, setType] = useState('emr'); // emr, platform, sales, reset
     const [user, setUser] = useState(null);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,7 +20,7 @@ const SetupPassword = () => {
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const tokenParam = params.get('token');
-        const typeParam = location.pathname === '/reset-password' ? 'reset' : 'invite';
+        const typeParam = params.get('type') || (location.pathname === '/reset-password' ? 'reset' : 'emr');
 
         if (!tokenParam) {
             setError('Missing or invalid token. Please check your link.');
@@ -34,7 +34,16 @@ const SetupPassword = () => {
         // Verify token on mount
         const verifyToken = async () => {
             try {
-                const response = await axios.get(`/api/auth/verify-token?token=${tokenParam}&type=${typeParam}`);
+                let endpoint = '';
+                if (typeParam === 'platform') {
+                    endpoint = `/api/platform-auth/verify-invite/${tokenParam}`;
+                } else if (typeParam === 'sales') {
+                    endpoint = `/api/sales/auth/verify-invite/${tokenParam}`;
+                } else {
+                    endpoint = `/api/auth/verify-token?token=${tokenParam}&type=${typeParam === 'reset' ? 'reset' : 'invite'}`;
+                }
+
+                const response = await axios.get(endpoint);
                 setUser(response.data.user);
             } catch (err) {
                 setError(err.response?.data?.error || 'Token is invalid or has expired.');
@@ -73,14 +82,25 @@ const SetupPassword = () => {
 
         setSubmitting(true);
         try {
-            await axios.post('/api/auth/redeem-token', {
-                token,
-                password,
-                type
-            });
+            let endpoint = '';
+            let payload = { token, password };
+
+            if (type === 'platform') {
+                endpoint = '/api/platform-auth/redeem-invite';
+            } else if (type === 'sales') {
+                endpoint = '/api/sales/auth/redeem-invite';
+            } else {
+                endpoint = '/api/auth/redeem-token';
+                payload.type = type === 'reset' ? 'reset' : 'invite';
+            }
+
+            await axios.post(endpoint, payload);
             setSuccess(true);
             setTimeout(() => {
-                navigate('/login');
+                // Determine redirect path
+                if (type === 'platform') navigate('/platform-admin');
+                else if (type === 'sales') navigate('/sales-admin');
+                else navigate('/login');
             }, 3000);
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to set password. Please try again.');

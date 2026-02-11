@@ -3,7 +3,7 @@ import {
     Mail, Phone, Building2, Users, Calendar, Clock,
     CheckCircle2, XCircle, MessageSquare, RefreshCw,
     Search, Filter, ChevronDown, ArrowLeft, Inbox,
-    TrendingUp, UserPlus, Eye, MoreVertical, Lock, LogOut,
+    TrendingUp, UserPlus, Eye, EyeOff, MoreVertical, Lock, LogOut,
     Settings, Key, Plus, User, Gift, Database, Shield,
     Send, History, Share2, X, ChevronRight, ChevronLeft, PhoneIncoming, CalendarCheck, Reply, XOctagon, Video, Zap, Star, Activity, CalendarDays, Archive,
     CalendarX2, Ban, Snowflake, AlertTriangle, CheckSquare, Trophy, HelpCircle, Timer, DollarSign, Wallet, CircleDashed, UserMinus, RotateCcw
@@ -33,6 +33,7 @@ const SalesAdmin = () => {
     // Login State
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [authLoading, setAuthLoading] = useState(false);
     const [authError, setAuthError] = useState('');
 
@@ -982,16 +983,25 @@ const SalesAdmin = () => {
                                     required
                                 />
                             </div>
-                            <div>
+                            <div className="relative group">
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Enter password"
-                                    required
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                                        placeholder="Enter password"
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                    </button>
+                                </div>
                             </div>
 
                             {authError && (
@@ -2622,22 +2632,17 @@ const SalesAdmin = () => {
                                                     />
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <input
-                                                        type="password"
-                                                        placeholder="Initial Password (min 8 chars)"
-                                                        value={userForm.password}
-                                                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
-                                                        required
-                                                        minLength={8}
-                                                    />
+                                                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-700 flex items-start gap-2 mb-2">
+                                                        <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+                                                        <p>An invitation will be sent to this email address to set up their password securely.</p>
+                                                    </div>
                                                 </div>
                                                 <div className="col-span-2">
                                                     <button
                                                         type="submit"
                                                         className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
                                                     >
-                                                        Create User
+                                                        Create User & Send Invite
                                                     </button>
                                                 </div>
                                                 {userMsg.text && (
@@ -2805,17 +2810,12 @@ const SalesAdmin = () => {
                                             />
                                         </div>
 
-                                        <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
-                                            <input
-                                                type="password"
-                                                required
-                                                minLength={8}
-                                                placeholder="Min 8 characters"
-                                                value={onboardForm.adminPassword}
-                                                onChange={e => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                            />
+                                        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-sm text-emerald-800 flex items-start gap-3">
+                                            <Shield className="w-5 h-5 mt-0.5 shrink-0" />
+                                            <div>
+                                                <p className="font-semibold">Secure Invitation Flow</p>
+                                                <p className="text-emerald-700/80">The clinic admin will receive a secure email invitation to set up their own password. This ensures compliance and security.</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

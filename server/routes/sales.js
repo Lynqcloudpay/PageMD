@@ -222,34 +222,121 @@ router.patch('/auth/profile', verifyToken, async (req, res) => {
 /**
  * POST /api/sales/auth/create-user
  * Create a new sales team user (Protected)
+ * Now uses invitation-based flow.
  */
 router.post('/auth/create-user', verifyToken, async (req, res) => {
     try {
-        const { username, password, email } = req.body;
+        const { username, email } = req.body;
 
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password required' });
+        if (!username || !email) {
+            return res.status(400).json({ error: 'Username and email required' });
         }
 
         // Check availability
-        const check = await pool.query('SELECT * FROM sales_team_users WHERE username = $1', [username]);
+        const check = await pool.query('SELECT * FROM sales_team_users WHERE username = $1 OR email = $2', [username, email]);
         if (check.rows.length > 0) {
-            return res.status(400).json({ error: 'Username already taken' });
+            return res.status(400).json({ error: 'Username or Email already taken' });
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(password, salt);
+        // Generate invitation token
+        const inviteToken = uuidv4();
+        const inviteExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
 
         await pool.query(
-            'INSERT INTO sales_team_users (username, password_hash, email) VALUES ($1, $2, $3)',
-            [username, hash, email]
+            `INSERT INTO sales_team_users (username, email, invite_token, invite_expires_at, is_active) 
+       VALUES ($1, $2, $3, $4, false)`,
+            [username, email, inviteToken, inviteExpiresAt]
         );
 
-        res.json({ success: true, message: 'User created successfully' });
+        // Send Email
+        const emailService = require('../services/emailService');
+        const setupLink = `${process.env.FRONTEND_URL || 'https://pagemdemr.com'}/setup-password?token=${inviteToken}&type=sales`;
+        await emailService.sendUserInvitation(email, username, setupLink);
+
+        res.json({ success: true, message: 'Invitation sent successfully' });
 
     } catch (error) {
         console.error('Create user error:', error);
-        res.status(500).json({ error: 'Failed to create user' });
+        res.status(500).json({ error: 'Failed to create user invitation' });
+    }
+});
+
+/**
+ * GET /api/sales/auth/verify-invite/:token
+ * Verify sales team invitation token
+ */
+router.get('/auth/verify-invite/:token', async (req, res) => {
+    try {
+        const { token } = req.params;
+        const result = await pool.query(
+            'SELECT username, email, invite_expires_at FROM sales_team_users WHERE invite_token = $1',
+            [token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Invalid or already used invitation link' });
+        }
+
+        const user = result.rows[0];
+        if (new Date() > new Date(user.invite_expires_at)) {
+            return res.status(400).json({ error: 'Invitation link has expired' });
+        }
+
+        res.json({
+            valid: true,
+            user: {
+                username: user.username,
+                email: user.email
+            }
+        });
+    } catch (error) {
+        console.error('Verify invite error:', error);
+        res.status(500).json({ error: 'Failed to verify invitation' });
+    }
+});
+
+/**
+ * POST /api/sales/auth/redeem-invite
+ * Set password and activate sales team account
+ */
+router.post('/auth/redeem-invite', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) {
+            return res.status(400).json({ error: 'Token and password required' });
+        }
+
+        if (password.length < 12) {
+            return res.status(400).json({ error: 'Password must be at least 12 characters' });
+        }
+
+        // Find user
+        const result = await pool.query(
+            'SELECT id, username FROM sales_team_users WHERE invite_token = $1',
+            [token]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Invalid or expired invitation' });
+        }
+
+        const userId = result.rows[0].id;
+        const salt = await bcrypt.genSalt(10);
+        const hash = await bcrypt.hash(password, salt);
+
+        // Update user
+        await pool.query(
+            `UPDATE sales_team_users 
+       SET password_hash = $1, invite_token = NULL, invite_expires_at = NULL, is_active = true 
+       WHERE id = $2`,
+            [hash, userId]
+        );
+
+        res.json({ success: true, message: 'Account activated successfully' });
+    } catch (error) {
+        console.error('Redeem invite error:', error);
+        res.status(500).json({ error: 'Activation failed' });
     }
 });
 
@@ -1510,6 +1597,13 @@ router.post('/onboard', verifyToken, async (req, res) => {
 
         const clinicId = await tenantManager.provisionClinic(clinicData, {}, adminUser);
         console.log(`[SALES] Clinic ${clinicId} provisioned successfully`);
+
+        // If an invitation token was generated (password-less onboarding)
+        if (clinicId._inviteToken) {
+            const emailService = require('../services/emailService');
+            const setupLink = `${process.env.FRONTEND_URL || 'https://pagemdemr.com'}/setup-password?token=${clinicId._inviteToken}&type=emr&slug=${clinic.slug}`;
+            await emailService.sendUserInvitation(adminUser.email, `${adminUser.firstName} ${adminUser.lastName}`, setupLink);
+        }
 
         // 4. Create trial subscription
         const trialPlan = await pool.query(

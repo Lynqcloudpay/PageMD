@@ -80,16 +80,38 @@ class TenantManager {
 
             // 5. Create Initial Admin User in the new schema
             if (adminUser && adminUser.email) {
-                const passwordHash = await bcrypt.hash(adminUser.password, 10);
+                let passwordHash = null;
+                let inviteToken = null;
+                let inviteExpiresAt = null;
+
+                if (adminUser.password) {
+                    passwordHash = await bcrypt.hash(adminUser.password, 10);
+                } else {
+                    const { v4: uuidv4 } = require('uuid');
+                    inviteToken = uuidv4();
+                    inviteExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // 48 hours
+                }
 
                 // Get the admin role_id we just created in this schema
                 const roleRes = await client.query(`SELECT id FROM ${schemaName}.roles WHERE name = 'Admin'`);
                 const roleId = roleRes.rows[0]?.id || null;
 
                 await client.query(`
-                    INSERT INTO ${schemaName}.users (email, password_hash, first_name, last_name, role, role_id, is_admin, status)
-                    VALUES ($1, $2, $3, $4, 'Admin', $5, true, 'active')
-                `, [adminUser.email, passwordHash, adminUser.firstName, adminUser.lastName, roleId]);
+                    INSERT INTO ${schemaName}.users (
+                        email, password_hash, first_name, last_name, role, role_id, is_admin, status,
+                        invite_token, invite_expires_at
+                    )
+                    VALUES ($1, $2, $3, $4, 'Admin', $5, true, $6, $7, $8)
+                `, [
+                    adminUser.email,
+                    passwordHash,
+                    adminUser.firstName,
+                    adminUser.lastName,
+                    roleId,
+                    passwordHash ? 'active' : 'inactive',
+                    inviteToken,
+                    inviteExpiresAt
+                ]);
 
                 // 5b. Add to Global User Lookup (for recognition by email)
                 await client.query(`
@@ -99,6 +121,11 @@ class TenantManager {
                         clinic_id = EXCLUDED.clinic_id,
                         schema_name = EXCLUDED.schema_name
                 `, [adminUser.email, clinicId, schemaName]);
+
+                // 5c. Return invite token if generated
+                if (inviteToken) {
+                    clinicId._inviteToken = inviteToken; // Temporary attachment for the caller to send email
+                }
             }
 
             // 6. Initialize Settings in control_db
