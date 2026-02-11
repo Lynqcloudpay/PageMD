@@ -468,7 +468,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
   const isHealthcareProvider = selectedRole && healthcareProviderRoles.includes(selectedRole.name);
   const canPrescribe = selectedRole && prescribingRoles.includes(selectedRole.name);
   const adminRole = roles?.find(r => r.name === 'Admin');
-  const isAdmin = selectedRole?.name === 'Admin';
+  const isAdmin = formData.isAdmin || selectedRole?.name === 'Admin';
 
   // Memoize steps to prevent infinite loops - only recalculate when role changes
   // Order: Basic Info -> Contact -> Account Settings (role selection) -> Credentials (if healthcare provider)
@@ -928,7 +928,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
                     <input
                       type="checkbox"
                       id="adminPrivileges"
-                      checked={formData.isAdmin === true || formData.isAdmin === "true" || isAdmin}
+                      checked={isAdmin}
                       onChange={(e) => {
                         // Grant/revoke admin privileges WITHOUT changing the role
                         setFormData({
@@ -1011,7 +1011,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
               </div>
 
               {/* Professional Credentials - Show inline when healthcare provider role is selected */}
-              {isHealthcareProvider && selectedRole && (
+              {activeTab === 'credentials' && isHealthcareProvider && selectedRole && (
                 <div className="border-t border-gray-200 pt-6 mt-6">
                   <div className="mb-4">
                     <h4 className="text-sm font-semibold text-gray-900 mb-2">Professional Credentials</h4>
@@ -1317,7 +1317,7 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
 
   const selectedRole = roles.find(r => r.id === formData.roleId);
   const adminRole = roles.find(r => r.name === 'Admin');
-  const isAdmin = formData.isAdmin === true || formData.isAdmin === 'true';
+  const isAdmin = formData.isAdmin === true || formData.isAdmin === 'true' || selectedRole?.name === 'Admin';
   const isHealthcareProvider = selectedRole && healthcareProviderRoles.includes(selectedRole.name);
   const canPrescribe = selectedRole && prescribingRoles.includes(selectedRole.name);
 
@@ -1662,7 +1662,7 @@ const EditUserModal = ({ isOpen, onClose, user, roles }) => {
                   <input
                     type="checkbox"
                     id="editAdminPrivileges"
-                    checked={formData.isAdmin === true || formData.isAdmin === "true" || isAdmin}
+                    checked={isAdmin}
                     onChange={(e) => {
                       // Grant/revoke admin privileges WITHOUT changing the role
                       setFormData({ ...formData, isAdmin: e.target.checked });
