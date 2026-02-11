@@ -647,7 +647,7 @@ const CreateUserModal = ({ isOpen, onClose, roles }) => {
       // Transform camelCase to snake_case for backend
       const submitData = {
         email: formData.email || formData.username + '@clinic.com',
-        password: formData.password,
+        ...(formData.password ? { password: formData.password } : {}),
         first_name: formData.firstName,
         last_name: formData.lastName,
         middle_name: formData.middleName,
