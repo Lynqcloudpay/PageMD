@@ -51,8 +51,8 @@ class TenantManager {
 
             // 2. Create the Clinic record in control_db
             const clinicRes = await client.query(
-                `INSERT INTO clinics (slug, schema_name, display_name, specialty, status, enabled_features) 
-                 VALUES ($1, $2, $3, $4, 'active', $5) RETURNING id`,
+                `INSERT INTO clinics (slug, schema_name, display_name, specialty, status, enabled_features, onboarded_at, trial_expiry_at) 
+                 VALUES ($1, $2, $3, $4, 'active', $5, NOW(), NOW() + INTERVAL '15 days') RETURNING id`,
                 [
                     clinicData.slug,
                     schemaName,

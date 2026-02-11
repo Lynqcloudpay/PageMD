@@ -248,31 +248,33 @@ const resolveTenant = async (req, res, next) => {
             return res.status(404).json({ error: `Clinic access denied.` });
         }
 
-        if (tenantInfo && tenantInfo.status !== 'active') {
-            return res.status(403).json({ error: `Clinic is currently ${tenantInfo.status}. Access restricted.` });
-        }
+        const { id, schema_name, slug: resolvedSlug, is_read_only, billing_locked, prescribing_locked, stripe_subscription_status, trial_expiry_at } = tenantInfo;
+        const displaySlug = resolvedSlug || slug;
 
-        // Enforcement: Read-Only Kill Switch
+        // Enforcement: Proactive Billing Guard
         const mutableMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
-        // The columns is_read_only and billing_locked are the source of truth.
-        // If billing_manual_override is TRUE, the automated dunning script won't touch them, 
-        // allowing absolute manual control.
-        const isActuallyReadOnly = tenantInfo.is_read_only;
+        const isSubscriptionValid = stripe_subscription_status === 'active' || stripe_subscription_status === 'trialing';
+        const isTrialValid = trial_expiry_at && new Date(trial_expiry_at) > new Date();
+        const isSandbox = req.isSandbox || false;
 
-        if (isActuallyReadOnly && mutableMethods.includes(req.method)) {
-            // Allow login/logout even in read-only mode
-            if (!req.path.includes('/auth/login') && !req.path.includes('/auth/logout')) {
-                return res.status(423).json({
-                    error: 'Clinic is in Read-Only mode. Modifications are currently disabled by platform administrators.',
-                    code: 'TENANT_READ_ONLY'
-                });
+        if (mutableMethods.includes(req.method) && !isSandbox) {
+            // If they have no valid subscription AND their trial has expired (or was never set)
+            if (!isSubscriptionValid && !isTrialValid) {
+                // Allow specific non-clinical or essential routes if needed, but generally block
+                const isWhitelisted = req.path.includes('/auth/login') || req.path.includes('/auth/logout') || req.path.includes('/billing/stripe');
+
+                if (!isWhitelisted) {
+                    console.warn(`[Tenant] Mutation BLOCKED for clinic ${displaySlug}. No active subscription or valid trial.`);
+                    return res.status(402).json({
+                        error: 'Subscription Required',
+                        message: 'Trial expired or no active subscription found. Please set up billing in Admin Settings to continue.',
+                        code: 'PAYMENT_REQUIRED'
+                    });
+                }
             }
         }
 
-        const { id, schema_name, slug: resolvedSlug, is_read_only, billing_locked, prescribing_locked } = tenantInfo;
-        const displaySlug = resolvedSlug || slug;
-
-        // 4. Start Transaction Wrapper (Actually just a connection now)
+        // Enforcement: Read-Only Kill Switch (Reactive/Manual)
         client = await pool.controlPool.connect();
 
         // Critical Security Step: Set Search Path

@@ -34,12 +34,16 @@ class GracePeriodService {
         const res = await pool.controlPool.query(`
             SELECT id, display_name, slug, schema_name, status, is_read_only, billing_locked, 
                    stripe_subscription_status, billing_grace_phase, billing_grace_start_at,
-                   billing_manual_override
+                   billing_manual_override, trial_expiry_at
               FROM clinics
              WHERE billing_manual_override = false
                AND (
                    billing_grace_phase > 0 
                    OR stripe_subscription_status IN ('past_due', 'unpaid')
+                   OR (
+                       (stripe_subscription_status IS NULL OR stripe_subscription_status NOT IN ('active', 'trialing'))
+                       AND trial_expiry_at < NOW()
+                   )
                )
         `);
 
@@ -85,15 +89,21 @@ class GracePeriodService {
             return;
         }
 
-        // 2. If it's the first time we see a failure, initialize grace period
-        if (!graceStart) {
-            console.log(`[GracePeriodService] Initializing grace period for clinic ${clinic.display_name}`);
+        // 2. Determine if dunning should be active
+        const isSubscriptionFailure = ['past_due', 'unpaid', 'canceled'].includes(clinic.stripe_subscription_status);
+        const isTrialExpired = (clinic.stripe_subscription_status === null || clinic.stripe_subscription_status === 'none') &&
+            (clinic.trial_expiry_at && new Date(clinic.trial_expiry_at) < now);
+
+        if (!graceStart && (isSubscriptionFailure || isTrialExpired)) {
+            console.log(`[GracePeriodService] Initializing grace period for clinic ${clinic.display_name} (Reason: ${isTrialExpired ? 'Trial Expired' : 'Payment Failure'})`);
             graceStart = now;
             await pool.controlPool.query(
                 "UPDATE clinics SET billing_grace_start_at = $1, billing_grace_phase = 1 WHERE id = $2",
                 [graceStart, clinic.id]
             );
-            await this.logEvent(clinic.id, 'phase_initialized', 0, 1, { message: 'First payment failure detected' });
+
+            const details = isTrialExpired ? { message: 'Trial period expired without subscription' } : { message: 'First payment failure detected' };
+            await this.logEvent(clinic.id, 'phase_initialized', 0, 1, details);
             await this.sendDunningEmail(clinic, 1);
             return;
         }
