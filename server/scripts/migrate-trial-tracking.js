@@ -14,10 +14,10 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const poolConfig = process.env.DATABASE_URL
     ? {
-        connectionString: process.env.DATABASE_URL.replace('@db:', '@localhost:').replace('sslmode=require', 'sslmode=disable'),
-        ssl: (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL.includes('sslmode=require')) && !process.env.DATABASE_URL.includes('localhost')
-            ? { rejectUnauthorized: false }
-            : false,
+        connectionString: process.env.NODE_ENV === 'production'
+            ? process.env.DATABASE_URL
+            : process.env.DATABASE_URL.replace('@db:', '@localhost:').replace('sslmode=require', 'sslmode=disable'),
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     }
     : {
         host: process.env.DB_HOST === 'db' ? 'localhost' : (process.env.DB_HOST || 'localhost'),
