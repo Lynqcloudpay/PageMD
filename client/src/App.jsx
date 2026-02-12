@@ -15,7 +15,8 @@ import { NotificationProvider } from './components/NotificationProvider'
 
 // Lazy loaded pages/components
 const Snapshot = React.lazy(() => import('./pages/Snapshot'));
-const VisitNote = React.lazy(() => import('./pages/VisitNote'));
+const VisitNote = React.lazy(() => import('./pages/VisitNote.legacy')); // Legacy fallback
+const ChartingEngine = React.lazy(() => import('./pages/ChartingEngine/ChartingEngine'));
 const Schedule = React.lazy(() => import('./pages/Schedule'));
 const MySchedule = React.lazy(() => import('./pages/MySchedule'));
 const Patients = React.lazy(() => import('./pages/Patients'));
@@ -383,7 +384,7 @@ function App() {
                                                                 <ErrorBoundary>
                                                                     <Layout>
                                                                         <PatientNoteLayout>
-                                                                            <VisitNote />
+                                                                            <ChartingEngine />
                                                                         </PatientNoteLayout>
                                                                     </Layout>
                                                                 </ErrorBoundary>
@@ -394,7 +395,7 @@ function App() {
                                                                 <ErrorBoundary>
                                                                     <Layout>
                                                                         <PatientNoteLayout>
-                                                                            <VisitNote />
+                                                                            <ChartingEngine />
                                                                         </PatientNoteLayout>
                                                                     </Layout>
                                                                 </ErrorBoundary>

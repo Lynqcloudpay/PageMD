@@ -380,6 +380,11 @@ export const icd10API = {
   getRecent: (limit = 20) => api.get('/icd10/recent', { params: { limit } }),
 };
 
+// ICD-10 Hierarchy (refinement questions for specifying codes)
+export const icd10HierarchyAPI = {
+  getQuestions: (code) => api.get(`/icd10/hierarchy/${code}`),
+};
+
 export const ordersCatalogAPI = {
   search: (q, type, limit = 20) => api.get('/orders-catalog/search', { params: { q, type, limit } }),
   getFavorites: () => api.get('/orders-catalog/favorites'),
