@@ -1815,14 +1815,16 @@ const VisitNote = () => {
                 // Sync Plan Structured
                 let updatedPlanStructured = prev.planStructured || [];
                 if (oldName && updatedPlanStructured.length > 0) {
-                    const matchIndex = updatedPlanStructured.findIndex(item =>
-                        item.diagnosis === oldName || item.diagnosis.includes(oldName) || oldName.includes(item.diagnosis)
-                    );
+                    const matchIndex = updatedPlanStructured.findIndex(item => {
+                        const cleanOld = oldName.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
+                        const cleanItem = item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
+                        return cleanItem === cleanOld;
+                    });
                     if (matchIndex !== -1) {
                         updatedPlanStructured = [...updatedPlanStructured];
                         updatedPlanStructured[matchIndex] = {
                             ...updatedPlanStructured[matchIndex],
-                            diagnosis: newName
+                            diagnosis: newName.replace(/^\d+[\.\)]?\s*/, '').trim()
                         };
                     }
                 }
@@ -1841,17 +1843,35 @@ const VisitNote = () => {
             });
             setEditingDiagnosisIndex(null);
         } else {
-            // Add new diagnosis
-            const newDx = `${code.code} - ${code.description}`;
-            const newAssessment = noteData.assessment
-                ? `${noteData.assessment}\n${newDx}`
-                : newDx;
+            // Add new diagnosis - check for duplicates first
+            const cleanNewDx = `${code.code} - ${code.description}`.replace(/^\d+[\.\)]?\s*/, '').trim();
+            const currentAssessments = noteData.assessment ? noteData.assessment.split('\n').filter(l => l.trim()) : [];
+            const alreadyInAssessment = currentAssessments.some(line => {
+                const cleanLine = line.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
+                return cleanLine === cleanNewDx.toLowerCase();
+            });
 
-            setNoteData(prev => ({
-                ...prev,
-                assessment: newAssessment,
-                planStructured: [...(prev.planStructured || []), { diagnosis: newDx, orders: [] }]
-            }));
+            if (alreadyInAssessment) {
+                showToast('This diagnosis is already in the assessment', 'info');
+            } else {
+                const newDx = cleanNewDx;
+                const newAssessment = noteData.assessment
+                    ? `${noteData.assessment}\n${currentAssessments.length + 1}. ${newDx}`
+                    : `1. ${newDx}`;
+
+                setNoteData(prev => {
+                    const currentPlan = prev.planStructured || [];
+                    const existsInPlan = currentPlan.some(item =>
+                        item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase() === newDx.toLowerCase()
+                    );
+
+                    return {
+                        ...prev,
+                        assessment: newAssessment,
+                        planStructured: existsInPlan ? prev.planStructured : [...currentPlan, { diagnosis: newDx, orders: [] }]
+                    };
+                });
+            }
         }
 
         setShowIcd10Search(false);
@@ -1882,7 +1902,6 @@ const VisitNote = () => {
                 const cleanDiag = diag.replace(/^\d+[\.\)]?\s*/, '').trim();
 
                 // key check: is this clean diagnosis in the plan?
-                // Plan items usually don't have numbers stored in the 'diagnosis' field
                 const exists = newPlan.some(item => {
                     const cleanItemDx = item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim();
                     return cleanItemDx.toLowerCase() === cleanDiag.toLowerCase();
@@ -1894,12 +1913,7 @@ const VisitNote = () => {
                 }
             });
 
-            // 2. We DO NOT remove items from Plan that are not in Assessment here automatically
-            // to prevent accidental data loss of orders if an assessment line is modified.
-            // Removal is handled by explicit user action (trash icon).
-
             if (planUpdated) {
-                // Re-format the plan text
                 const formatted = formatPlanText(newPlan);
                 return {
                     ...prev,
@@ -2032,11 +2046,14 @@ const VisitNote = () => {
             let assessmentUpdated = false;
             let newAssessment = currentAssessment;
 
-            if (diagnosisToUseClean !== 'Unassigned' && !existingDxClean.includes(diagnosisToUseClean.toLowerCase())) {
-                const nextNum = existingDxLines.length + 1;
-                if (newAssessment && !newAssessment.endsWith('\n')) newAssessment += '\n';
-                newAssessment += `${nextNum}. ${diagnosisToUseClean}`;
-                assessmentUpdated = true;
+            if (diagnosisToUseClean !== 'Unassigned') {
+                const alreadyTagged = existingDxClean.some(edx => edx === diagnosisToUseClean.toLowerCase());
+                if (!alreadyTagged) {
+                    const nextNum = existingDxLines.length + 1;
+                    if (newAssessment && !newAssessment.endsWith('\n')) newAssessment += '\n';
+                    newAssessment += `${nextNum}. ${diagnosisToUseClean}`;
+                    assessmentUpdated = true;
+                }
             }
 
             const formattedPlan = formatPlanText(updatedPlan);
@@ -2337,9 +2354,15 @@ const VisitNote = () => {
             ? `${problem.problem_name} (${problem.icd10_code})`
             : problem.problem_name;
 
-        // Check if already in assessment
-        if (diagnoses.some(d => d.toLowerCase().includes(problem.problem_name.toLowerCase()))) {
-            showToast('Already in assessment', 'info');
+        // Check if already in assessment with more robust comparison
+        const cleanDiag = diagText.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
+        const alreadyInAssessment = diagnoses.some(d => {
+            const cleanExisting = d.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
+            return cleanExisting === cleanDiag || cleanExisting.includes(cleanDiag) || cleanDiag.includes(cleanExisting);
+        });
+
+        if (alreadyInAssessment) {
+            showToast('This diagnosis is already in the assessment', 'info');
             return;
         }
 
@@ -2347,11 +2370,19 @@ const VisitNote = () => {
             ? `${noteData.assessment}\n${diagnoses.length + 1}. ${diagText}`
             : `1. ${diagText}`;
 
-        setNoteData(prev => ({
-            ...prev,
-            assessment: newAssessment,
-            planStructured: [...(prev.planStructured || []), { diagnosis: diagText, orders: [] }]
-        }));
+        setNoteData(prev => {
+            const currentPlan = prev.planStructured || [];
+            const cleanDx = diagText.replace(/^\d+[\.\)]?\s*/, '').trim();
+            const existsInPlan = currentPlan.some(item =>
+                item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase() === cleanDx.toLowerCase()
+            );
+
+            return {
+                ...prev,
+                assessment: newAssessment,
+                planStructured: existsInPlan ? prev.planStructured : [...(prev.planStructured || []), { diagnosis: cleanDx, orders: [] }]
+            };
+        });
 
         showToast(`Added: ${problem.problem_name}`, 'success');
     };
