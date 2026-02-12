@@ -961,6 +961,71 @@ const VisitNote = () => {
         return combined;
     };
 
+    // Load Quick Actions (Favorites/Macros)
+    const fetchQuickActions = useCallback(async () => {
+        try {
+            const [ordersRes, macrosRes] = await Promise.all([
+                ordersCatalogAPI.getFavorites(),
+                macrosAPI.getAll({ category: 'Sidebar' })
+            ]);
+
+            let orders = ordersRes.data || [];
+            if (orders.length === 0) {
+                orders = [
+                    { name: '12-Lead EKG', type: 'PROCEDURE', loinc_code: '93000' },
+                    { name: 'Echo Complete', type: 'IMAGING', loinc_code: '93306' },
+                    { name: 'Stress Test', type: 'PROCEDURE', loinc_code: '93015' },
+                    { name: 'CMP', type: 'LAB', loinc_code: '80053' },
+                    { name: 'CBC', type: 'LAB', loinc_code: '85025' }
+                ];
+            }
+            setQuickOrdersList(orders);
+
+            let macros = macrosRes.data || [];
+            if (macros.length === 0) {
+                macros = [
+                    { shortcut_code: '.cp_typical', template_text: hpiDotPhrases['.cp_typical'] },
+                    { shortcut_code: '.sob_exertional', template_text: hpiDotPhrases['.sob_exertional'] },
+                    { shortcut_code: '.htn_followup', template_text: hpiDotPhrases['.htn_followup'] }
+                ];
+            }
+            setSidebarMacrosList(macros);
+        } catch (error) {
+            console.error('Failed to fetch quick actions:', error);
+        }
+    }, []);
+
+    const refreshPatientData = useCallback(async () => {
+        if (!id) return;
+        try {
+            const [problemsRes, medsRes, famRes, surgRes, socRes] = await Promise.all([
+                patientsAPI.getProblems(id),
+                patientsAPI.getMedications(id),
+                patientsAPI.getFamilyHistory(id),
+                patientsAPI.getSurgicalHistory(id),
+                patientsAPI.getSocialHistory(id)
+            ]);
+
+            setFamilyHistory(famRes.data || []);
+            setSurgicalHistory(surgRes.data || []);
+            setSocialHistory(socRes.data || {});
+
+            const snapshotRes = await patientsAPI.getSnapshot(id);
+            const data = snapshotRes.data;
+            if (data) {
+                data.problems = problemsRes.data || [];
+                data.medications = medsRes.data || [];
+                setPatientData(data);
+            }
+        } catch (error) {
+            console.error('Error refreshing patient data:', error);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        fetchQuickActions();
+    }, [fetchQuickActions]);
+
     // Find or create visit on mount
     useEffect(() => {
         let cleanup = null;
@@ -983,71 +1048,6 @@ const VisitNote = () => {
                 })
                 .catch(error => console.error('Error fetching patient snapshot:', error));
 
-            // Load Quick Actions (Favorites/Macros)
-            const fetchQuickActions = useCallback(async () => {
-                try {
-                    const [ordersRes, macrosRes] = await Promise.all([
-                        ordersCatalogAPI.getFavorites(),
-                        macrosAPI.getAll({ category: 'Sidebar' })
-                    ]);
-
-                    let orders = ordersRes.data || [];
-                    if (orders.length === 0) {
-                        orders = [
-                            { name: '12-Lead EKG', type: 'PROCEDURE', loinc_code: '93000' },
-                            { name: 'Echo Complete', type: 'IMAGING', loinc_code: '93306' },
-                            { name: 'Stress Test', type: 'PROCEDURE', loinc_code: '93015' },
-                            { name: 'CMP', type: 'LAB', loinc_code: '80053' },
-                            { name: 'CBC', type: 'LAB', loinc_code: '85025' }
-                        ];
-                    }
-                    setQuickOrdersList(orders);
-
-                    let macros = macrosRes.data || [];
-                    if (macros.length === 0) {
-                        macros = [
-                            { shortcut_code: '.cp_typical', template_text: hpiDotPhrases['.cp_typical'] },
-                            { shortcut_code: '.sob_exertional', template_text: hpiDotPhrases['.sob_exertional'] },
-                            { shortcut_code: '.htn_followup', template_text: hpiDotPhrases['.htn_followup'] }
-                        ];
-                    }
-                    setSidebarMacrosList(macros);
-                } catch (error) {
-                    console.error('Failed to fetch quick actions:', error);
-                }
-            }, []);
-
-            useEffect(() => {
-                fetchQuickActions();
-            }, [fetchQuickActions]);
-
-            const refreshPatientData = useCallback(async () => {
-                if (!id) return;
-                try {
-                    const [problemsRes, medsRes, famRes, surgRes, socRes] = await Promise.all([
-                        patientsAPI.getProblems(id),
-                        patientsAPI.getMedications(id),
-                        patientsAPI.getFamilyHistory(id),
-                        patientsAPI.getSurgicalHistory(id),
-                        patientsAPI.getSocialHistory(id)
-                    ]);
-
-                    setFamilyHistory(famRes.data || []);
-                    setSurgicalHistory(surgRes.data || []);
-                    setSocialHistory(socRes.data || {});
-
-                    const snapshotRes = await patientsAPI.getSnapshot(id);
-                    const data = snapshotRes.data;
-                    if (data) {
-                        data.problems = problemsRes.data || [];
-                        data.medications = medsRes.data || [];
-                        setPatientData(data);
-                    }
-                } catch (error) {
-                    console.error('Error refreshing patient data:', error);
-                }
-            }, [id]);
-
             // Fetch History Data
             refreshPatientData();
 
@@ -1058,7 +1058,7 @@ const VisitNote = () => {
                 window.removeEventListener('patient-data-updated', handlePatientDataUpdate);
             };
         }
-    }, [id, refreshPatientData, fetchQuickActions]);
+    }, [id, refreshPatientData]);
 
     // Load documents linked to this visit
     useEffect(() => {
