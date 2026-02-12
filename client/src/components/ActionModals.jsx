@@ -835,9 +835,17 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 grouped[dx].push(orderText);
             });
 
-            // Create structured plan list - including ALL diagnoses from assessment to prevent them from disappearing
-            // Use availableDiagnoses which already aggregates diagnoses prop + cart items
-            availableDiagnoses.forEach(dx => {
+            // Create structured plan list - only include diagnoses that:
+            // 1. Are already in the assessment (the 'diagnoses' prop)
+            // 2. OR have newly added orders in this session
+            const assessmentDiagsClean = diagnoses.map(d => d.replace(/^\d+[\.\)]?\s*/, '').trim());
+            const relevantDiagnoses = new Set([
+                ...assessmentDiagsClean,
+                ...Object.keys(grouped)
+            ]);
+
+            relevantDiagnoses.forEach(dx => {
+                if (!dx || dx === 'Unassigned') return;
                 newPlanStructured.push({
                     diagnosis: dx,
                     orders: grouped[dx] || []
