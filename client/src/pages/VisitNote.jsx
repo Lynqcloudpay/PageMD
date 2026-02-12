@@ -1930,20 +1930,23 @@ const VisitNote = () => {
     }, [noteData.assessment]);
 
     // Ensure Plan stays in sync with Assessment (Diagnoses -> Plan Items)
-    // This fixes the issue where diagnoses disappear from Plan if no orders are added
     useEffect(() => {
-        if (!diagnoses || diagnoses.length === 0) return;
-
         setNoteData(prev => {
             const currentPlan = prev.planStructured || [];
             let planUpdated = false;
-            let newPlan = [...currentPlan];
 
-            // 1. Add missing diagnoses from Assessment to Plan
+            // 1. Remove items from Plan that are no longer in Assessment
+            const assessmentDiagsClean = diagnoses.map(d => normalizeDiagnosis(d).toLowerCase());
+            let newPlan = currentPlan.filter(item => {
+                const cleanItemDx = normalizeDiagnosis(item.diagnosis).toLowerCase();
+                const stillExists = assessmentDiagsClean.includes(cleanItemDx);
+                if (!stillExists) planUpdated = true;
+                return stillExists;
+            });
+
+            // 2. Add missing diagnoses from Assessment to Plan
             diagnoses.forEach(diag => {
                 const cleanDiag = normalizeDiagnosis(diag);
-
-                // key check: is this clean diagnosis in the plan?
                 const exists = newPlan.some(item => {
                     return normalizeDiagnosis(item.diagnosis).toLowerCase() === cleanDiag.toLowerCase();
                 });
@@ -2004,29 +2007,23 @@ const VisitNote = () => {
     const handleUpdatePlan = (updatedPlanStructured) => {
         setNoteData(prev => {
             const formattedPlan = formatPlanText(updatedPlanStructured);
-
-            // Extract all unique diagnoses from the updated plan
             const planDiagnoses = updatedPlanStructured
-                .map(item => item.diagnosis)
+                .map(item => normalizeDiagnosis(item.diagnosis))
                 .filter(d => d && d !== 'Unassigned');
 
-            // Current assessments
+            // Sync with Assessment
             let currentAssessment = prev.assessment || '';
-            const existingDxLines = currentAssessment.split('\n').map(l => l.trim()).filter(Boolean);
-            const existingDxClean = existingDxLines.map(l => l.replace(/^\d+\.\s*/, '').trim().toLowerCase());
+            const existingDxLines = (currentAssessment.split('\n') || []).filter(l => l.trim()).map(l => l.trim());
+            const existingDxClean = existingDxLines.map(l => normalizeDiagnosis(l).toLowerCase());
 
             let assessmentUpdated = false;
-            let newAssessment = currentAssessment;
+            let newAssessmentLines = [...existingDxLines];
 
             planDiagnoses.forEach(dx => {
-                const cleanDx = dx.replace(/^\d+\.\s*/, '').trim();
-                if (!existingDxClean.includes(cleanDx.toLowerCase())) {
-                    // Add missing diagnosis to assessment
-                    const nextNum = existingDxLines.length + 1;
-                    if (newAssessment && !newAssessment.endsWith('\n')) newAssessment += '\n';
-                    newAssessment += `${nextNum}. ${cleanDx}`;
-                    existingDxLines.push(`${nextNum}. ${cleanDx}`);
-                    existingDxClean.push(cleanDx.toLowerCase());
+                const cleanDxLower = dx.toLowerCase();
+                if (!existingDxClean.includes(cleanDxLower)) {
+                    newAssessmentLines.push(`${newAssessmentLines.length + 1}. ${dx}`);
+                    existingDxClean.push(cleanDxLower);
                     assessmentUpdated = true;
                 }
             });
@@ -2035,7 +2032,7 @@ const VisitNote = () => {
                 ...prev,
                 planStructured: updatedPlanStructured,
                 plan: formattedPlan,
-                assessment: assessmentUpdated ? newAssessment : prev.assessment
+                assessment: assessmentUpdated ? newAssessmentLines.join('\n') : prev.assessment
             };
         });
     };
@@ -2445,15 +2442,14 @@ const VisitNote = () => {
                 ? `Refill ${med.medication_name} ${med.dosage || ''} - 90 day supply`
                 : `Discontinue ${med.medication_name}`;
 
-        // Strip leading numbers "1. "
-        const cleanDiagnosis = diagnosisText.replace(/^\d+\.\s*/, '').trim();
-
-        // 1. Ensure diagnosis exists in assessment/planStructured
+        // Use standard normalization
+        const cleanDiagnosis = normalizeDiagnosis(diagnosisText);
         let targetIndex = -1;
 
-        // Check if diagnosis is already in our structured plan
         if (noteData.planStructured) {
-            targetIndex = noteData.planStructured.findIndex(item => item.diagnosis === cleanDiagnosis || item.diagnosis === diagnosisText);
+            targetIndex = noteData.planStructured.findIndex(item =>
+                normalizeDiagnosis(item.diagnosis).toLowerCase() === cleanDiagnosis.toLowerCase()
+            );
         }
 
         // If not found, adding it to assessment and structured plan
