@@ -21,7 +21,7 @@ const decodeHtmlEntities = (text) => {
     return str;
 };
 
-export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }) => {
+export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [], selectedDiagnosis: propSelectedDiagnosis = '' }) => {
     const [med, setMed] = useState('');
     const [sig, setSig] = useState('');
     const [dispense, setDispense] = useState('');
@@ -39,7 +39,8 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
             setMed('');
             setSig('');
             setDispense('');
-            setSelectedDiagnosis(diagnoses.length > 0 ? diagnoses[0] : '');
+            // Prioritize propSelectedDiagnosis, fallback to first diag
+            setSelectedDiagnosis(propSelectedDiagnosis || (diagnoses.length > 0 ? diagnoses[0] : ''));
             setNewDiagnosis('');
             setUseNewDiagnosis(false);
             setIcd10Search('');
@@ -227,7 +228,7 @@ export const PrescriptionModal = ({ isOpen, onClose, onSuccess, diagnoses = [] }
     );
 };
 
-export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], existingOrders = [], patientId = null, visitId = null, initialMedications = null, patientProblems = [] }) => {
+export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'labs', diagnoses = [], selectedDiagnosis: propSelectedDiagnosis = '', existingOrders = [], patientId = null, visitId = null, initialMedications = null, patientProblems = [] }) => {
     const [activeTab, setActiveTab] = useState(initialTab);
     const [cart, setCart] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -314,7 +315,15 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
 
     // Aggregate all available diagnoses including existing ones, the currently selected one (if new), and any attached to cart items
     const availableDiagnoses = useMemo(() => {
-        const set = new Set(diagnoses);
+        const set = new Set();
+        // Add assessment diagnoses - NORMALIZE by removing leading numbers "1. "
+        diagnoses.forEach(dx => {
+            if (typeof dx === 'string') {
+                const clean = dx.replace(/^\d+[\.\)]?\s*/, '').trim();
+                if (clean) set.add(clean);
+            }
+        });
+
         // Add patient problems as available diagnoses
         if (patientProblems && Array.isArray(patientProblems)) {
             patientProblems.filter(p => p.status === 'active' || !p.status).forEach(p => {
@@ -326,12 +335,17 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 }
             });
         }
+
+        // Normalize selectedDiagnosis too
         if (selectedDiagnosis && selectedDiagnosis !== 'new' && selectedDiagnosis !== 'Unassigned') {
-            set.add(selectedDiagnosis);
+            const clean = selectedDiagnosis.replace(/^\d+[\.\)]?\s*/, '').trim();
+            if (clean) set.add(clean);
         }
+
         cart.forEach(item => {
             if (item.diagnosis && item.diagnosis !== 'Unassigned') {
-                set.add(item.diagnosis);
+                const clean = item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim();
+                if (clean) set.add(clean);
             }
         });
         return Array.from(set);
@@ -461,9 +475,12 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             setSearchResults([]);
             setActiveTab(initialTab);
 
-            // Default select first available diagnosis if none selected
-            if (diagnoses.length > 0 && !selectedDiagnosis) {
-                setSelectedDiagnosis(diagnoses[0]);
+            // Priority: propSelectedDiagnosis, then previously selected, then first available
+            if (propSelectedDiagnosis) {
+                // Normalize by stripping leading numbers "1. "
+                setSelectedDiagnosis(propSelectedDiagnosis.replace(/^\d+[\.\)]?\s*/, '').trim());
+            } else if (diagnoses.length > 0 && !selectedDiagnosis) {
+                setSelectedDiagnosis(diagnoses[0].replace(/^\d+[\.\)]?\s*/, '').trim());
             }
 
             setIsDiagnosisDropdownOpen(false);
@@ -797,7 +814,8 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
             const grouped = {};
 
             cart.forEach(item => {
-                const dx = item.diagnosis || 'Unassigned';
+                const dxRaw = item.diagnosis || 'Unassigned';
+                const dx = dxRaw.replace(/^\d+[\.\)]?\s*/, '').trim();
                 if (!grouped[dx]) grouped[dx] = [];
 
                 let orderText = '';
@@ -817,11 +835,12 @@ export const OrderModal = ({ isOpen, onClose, onSuccess, onSave, initialTab = 'l
                 grouped[dx].push(orderText);
             });
 
-            // Create structured plan list
-            Object.keys(grouped).forEach(dx => {
+            // Create structured plan list - including ALL diagnoses from assessment to prevent them from disappearing
+            // Use availableDiagnoses which already aggregates diagnoses prop + cart items
+            availableDiagnoses.forEach(dx => {
                 newPlanStructured.push({
                     diagnosis: dx,
-                    orders: grouped[dx]
+                    orders: grouped[dx] || []
                 });
             });
 

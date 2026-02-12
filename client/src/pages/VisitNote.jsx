@@ -2346,11 +2346,10 @@ const VisitNote = () => {
         const newAssessment = noteData.assessment
             ? `${noteData.assessment}\n${diagnoses.length + 1}. ${diagText}`
             : `1. ${diagText}`;
-        setNoteData(prev => ({ ...prev, assessment: newAssessment }));
 
-        // Also add to planStructured
         setNoteData(prev => ({
             ...prev,
+            assessment: newAssessment,
             planStructured: [...(prev.planStructured || []), { diagnosis: diagText, orders: [] }]
         }));
 
