@@ -1935,13 +1935,27 @@ const VisitNote = () => {
             const currentPlan = prev.planStructured || [];
             let planUpdated = false;
 
-            // 1. Remove items from Plan that are no longer in Assessment
+            // 1. Process existing plan items
             const assessmentDiagsClean = diagnoses.map(d => normalizeDiagnosis(d).toLowerCase());
-            let newPlan = currentPlan.filter(item => {
+            let newPlan = [];
+            let ordersToMove = [];
+
+            currentPlan.forEach(item => {
                 const cleanItemDx = normalizeDiagnosis(item.diagnosis).toLowerCase();
-                const stillExists = assessmentDiagsClean.includes(cleanItemDx);
-                if (!stillExists) planUpdated = true;
-                return stillExists;
+                const stillInAssessment = assessmentDiagsClean.includes(cleanItemDx);
+
+                if (cleanItemDx === 'other' || cleanItemDx === 'unassigned') {
+                    // Always keep unassigned/other groupings if they exist
+                    newPlan.push(item);
+                } else if (stillInAssessment) {
+                    newPlan.push(item);
+                } else {
+                    // Diagnosis was removed!
+                    if (item.orders && item.orders.length > 0) {
+                        ordersToMove.push(...item.orders);
+                    }
+                    planUpdated = true;
+                }
             });
 
             // 2. Add missing diagnoses from Assessment to Plan
@@ -1956,6 +1970,20 @@ const VisitNote = () => {
                     planUpdated = true;
                 }
             });
+
+            // 3. Handle orphaned orders by moving them to "Other"
+            if (ordersToMove.length > 0) {
+                const otherIndex = newPlan.findIndex(p => normalizeDiagnosis(p.diagnosis).toLowerCase() === 'other');
+                if (otherIndex !== -1) {
+                    newPlan[otherIndex] = {
+                        ...newPlan[otherIndex],
+                        orders: [...newPlan[otherIndex].orders, ...ordersToMove]
+                    };
+                } else {
+                    newPlan.push({ diagnosis: 'Other', orders: ordersToMove });
+                }
+                planUpdated = true;
+            }
 
             if (planUpdated) {
                 const formatted = formatPlanText(newPlan);
@@ -2129,54 +2157,13 @@ const VisitNote = () => {
     const removeDiagnosisFromAssessment = (index) => {
         setNoteData(prev => {
             const lines = prev.assessment.split('\n').filter(l => l.trim());
-            const deletedDiagnosis = lines[index]; // Get the diagnosis being deleted
             lines.splice(index, 1);
 
-            // Update planStructured - if any orders are associated with the deleted diagnosis, move them to "Other"
-            let updatedPlanStructured = prev.planStructured || [];
-            if (deletedDiagnosis && updatedPlanStructured.length > 0) {
-                // Find if there's an entry in planStructured that matches the deleted diagnosis
-                const matchingPlanIndex = updatedPlanStructured.findIndex(item =>
-                    item.diagnosis && deletedDiagnosis.includes(item.diagnosis)
-                );
-
-                if (matchingPlanIndex !== -1) {
-                    // Get the orders from the deleted diagnosis
-                    const ordersToMove = updatedPlanStructured[matchingPlanIndex].orders;
-
-                    // Remove the deleted diagnosis entry
-                    updatedPlanStructured = updatedPlanStructured.filter((_, idx) => idx !== matchingPlanIndex);
-
-                    // If there are orders, move them to "Other" diagnosis
-                    if (ordersToMove && ordersToMove.length > 0) {
-                        const otherIndex = updatedPlanStructured.findIndex(item => item.diagnosis === 'Other');
-                        if (otherIndex !== -1) {
-                            // Append to existing "Other" diagnosis
-                            updatedPlanStructured[otherIndex].orders = [
-                                ...updatedPlanStructured[otherIndex].orders,
-                                ...ordersToMove
-                            ];
-                        } else {
-                            // Create new "Other" diagnosis entry
-                            updatedPlanStructured.push({
-                                diagnosis: 'Other',
-                                orders: ordersToMove
-                            });
-                        }
-                    }
-                }
-            }
-
-            // Update plan text from structured data
-            const updatedPlanText = updatedPlanStructured.length > 0
-                ? formatPlanText(updatedPlanStructured)
-                : prev.plan;
-
+            // Note: Plan sync is now handled automatically by the useEffect[diagnoses]
+            // which will detect the missing diagnosis and move orphaned orders to "Other".
             return {
                 ...prev,
-                assessment: lines.join('\n'),
-                planStructured: updatedPlanStructured,
-                plan: updatedPlanText
+                assessment: lines.join('\n')
             };
         });
     };
