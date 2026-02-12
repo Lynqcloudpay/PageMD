@@ -2485,14 +2485,25 @@ const VisitNote = () => {
         showToast(`Inserted: ${templateKey}`, 'success');
     };
 
-    // Common HPI templates
-    const hpiTemplates = [
-        { key: 'Chest Pain', text: 'Patient presents with chest pain. Location: substernal. Quality: pressure. Severity: [X]/10. Onset: [TIME]. Duration: [DURATION]. Radiation: [LOCATION]. Associated symptoms: [SYMPTOMS]. Aggravating factors: [FACTORS]. Relieving factors: [FACTORS].' },
-        { key: 'Shortness of Breath', text: 'Patient presents with shortness of breath. Onset: [TIME]. Duration: [DURATION]. Severity: at rest / with exertion. Associated symptoms: orthopnea, PND, leg swelling. Number of pillows: [#]. Walking distance: [DISTANCE].' },
-        { key: 'Hypertension F/U', text: 'Patient here for hypertension follow-up. Blood pressure at home: [BP READINGS]. Medication compliance: good/fair/poor. Side effects: none/[SYMPTOMS]. Salt intake: [LOW/MODERATE/HIGH]. Exercise: [FREQUENCY].' },
-        { key: 'Diabetes F/U', text: 'Patient here for diabetes management. Home glucose readings: fasting [#], post-prandial [#]. A1C target: <7%. Hypoglycemic episodes: none/[FREQUENCY]. Diet compliance: good/fair/poor. Foot exam: normal/abnormal.' },
-        { key: 'Heart Failure', text: 'Patient with history of heart failure, EF [#]%. Current symptoms: NYHA Class [I/II/III/IV]. Weight today: [#] lbs. Dry weight: [#] lbs. Leg swelling: none/trace/1+/2+/3+. Medication compliance: good.' },
-        { key: 'Palpitations', text: 'Patient presents with palpitations. Onset: [TIME]. Frequency: [FREQUENCY]. Duration of episodes: [DURATION]. Associated symptoms: dizziness, syncope, chest pain, SOB. Triggers: caffeine, stress, exercise, none.' },
+    // Quick Orders Selection
+    const quickOrders = [
+        { name: '12-Lead EKG', type: 'PROCEDURE', loinc: '93000' },
+        { name: 'Echo Complete', type: 'IMAGING', loinc: '93306' },
+        { name: 'Stress Test', type: 'PROCEDURE', loinc: '93015' },
+        { name: 'CMP', type: 'LAB', loinc: '80053' },
+        { name: 'CBC', type: 'LAB', loinc: '85025' },
+        { name: 'Lipid Panel', type: 'LAB', loinc: '80061' },
+        { name: 'TSH', type: 'LAB', loinc: '84443' },
+        { name: 'Troponin', type: 'LAB', loinc: '84484' },
+    ];
+
+    // Quick Macros Selection
+    const sidebarMacros = [
+        { key: '.cp_typical', text: hpiDotPhrases['.cp_typical'] },
+        { key: '.sob_exertional', text: hpiDotPhrases['.sob_exertional'] },
+        { key: '.htn_followup', text: hpiDotPhrases['.htn_followup'] },
+        { key: '.hf_stable', text: hpiDotPhrases['.hf_stable'] },
+        { key: '.afib_followup', text: hpiDotPhrases['.afib_followup'] },
     ];
 
     // Insert result into plan
@@ -2996,6 +3007,18 @@ const VisitNote = () => {
                                     )}
                                     renderInput={(props) => <ProblemInput {...props} />}
                                     onAdd={async (data) => {
+                                        // Check for duplicates in patient chart
+                                        const cleanNewName = (data.problem_name || '').toLowerCase().trim();
+                                        const isDuplicate = (patientData?.problems || []).some(p => {
+                                            const cleanExisting = (p.problem_name || '').toLowerCase().trim();
+                                            return cleanExisting === cleanNewName;
+                                        });
+
+                                        if (isDuplicate) {
+                                            showToast('This diagnosis already exists in the Problem List', 'info');
+                                            return;
+                                        }
+
                                         try {
                                             const res = await patientsAPI.addProblem(id, data);
                                             setPatientData(prev => ({ ...prev, problems: [res.data, ...(prev.problems || [])] }));
@@ -3387,29 +3410,29 @@ const VisitNote = () => {
                             )}
 
                             {!isSigned && diagnoses.length > 0 && (
-                                <div className="space-y-2.5 mt-4">
+                                <div className="mt-2 divide-y divide-slate-100/50">
                                     {diagnoses.map((diag, idx) => (
-                                        <div key={idx} className="vn-card p-3 flex items-center justify-between group">
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <div className="w-6 h-6 flex-shrink-0 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center text-[10px] font-black">
-                                                    {idx + 1}
-                                                </div>
+                                        <div key={idx} className="vn-list-item-compact group">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold text-slate-400 w-4">{idx + 1}.</span>
                                                 <button
                                                     onClick={() => {
                                                         setEditingDiagnosisIndex(idx);
                                                         setShowICD10Modal(true);
                                                     }}
-                                                    className="text-left font-bold text-slate-700 text-sm hover:text-primary-600 transition-colors truncate"
+                                                    className="vn-link-diagnosis text-left"
                                                 >
-                                                    {diag.replace(/^\d+\.\s*/, '')}
+                                                    {diag.replace(/^\d+[\.\)]?\s*/, '')}
                                                 </button>
                                             </div>
-                                            <button
-                                                onClick={() => removeDiagnosisFromAssessment(idx)}
-                                                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
+                                            {!isLocked && (
+                                                <button
+                                                    onClick={() => removeDiagnosisFromAssessment(idx)}
+                                                    className="p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Trash2 className="w-3 h-3" />
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -3426,60 +3449,63 @@ const VisitNote = () => {
                         >
                             <div className="relative">
                                 {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
-                                    <div className="space-y-5">
+                                    <div className="space-y-4 px-1">
                                         {noteData.planStructured.map((item, index) => (
-                                            <div key={index} className="vn-card group p-0 overflow-hidden shadow-sm">
-                                                <div className="px-5 py-3.5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                                                    <div className="flex items-center gap-3 overflow-hidden">
-                                                        <div className="w-6 h-6 flex-shrink-0 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-[10px] font-black">
-                                                            {index + 1}
-                                                        </div>
-                                                        <span className="font-bold text-slate-800 text-sm truncate">{item.diagnosis}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
+                                            <div key={index} className="group">
+                                                {/* Diagnosis Link Row */}
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold text-slate-300 w-4">{index + 1}.</span>
+                                                        <span
+                                                            className="vn-link-diagnosis cursor-pointer"
                                                             onClick={() => {
                                                                 setSelectedDiagnosis(item.diagnosis);
                                                                 setShowOrderModal(true);
                                                             }}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-primary-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-50 hover:border-primary-100 transition-all shadow-sm"
                                                         >
-                                                            <Plus className="w-3.5 h-3.5" />
-                                                            Add Order
-                                                        </button>
-                                                        {!isLocked && (
-                                                            <button
-                                                                onClick={() => removeFromPlan(index)}
-                                                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
-                                                                title="Remove Diagnosis"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        )}
+                                                            {item.diagnosis.replace(/^\d+[\.\)]?\s*/, '')}
+                                                        </span>
+                                                        <span
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedDiagnosis(item.diagnosis);
+                                                                setShowOrderModal(true);
+                                                            }}
+                                                            className="vn-add-order-link"
+                                                        >
+                                                            + Add Order
+                                                        </span>
                                                     </div>
+                                                    {!isLocked && (
+                                                        <button
+                                                            onClick={() => removeFromPlan(index)}
+                                                            className="p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                            title="Remove Diagnosis"
+                                                        >
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    )}
                                                 </div>
 
-                                                <div className="p-5">
+                                                {/* Orders List beneath the diagnosis */}
+                                                <div className="mt-1">
                                                     {item.orders.length === 0 ? (
-                                                        <div className="py-4 border-2 border-dashed border-slate-50/50 rounded-2xl flex flex-col items-center justify-center bg-slate-50/10">
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-300 italic">No orders pending</p>
-                                                        </div>
+                                                        <p className="vn-order-item-compact border-dashed border-l border-slate-100 text-slate-300 italic">No orders pending</p>
                                                     ) : (
-                                                        <div className="space-y-3">
+                                                        <div className="space-y-0.5">
                                                             {item.orders.flatMap((order, orderIdx) => {
-                                                                const orderParts = order.split(';').map(part => part.trim()).filter(part => part);
+                                                                const orderParts = (typeof order === 'string' ? order : '').split(';').map(part => part.trim()).filter(Boolean);
                                                                 return orderParts.map((part, partIdx) => (
-                                                                    <div key={`${orderIdx}-${partIdx}`} className="flex items-center justify-between group/order bg-slate-50/30 p-2.5 rounded-xl border border-transparent hover:border-slate-100 hover:bg-white transition-all">
-                                                                        <div className="flex items-start gap-3">
-                                                                            <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary-400"></div>
-                                                                            <span className="text-sm text-slate-700 font-medium leading-relaxed">{part}</span>
-                                                                        </div>
-                                                                        <button
-                                                                            onClick={() => removeFromPlan(index, orderIdx)}
-                                                                            className="opacity-0 group-hover/order:opacity-100 p-1.5 text-slate-300 hover:text-rose-500 transition-all rounded-lg"
-                                                                        >
-                                                                            <X className="w-3.5 h-3.5" />
-                                                                        </button>
+                                                                    <div key={`${orderIdx}-${partIdx}`} className="vn-order-item-compact group/order">
+                                                                        <span className="leading-tight">{part}</span>
+                                                                        {!isLocked && (
+                                                                            <button
+                                                                                onClick={() => removeFromPlan(index, orderIdx)}
+                                                                                className="opacity-0 group-hover/order:opacity-100 p-0.5 text-slate-300 hover:text-rose-500 transition-all"
+                                                                            >
+                                                                                <X className="w-3 h-3" />
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 ));
                                                             })}
@@ -3898,24 +3924,48 @@ const VisitNote = () => {
                                         </div>
                                     </div>
 
-                                    {/* HPI Templates Section */}
+                                    {/* Quick Orders Section */}
                                     <div className="border-b border-slate-100">
                                         <div className="px-3 py-2 bg-slate-50/50">
                                             <div className="flex items-center gap-1.5">
-                                                <FileText className="w-3.5 h-3.5 text-blue-500" />
-                                                <span className="text-[10px] font-bold text-slate-600 uppercase">HPI Templates</span>
+                                                <ClipboardList className="w-3.5 h-3.5 text-blue-500" />
+                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Quick Orders</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
+                                            <div className="grid grid-cols-1 gap-1">
+                                                {quickOrders.map((o, idx) => (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => handleOrderSelect({ name: o.name, type: o.type, loinc_code: o.loinc })}
+                                                        className="w-full text-left px-2 py-1 bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group"
+                                                    >
+                                                        <span className="text-[11px] text-slate-700 font-medium truncate">{o.name}</span>
+                                                        <Plus className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Macros Section */}
+                                    <div className="border-b border-slate-100">
+                                        <div className="px-3 py-2 bg-slate-50/50">
+                                            <div className="flex items-center gap-1.5">
+                                                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Macros</span>
                                             </div>
                                         </div>
                                         <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
                                             <div className="space-y-1">
-                                                {hpiTemplates.map((t, idx) => (
+                                                {sidebarMacros.map((m, idx) => (
                                                     <button
                                                         key={idx}
-                                                        onClick={() => insertHpiTemplate(t.key, t.text)}
-                                                        className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center gap-1.5 group"
+                                                        onClick={() => insertHpiTemplate(m.key, m.text)}
+                                                        className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-amber-50 rounded border border-slate-100 hover:border-amber-200 transition-all flex items-center gap-1.5 group"
                                                     >
-                                                        <Zap className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
-                                                        <span className="text-slate-700 group-hover:text-blue-700">{t.key}</span>
+                                                        <Sparkles className="w-3 h-3 text-slate-400 group-hover:text-amber-500" />
+                                                        <span className="text-slate-700 group-hover:text-amber-700">{m.key}</span>
                                                     </button>
                                                 ))}
                                             </div>

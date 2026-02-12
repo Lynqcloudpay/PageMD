@@ -247,3 +247,67 @@
   background: #2563EB;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
+
+/* Compact Link-Style UI */
+.vn-link-diagnosis {
+  color: var(--vn-accent);
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.8125rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.vn-link-diagnosis:hover {
+  text-decoration: underline;
+  color: #1D4ED8;
+}
+
+.vn-list-item-compact {
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.vn-list-item-compact:hover {
+  background: rgba(59, 130, 246, 0.03);
+}
+
+.vn-order-item-compact {
+  font-size: 0.75rem;
+  color: #475569;
+  padding: 0.35rem 0.65rem;
+  margin-left: 1.25rem;
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-left: 1px solid var(--vn-border-soft);
+  background: transparent;
+  transition: all 0.2s;
+}
+
+.vn-order-item-compact:hover {
+  background: rgba(59, 130, 246, 0.02);
+  border-left-color: var(--vn-accent);
+}
+
+.vn-add-order-link {
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: var(--vn-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 0.75rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.vn-add-order-link:hover {
+  color: var(--vn-accent);
+}
