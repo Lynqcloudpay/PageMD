@@ -32,7 +32,7 @@ import DiagnosisLinkModal from '../components/DiagnosisLinkModal';
 import SignatureCard from '../components/SignatureCard';
 
 // Modular Redesign Components
-import './VisitNote.css';
+import './VisitNote.legacy.css';
 import VisitNoteHeader from './VisitNoteComponent/VisitNoteHeader';
 import QuickNav from './VisitNoteComponent/QuickNav';
 import VisitNoteSection from './VisitNoteComponent/VisitNoteSection';
