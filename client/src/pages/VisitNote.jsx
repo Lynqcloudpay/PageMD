@@ -40,6 +40,51 @@ import VitalsGrid from './VisitNoteComponent/VitalsGrid';
 import PlanDisplay from './VisitNoteComponent/PlanDisplay';
 import CommandPalette from './VisitNoteComponent/CommandPalette';
 
+const normalizeDiagnosis = (diag) => {
+    if (!diag) return '';
+
+    // 1. Remove leading numbers like "1. ", "1) ", "1- "
+    let clean = diag.replace(/^\d+[\.\)\-]?\s*/, '').trim();
+
+    // 2. Extract code and description
+    // Pattern A: "I10 - Essential Hypertension"
+    // Pattern B: "Essential Hypertension (I10)"
+
+    let code = '';
+    let description = clean;
+
+    // Check Pattern A: Starting with a code followed by dash or space
+    // e.g. "I10 - Essential (primary) hypertension"
+    const patternAMatch = clean.match(/^([A-Z]\d{2,}\.?\d{0,})\s*[\-\:]\s*(.*)$/i);
+    if (patternAMatch) {
+        code = patternAMatch[1].toUpperCase();
+        description = patternAMatch[2];
+    } else {
+        // Check Pattern B: Description followed by code in parentheses
+        // e.g. "Essential (primary) hypertension (I10)"
+        const patternBMatch = clean.match(/^(.*)\s*\((([A-Z]\d{2,}\.?\d{0,}))\)$/i);
+        if (patternBMatch) {
+            code = patternBMatch[2].toUpperCase();
+            description = patternBMatch[1];
+        } else {
+            // Check for lone code
+            const loneCodeMatch = clean.match(/^([A-Z]\d{2,}\.?\d{0,})$/i);
+            if (loneCodeMatch) {
+                code = loneCodeMatch[1].toUpperCase();
+                description = '';
+            }
+        }
+    }
+
+    // 3. Clean up description
+    description = description.trim();
+
+    // 4. Return standard format: "CODE - DESCRIPTION" or just "DESCRIPTION"
+    if (code && description) return `${code} - ${description}`;
+    if (code) return code;
+    return description;
+};
+
 // Image preview component for protected documents
 const ResultImage = ({ doc }) => {
     const [src, setSrc] = useState(null);
@@ -1809,22 +1854,21 @@ const VisitNote = () => {
             setNoteData(prev => {
                 const lines = prev.assessment.split('\n').filter(l => l.trim());
                 const oldName = lines[editingDiagnosisIndex];
-                const newName = `${code.code} - ${code.description}`;
+                const newName = normalizeDiagnosis(`${code.code} - ${code.description}`);
                 lines[editingDiagnosisIndex] = newName;
 
                 // Sync Plan Structured
                 let updatedPlanStructured = prev.planStructured || [];
                 if (oldName && updatedPlanStructured.length > 0) {
+                    const cleanOld = normalizeDiagnosis(oldName);
                     const matchIndex = updatedPlanStructured.findIndex(item => {
-                        const cleanOld = oldName.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
-                        const cleanItem = item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
-                        return cleanItem === cleanOld;
+                        return normalizeDiagnosis(item.diagnosis) === cleanOld;
                     });
                     if (matchIndex !== -1) {
                         updatedPlanStructured = [...updatedPlanStructured];
                         updatedPlanStructured[matchIndex] = {
                             ...updatedPlanStructured[matchIndex],
-                            diagnosis: newName.replace(/^\d+[\.\)]?\s*/, '').trim()
+                            diagnosis: normalizeDiagnosis(newName)
                         };
                     }
                 }
@@ -1844,11 +1888,10 @@ const VisitNote = () => {
             setEditingDiagnosisIndex(null);
         } else {
             // Add new diagnosis - check for duplicates first
-            const cleanNewDx = `${code.code} - ${code.description}`.replace(/^\d+[\.\)]?\s*/, '').trim();
+            const cleanNewDx = normalizeDiagnosis(`${code.code} - ${code.description}`);
             const currentAssessments = noteData.assessment ? noteData.assessment.split('\n').filter(l => l.trim()) : [];
             const alreadyInAssessment = currentAssessments.some(line => {
-                const cleanLine = line.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
-                return cleanLine === cleanNewDx.toLowerCase();
+                return normalizeDiagnosis(line).toLowerCase() === cleanNewDx.toLowerCase();
             });
 
             if (alreadyInAssessment) {
@@ -1883,7 +1926,7 @@ const VisitNote = () => {
     const diagnoses = useMemo(() => {
         if (!noteData.assessment) return [];
         const lines = noteData.assessment.split('\n').filter(line => line.trim());
-        return lines.map(line => line.trim());
+        return lines.map(normalizeDiagnosis);
     }, [noteData.assessment]);
 
     // Ensure Plan stays in sync with Assessment (Diagnoses -> Plan Items)
@@ -1898,13 +1941,11 @@ const VisitNote = () => {
 
             // 1. Add missing diagnoses from Assessment to Plan
             diagnoses.forEach(diag => {
-                // Normalize to remove leading "1. " or "1 "
-                const cleanDiag = diag.replace(/^\d+[\.\)]?\s*/, '').trim();
+                const cleanDiag = normalizeDiagnosis(diag);
 
                 // key check: is this clean diagnosis in the plan?
                 const exists = newPlan.some(item => {
-                    const cleanItemDx = item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim();
-                    return cleanItemDx.toLowerCase() === cleanDiag.toLowerCase();
+                    return normalizeDiagnosis(item.diagnosis).toLowerCase() === cleanDiag.toLowerCase();
                 });
 
                 if (!exists && cleanDiag) {
@@ -2024,8 +2065,8 @@ const VisitNote = () => {
         // 2. Update frontend note data
         setNoteData(prev => {
             const currentPlan = prev.planStructured || [];
-            const diagnosisToUseClean = diagnosisToUse.replace(/^\d+\.\s*/, '').trim();
-            const dxIndex = currentPlan.findIndex(p => p.diagnosis === diagnosisToUse || p.diagnosis === diagnosisToUseClean);
+            const diagnosisToUseClean = normalizeDiagnosis(diagnosisToUse);
+            const dxIndex = currentPlan.findIndex(p => normalizeDiagnosis(p.diagnosis).toLowerCase() === diagnosisToUseClean.toLowerCase());
 
             let updatedPlan;
             if (dxIndex >= 0) {
@@ -2041,7 +2082,7 @@ const VisitNote = () => {
             // Sync with Assessment
             let currentAssessment = prev.assessment || '';
             const existingDxLines = currentAssessment.split('\n').map(l => l.trim()).filter(Boolean);
-            const existingDxClean = existingDxLines.map(l => l.replace(/^\d+\.\s*/, '').trim().toLowerCase());
+            const existingDxClean = existingDxLines.map(l => normalizeDiagnosis(l).toLowerCase());
 
             let assessmentUpdated = false;
             let newAssessment = currentAssessment;
@@ -2350,15 +2391,14 @@ const VisitNote = () => {
 
     // Add problem directly to assessment (with ICD-10 code if available)
     const addProblemToAssessment = (problem) => {
-        const diagText = problem.icd10_code
-            ? `${problem.problem_name} (${problem.icd10_code})`
-            : problem.problem_name;
+        const diagText = normalizeDiagnosis(problem.icd10_code
+            ? `${problem.icd10_code} - ${problem.problem_name}`
+            : problem.problem_name);
 
-        // Check if already in assessment with more robust comparison
-        const cleanDiag = diagText.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
+        // Check if already in assessment with robust comparison
+        const cleanDiag = diagText.toLowerCase();
         const alreadyInAssessment = diagnoses.some(d => {
-            const cleanExisting = d.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase();
-            return cleanExisting === cleanDiag || cleanExisting.includes(cleanDiag) || cleanDiag.includes(cleanExisting);
+            return d.toLowerCase() === cleanDiag;
         });
 
         if (alreadyInAssessment) {
@@ -2372,9 +2412,9 @@ const VisitNote = () => {
 
         setNoteData(prev => {
             const currentPlan = prev.planStructured || [];
-            const cleanDx = diagText.replace(/^\d+[\.\)]?\s*/, '').trim();
+            const cleanDx = diagText;
             const existsInPlan = currentPlan.some(item =>
-                item.diagnosis.replace(/^\d+[\.\)]?\s*/, '').trim().toLowerCase() === cleanDx.toLowerCase()
+                normalizeDiagnosis(item.diagnosis).toLowerCase() === cleanDx.toLowerCase()
             );
 
             return {
