@@ -2706,7 +2706,7 @@ const VisitNote = () => {
                         {/* HPI */}
                         <VisitNoteSection title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')} id="hpi">
                             <div className="relative">
-                                <span className="absolute -top-1.5 right-4 z-10 text-[9px] font-black text-slate-300 bg-white px-2 py-0.5 rounded-full border border-slate-50 uppercase tracking-widest group-focus-within:text-primary-400 transition-colors">F2 for templates</span>
+                                <span className="absolute -top-1.5 right-4 z-10 text-[9px] font-black text-slate-300 bg-white px-2 py-0.5 rounded-full border border-slate-50 uppercase tracking-widest group-focus-within:text-primary-400 transition-colors">F2 for placeholders</span>
                                 <textarea
                                     ref={hpiRef}
                                     value={noteData.hpi}
@@ -2718,10 +2718,7 @@ const VisitNote = () => {
                                     }}
                                     disabled={isLocked}
                                     onKeyDown={(e) => {
-                                        if (e.key === 'F2') {
-                                            e.preventDefault();
-                                            setShowDotPhraseModal(true);
-                                        } else if (autocompleteState.show) {
+                                        if (autocompleteState.show) {
                                             if (e.key === 'ArrowDown') {
                                                 e.preventDefault();
                                                 setAutocompleteState(prev => ({ ...prev, selectedIndex: Math.min(prev.selectedIndex + 1, prev.suggestions.length - 1) }));
@@ -2767,7 +2764,7 @@ const VisitNote = () => {
                                     className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-primary-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-50 transition-all border border-slate-100 hover:border-primary-100"
                                 >
                                     <Zap className="w-4 h-4" />
-                                    Templates (F2)
+                                    Templates
                                 </button>
                                 {!isLocked && (
                                     <button
