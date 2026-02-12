@@ -46,7 +46,7 @@ import SignatureCard from '../../components/SignatureCard';
 import { hpiDotPhrases } from '../../data/hpiDotPhrases';
 
 // Section components (reused from legacy redesign)
-import '../VisitNote.css';
+import '../VisitNote.legacy.css';
 import VisitNoteHeader from '../VisitNoteComponent/VisitNoteHeader';
 import QuickNav from '../VisitNoteComponent/QuickNav';
 import VisitNoteSection from '../VisitNoteComponent/VisitNoteSection';
