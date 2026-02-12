@@ -7,7 +7,7 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
     return (
         <div
             id={id}
-            className={`vn-card scroll-mt-24 mb-6 overflow-visible ${isEdited ? 'vn-autonomous-active' : ''} ${className}`}
+            className={`vn-card scroll-mt-24 mb-6 relative overflow-visible focus-within:z-[50] ${isEdited ? 'vn-autonomous-active' : ''} ${className}`}
         >
             <button
                 onClick={() => setIsOpen(!isOpen)}

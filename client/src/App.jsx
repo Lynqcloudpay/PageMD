@@ -15,7 +15,7 @@ import { NotificationProvider } from './components/NotificationProvider'
 
 // Lazy loaded pages/components
 const Snapshot = React.lazy(() => import('./pages/Snapshot'));
-const VisitNote = React.lazy(() => import('./pages/VisitNote.legacy')); // Legacy fallback
+const VisitNote = React.lazy(() => import('./pages/VisitNote'));
 const ChartingEngine = React.lazy(() => import('./pages/ChartingEngine/ChartingEngine'));
 const Schedule = React.lazy(() => import('./pages/Schedule'));
 const MySchedule = React.lazy(() => import('./pages/MySchedule'));
@@ -384,7 +384,7 @@ function App() {
                                                                 <ErrorBoundary>
                                                                     <Layout>
                                                                         <PatientNoteLayout>
-                                                                            <ChartingEngine />
+                                                                            <VisitNote />
                                                                         </PatientNoteLayout>
                                                                     </Layout>
                                                                 </ErrorBoundary>
@@ -395,7 +395,7 @@ function App() {
                                                                 <ErrorBoundary>
                                                                     <Layout>
                                                                         <PatientNoteLayout>
-                                                                            <ChartingEngine />
+                                                                            <VisitNote />
                                                                         </PatientNoteLayout>
                                                                     </Layout>
                                                                 </ErrorBoundary>

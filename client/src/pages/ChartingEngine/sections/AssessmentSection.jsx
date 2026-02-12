@@ -121,7 +121,7 @@ const AssessmentSection = ({
 
                     {/* Inline Results Dropdown */}
                     {showResults && results.length > 0 && (
-                        <div ref={resultsRef} className="absolute z-30 top-full left-0 right-0 mt-1 border border-slate-200 rounded-xl bg-white shadow-xl max-h-64 overflow-y-auto">
+                        <div ref={resultsRef} className="absolute z-50 top-full left-0 right-0 mt-1 border border-slate-200 rounded-xl bg-white shadow-xl max-h-64 overflow-y-auto">
                             {results.slice(0, 12).map((r, i) => (
                                 <div key={i} className="flex items-center justify-between px-4 py-2.5 hover:bg-primary-50 text-sm border-b border-slate-50 last:border-0 group/item">
                                     <button className="flex-1 text-left" onClick={() => handleSelectCode(r)}>
