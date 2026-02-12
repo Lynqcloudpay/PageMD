@@ -574,6 +574,16 @@ const VisitNote = () => {
     const [socialHistory, setSocialHistory] = useState(null);
     const [showHistoryModal, setShowHistoryModal] = useState(false); // For extended editing if needed
 
+    // Quick actions state
+    const [quickOrdersList, setQuickOrdersList] = useState([]);
+    const [sidebarMacrosList, setSidebarMacrosList] = useState([]);
+    const [showQuickActionDxModal, setShowQuickActionDxModal] = useState(false);
+    const [pendingQuickAction, setPendingQuickAction] = useState(null); // {item: object, type: 'order'|'macro'}
+    const [isAddingProblemFromSidebar, setIsAddingProblemFromSidebar] = useState(false);
+    const [isAddingMedicationFromSidebar, setIsAddingMedicationFromSidebar] = useState(false);
+    const [showMacroAddModal, setShowMacroAddModal] = useState(false);
+    const [newMacroData, setNewMacroData] = useState({ shortcut_code: '', template_text: '' });
+
     // Note sections
     const [noteData, setNoteData] = useState({
         chiefComplaint: '',
@@ -973,59 +983,82 @@ const VisitNote = () => {
                 })
                 .catch(error => console.error('Error fetching patient snapshot:', error));
 
-            // Fetch Family History
-            patientsAPI.getFamilyHistory(id)
-                .then(response => setFamilyHistory(response.data || []))
-                .catch(error => console.error('Error fetching family history:', error));
+            // Load Quick Actions (Favorites/Macros)
+            const fetchQuickActions = useCallback(async () => {
+                try {
+                    const [ordersRes, macrosRes] = await Promise.all([
+                        ordersCatalogAPI.getFavorites(),
+                        macrosAPI.getAll({ category: 'Sidebar' })
+                    ]);
 
-            // Fetch Surgical History
-            patientsAPI.getSurgicalHistory(id)
-                .then(response => setSurgicalHistory(response.data || []))
-                .catch(error => console.error('Error fetching surgical history:', error));
+                    let orders = ordersRes.data || [];
+                    if (orders.length === 0) {
+                        orders = [
+                            { name: '12-Lead EKG', type: 'PROCEDURE', loinc_code: '93000' },
+                            { name: 'Echo Complete', type: 'IMAGING', loinc_code: '93306' },
+                            { name: 'Stress Test', type: 'PROCEDURE', loinc_code: '93015' },
+                            { name: 'CMP', type: 'LAB', loinc_code: '80053' },
+                            { name: 'CBC', type: 'LAB', loinc_code: '85025' }
+                        ];
+                    }
+                    setQuickOrdersList(orders);
 
-            // Fetch Social History
-            const fetchSocialHistory = () => {
-                patientsAPI.getSocialHistory(id)
-                    .then(response => setSocialHistory(response.data || {}))
-                    .catch(error => console.error('Error fetching social history:', error));
-            };
-            fetchSocialHistory();
+                    let macros = macrosRes.data || [];
+                    if (macros.length === 0) {
+                        macros = [
+                            { shortcut_code: '.cp_typical', template_text: hpiDotPhrases['.cp_typical'] },
+                            { shortcut_code: '.sob_exertional', template_text: hpiDotPhrases['.sob_exertional'] },
+                            { shortcut_code: '.htn_followup', template_text: hpiDotPhrases['.htn_followup'] }
+                        ];
+                    }
+                    setSidebarMacrosList(macros);
+                } catch (error) {
+                    console.error('Failed to fetch quick actions:', error);
+                }
+            }, []);
 
-            // Listen for patient data updates
-            const handlePatientDataUpdate = () => {
-                fetchSocialHistory();
+            useEffect(() => {
+                fetchQuickActions();
+            }, [fetchQuickActions]);
 
-                // Refresh Family History
-                patientsAPI.getFamilyHistory(id)
-                    .then(response => setFamilyHistory(response.data || []))
-                    .catch(error => console.error('Error refreshing family history:', error));
+            const refreshPatientData = useCallback(async () => {
+                if (!id) return;
+                try {
+                    const [problemsRes, medsRes, famRes, surgRes, socRes] = await Promise.all([
+                        patientsAPI.getProblems(id),
+                        patientsAPI.getMedications(id),
+                        patientsAPI.getFamilyHistory(id),
+                        patientsAPI.getSurgicalHistory(id),
+                        patientsAPI.getSocialHistory(id)
+                    ]);
 
-                // Refresh Surgical History
-                patientsAPI.getSurgicalHistory(id)
-                    .then(response => setSurgicalHistory(response.data || []))
-                    .catch(error => console.error('Error refreshing surgical history:', error));
+                    setFamilyHistory(famRes.data || []);
+                    setSurgicalHistory(surgRes.data || []);
+                    setSocialHistory(socRes.data || {});
 
-                // Also refresh snapshot data as it might have changed
-                patientsAPI.getSnapshot(id)
-                    .then(async response => {
-                        const data = response.data;
-                        if (data && (!data.medications || data.medications.length === 0)) {
-                            try {
-                                const medsRes = await patientsAPI.getMedications(id);
-                                data.medications = medsRes.data || [];
-                            } catch (e) { }
-                        }
+                    const snapshotRes = await patientsAPI.getSnapshot(id);
+                    const data = snapshotRes.data;
+                    if (data) {
+                        data.problems = problemsRes.data || [];
+                        data.medications = medsRes.data || [];
                         setPatientData(data);
-                    })
-                    .catch(error => console.error('Error fetching patient snapshot:', error));
-            };
+                    }
+                } catch (error) {
+                    console.error('Error refreshing patient data:', error);
+                }
+            }, [id]);
+
+            // Fetch History Data
+            refreshPatientData();
+
+            const handlePatientDataUpdate = () => refreshPatientData();
 
             window.addEventListener('patient-data-updated', handlePatientDataUpdate);
             return () => {
                 window.removeEventListener('patient-data-updated', handlePatientDataUpdate);
             };
         }
-    }, [id]);
+    }, [id, refreshPatientData, fetchQuickActions]);
 
     // Load documents linked to this visit
     useEffect(() => {
@@ -1839,13 +1872,19 @@ const VisitNote = () => {
     }, []);
 
     const handleAddICD10 = async (code, addToProblem = false) => {
-        if (addToProblem) {
+        if (addToProblem || isAddingProblemFromSidebar) {
             try {
                 await patientsAPI.addProblem(id, { problemName: code.description, icd10Code: code.code, status: 'active' });
-                showToast(`Added ${code.code} to problem list`, 'success');
+                showToast(`Added ${code.code} to Chart`, 'success');
+                refreshPatientData(); // Refresh sidebar list
+                setIsAddingProblemFromSidebar(false);
+                if (isAddingProblemFromSidebar) {
+                    setShowICD10Modal(false);
+                    return; // Don't add to note if just managing chart
+                }
             } catch (error) {
-                console.error('Error adding to problem list:', error);
-                showToast('Error adding to problem list', 'error');
+                console.error('Error adding to chart:', error);
+                showToast('Error adding to chart', 'error');
             }
         }
 
@@ -2033,6 +2072,10 @@ const VisitNote = () => {
     };
 
     const handleUpdatePlan = (updatedPlanStructured) => {
+        if (isAddingMedicationFromSidebar) {
+            setIsAddingMedicationFromSidebar(false);
+            refreshPatientData();
+        }
         setNoteData(prev => {
             const formattedPlan = formatPlanText(updatedPlanStructured);
             const planDiagnoses = updatedPlanStructured
@@ -2508,26 +2551,115 @@ const VisitNote = () => {
         showToast(`Inserted: ${templateKey}`, 'success');
     };
 
-    // Quick Orders Selection
-    const quickOrders = [
-        { name: '12-Lead EKG', type: 'PROCEDURE', loinc: '93000' },
-        { name: 'Echo Complete', type: 'IMAGING', loinc: '93306' },
-        { name: 'Stress Test', type: 'PROCEDURE', loinc: '93015' },
-        { name: 'CMP', type: 'LAB', loinc: '80053' },
-        { name: 'CBC', type: 'LAB', loinc: '85025' },
-        { name: 'Lipid Panel', type: 'LAB', loinc: '80061' },
-        { name: 'TSH', type: 'LAB', loinc: '84443' },
-        { name: 'Troponin', type: 'LAB', loinc: '84484' },
-    ];
+    const quickOrders = quickOrdersList;
 
-    // Quick Macros Selection
-    const sidebarMacros = [
-        { key: '.cp_typical', text: hpiDotPhrases['.cp_typical'] },
-        { key: '.sob_exertional', text: hpiDotPhrases['.sob_exertional'] },
-        { key: '.htn_followup', text: hpiDotPhrases['.htn_followup'] },
-        { key: '.hf_stable', text: hpiDotPhrases['.hf_stable'] },
-        { key: '.afib_followup', text: hpiDotPhrases['.afib_followup'] },
-    ];
+    const sidebarMacros = sidebarMacrosList;
+
+    // Quick Actions Logic
+    const handleQuickOrderClick = (order) => {
+        if (diagnoses.length > 1) {
+            setPendingQuickAction({ item: order, type: 'order' });
+            setShowQuickActionDxModal(true);
+        } else {
+            const dx = diagnoses[0] || 'Unassigned';
+            handleOrderSelect(order, dx);
+        }
+    };
+
+    const handleQuickMacroClick = (macro) => {
+        if (diagnoses.length > 1) {
+            setPendingQuickAction({ item: macro, type: 'macro' });
+            setShowQuickActionDxModal(true);
+        } else {
+            insertHpiTemplate(macro.shortcut_code || macro.key, macro.template_text || macro.text);
+        }
+    };
+
+    const handleQuickActionDxSelect = (dx) => {
+        if (!pendingQuickAction) return;
+
+        if (pendingQuickAction.type === 'order') {
+            handleOrderSelect(pendingQuickAction.item, dx);
+        } else {
+            const macro = pendingQuickAction.item;
+            insertHpiTemplate(macro.shortcut_code || macro.key, macro.template_text || macro.text);
+        }
+
+        setShowQuickActionDxModal(false);
+        setPendingQuickAction(null);
+    };
+
+    const addFavoriteOrder = async (order) => {
+        try {
+            if (order.catalog_id) {
+                await ordersCatalogAPI.addFavorite(order.catalog_id);
+            }
+            await fetchQuickActions();
+            showToast('Added to Favorite Orders', 'success');
+        } catch (error) {
+            console.error('Failed to add favorite order:', error);
+        }
+    };
+
+    const deleteFavoriteOrder = async (order) => {
+        try {
+            if (order.catalog_id) {
+                await ordersCatalogAPI.removeFavorite(order.catalog_id);
+            } else {
+                setQuickOrdersList(prev => prev.filter(o => o.name !== order.name));
+            }
+            await fetchQuickActions();
+            showToast('Order removed from favorites', 'info');
+        } catch (error) {
+            console.error('Failed to delete favorite order:', error);
+        }
+    };
+
+    const addSidebarMacro = async (macroData) => {
+        try {
+            await macrosAPI.create({ ...macroData, category: 'Sidebar' });
+            await fetchQuickActions();
+            setShowMacroAddModal(false);
+            setNewMacroData({ shortcut_code: '', template_text: '' });
+            showToast('Macro added to sidebar', 'success');
+        } catch (error) {
+            console.error('Failed to add macro:', error);
+            showToast('Failed to add macro', 'error');
+        }
+    };
+
+    const deleteSidebarMacro = async (macroId) => {
+        if (!confirm('Are you sure you want to delete this macro?')) return;
+        try {
+            await macrosAPI.delete(macroId);
+            await fetchQuickActions();
+            showToast('Macro removed', 'info');
+        } catch (error) {
+            console.error('Failed to delete macro:', error);
+        }
+    };
+
+    const deleteProblemFromChart = async (problemId) => {
+        if (!confirm('Permanently delete this problem from the patient chart?')) return;
+        try {
+            await patientsAPI.deleteProblem(problemId);
+            showToast('Problem deleted', 'success');
+            refreshPatientData();
+        } catch (error) {
+            console.error('Failed to delete problem:', error);
+        }
+    };
+
+    const deleteMedicationFromChart = async (medId) => {
+        if (!confirm('Permanently delete this medication from the patient record?')) return;
+        try {
+            await patientsAPI.deleteMedication(medId);
+            showToast('Medication deleted', 'success');
+            refreshPatientData();
+        } catch (error) {
+            console.error('Failed to delete medication:', error);
+        }
+    };
 
     // Insert result into plan
     // Updated to insert into Results section with billing disclaimer
@@ -3859,11 +3991,21 @@ const VisitNote = () => {
 
                                     {/* Problem List Section */}
                                     <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
                                                 <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
                                                 <span className="text-[10px] font-bold text-slate-600 uppercase">Problem List</span>
                                             </div>
+                                            <button
+                                                onClick={() => {
+                                                    setIsAddingProblemFromSidebar(true);
+                                                    setShowICD10Modal(true);
+                                                }}
+                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-primary-600 transition-colors"
+                                                title="Add New Problem to Chart"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                            </button>
                                         </div>
                                         <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
                                             {(patientData?.problems || []).filter(p => p.status === 'active').length > 0 ? (
@@ -3883,17 +4025,28 @@ const VisitNote = () => {
                                                             })
                                                             .slice(0, 10)
                                                             .map((p, idx) => (
-                                                                <button
-                                                                    key={idx}
-                                                                    onClick={() => addProblemToAssessment(p)}
-                                                                    className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
-                                                                >
-                                                                    <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
-                                                                    <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">
-                                                                        {(p.problem_name || '').replace(/^[\d.\s]+/, '')}
-                                                                    </span>
-                                                                    {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
-                                                                </button>
+                                                                <div key={idx} className="flex items-center gap-1 group/item">
+                                                                    <button
+                                                                        onClick={() => addProblemToAssessment(p)}
+                                                                        className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
+                                                                    >
+                                                                        <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
+                                                                        <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">
+                                                                            {(p.problem_name || '').replace(/^[\d.\s]+/, '')}
+                                                                        </span>
+                                                                        {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            deleteProblemFromChart(p.id);
+                                                                        }}
+                                                                        className="p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover/item:opacity-100 transition-all"
+                                                                        title="Delete Problem from Chart"
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
                                                             ));
                                                     })()}
                                                 </div>
@@ -3905,38 +4058,55 @@ const VisitNote = () => {
 
                                     {/* Medications Section */}
                                     <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
                                                 <Pill className="w-3.5 h-3.5 text-emerald-500" />
                                                 <span className="text-[10px] font-bold text-slate-600 uppercase">Medications</span>
                                             </div>
+                                            <button
+                                                onClick={() => {
+                                                    setIsAddingMedicationFromSidebar(true);
+                                                    setOrderModalTab('medications');
+                                                    setShowOrderModal(true);
+                                                }}
+                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-emerald-600 transition-colors"
+                                                title="Add New Medication to Chart"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                            </button>
                                         </div>
                                         <div className="p-2 max-h-48 overflow-y-auto custom-scrollbar">
                                             {(patientData?.medications || []).filter(m => m.active !== false).length > 0 ? (
                                                 <div className="space-y-1.5">
                                                     {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
-                                                        <div key={idx} className="px-2 py-1.5 bg-white rounded border border-slate-100">
-                                                            <div className="text-[11px] font-medium text-slate-800 truncate">
-                                                                {(m.medication_name || '')
-                                                                    .replace(/&amp;/g, '&')
-                                                                    .replace(/&#x2f;/gi, '/')
-                                                                    .replace(/&#47;/g, '/')
-                                                                    .replace(/&quot;/g, '"')
-                                                                    .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
-                                                            </div>
-                                                            <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
-                                                            <div className="flex gap-1 mt-1">
-                                                                <button onClick={() => addMedicationToPlan(m, 'continue')} className="px-1.5 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors">
-                                                                    Continue
+                                                        <div key={idx} className="group/med border border-slate-100 rounded overflow-hidden">
+                                                            <div className="p-2 bg-white relative">
+                                                                <div className="text-[11px] font-medium text-slate-800 pr-5">
+                                                                    {(m.medication_name || '')
+                                                                        .replace(/&amp;/g, '&')
+                                                                        .replace(/&#x2f;/gi, '/')
+                                                                        .replace(/&#47;/g, '/')
+                                                                        .replace(/&quot;/g, '"')
+                                                                        .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => deleteMedicationFromChart(m.id)}
+                                                                    className="absolute top-1.5 right-1.5 p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover/med:opacity-100 transition-all"
+                                                                >
+                                                                    <Trash2 className="w-2.5 h-2.5" />
                                                                 </button>
-                                                                <button onClick={() => addMedicationToPlan(m, 'refill')} className="px-1.5 py-0.5 text-[9px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors flex items-center gap-0.5">
-                                                                    <RefreshCw className="w-2.5 h-2.5" />
-                                                                    Refill
-                                                                </button>
-                                                                <button onClick={() => addMedicationToPlan(m, 'stop')} className="px-1.5 py-0.5 text-[9px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors flex items-center gap-0.5">
-                                                                    <StopCircle className="w-2.5 h-2.5" />
-                                                                    Stop
-                                                                </button>
+                                                                <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
+                                                                <div className="flex gap-1 mt-1.5">
+                                                                    <button onClick={() => addMedicationToPlan(m, 'continue')} className="flex-1 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors font-bold">
+                                                                        Cont.
+                                                                    </button>
+                                                                    <button onClick={() => addMedicationToPlan(m, 'refill')} className="flex-1 py-0.5 text-[9px] bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors font-bold flex items-center justify-center gap-0.5">
+                                                                        Refill
+                                                                    </button>
+                                                                    <button onClick={() => addMedicationToPlan(m, 'stop')} className="flex-1 py-0.5 text-[9px] bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors font-bold">
+                                                                        Stop
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -3949,23 +4119,40 @@ const VisitNote = () => {
 
                                     {/* Quick Orders Section */}
                                     <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
                                                 <ClipboardList className="w-3.5 h-3.5 text-blue-500" />
                                                 <span className="text-[10px] font-bold text-slate-600 uppercase">Quick Orders</span>
                                             </div>
+                                            <button
+                                                onClick={() => {
+                                                    setOrderPickerType('ALL');
+                                                    setShowOrderPicker(true);
+                                                }}
+                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-blue-600 transition-colors"
+                                                title="Browse & Add to Favorites"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                            </button>
                                         </div>
                                         <div className="p-2 max-h-40 overflow-y-auto custom-scrollbar">
                                             <div className="grid grid-cols-1 gap-1">
-                                                {quickOrders.map((o, idx) => (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => handleOrderSelect({ name: o.name, type: o.type, loinc_code: o.loinc })}
-                                                        className="w-full text-left px-2 py-1 bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group"
-                                                    >
-                                                        <span className="text-[11px] text-slate-700 font-medium truncate">{o.name}</span>
-                                                        <Plus className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
-                                                    </button>
+                                                {sidebarMacros.length > 0 && quickOrders.map((o, idx) => (
+                                                    <div key={idx} className="flex items-center gap-1 group/qorder">
+                                                        <button
+                                                            onClick={() => handleQuickOrderClick(o)}
+                                                            className="flex-1 text-left px-2 py-1.5 bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group"
+                                                        >
+                                                            <span className="text-[11px] text-slate-700 font-medium truncate">{o.name}</span>
+                                                            <Plus className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteFavoriteOrder(o)}
+                                                            className="px-1 text-slate-200 hover:text-rose-400 opacity-0 group-hover/qorder:opacity-100 transition-all"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
                                                 ))}
                                             </div>
                                         </div>
@@ -3973,23 +4160,39 @@ const VisitNote = () => {
 
                                     {/* Macros Section */}
                                     <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
                                                 <Zap className="w-3.5 h-3.5 text-amber-500" />
                                                 <span className="text-[10px] font-bold text-slate-600 uppercase">Macros</span>
                                             </div>
+                                            <button
+                                                onClick={() => setShowMacroAddModal(true)}
+                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-amber-600 transition-colors"
+                                                title="Create New Macro"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                            </button>
                                         </div>
                                         <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
                                             <div className="space-y-1">
                                                 {sidebarMacros.map((m, idx) => (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => insertHpiTemplate(m.key, m.text)}
-                                                        className="w-full text-left px-2 py-1.5 text-[11px] bg-white hover:bg-amber-50 rounded border border-slate-100 hover:border-amber-200 transition-all flex items-center gap-1.5 group"
-                                                    >
-                                                        <Sparkles className="w-3 h-3 text-slate-400 group-hover:text-amber-500" />
-                                                        <span className="text-slate-700 group-hover:text-amber-700">{m.key}</span>
-                                                    </button>
+                                                    <div key={idx} className="flex items-center gap-1 group/macro">
+                                                        <button
+                                                            onClick={() => handleQuickMacroClick(m)}
+                                                            className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-amber-50 rounded border border-slate-100 hover:border-amber-200 transition-all flex items-center gap-1.5 group"
+                                                        >
+                                                            <Sparkles className="w-3 h-3 text-slate-400 group-hover:text-amber-500" />
+                                                            <span className="text-slate-700 group-hover:text-amber-700 font-medium">
+                                                                {m.shortcut_code || m.key}
+                                                            </span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteSidebarMacro(m.id)}
+                                                            className="px-1 text-slate-200 hover:text-rose-400 opacity-0 group-hover/macro:opacity-100 transition-all"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
                                                 ))}
                                             </div>
                                         </div>
@@ -4134,12 +4337,9 @@ const VisitNote = () => {
                             onClose={() => setShowDiagnosisLinkModal(false)}
                             diagnoses={diagnoses}
                             onConfirm={(selectedDiagnoses) => {
-                                const { action, medication } = pendingMedAction;
-                                if (action === 'add') {
-                                    setPatientData(prev => ({
-                                        ...prev,
-                                        medications: [{ ...medication, related_diagnoses: selectedDiagnoses }, ...(prev.medications || [])]
-                                    }));
+                                if (pendingMedAction) {
+                                    // Handle each selected diagnosis
+                                    selectedDiagnoses.forEach(dx => handleMedicationDiagnosisSelect(dx));
                                 }
                                 setShowDiagnosisLinkModal(false);
                             }}
@@ -4221,6 +4421,88 @@ const VisitNote = () => {
                                             })}
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+                {
+                    showQuickActionDxModal && (
+                        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+                                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-slate-700">Link to Diagnosis</h3>
+                                    <button onClick={() => setShowQuickActionDxModal(false)} className="text-slate-400 hover:text-slate-600">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="p-4">
+                                    <p className="text-xs text-slate-500 mb-4">Select a diagnosis to link this {pendingQuickAction?.type} to:</p>
+                                    <div className="space-y-2">
+                                        {diagnoses.map((dx, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => handleQuickActionDxSelect(dx)}
+                                                className="w-full text-left px-3 py-2.5 rounded-lg border border-slate-200 hover:border-primary-500 hover:bg-primary-50 transition-all text-xs font-medium text-slate-700"
+                                            >
+                                                {dx}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+                {
+                    showMacroAddModal && (
+                        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
+                                <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-800">Create New Sidebar Macro</h3>
+                                        <p className="text-xs text-slate-500">Add a custom dot-phrase to your quick actions</p>
+                                    </div>
+                                    <button onClick={() => setShowMacroAddModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                        <X className="w-5 h-5 text-slate-400" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Shortcut Code</label>
+                                        <input
+                                            type="text"
+                                            value={newMacroData.shortcut_code}
+                                            onChange={(e) => setNewMacroData(prev => ({ ...prev, shortcut_code: e.target.value }))}
+                                            placeholder=".htn_fup"
+                                            className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Template Text Content</label>
+                                        <textarea
+                                            rows={6}
+                                            value={newMacroData.template_text}
+                                            onChange={(e) => setNewMacroData(prev => ({ ...prev, template_text: e.target.value }))}
+                                            placeholder="Patient presents for follow-up of hypertension..."
+                                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium resize-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                                    <button
+                                        onClick={() => setShowMacroAddModal(false)}
+                                        className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => addSidebarMacro(newMacroData)}
+                                        disabled={!newMacroData.shortcut_code || !newMacroData.template_text}
+                                        className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 text-white text-sm font-bold rounded-xl shadow-lg shadow-primary-600/20 transition-all"
+                                    >
+                                        Save Macro
+                                    </button>
                                 </div>
                             </div>
                         </div>
