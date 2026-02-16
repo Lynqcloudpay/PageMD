@@ -6,6 +6,7 @@ import {
     Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe, FlaskConical, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 // ─── Trend Chart Component (lightweight SVG) ────────────────────────────────
 
@@ -442,11 +443,10 @@ export default function EchoPanel({ patientId, patientName }) {
 
         // Proactive clinical gap peeking
         if (patientId) {
-            fetch(`/api/echo/gaps/${patientId}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data?.gaps?.length > 0) {
-                        setProactiveGaps(data);
+            api.get(`/echo/gaps/${patientId}`)
+                .then(res => {
+                    if (res.data?.gaps?.length > 0) {
+                        setProactiveGaps(res.data);
                     }
                 })
                 .catch(err => console.error('Silent gap check failed:', err));
@@ -465,24 +465,11 @@ export default function EchoPanel({ patientId, patientName }) {
         setLoading(true);
 
         try {
-            const response = await fetch('/api/echo/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    message: text,
-                    patientId,
-                    conversationId
-                })
+            const { data } = await api.post('/echo/chat', {
+                message: text,
+                patientId,
+                conversationId
             });
-
-            if (!response.ok) {
-                throw new Error(`Echo returned ${response.status}`);
-            }
-
-            const data = await response.json();
 
             const assistantMessage = {
                 role: 'assistant',
@@ -499,7 +486,8 @@ export default function EchoPanel({ patientId, patientName }) {
 
         } catch (err) {
             console.error('[EchoPanel] Send error:', err);
-            setError(err.message);
+            const errorMsg = err.response?.data?.error || err.message;
+            setError(errorMsg);
             setMessages(prev => [...prev, {
                 role: 'assistant',
                 content: 'Sorry, I encountered an error. Please try again.',
@@ -516,16 +504,11 @@ export default function EchoPanel({ patientId, patientName }) {
         const actionsToCommit = Array.isArray(action) ? action : [action];
 
         try {
-            const response = await fetch('/api/echo/commit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    actions: actionsToCommit.map(a => ({ type: a.type, payload: a.payload })),
-                    conversationId
-                })
+            const { data } = await api.post('/echo/commit', {
+                actions: actionsToCommit.map(a => ({ type: a.type, payload: a.payload })),
+                conversationId
             });
 
-            const data = await response.json();
             if (data.success) {
                 const newMessages = [...messages];
                 actionsToCommit.forEach(a => {
