@@ -1,5 +1,5 @@
 /**
- * Echo Service — Multi-Agent Orchestrator (Phase 2A)
+ * Echo Service — Multi-Agent Orchestrator (Phase 2A + 2B)
  * 
  * Central brain of Project Echo. Routes user intent to sub-agents via
  * OpenAI function-calling. Manages conversation state, tool execution,
@@ -7,12 +7,14 @@
  * 
  * Phase 1: Read-only clinical queries, vital trends, semantic SQL
  * Phase 2A: Visit note drafting, write actions, global availability
+ * Phase 2B: Lab result intelligence, auto-interpretation, trend analysis
  */
 
 const pool = require('../db');
 const echoContextEngine = require('./echoContextEngine');
 const echoTrendEngine = require('./echoTrendEngine');
 const echoSemanticLayer = require('./echoSemanticLayer');
+const echoLabEngine = require('./echoLabEngine');
 
 const AI_API_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
 const ECHO_MODEL = process.env.ECHO_MODEL || 'gpt-4o';
@@ -35,6 +37,8 @@ CAPABILITIES (Phase 2A):
 - Draft visit note sections (HPI, assessment, plan)
 - Suggest ICD-10 diagnoses based on clinical context
 - Add problems, medications, and orders to the chart (with confirmation)
+- Interpret lab results with clinical significance and reference ranges
+- Analyze lab trends over time with clinical context
 - Work globally: answer questions about schedule, inbox, and pending notes
 - Navigate the EMR interface
 
@@ -333,6 +337,62 @@ const TOOL_CATALOG = [
         }
     },
 
+    // ── Phase 2B: Lab Intelligence Tools ─────────────────────────────────
+    {
+        type: 'function',
+        function: {
+            name: 'interpret_lab_results',
+            description: 'Interpret all lab results for the patient. Auto-flags abnormals and criticals with clinical context, reference ranges, and follow-up suggestions.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    limit: {
+                        type: 'integer',
+                        description: 'Number of recent lab orders to analyze (default 10)'
+                    }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_lab_trends',
+            description: 'Analyze trends for a specific lab test over time (e.g., HbA1c trend, creatinine trend). Shows direction, percent change, and clinical significance.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    test_name: {
+                        type: 'string',
+                        description: 'Name of the lab test to track (e.g., "HbA1c", "creatinine", "TSH", "LDL")'
+                    }
+                },
+                required: ['test_name']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'interpret_specific_test',
+            description: 'Interpret a single lab test value with clinical context. Use when the user mentions a specific test and value.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    test_name: {
+                        type: 'string',
+                        description: 'Lab test name (e.g., "TSH", "HbA1c", "potassium")'
+                    },
+                    value: {
+                        type: 'number',
+                        description: 'The numeric test result value'
+                    }
+                },
+                required: ['test_name', 'value']
+            }
+        }
+    },
+
     // ── Phase 2A: Global Tools (non-patient) ────────────────────────────
     {
         type: 'function',
@@ -553,6 +613,71 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                     dataAccessed: ['orders'],
                     type: 'write_action',
                     writeType: 'create_order'
+                };
+            }
+
+            // ── Phase 2B: Lab Intelligence ───────────────────────────────
+            case 'interpret_lab_results': {
+                if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
+                const limit = Math.min(args.limit || 10, 30);
+                const labOrders = await pool.query(
+                    `SELECT * FROM orders WHERE patient_id = $1 AND order_type = 'lab'
+                     AND (status = 'completed' OR result_value IS NOT NULL)
+                     ORDER BY created_at DESC LIMIT $2`,
+                    [patientId, limit]
+                );
+                const analysis = echoLabEngine.analyzePatientLabs(labOrders.rows);
+                return {
+                    result: analysis,
+                    dataAccessed: ['orders', 'lab_results'],
+                    type: 'lab_analysis'
+                };
+            }
+
+            case 'get_lab_trends': {
+                if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
+                const testKey = echoLabEngine.resolveTestKey(args.test_name);
+                if (!testKey) {
+                    return {
+                        result: `No reference data found for "${args.test_name}". Try common names like: HbA1c, TSH, LDL, creatinine, potassium, hemoglobin, etc.`,
+                        dataAccessed: []
+                    };
+                }
+                const allLabs = await pool.query(
+                    `SELECT * FROM orders WHERE patient_id = $1 AND order_type = 'lab'
+                     AND (status = 'completed' OR result_value IS NOT NULL)
+                     ORDER BY created_at ASC`,
+                    [patientId]
+                );
+                const fullAnalysis = echoLabEngine.analyzePatientLabs(allLabs.rows);
+                const guideline = echoLabEngine.LAB_GUIDELINES[testKey];
+                const matchedTrend = fullAnalysis.trends.find(
+                    t => t.testName === guideline?.name
+                );
+                const matchedResults = fullAnalysis.results.filter(
+                    r => r.testName === guideline?.name
+                );
+                return {
+                    result: {
+                        testName: guideline?.name || args.test_name,
+                        trend: matchedTrend || { direction: 'insufficient_data', dataPoints: matchedResults.length },
+                        results: matchedResults,
+                        guideline: {
+                            normalRange: `${guideline?.normal?.min}–${guideline?.normal?.max} ${guideline?.unit}`,
+                            unit: guideline?.unit
+                        }
+                    },
+                    dataAccessed: ['orders', 'lab_results'],
+                    type: 'lab_trend'
+                };
+            }
+
+            case 'interpret_specific_test': {
+                const interp = echoLabEngine.interpretSpecificTest(args.test_name, args.value);
+                return {
+                    result: interp,
+                    dataAccessed: ['lab_reference_ranges'],
+                    type: 'lab_interpretation'
                 };
             }
 
@@ -995,6 +1120,16 @@ async function chat({ message, patientId, conversationId, user }) {
                 }
                 if (result.type === 'diagnosis_suggestions') {
                     visualizations.push({ type: 'diagnosis_suggestions', ...result.result });
+                }
+                // Phase 2B: Lab visualizations
+                if (result.type === 'lab_analysis') {
+                    visualizations.push({ type: 'lab_analysis', ...result.result });
+                }
+                if (result.type === 'lab_trend') {
+                    visualizations.push({ type: 'lab_analysis', ...result.result });
+                }
+                if (result.type === 'lab_interpretation') {
+                    visualizations.push({ type: 'lab_interpretation', ...result.result });
                 }
 
                 // Track write actions

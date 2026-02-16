@@ -3,7 +3,7 @@ import {
     MessageCircle, X, Send, Sparkles, Activity, ChevronDown, Loader2, TrendingUp,
     Pill, FileText, Bot, User, Navigation, BarChart3, Trash2, History,
     Stethoscope, ClipboardList, Plus, CheckCircle2, AlertTriangle, Calendar,
-    Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe
+    Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe, FlaskConical, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -173,8 +173,8 @@ function DiagnosisSuggestionsCard({ visualization }) {
                             <span className="text-[11px] text-slate-700 truncate">{dx.description}</span>
                         </div>
                         <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${dx.relevance === 'high' ? 'bg-amber-200 text-amber-800' :
-                                dx.relevance === 'medium' ? 'bg-amber-100 text-amber-600' :
-                                    'bg-slate-100 text-slate-500'
+                            dx.relevance === 'medium' ? 'bg-amber-100 text-amber-600' :
+                                'bg-slate-100 text-slate-500'
                             }`}>
                             {dx.relevance}
                         </span>
@@ -199,8 +199,8 @@ function WriteActionCard({ action }) {
 
     return (
         <div className={`mt-2 rounded-lg p-2 border ${action.success
-                ? 'bg-green-50/70 border-green-200/60'
-                : 'bg-red-50/70 border-red-200/60'
+            ? 'bg-green-50/70 border-green-200/60'
+            : 'bg-red-50/70 border-red-200/60'
             }`}>
             <div className="flex items-center gap-1.5">
                 {action.success ? (
@@ -214,6 +214,109 @@ function WriteActionCard({ action }) {
                     {action.message}
                 </span>
             </div>
+        </div>
+    );
+}
+
+// ─── Lab Results Card (Phase 2B) ────────────────────────────────────────────
+
+function LabResultsCard({ visualization }) {
+    if (!visualization) return null;
+
+    // Handle both full analysis and specific interpretation
+    const isFullAnalysis = !!visualization.summary;
+    const results = isFullAnalysis
+        ? [...(visualization.criticals || []), ...(visualization.abnormals || [])].slice(0, 8)
+        : visualization.success !== undefined ? [visualization] : [];
+
+    if (results.length === 0 && !visualization.summary) return null;
+
+    const severityBg = {
+        critical: 'bg-red-100 text-red-800 border-red-200',
+        high: 'bg-orange-100 text-orange-800 border-orange-200',
+        moderate: 'bg-amber-100 text-amber-700 border-amber-200',
+        normal: 'bg-green-100 text-green-700 border-green-200',
+        unknown: 'bg-slate-100 text-slate-600 border-slate-200'
+    };
+
+    const severityIcon = {
+        critical: '🔴',
+        high: '🟠',
+        moderate: '🟡',
+        normal: '🟢',
+        unknown: '⚪'
+    };
+
+    return (
+        <div className="mt-2 bg-purple-50/60 rounded-lg p-2.5 border border-purple-200/60">
+            <div className="flex items-center gap-1.5 mb-1.5">
+                <FlaskConical className="w-3 h-3 text-purple-600" />
+                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider">
+                    {isFullAnalysis ? 'Lab Results Analysis' : 'Lab Interpretation'}
+                </span>
+            </div>
+
+            {isFullAnalysis && visualization.summary && (
+                <div className="text-[11px] text-purple-800 mb-2 whitespace-pre-wrap leading-relaxed">
+                    {visualization.summary}
+                </div>
+            )}
+
+            <div className="space-y-1">
+                {results.map((r, i) => (
+                    <div key={i} className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border ${severityBg[r.severity] || severityBg.unknown
+                        }`}>
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="text-[10px]">{severityIcon[r.severity] || '⚪'}</span>
+                            <span className="text-[11px] font-medium truncate">
+                                {r.testName || r.rawTestName}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-[11px] font-bold">
+                                {r.value}{r.unit ? ` ${r.unit}` : ''}
+                            </span>
+                            <span className="text-[9px] opacity-70">
+                                {r.normalRange && r.normalRange !== 'N/A' ? `(${r.normalRange})` : ''}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Trends section */}
+            {visualization.trends?.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-purple-200/40">
+                    <span className="text-[9px] font-bold text-purple-600 uppercase">Trends</span>
+                    <div className="space-y-0.5 mt-1">
+                        {visualization.trends.filter(t => t.direction !== 'stable').map((t, i) => (
+                            <div key={i} className="flex items-center gap-1 text-[10px]">
+                                {t.direction === 'rising'
+                                    ? <ArrowUpRight className="w-3 h-3 text-red-500" />
+                                    : <ArrowDownRight className="w-3 h-3 text-blue-500" />
+                                }
+                                <span className="text-purple-700">
+                                    {t.testName}: {t.direction} {Math.abs(t.percentChange)}% ({t.period})
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Follow-up suggestions */}
+            {results.some(r => r.followUp?.length > 0) && (
+                <div className="mt-2 pt-2 border-t border-purple-200/40">
+                    <span className="text-[9px] font-bold text-purple-600 uppercase">Suggested Follow-up</span>
+                    <ul className="mt-0.5 space-y-0.5">
+                        {[...new Set(results.flatMap(r => r.followUp || []))].slice(0, 4).map((f, i) => (
+                            <li key={i} className="text-[10px] text-purple-600 flex items-center gap-1">
+                                <ChevronRight className="w-2.5 h-2.5" />{f}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }
@@ -330,7 +433,7 @@ export default function EchoPanel({ patientId, patientName }) {
         { label: 'BP trend', icon: TrendingUp, prompt: 'Show me the blood pressure trend for this patient.' },
         { label: 'Active meds', icon: Pill, prompt: 'List all active medications.' },
         { label: 'Draft HPI', icon: PenTool, prompt: 'Draft an HPI for a follow-up visit.' },
-        { label: 'Vital overview', icon: Activity, prompt: 'Analyze all vital sign trends.' },
+        { label: 'Interpret labs', icon: FlaskConical, prompt: 'Interpret all recent lab results for this patient.' },
         { label: 'Suggest Dx', icon: Stethoscope, prompt: 'Suggest diagnoses based on the chief complaint and patient history.' },
     ];
 
@@ -414,8 +517,8 @@ export default function EchoPanel({ patientId, patientName }) {
                 {messages.length === 0 && (
                     <div className="text-center py-4 space-y-3">
                         <div className={`w-12 h-12 mx-auto rounded-2xl flex items-center justify-center border ${isPatientMode
-                                ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
-                                : 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200'
+                            ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
+                            : 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200'
                             }`}>
                             {isPatientMode
                                 ? <Sparkles className="w-6 h-6 text-blue-500" />
@@ -472,6 +575,7 @@ export default function EchoPanel({ patientId, patientName }) {
                                     {viz.type === 'vital_trend' && <EchoTrendChart visualization={viz} />}
                                     {viz.type === 'note_draft' && <NoteDraftCard visualization={viz} />}
                                     {viz.type === 'diagnosis_suggestions' && <DiagnosisSuggestionsCard visualization={viz} />}
+                                    {(viz.type === 'lab_analysis' || viz.type === 'lab_interpretation') && <LabResultsCard visualization={viz} />}
                                     {viz.type === 'navigation' && (
                                         <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-100">
                                             <div className="flex items-center gap-1.5">
