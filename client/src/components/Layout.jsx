@@ -306,7 +306,8 @@ const Layout = ({ children }) => {
                                         <img
                                             src="/logo.png"
                                             alt="PageMD Logo"
-                                            className="h-7 w-auto object-contain max-w-[100px] brightness-0 invert opacity-90 transition-opacity"
+                                            className="h-9 w-auto object-contain max-w-[130px] transition-opacity"
+                                            style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
                                             onError={(e) => { e.target.style.display = 'none'; }}
                                         />
                                     </Link>
@@ -327,7 +328,8 @@ const Layout = ({ children }) => {
                                     <img
                                         src="/logo-icon.png"
                                         alt="PMD"
-                                        className="w-7 h-7 object-contain brightness-0 invert opacity-60 group-hover:opacity-100 transition-opacity"
+                                        className="w-9 h-9 object-contain group-hover:opacity-100 transition-opacity"
+                                        style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
                                         onError={(e) => {
                                             e.target.style.display = 'none';
                                             if (e.target.nextSibling) e.target.nextSibling.classList.remove('hidden');
