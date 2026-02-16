@@ -705,7 +705,19 @@ export default function EchoPanel({ patientId, patientName }) {
                                 : 'bg-slate-50 text-slate-700 rounded-2xl rounded-bl-md px-3 py-2 border border-slate-100'
                             }`}>
                             <div className="text-[12px] leading-relaxed whitespace-pre-wrap">
-                                {msg.content}
+                                {msg.role === 'assistant' ? (
+                                    msg.content.split(/(\*\*.*?\*\*|!!.*?!!)/g).map((part, index) => {
+                                        if (part.startsWith('**') && part.endsWith('**')) {
+                                            return <strong key={index} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+                                        }
+                                        if (part.startsWith('!!') && part.endsWith('!!')) {
+                                            return <span key={index} className="font-bold text-red-600">{part.slice(2, -2)}</span>;
+                                        }
+                                        return part;
+                                    })
+                                ) : (
+                                    msg.content
+                                )}
                             </div>
 
                             {/* Visualizations */}
