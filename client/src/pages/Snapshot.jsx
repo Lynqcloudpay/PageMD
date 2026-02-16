@@ -1519,7 +1519,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50 flex items-center justify-center">
+            <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center">
                 <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
                     <p className="text-gray-600">Loading patient chart...</p>
@@ -1531,7 +1531,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const age = patient ? calculateAge(patient.dob) : null;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100/50">
+        <div className="min-h-screen bg-[#F0F2F5]">
             <div className="w-full px-4 relative z-10">
                 <PatientHeader
                     patient={patient}
@@ -1561,7 +1561,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 />
 
                 {/* Quick Navigation Bar - Neutralized */}
-                <div className="px-6 py-2.5 bg-white/70 backdrop-blur-md border-b border-white/50 mb-6 shadow-lg shadow-slate-200/20 sticky top-0 z-5 rounded-b-2xl mx-2">
+                <div className="px-6 py-2.5 bg-white border-b border-gray-200 mb-6 sticky top-0 z-5 rounded-b-xl mx-2 shadow-sm">
                     <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-hide">
                             <button
@@ -1630,7 +1630,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
-                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-slate-600 bg-white/60 backdrop-blur-sm border border-slate-100 rounded-xl transition-all hover:bg-white/80 hover:shadow-md whitespace-nowrap"
+                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg transition-all hover:bg-gray-50 hover:shadow-sm whitespace-nowrap"
                                 title="Print Orders"
                             >
                                 <Printer className="w-3.5 h-3.5" />
@@ -1638,7 +1638,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </button>
                             <button
                                 onClick={() => setShowChartReview(true)}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50/80 backdrop-blur-sm text-indigo-600 hover:bg-indigo-100/80 text-[11px] font-medium rounded-xl border border-indigo-100 transition-all"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-[11px] font-semibold rounded-lg border border-indigo-200 transition-all"
                                 title="Chart Review"
                             >
                                 <Eye className="w-3.5 h-3.5" />
@@ -1646,7 +1646,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </button>
                             <button
                                 onClick={() => setShowSpecialtyTracker(true)}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-rose-400 to-pink-400 text-white hover:from-rose-500 hover:to-pink-500 text-[11px] font-medium rounded-xl transition-all shadow-md shadow-rose-500/20"
+                                className="flex items-center gap-1 px-3 py-1.5 bg-rose-500 text-white hover:bg-rose-600 text-[11px] font-semibold rounded-lg transition-all shadow-sm"
                                 title="Specialty Tracker - At-a-glance trends"
                             >
                                 <Activity className="w-3.5 h-3.5" />
@@ -1657,7 +1657,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="relative group/visit">
                                 <button
                                     onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
-                                    className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl transition-all hover:from-primary-600 hover:to-primary-700 hover:shadow-lg hover:scale-[1.02] shadow-md shadow-primary-500/20"
+                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg transition-all hover:bg-blue-700 hover:shadow-md shadow-sm"
                                 >
                                     {todayDraftVisit ? (
                                         <>
@@ -1715,7 +1715,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 {/* Left Column: Compact Reference Cards + Visit History */}
                                 <div className="lg:col-span-1 space-y-4">
                                     {/* Sticky Note / Quick Reminder */}
-                                    <div className="bg-amber-50/40 backdrop-blur-sm rounded-2xl border border-amber-100/50 p-4 relative group/sticky hover:shadow-lg hover:shadow-amber-100/30 transition-all h-[120px] flex flex-col">
+                                    <div className="bg-amber-50 rounded-xl border border-amber-200 p-4 relative group/sticky hover:shadow-md transition-all h-[120px] flex flex-col">
                                         <div className="flex items-center justify-between mb-2 shrink-0">
                                             <div className="flex items-center gap-2">
                                                 <Pin className="w-3.5 h-3.5 text-yellow-600 -rotate-12" />
@@ -1735,7 +1735,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         <div className="flex-1 overflow-y-auto scrollbar-hide">
                                             {isEditingSticky ? (
                                                 <textarea
-                                                    className="w-full h-full bg-white/60 backdrop-blur-sm border border-amber-100 rounded-xl p-2 text-[11px] font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-200 resize-none"
+                                                    className="w-full h-full bg-white border border-amber-200 rounded-lg p-2 text-[11px] font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
                                                     value={stickyNoteText}
                                                     onChange={(e) => setStickyNoteText(e.target.value)}
                                                     placeholder="Write a clinical reminder here..."
@@ -1750,9 +1750,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Visit History Section */}
-                                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50">
+                                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
                                         <div
-                                            className="px-3 py-2.5 border-b border-slate-100/50 flex items-center justify-between bg-white/50 cursor-pointer hover:bg-white/70 transition-colors group/header rounded-t-2xl"
+                                            className="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors group/header rounded-t-xl"
                                             onClick={() => setShowVisitFoldersModal(true)}
                                             title={`View all ${filteredNotes.length} medical encounters`}
                                         >
@@ -1821,8 +1821,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Health Maintenance Section - Specialized */}
-                                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 overflow-hidden group/hm hover:border-blue-200/50 transition-all duration-300">
-                                        <div className="px-4 py-3 border-b border-slate-100/50 flex items-center justify-between bg-white/50">
+                                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden group/hm hover:border-blue-300 transition-all duration-300">
+                                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
                                             <div className="flex items-center gap-2">
                                                 <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                     <ShieldCheck className="w-3.5 h-3.5" />
@@ -1877,7 +1877,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         setPatientChartTab('reports');
                                                         setShowPatientChart(true);
                                                     }}
-                                                    className="w-full py-2 bg-white/70 backdrop-blur-sm border border-slate-100 text-[10px] font-medium text-slate-500 hover:text-blue-600 hover:border-blue-200/50 hover:shadow-md transition-all rounded-xl flex items-center justify-center gap-2 group/btn"
+                                                    className="w-full py-2 bg-gray-50 border border-gray-200 text-[10px] font-semibold text-gray-500 hover:text-blue-600 hover:border-blue-300 hover:shadow-sm transition-all rounded-lg flex items-center justify-center gap-2 group/btn"
                                                 >
                                                     Clinical Quality Measures <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                                                 </button>
@@ -1927,12 +1927,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     )}
 
                                     {/* Vitals Trend Wave - Enhanced Clinical Visualization */}
-                                    <div className="bg-white/70 backdrop-blur-sm p-6 rounded-[2rem] border border-white/50 shadow-xl shadow-slate-200/30 mb-6 relative overflow-hidden group/wave isolate">
-                                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50/20 rounded-full -mr-32 -mt-32 blur-3xl group-hover/wave:bg-blue-100/30 transition-colors duration-1000" />
+                                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6 relative overflow-hidden group/wave isolate">
+
 
                                         <div className="flex justify-between items-center mb-6 relative">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-3 bg-gradient-to-br from-blue-400 to-indigo-500 text-white rounded-2xl shadow-lg shadow-blue-100">
+                                                <div className="p-3 bg-blue-600 text-white rounded-xl shadow-sm">
                                                     <Waves className="w-5 h-5 opacity-90" />
                                                 </div>
                                                 <div>
@@ -1945,7 +1945,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-6 bg-slate-50/50 backdrop-blur-md p-2 px-4 rounded-xl border border-slate-100">
+                                            <div className="flex gap-6 bg-gray-50 p-2 px-4 rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
                                                     <span className="text-[9px] font-medium text-slate-500 tracking-wide">Sys. BP</span>
@@ -2080,7 +2080,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </AreaChart>
                                                 </ResponsiveContainer>
                                             ) : (
-                                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                                                <div className="h-full flex flex-col items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
                                                     <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
                                                         <Waves className="w-8 h-8 text-slate-200" />
                                                     </div>
@@ -2093,8 +2093,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Detailed Boards Grid - Custom Proportions for Clinical Depth */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-4">
                                         {/* Column 1: Problems - Geometric Match */}
-                                        <div className="flex flex-col bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 overflow-hidden hover:border-rose-200/50 transition-colors h-[416px]">
-                                            <div className="px-4 py-3 border-b border-slate-100/50 flex items-center justify-between bg-white/50">
+                                        <div className="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:border-rose-300 transition-colors h-[416px]">
+                                            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
                                                         <Activity className="w-3.5 h-3.5" />
@@ -2125,8 +2125,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
 
                                         {/* Column 2: Medications - Now Compact lg:col-span-1 */}
-                                        <div className="flex flex-col bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 overflow-hidden hover:border-blue-200/50 transition-colors h-[416px]">
-                                            <div className="px-4 py-3 border-b border-slate-100/50 flex items-center justify-between bg-white/50">
+                                        <div className="flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:border-blue-300 transition-colors h-[416px]">
+                                            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                         <Pill className="w-3.5 h-3.5" />
@@ -2166,8 +2166,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         {/* Middle Stack: Allergies & Surgical */}
                                         <div className="flex flex-col gap-4 h-[416px]">
                                             {/* Allergies - Increased Height */}
-                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-amber-200/50 transition-colors">
-                                                <div className="px-4 py-2.5 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden hover:border-amber-300 transition-colors">
+                                                <div className="px-4 py-2.5 border-b border-gray-100 flex items-center bg-gray-50 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-amber-50 text-amber-500 rounded-md">
                                                             <AlertCircle className="w-3 h-3" />
@@ -2198,8 +2198,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
 
                                             {/* Surgical History - Compact but with more space */}
-                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-violet-200/50 transition-colors">
-                                                <div className="px-4 py-2 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden hover:border-indigo-300 transition-colors">
+                                                <div className="px-4 py-2 border-b border-gray-100 flex items-center bg-gray-50 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-violet-50 text-violet-500 rounded-md">
                                                             <Scissors className="w-3 h-3" />
@@ -2233,8 +2233,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         {/* Column 4: Social & Family Stack */}
                                         <div className="flex flex-col gap-4 h-[416px]">
                                             {/* Family History - Top */}
-                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-emerald-200/50 transition-colors">
-                                                <div className="px-4 py-2.5 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden hover:border-emerald-300 transition-colors">
+                                                <div className="px-4 py-2.5 border-b border-gray-100 flex items-center bg-gray-50 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-emerald-50 text-emerald-500 rounded-md">
                                                             <ShieldPlus className="w-3 h-3" />
@@ -2264,8 +2264,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
 
                                             {/* Social History - Fixed Bottom to align with Surgical */}
-                                            <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/20 border border-white/50 flex flex-col overflow-hidden hover:border-indigo-200/50 transition-colors">
-                                                <div className="px-4 py-2 border-b border-slate-100/50 flex items-center bg-white/50 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden hover:border-indigo-300 transition-colors">
+                                                <div className="px-4 py-2 border-b border-gray-100 flex items-center bg-gray-50 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">
                                                             <Users className="w-3 h-3" />
