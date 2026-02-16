@@ -12,6 +12,7 @@ const { requirePermission } = require('../services/authorization');
 const echoService = require('../services/echoService');
 const echoTrendEngine = require('../services/echoTrendEngine');
 const echoContextEngine = require('../services/echoContextEngine');
+const echoCDSEngine = require('../services/echoCDSEngine');
 
 const router = express.Router();
 

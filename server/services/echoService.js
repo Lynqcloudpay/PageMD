@@ -1303,6 +1303,17 @@ async function callLLM(messages, tools) {
 // ─── Conversation Management ────────────────────────────────────────────────
 
 async function createConversation(patientId, userId, tenantId) {
+    // Drop the FK constraint if it exists — echo_conversations is in public schema
+    // but patients live in tenant schemas, so the FK can never be satisfied
+    try {
+        await pool.query(`
+            ALTER TABLE echo_conversations 
+            DROP CONSTRAINT IF EXISTS echo_conversations_patient_id_fkey
+        `);
+    } catch (e) {
+        // Ignore — constraint may already be dropped
+    }
+
     const result = await pool.query(
         `INSERT INTO echo_conversations (patient_id, user_id, tenant_id)
          VALUES ($1, $2, $3) RETURNING *`,
