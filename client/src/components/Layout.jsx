@@ -297,12 +297,15 @@ const Layout = ({ children }) => {
 
                         {/* Logo Area */}
                         <div className={cn(
-                            "flex items-center h-16 border-b border-slate-800/50 justify-center",
-                            !sidebarCollapsed && "px-4"
+                            "flex items-center h-16 border-b border-slate-800/50",
+                            sidebarCollapsed ? "justify-center px-0" : "px-4 justify-start"
                         )}>
                             <button
                                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                className="flex items-center group transition-transform active:scale-95"
+                                className={cn(
+                                    "flex items-center group transition-transform active:scale-95",
+                                    !sidebarCollapsed && "w-full"
+                                )}
                                 title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                             >
                                 {sidebarCollapsed ? (
@@ -331,91 +334,65 @@ const Layout = ({ children }) => {
                             </button>
                         </div>
 
-                        {/* Search trigger */}
-                        {!sidebarCollapsed && (
-                            <div className="px-2.5 pt-3 pb-1">
-                                <button
-                                    onClick={() => setShowSearch(true)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 text-white text-[11px] hover:bg-slate-700 transition-all border border-slate-700 shadow-inner"
-                                >
-                                    <Search className="w-3.5 h-3.5 text-blue-400 font-bold" strokeWidth={3} />
-                                    <span className="font-semibold">Search...</span>
-                                    <div className="ml-auto flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-900 rounded text-[9px] font-black text-slate-300 border border-slate-700">
-                                        <span>⌘</span>
-                                        <span>K</span>
+                        {/* Vertical Centering Wrapper for Nav */}
+                        <div className={cn("flex-1 flex flex-col min-h-0", sidebarCollapsed && "justify-center")}>
+                            {/* Navigation */}
+                            <nav className="flex-shrink-0 overflow-y-auto overflow-x-hidden py-4 flex flex-col gap-0.5">
+                                {/* Primary section */}
+                                <div>
+                                    {!sidebarCollapsed && (
+                                        <div className="px-4 pt-6 pb-2">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                                Navigation
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="space-y-0.5">
+                                        {navigationSection.map((item) => (
+                                            <SidebarItem
+                                                key={item.path}
+                                                to={item.path}
+                                                icon={item.icon}
+                                                label={item.label}
+                                                badge={item.badge}
+                                                badgeColor={item.badgeColor}
+                                                active={isActive(item.path)}
+                                                collapsed={sidebarCollapsed}
+                                            />
+                                        ))}
                                     </div>
-                                </button>
-                            </div>
-                        )}
-
-                        {sidebarCollapsed && (
-                            <div className="flex justify-center pt-5 pb-2">
-                                <button
-                                    onClick={() => setShowSearch(true)}
-                                    className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 hover:bg-slate-700 transition-all border border-slate-700 shadow-md group"
-                                    title="Search (⌘K)"
-                                >
-                                    <Search className="w-4 h-4 group-hover:scale-110 transition-transform" strokeWidth={3} />
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Navigation */}
-                        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 flex flex-col gap-0.5">
-                            {/* Primary section */}
-                            <div>
-                                {!sidebarCollapsed && (
-                                    <div className="px-4 pt-6 pb-2">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                                            Navigation
-                                        </span>
-                                    </div>
-                                )}
-                                <div className="space-y-0.5">
-                                    {navigationSection.map((item) => (
-                                        <SidebarItem
-                                            key={item.path}
-                                            to={item.path}
-                                            icon={item.icon}
-                                            label={item.label}
-                                            badge={item.badge}
-                                            badgeColor={item.badgeColor}
-                                            active={isActive(item.path)}
-                                            collapsed={sidebarCollapsed}
-                                        />
-                                    ))}
                                 </div>
-                            </div>
 
-                            {/* Divider */}
-                            <div className={cn("my-2", sidebarCollapsed ? "mx-2" : "mx-3")}>
-                                <div className="h-px bg-gray-100" />
-                            </div>
-
-                            {/* Workflow section */}
-                            <div>
-                                {!sidebarCollapsed && (
-                                    <div className="px-4 pt-6 pb-2">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                                            Workflows
-                                        </span>
-                                    </div>
-                                )}
-                                <div className="space-y-0.5">
-                                    {workflowSection.map((item) => (
-                                        <SidebarItem
-                                            key={item.path}
-                                            to={item.path}
-                                            icon={item.icon}
-                                            label={item.label}
-                                            badge={item.badge}
-                                            active={isActive(item.path)}
-                                            collapsed={sidebarCollapsed}
-                                        />
-                                    ))}
+                                {/* Divider */}
+                                <div className={cn("my-2", sidebarCollapsed ? "mx-2" : "mx-3")}>
+                                    <div className="h-px bg-gray-100" />
                                 </div>
-                            </div>
-                        </nav>
+
+                                {/* Workflow section */}
+                                <div>
+                                    {!sidebarCollapsed && (
+                                        <div className="px-4 pt-6 pb-2">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                                Workflows
+                                            </span>
+                                        </div>
+                                    )}
+                                    <div className="space-y-0.5">
+                                        {workflowSection.map((item) => (
+                                            <SidebarItem
+                                                key={item.path}
+                                                to={item.path}
+                                                icon={item.icon}
+                                                label={item.label}
+                                                badge={item.badge}
+                                                active={isActive(item.path)}
+                                                collapsed={sidebarCollapsed}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </nav>
+                        </div>
 
                         {/* User profile — bottom */}
                         <div className="border-t border-white/5 p-3 bg-black/5">
