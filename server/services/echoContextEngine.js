@@ -92,7 +92,7 @@ function buildContextPrompt(context) {
     if (context.vitalHistory?.length > 0) {
         const latest = context.vitalHistory[context.vitalHistory.length - 1];
         if (latest?.vitals) {
-            const v = typeof latest.vitals === 'string' ? JSON.parse(latest.vitals) : latest.vitals;
+            const v = latest.vitals; // Already normalized by getVitalHistory
             const vitalParts = [];
             if (v.systolicBp && v.diastolicBp) vitalParts.push(`BP ${v.systolicBp}/${v.diastolicBp}`);
             if (v.heartRate) vitalParts.push(`HR ${v.heartRate}`);
@@ -212,7 +212,11 @@ async function getRecentVisits(patientId, limit = 5) {
              ORDER BY visit_date DESC LIMIT $2`,
             [patientId, limit]
         );
-        return res.rows;
+        // Normalize vitals in recent visits
+        return res.rows.map(row => ({
+            ...row,
+            vitals: normalizeVitals(row.vitals)
+        }));
     } catch (err) {
         console.warn('[EchoContext] Visits fetch failed:', err.message);
         return [];
@@ -227,7 +231,10 @@ async function getVitalHistory(patientId, limit = 20) {
              ORDER BY visit_date ASC LIMIT $2`,
             [patientId, limit]
         );
-        return result.rows;
+        return result.rows.map(row => ({
+            ...row,
+            vitals: normalizeVitals(row.vitals)
+        }));
     } catch (err) {
         console.warn('[EchoContext] Vital history fetch failed:', err.message);
         return [];
@@ -318,9 +325,31 @@ function extractSection(note, sectionName) {
     return match ? match[1].trim() : null;
 }
 
+/**
+ * Normalizes vitals from raw database format to Echo standard format
+ */
+function normalizeVitals(vitals) {
+    if (!vitals) return null;
+    const v = typeof vitals === 'string' ? JSON.parse(vitals) : vitals;
+
+    // Mapping: DB Key -> Echo Key
+    return {
+        ...v,
+        systolicBp: v.systolicBp || v.systolic,
+        diastolicBp: v.diastolicBp || v.diastolic,
+        heartRate: v.heartRate || v.pulse || v.pulseRate,
+        temperature: v.temperature || v.temp,
+        oxygenSaturation: v.oxygenSaturation || v.o2sat || v.spo2,
+        respiratoryRate: v.respiratoryRate || v.resp || v.rr,
+        weight: v.weight,
+        bmi: v.bmi
+    };
+}
+
 module.exports = {
     assemblePatientContext,
     buildContextPrompt,
     getVitalHistory,
-    extractSection
+    extractSection,
+    normalizeVitals
 };
