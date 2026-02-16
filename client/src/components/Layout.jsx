@@ -297,7 +297,7 @@ const Layout = ({ children }) => {
 
                         {/* Logo Area */}
                         <div className={cn(
-                            "flex items-center h-16 border-b border-slate-800/50",
+                            "flex items-center h-20 border-b border-slate-800/50 pt-4",
                             sidebarCollapsed ? "justify-center px-0" : "px-4 justify-start"
                         )}>
                             <button
