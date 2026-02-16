@@ -15,6 +15,7 @@ const echoContextEngine = require('./echoContextEngine');
 const echoTrendEngine = require('./echoTrendEngine');
 const echoSemanticLayer = require('./echoSemanticLayer');
 const echoLabEngine = require('./echoLabEngine');
+const echoCDSEngine = require('./echoCDSEngine');
 
 const AI_API_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
 const ECHO_MODEL = process.env.ECHO_MODEL || 'gpt-4o';
@@ -393,6 +394,19 @@ const TOOL_CATALOG = [
         }
     },
 
+    {
+        type: 'function',
+        function: {
+            name: 'check_clinical_gaps',
+            description: 'Analyzes patient history for missing preventive screenings (mammograms, colonoscopies) or chronic care gaps (diabetic eye exams).',
+            parameters: {
+                type: 'object',
+                properties: {
+                    focus: { type: 'string', enum: ['preventive', 'chronic', 'all'], default: 'all' }
+                }
+            }
+        }
+    },
     // ── Phase 2A: Global Tools (non-patient) ────────────────────────────
     {
         type: 'function',
@@ -472,7 +486,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 const limit = Math.min(args.limit || 5, 20);
                 const visits = await pool.query(
                     `SELECT id, visit_date, encounter_date, visit_type, note_type, status,
-                            chief_complaint, assessment, plan, note_draft, note_signed_at
+                            note_draft, note_signed_at
                      FROM visits WHERE patient_id = $1
                      ORDER BY visit_date DESC LIMIT $2`,
                     [patientId, limit]
@@ -553,66 +567,77 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
             // ── Phase 2A: Write Actions ─────────────────────────────────
             case 'add_problem': {
                 if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
-                const prob = await pool.query(
-                    `INSERT INTO problems (patient_id, problem_name, icd10_code, status)
-                     VALUES ($1, $2, $3, $4) RETURNING *`,
-                    [patientId, args.problem_name, args.icd10_code || null, args.status || 'active']
-                );
+                const actionId = `act_${Math.random().toString(36).substring(2, 9)}`;
                 return {
                     result: {
-                        success: true,
-                        message: `Added "${args.problem_name}"${args.icd10_code ? ` (${args.icd10_code})` : ''} to the problem list.`,
-                        record: prob.rows[0]
+                        action_id: actionId,
+                        type: 'add_problem',
+                        label: `Add Problem: ${args.problem_name}`,
+                        message: `Staged adding **${args.problem_name}** to the problem list.`,
+                        payload: {
+                            patient_id: patientId,
+                            problem_name: args.problem_name,
+                            icd10_code: args.icd10_code || null,
+                            status: args.status || 'active'
+                        }
                     },
-                    dataAccessed: ['problems'],
-                    type: 'write_action',
-                    writeType: 'add_problem'
+                    dataAccessed: [],
+                    type: 'staged_action'
                 };
             }
 
             case 'add_medication': {
                 if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
-                const med = await pool.query(
-                    `INSERT INTO medications (patient_id, medication_name, dosage, frequency, route, prescriber_id, active, status)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-                    [patientId, args.medication_name, args.dosage || null, args.frequency || null,
-                        args.route || 'oral', userId, true, 'active']
-                );
+
+                // DDI Check
+                const interaction = echoCDSEngine.checkMedicationInteractions(args.medication_name, patientContext?.medications || []);
+
+                const actionId = `act_${Math.random().toString(36).substring(2, 9)}`;
                 return {
                     result: {
-                        success: true,
-                        message: `Added ${args.medication_name}${args.dosage ? ` ${args.dosage}` : ''}${args.frequency ? ` ${args.frequency}` : ''} to the medication list.`,
-                        record: med.rows[0]
+                        action_id: actionId,
+                        type: 'add_medication',
+                        label: `Add Medication: ${args.medication_name}`,
+                        message: `Staged adding **${args.medication_name}** to the medication list.`,
+                        interactionWarning: interaction,
+                        payload: {
+                            patient_id: patientId,
+                            medication_name: args.medication_name,
+                            dosage: args.dosage || null,
+                            frequency: args.frequency || null,
+                            route: args.route || 'oral',
+                            active: true,
+                            status: 'active'
+                        }
                     },
                     dataAccessed: ['medications'],
-                    type: 'write_action',
-                    writeType: 'add_medication'
+                    type: 'staged_action'
                 };
             }
 
             case 'create_order': {
                 if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
-                const order = await pool.query(
-                    `INSERT INTO orders (patient_id, order_type, ordered_by, order_payload)
-                     VALUES ($1, $2, $3, $4) RETURNING *`,
-                    [patientId, args.order_type, userId,
-                        JSON.stringify({
-                            test_name: args.order_name,
-                            priority: args.priority || 'routine',
-                            indication: args.indication || null,
-                            source: 'echo_ai'
-                        })
-                    ]
-                );
+                const actionId = `act_${Math.random().toString(36).substring(2, 9)}`;
                 return {
                     result: {
-                        success: true,
-                        message: `Created ${args.priority || 'routine'} ${args.order_type} order: ${args.order_name}`,
-                        record: order.rows[0]
+                        action_id: actionId,
+                        type: 'create_order',
+                        label: `Create ${args.order_type}: ${args.order_name}`,
+                        message: `Staged creating **${args.order_type}** order: **${args.order_name}**.`,
+                        payload: {
+                            patient_id: patientId,
+                            order_type: args.order_type,
+                            test_name: args.order_name,
+                            order_payload: {
+                                test_name: args.order_name,
+                                priority: args.priority || 'routine',
+                                indication: args.indication || null,
+                                source: 'echo_ai'
+                            }
+                        }
                     },
-                    dataAccessed: ['orders'],
-                    type: 'write_action',
-                    writeType: 'create_order'
+                    dataAccessed: [],
+                    type: 'staged_action'
                 };
             }
 
@@ -760,6 +785,17 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 return {
                     result: inbox.rows[0] || { total: 0, unread: 0, results: 0, messages: 0, tasks: 0, refills: 0 },
                     dataAccessed: ['inbox_items']
+                };
+            }
+
+            // Phase 2C - Clinical Decision Support
+            case 'check_clinical_gaps': {
+                if (!patientId || !patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const gaps = await echoCDSEngine.analyzeClinicalGaps(patientContext);
+                return {
+                    type: 'clinical_gaps',
+                    result: gaps,
+                    dataAccessed: ['patients', 'problems', 'orders', 'labs', 'social_history']
                 };
             }
 
@@ -1131,6 +1167,12 @@ async function chat({ message, patientId, conversationId, user }) {
                 if (result.type === 'lab_interpretation') {
                     visualizations.push({ type: 'lab_interpretation', ...result.result });
                 }
+                if (result.type === 'clinical_gaps') {
+                    visualizations.push({ type: 'clinical_gaps', ...result.result });
+                }
+                if (result.type === 'staged_action') {
+                    visualizations.push({ type: 'staged_action', ...result.result });
+                }
 
                 // Track write actions
                 if (result.type === 'write_action') {
@@ -1154,12 +1196,12 @@ async function chat({ message, patientId, conversationId, user }) {
                     userId: user.id,
                     tenantId,
                     patientId,
-                    action: result.type === 'write_action' ? 'write_action' : 'tool_execution',
+                    action: result.type === 'write_action' || result.type === 'staged_action' ? result.type : 'tool_execution',
                     toolName: toolCall.function.name,
                     inputRedacted: redactPHI(JSON.stringify(args)),
                     outputSummary: `${result.dataAccessed?.join(', ') || 'unknown'} accessed`,
                     dataAccessed: result.dataAccessed,
-                    riskLevel: result.type === 'write_action' ? 'high' :
+                    riskLevel: result.type === 'write_action' || result.type === 'staged_action' ? 'high' :
                         toolCall.function.name === 'query_clinical_data' ? 'medium' : 'low'
                 });
             }

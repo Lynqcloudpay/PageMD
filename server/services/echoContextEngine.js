@@ -23,7 +23,8 @@ async function assemblePatientContext(patientId, tenantId) {
         vitalHistory,
         activeOrders,
         familyHistory,
-        socialHistory
+        socialHistory,
+        labs
     ] = await Promise.all([
         getPatientDemographics(patientId),
         getAllergies(patientId),
@@ -33,7 +34,8 @@ async function assemblePatientContext(patientId, tenantId) {
         getVitalHistory(patientId, 20),
         getActiveOrders(patientId),
         getFamilyHistory(patientId),
-        getSocialHistory(patientId)
+        getSocialHistory(patientId),
+        getLabResults(patientId, 50)
     ]);
 
     return {
@@ -46,6 +48,7 @@ async function assemblePatientContext(patientId, tenantId) {
         activeOrders,
         familyHistory,
         socialHistory,
+        labs,
         assembled_at: new Date().toISOString()
     };
 }
@@ -105,10 +108,12 @@ function buildContextPrompt(context) {
 
     if (context.recentVisits?.length > 0) {
         const visitSummaries = context.recentVisits.map(v => {
-            const cc = v.chief_complaint || v.visit_type || 'Visit';
-            const date = v.visit_date || v.encounter_date;
-            const assessment = v.assessment ? ` — Dx: ${v.assessment.substring(0, 100)}` : '';
-            return `  • ${date}: ${cc}${assessment}`;
+            const date = v.date || v.visit_date;
+            const draft = v.note_draft || '';
+            const cc = extractSection(draft, 'HPI') || extractSection(draft, 'Chief Complaint') || v.type || 'Visit';
+            const dx = extractSection(draft, 'Assessment') || extractSection(draft, 'Diagnosis');
+            const dxSnippet = dx ? ` — Dx: ${dx.substring(0, 80)}...` : '';
+            return `  • ${date}: ${cc}${dxSnippet}`;
         }).join('\n');
         parts.push(`RECENT VISITS:\n${visitSummaries}`);
     }
@@ -273,6 +278,22 @@ async function getSocialHistory(patientId) {
     }
 }
 
+async function getLabResults(patientId, limit = 50) {
+    try {
+        const res = await pool.query(
+            `SELECT test_name, result_value as value, result_units as unit, created_at as date
+             FROM orders 
+             WHERE patient_id = $1 AND result_value IS NOT NULL 
+             ORDER BY created_at DESC LIMIT $2`,
+            [patientId, limit]
+        );
+        return res.rows || [];
+    } catch (err) {
+        console.warn('[EchoContext] Lab results fetch failed:', err.message);
+        return [];
+    }
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function calculateAge(dob) {
@@ -287,8 +308,19 @@ function calculateAge(dob) {
     return `${age}yo`;
 }
 
+/**
+ * Simple parser to extract sections from note_draft strings
+ */
+function extractSection(note, sectionName) {
+    if (!note) return null;
+    const regex = new RegExp(`${sectionName}:?\\s*([\\s\\S]*?)(?=\\n[A-Z][a-z]+:|$)`, 'i');
+    const match = note.match(regex);
+    return match ? match[1].trim() : null;
+}
+
 module.exports = {
     assemblePatientContext,
     buildContextPrompt,
-    getVitalHistory
+    getVitalHistory,
+    extractSection
 };

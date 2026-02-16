@@ -187,33 +187,77 @@ function DiagnosisSuggestionsCard({ visualization }) {
 
 // ─── Write Action Card ──────────────────────────────────────────────────────
 
-function WriteActionCard({ action }) {
-    if (!action) return null;
+// ─── Staged Action Card (Phase 3) ───────────────────────────────────────────
+
+function StagedActionCard({ visualization, onApprove, onReject }) {
+    if (!visualization) return null;
 
     const iconMap = {
         add_problem: Stethoscope,
         add_medication: Pill,
         create_order: ClipboardList
     };
-    const Icon = iconMap[action.type] || Plus;
+    const Icon = iconMap[visualization.type] || Plus;
+    const isCommitted = visualization.status === 'committed';
+    const isRejected = visualization.status === 'rejected';
 
     return (
-        <div className={`mt-2 rounded-lg p-2 border ${action.success
-            ? 'bg-green-50/70 border-green-200/60'
-            : 'bg-red-50/70 border-red-200/60'
+        <div className={`mt-2 rounded-lg p-2.5 border transition-all duration-200 ${isCommitted
+            ? 'bg-green-50 border-green-200 shadow-sm'
+            : isRejected
+                ? 'bg-slate-50 border-slate-200 opacity-60'
+                : 'bg-blue-50/80 border-blue-200 shadow-sm'
             }`}>
-            <div className="flex items-center gap-1.5">
-                {action.success ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                ) : (
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-                )}
-                <Icon className="w-3 h-3 text-slate-500" />
-                <span className={`text-[11px] font-medium ${action.success ? 'text-green-700' : 'text-red-700'
-                    }`}>
-                    {action.message}
-                </span>
+            <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-lg ${isCommitted ? 'bg-green-100' : isRejected ? 'bg-slate-100' : 'bg-blue-100'}`}>
+                    <Icon className={`w-3.5 h-3.5 ${isCommitted ? 'text-green-600' : isRejected ? 'text-slate-500' : 'text-blue-600'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className={`text-[11px] font-bold ${isCommitted ? 'text-green-800' : isRejected ? 'text-slate-600' : 'text-blue-800'}`}>
+                        {visualization.label}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        {isCommitted ? '✅ Action successfully committed to chart.' : isRejected ? 'Action declined.' : visualization.message}
+                    </p>
+                </div>
             </div>
+
+            {/* DDI Warning */}
+            {visualization.interactionWarning && !isCommitted && !isRejected && (
+                <div className={`mt-2 p-2 rounded-md border ${visualization.interactionWarning.severity === 'high'
+                    ? 'bg-red-50 border-red-200 text-red-800'
+                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                    } animate-in fade-in slide-in-from-top-1`}>
+                    <div className="flex items-start gap-1.5">
+                        <AlertTriangle className={`w-3 h-3 mt-0.5 ${visualization.interactionWarning.severity === 'high' ? 'text-red-500 animate-pulse' : 'text-amber-500'}`} />
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider">
+                                {visualization.interactionWarning.risk} — {visualization.interactionWarning.severity.toUpperCase()} RISK
+                            </p>
+                            <p className="text-[10px] mt-0.5 leading-snug">
+                                {visualization.interactionWarning.message} (Interacts with: {visualization.interactionWarning.interactsWith})
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {!isCommitted && !isRejected && (
+                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100/50">
+                    <button
+                        onClick={() => onApprove(visualization)}
+                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-md shadow-sm transition-colors"
+                    >
+                        Approve
+                    </button>
+                    <button
+                        onClick={() => onReject(visualization)}
+                        className="px-3 py-1.5 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-[10px] font-medium rounded-md transition-colors"
+                    >
+                        Reject
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
@@ -248,16 +292,16 @@ function LabResultsCard({ visualization }) {
     };
 
     return (
-        <div className="mt-2 bg-purple-50/60 rounded-lg p-2.5 border border-purple-200/60">
+        <div className="mt-2 bg-blue-50/60 rounded-lg p-2.5 border border-blue-200/60">
             <div className="flex items-center gap-1.5 mb-1.5">
-                <FlaskConical className="w-3 h-3 text-purple-600" />
-                <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider">
+                <FlaskConical className="w-3 h-3 text-blue-600" />
+                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
                     {isFullAnalysis ? 'Lab Results Analysis' : 'Lab Interpretation'}
                 </span>
             </div>
 
             {isFullAnalysis && visualization.summary && (
-                <div className="text-[11px] text-purple-800 mb-2 whitespace-pre-wrap leading-relaxed">
+                <div className="text-[11px] text-blue-800 mb-2 whitespace-pre-wrap leading-relaxed">
                     {visualization.summary}
                 </div>
             )}
@@ -286,8 +330,8 @@ function LabResultsCard({ visualization }) {
 
             {/* Trends section */}
             {visualization.trends?.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-purple-200/40">
-                    <span className="text-[9px] font-bold text-purple-600 uppercase">Trends</span>
+                <div className="mt-2 pt-2 border-t border-blue-200/40">
+                    <span className="text-[9px] font-bold text-blue-600 uppercase">Trends</span>
                     <div className="space-y-0.5 mt-1">
                         {visualization.trends.filter(t => t.direction !== 'stable').map((t, i) => (
                             <div key={i} className="flex items-center gap-1 text-[10px]">
@@ -295,7 +339,7 @@ function LabResultsCard({ visualization }) {
                                     ? <ArrowUpRight className="w-3 h-3 text-red-500" />
                                     : <ArrowDownRight className="w-3 h-3 text-blue-500" />
                                 }
-                                <span className="text-purple-700">
+                                <span className="text-blue-700">
                                     {t.testName}: {t.direction} {Math.abs(t.percentChange)}% ({t.period})
                                 </span>
                             </div>
@@ -306,16 +350,55 @@ function LabResultsCard({ visualization }) {
 
             {/* Follow-up suggestions */}
             {results.some(r => r.followUp?.length > 0) && (
-                <div className="mt-2 pt-2 border-t border-purple-200/40">
-                    <span className="text-[9px] font-bold text-purple-600 uppercase">Suggested Follow-up</span>
+                <div className="mt-2 pt-2 border-t border-blue-200/40">
+                    <span className="text-[9px] font-bold text-blue-600 uppercase">Suggested Follow-up</span>
                     <ul className="mt-0.5 space-y-0.5">
                         {[...new Set(results.flatMap(r => r.followUp || []))].slice(0, 4).map((f, i) => (
-                            <li key={i} className="text-[10px] text-purple-600 flex items-center gap-1">
+                            <li key={i} className="text-[10px] text-blue-600 flex items-center gap-1">
                                 <ChevronRight className="w-2.5 h-2.5" />{f}
                             </li>
                         ))}
                     </ul>
                 </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Clinical Gaps Card (Phase 2C) ──────────────────────────────────────────
+
+function ClinicalGapsCard({ visualization }) {
+    if (!visualization?.gaps?.length) return null;
+
+    const severityColor = {
+        high: 'text-red-600 border-red-200 bg-red-50/50',
+        medium: 'text-amber-600 border-amber-200 bg-amber-50/50',
+        low: 'text-blue-600 border-blue-200 bg-blue-50/50'
+    };
+
+    return (
+        <div className="mt-2 bg-slate-50 rounded-lg p-2.5 border border-slate-200/60">
+            <div className="flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="w-3 h-3 text-amber-500" />
+                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                    Care Gaps & Opportunities
+                </span>
+            </div>
+            <div className="space-y-1.5">
+                {visualization.gaps.map((gap, i) => (
+                    <div key={i} className={`px-2 py-1.5 rounded border text-[11px] leading-tight ${severityColor[gap.severity] || severityColor.low}`}>
+                        <div className="font-bold flex items-center justify-between">
+                            {gap.name}
+                            <span className="text-[8px] uppercase px-1 rounded bg-white/50 border border-current opacity-70">
+                                {gap.type}
+                            </span>
+                        </div>
+                        <div className="mt-0.5 opacity-90">{gap.message}</div>
+                    </div>
+                ))}
+            </div>
+            {visualization.summary && (
+                <p className="text-[9px] text-slate-400 mt-2 text-right italic">{visualization.summary}</p>
             )}
         </div>
     );
@@ -332,6 +415,7 @@ export default function EchoPanel({ patientId, patientName }) {
     const [conversationId, setConversationId] = useState(null);
     const [usage, setUsage] = useState(null);
     const [error, setError] = useState(null);
+    const [proactiveGaps, setProactiveGaps] = useState(null);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -354,6 +438,19 @@ export default function EchoPanel({ patientId, patientName }) {
         setMessages([]);
         setConversationId(null);
         setError(null);
+        setProactiveGaps(null);
+
+        // Proactive clinical gap peeking
+        if (patientId) {
+            fetch(`/api/echo/gaps/${patientId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data?.gaps?.length > 0) {
+                        setProactiveGaps(data);
+                    }
+                })
+                .catch(err => console.error('Silent gap check failed:', err));
+        }
     }, [patientId]);
 
     const sendMessage = useCallback(async (messageText) => {
@@ -414,6 +511,49 @@ export default function EchoPanel({ patientId, patientName }) {
         }
     }, [input, loading, patientId, conversationId]);
 
+    async function handleApproveAction(action, messageIndex) {
+        // Now handles both single action objects and arrays for batch
+        const actionsToCommit = Array.isArray(action) ? action : [action];
+
+        try {
+            const response = await fetch('/api/echo/commit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actions: actionsToCommit.map(a => ({ type: a.type, payload: a.payload })),
+                    conversationId
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                const newMessages = [...messages];
+                actionsToCommit.forEach(a => {
+                    const vizIndex = newMessages[messageIndex].visualizations.findIndex(v => v.action_id === a.action_id);
+                    if (vizIndex !== -1) {
+                        newMessages[messageIndex].visualizations[vizIndex].status = 'committed';
+                    }
+                });
+                setMessages(newMessages);
+
+                if (window.refreshChartData) window.refreshChartData();
+            } else {
+                alert('Approval failed: ' + data.error);
+            }
+        } catch (err) {
+            console.error('Approve error:', err);
+        }
+    }
+
+    function handleRejectAction(action, messageIndex) {
+        const newMessages = [...messages];
+        const vizIndex = newMessages[messageIndex].visualizations.findIndex(v => v.action_id === action.action_id);
+        if (vizIndex !== -1) {
+            newMessages[messageIndex].visualizations[vizIndex].status = 'rejected';
+            setMessages(newMessages);
+        }
+    }
+
     const handleKeyDown = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -435,6 +575,7 @@ export default function EchoPanel({ patientId, patientName }) {
         { label: 'Draft HPI', icon: PenTool, prompt: 'Draft an HPI for a follow-up visit.' },
         { label: 'Interpret labs', icon: FlaskConical, prompt: 'Interpret all recent lab results for this patient.' },
         { label: 'Suggest Dx', icon: Stethoscope, prompt: 'Suggest diagnoses based on the chief complaint and patient history.' },
+        { label: 'Clinical gaps', icon: AlertTriangle, prompt: 'Check for any clinical gaps or missing preventive care for this patient.' },
     ];
 
     const globalActions = [
@@ -460,6 +601,10 @@ export default function EchoPanel({ patientId, patientName }) {
                 title="Open Echo AI Assistant"
             >
                 <Sparkles className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
+                {isPatientMode && proactiveGaps && (
+                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-500 border-2 border-white rounded-full 
+                                     animate-pulse shadow-sm" />
+                )}
             </button>
         );
     }
@@ -495,6 +640,17 @@ export default function EchoPanel({ patientId, patientName }) {
                         }`}>
                         {isPatientMode ? 'CHART' : 'GLOBAL'}
                     </span>
+
+                    {/* Proactive Insight Badge */}
+                    {isPatientMode && proactiveGaps && (
+                        <button
+                            onClick={() => sendMessage('Check for any clinical gaps or missing preventive care for this patient.')}
+                            className="group flex items-center gap-1.5 px-2 py-0.5 bg-amber-400/20 hover:bg-amber-400/30 text-amber-100 rounded-full border border-amber-400/30 transition-all duration-200 animate-in fade-in zoom-in"
+                        >
+                            <Zap className="w-2.5 h-2.5 text-amber-300 group-hover:scale-110 transition-transform" />
+                            <span className="text-[9px] font-bold">Insight</span>
+                        </button>
+                    )}
                     {conversationId && (
                         <button onClick={clearConversation}
                             className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
@@ -576,6 +732,14 @@ export default function EchoPanel({ patientId, patientName }) {
                                     {viz.type === 'note_draft' && <NoteDraftCard visualization={viz} />}
                                     {viz.type === 'diagnosis_suggestions' && <DiagnosisSuggestionsCard visualization={viz} />}
                                     {(viz.type === 'lab_analysis' || viz.type === 'lab_interpretation') && <LabResultsCard visualization={viz} />}
+                                    {viz.type === 'clinical_gaps' && <ClinicalGapsCard visualization={viz} />}
+                                    {viz.type === 'staged_action' && (
+                                        <StagedActionCard
+                                            visualization={viz}
+                                            onApprove={(v) => handleApproveAction(v, i)}
+                                            onReject={(v) => handleRejectAction(v, i)}
+                                        />
+                                    )}
                                     {viz.type === 'navigation' && (
                                         <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-100">
                                             <div className="flex items-center gap-1.5">
@@ -611,6 +775,25 @@ export default function EchoPanel({ patientId, patientName }) {
                                     ))}
                                 </div>
                             )}
+
+                            {/* Batch Approval Action */}
+                            {(() => {
+                                const pending = (msg.visualizations || []).filter(v => v.type === 'staged_action' && !v.status);
+                                if (pending.length > 1) {
+                                    return (
+                                        <div className="mt-3 pt-3 border-t border-slate-200/60 flex justify-end">
+                                            <button
+                                                onClick={() => handleApproveAction(pending, i)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold shadow-sm hover:bg-blue-700 transition-all"
+                                            >
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                Approve All ({pending.length})
+                                            </button>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
                         </div>
                         {msg.role === 'user' && (
                             <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center 

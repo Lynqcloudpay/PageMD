@@ -47,8 +47,28 @@ const resolveTenant = async (req, res, next) => {
                     lookupSchema = `sandbox_${decoded.sandboxId}`;
                     slug = null; // Explicitly override any header/host slug for sandbox sessions
                     console.log(`[Tenant] Sandbox mode detected for ID: ${decoded.sandboxId}`);
-                } else if (!slug && decoded.clinicSlug) {
+                } else if (!slug && decoded.clinicSlug && decoded.clinicSlug !== 'default') {
                     slug = decoded.clinicSlug;
+                } else if (!slug && decoded.userId) {
+                    // IF no slug found, try to find the user's schema from the lookup table
+                    try {
+                        const userRes = await pool.controlPool.query(
+                            'SELECT email FROM users WHERE id = $1',
+                            [decoded.userId]
+                        );
+                        if (userRes.rows.length > 0) {
+                            const lookup = await pool.controlPool.query(
+                                'SELECT schema_name FROM platform_user_lookup WHERE email = $1',
+                                [userRes.rows[0].email]
+                            );
+                            if (lookup.rows.length > 0) {
+                                lookupSchema = lookup.rows[0].schema_name;
+                                console.log(`[Tenant] Token user ${userRes.rows[0].email} resolved to ${lookupSchema}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Tenant] Failed to resolve global user schema:', e.message);
+                    }
                 }
             }
         } catch (e) {
@@ -252,6 +272,22 @@ const resolveTenant = async (req, res, next) => {
                 [slug]
             );
             tenantInfo = result.rows[0];
+        }
+
+        if (!tenantInfo && lookupSchema === 'public') {
+            // Provide synthetic tenant info for the public (platform) context
+            tenantInfo = {
+                id: '00000000-0000-0000-0000-000000000000',
+                slug: 'platform',
+                schema_name: 'public',
+                display_name: 'PageMD Platform',
+                status: 'active',
+                is_read_only: false,
+                billing_locked: false,
+                prescribing_locked: false,
+                enabled_features: { echo: true, portal: true, billing: true }
+            };
+            console.log(`[Tenant] Providing synthetic platform context for ${lookupSchema}`);
         }
 
         if (!tenantInfo) {

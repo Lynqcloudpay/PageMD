@@ -54,6 +54,83 @@ router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
     }
 });
 
+/**
+ * POST /api/echo/commit
+ * Execute a staged clinical action after provider approval
+ */
+router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
+    const client = await pool.connect();
+    try {
+        const { type, payload, actions, conversationId } = req.body;
+        const userId = req.user.id;
+        const tenantId = req.user.clinic_id;
+
+        // Normalize to array of actions
+        const actionsToCommit = actions && Array.isArray(actions)
+            ? actions
+            : (type && payload ? [{ type, payload }] : []);
+
+        if (actionsToCommit.length === 0) {
+            return res.status(400).json({ error: 'Actions are required' });
+        }
+
+        await client.query('BEGIN');
+        const results = [];
+
+        for (const action of actionsToCommit) {
+            const { type: actType, payload: actPayload } = action;
+            let record;
+
+            switch (actType) {
+                case 'add_problem':
+                    record = await client.query(
+                        `INSERT INTO problems (patient_id, problem_name, icd10_code, status)
+                         VALUES ($1, $2, $3, $4) RETURNING *`,
+                        [actPayload.patient_id, actPayload.problem_name, actPayload.icd10_code, actPayload.status]
+                    );
+                    break;
+
+                case 'add_medication':
+                    record = await client.query(
+                        `INSERT INTO medications (patient_id, medication_name, dosage, frequency, route, prescriber_id, active, status)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                        [actPayload.patient_id, actPayload.medication_name, actPayload.dosage, actPayload.frequency,
+                        actPayload.route, userId, true, 'active']
+                    );
+                    break;
+
+                case 'create_order':
+                    record = await client.query(
+                        `INSERT INTO orders (patient_id, order_type, ordered_by, test_name, order_payload)
+                         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+                        [actPayload.patient_id, actPayload.order_type, userId, actPayload.test_name, actPayload.order_payload]
+                    );
+                    break;
+            }
+            if (record) results.push({ type: actType, record: record.rows[0] });
+        }
+
+        // Audit for the commit(s)
+        await client.query(
+            `INSERT INTO echo_audit (conversation_id, user_id, tenant_id, patient_id, action, output_summary, risk_level)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [conversationId, userId, tenantId, actionsToCommit[0].payload.patient_id,
+                actionsToCommit.length > 1 ? 'batch_commit' : 'action_committed',
+                `Committed ${results.length} clinical actions`, 'high']
+        );
+
+        await client.query('COMMIT');
+        res.json({ success: true, count: results.length, results });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[Echo API] Commit error:', err);
+        res.status(500).json({ error: 'Failed to commit clinical action(s)' });
+    } finally {
+        client.release();
+    }
+});
+
 // ─── Conversations ──────────────────────────────────────────────────────────
 
 /**
@@ -157,20 +234,21 @@ router.get('/trends/:patientId/:vitalType', requirePermission('ai.echo'), async 
 });
 
 /**
- * GET /api/echo/trends/:patientId
- * Get all vital trends overview
+ * GET /api/echo/gaps/:patientId
+ * Proactive clinical gap analysis
  */
-router.get('/trends/:patientId', requirePermission('ai.echo'), async (req, res) => {
+router.get('/gaps/:patientId', requirePermission('ai.echo'), async (req, res) => {
     try {
         const { patientId } = req.params;
+        const tenantId = req.user.clinic_id;
 
-        const vitalHistory = await echoContextEngine.getVitalHistory(patientId, 50);
-        const analysis = echoTrendEngine.analyzeAllVitals(vitalHistory);
+        const context = await echoContextEngine.assemblePatientContext(patientId, tenantId);
+        const gaps = await echoCDSEngine.analyzeClinicalGaps(context);
 
-        res.json(analysis);
+        res.json(gaps);
     } catch (err) {
-        console.error('[Echo API] All trends error:', err);
-        res.status(500).json({ error: 'Failed to analyze trends' });
+        console.error('[Echo API] Gaps analysis error:', err);
+        res.status(500).json({ error: 'Failed to analyze clinical gaps' });
     }
 });
 

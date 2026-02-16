@@ -48,13 +48,26 @@ async function activateEcho() {
             }
         }
 
-        // 3. Inject Privilege into each Clinic Schema
+        // 3. Inject Privilege into each Clinic Schema + PUBLIC schema
         console.log('🔄 Syncing ai.echo into all active tenant schemas...');
-        const clinics = await pool.controlPool.query("SELECT id, schema_name FROM clinics WHERE status = 'active'");
+        const clinics = await pool.controlPool.query("SELECT schema_name FROM clinics WHERE status = 'active'");
 
-        for (const clinic of clinics.rows) {
-            const schema = clinic.schema_name;
+        // Include 'public' in the sync list
+        const schemas = ['public', ...clinics.rows.map(c => c.schema_name)];
+
+        for (const schema of schemas) {
             try {
+                // Check if privileges table exists in the schema
+                const tableCheck = await pool.controlPool.query(`
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = $1 AND table_name = 'privileges'
+                `, [schema]);
+
+                if (tableCheck.rows.length === 0) {
+                    console.log(`   ⏭️  Skipping schema ${schema}: 'privileges' table not found.`);
+                    continue;
+                }
+
                 // Ensure the privilege exists in the tenant's privilege list
                 await pool.controlPool.query(`
                     INSERT INTO ${schema}.privileges (name, description, category)
@@ -72,6 +85,7 @@ async function activateEcho() {
                        OR r.name ILIKE '%Clinician%' 
                        OR r.name ILIKE '%Admin%'
                        OR r.name ILIKE '%Practitioner%'
+                       OR r.name ILIKE '%Super%'
                     ON CONFLICT DO NOTHING
                 `);
 
