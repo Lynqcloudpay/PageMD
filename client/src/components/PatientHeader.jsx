@@ -428,8 +428,14 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
             <div className="bg-white border-2 border-blue-50 shadow-2xl shadow-blue-900/10 rounded-3xl overflow-visible">
                 {/* Flags Manager Panel */}
                 {isFlagsPanelOpen && (
-                    <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
-                        <div className="w-full max-w-md h-full shadow-2xl animate-in slide-in-from-right duration-300">
+                    <div
+                        className="fixed inset-0 z-[200] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200"
+                        onClick={() => setIsFlagsPanelOpen(false)}
+                    >
+                        <div
+                            className="w-full max-w-md h-full shadow-2xl animate-in slide-in-from-right duration-300"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <PatientFlagsManager
                                 patientId={patient.id}
                                 onClose={() => setIsFlagsPanelOpen(false)}
@@ -439,7 +445,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-4 py-4 border-b border-blue-50 flex items-center justify-between bg-white text-slate-900 relative z-20 rounded-t-3xl overflow-hidden">
+                <div className="px-4 py-4 border-b border-blue-50 flex items-center justify-between bg-white text-slate-900 relative z-20 rounded-t-3xl">
                     {/* Decorative Elements - Modern & Subtle */}
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60" />
@@ -549,7 +555,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                             {isPortalMenuOpen && (
                                 <>
                                     <div
-                                        className="fixed inset-0 z-[90]"
+                                        className="fixed inset-0 z-[90] bg-transparent"
                                         onClick={() => setIsPortalMenuOpen(false)}
                                     />
                                     <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[999] py-2 animate-in fade-in zoom-in-95 duration-200">

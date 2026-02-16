@@ -452,6 +452,7 @@ if (require.main === module) {
         await require('./scripts/migrate-referral-tokens')();
         await require('./scripts/migrate-overbooking-cap')();
         await require('./scripts/fix-audit-schema')();
+        await require('./scripts/seed-default-flags')();
         console.log('✨ All startup migrations completed successfully.');
       } catch (err) {
         console.error('❌ Migration failed during startup:', err);
