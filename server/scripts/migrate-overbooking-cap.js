@@ -40,7 +40,7 @@ async function migrate() {
         const schemasResult = await client.query(`
             SELECT schema_name 
             FROM information_schema.schemata 
-            WHERE schema_name LIKE 'tenant_%' OR schema_name = 'sandbox'
+            WHERE schema_name LIKE 'tenant_%' OR schema_name LIKE 'sandbox_%' OR schema_name = 'sandbox'
         `);
 
         const schemas = schemasResult.rows.map(r => r.schema_name);

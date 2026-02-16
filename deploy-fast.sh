@@ -168,6 +168,15 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   echo "🛡️  Running Password History Migration..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/20260211_password_history.js || echo "⚠️ Warning: Password history migration failed."
 
+  echo "⚙️  Running Multi-Tenant Consistency Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-multi-tenant-consistency.js || echo "⚠️ Warning: Consistency migration failed."
+
+  echo "⚙️  Running Overbooking Cap Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-overbooking-cap.js || echo "⚠️ Warning: Overbooking migration failed."
+
+  echo "⚙️  Running Telehealth Columns Migration..."
+  docker compose -f docker-compose.prod.yml exec -T api node scripts/add-telehealth-columns.js || echo "⚠️ Warning: Telehealth columns migration failed."
+
   echo "🌱 Seeding System Control Records..."
   docker compose -f docker-compose.prod.yml exec -T api node scripts/seed-control.js || echo "⚠️ Warning: System seeding failed."
 

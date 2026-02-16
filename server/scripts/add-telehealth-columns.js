@@ -1,89 +1,80 @@
 /**
- * Add Telehealth Columns
+ * Add Telehealth Columns (Multi-tenant Robust)
  * 
- * This script adds 'visit_method' column to appointments and portal_appointment_requests tables.
+ * This script adds 'visit_method' column to appointments and portal_appointment_requests tables
+ * across all tenant and sandbox schemas.
  * 
  * Usage: node scripts/add-telehealth-columns.js
  */
 
-const { Pool } = require('pg');
-require('dotenv').config();
+const pool = require('../db');
 
-// Use DATABASE_URL if available (production/Docker), otherwise use individual env vars
-const pool = process.env.DATABASE_URL
-    ? new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
-            ? false
-            : {
-                rejectUnauthorized: false // Allow self-signed certificates
-            },
-    })
-    : new Pool({
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 5432,
-        database: process.env.DB_NAME || 'paper_emr',
-        user: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || 'postgres',
-    });
+async function runMigrationForSchema(client, schema) {
+  console.log(`🚀 Migrating telehealth columns for schema: ${schema}`);
 
-async function addTelehealthColumns() {
-    const client = await pool.connect();
+  // Set search path
+  await client.query(`SET search_path TO ${schema}, public`);
 
-    try {
-        await client.query('BEGIN');
-
-        console.log('Adding visit_method columns...');
-
-        // Add visit_method to appointments
-        await client.query(`
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name='appointments' AND column_name='visit_method'
-        ) THEN
-          ALTER TABLE appointments 
-          ADD COLUMN visit_method VARCHAR(20) DEFAULT 'office';
-        END IF;
-      END $$;
+  // 1. Update appointments
+  await client.query(`
+        ALTER TABLE appointments 
+        ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office'
     `);
-        console.log('✅ Added visit_method column to appointments');
+  console.log(`  ✅ Added visit_method to appointments in ${schema}`);
 
-        // Add visit_method to portal_appointment_requests
-        await client.query(`
-      DO $$ 
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name='portal_appointment_requests' AND column_name='visit_method'
-        ) THEN
-          ALTER TABLE portal_appointment_requests 
-          ADD COLUMN visit_method VARCHAR(20) DEFAULT 'office';
-        END IF;
-      END $$;
+  // 2. Update portal_appointment_requests
+  const tableRes = await client.query(`
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = '${schema}' AND table_name = 'portal_appointment_requests'
     `);
-        console.log('✅ Added visit_method column to portal_appointment_requests');
-
-        await client.query('COMMIT');
-        console.log('\n✅ Successfully added visit_method columns!');
-
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error('❌ Error adding visit_method columns:', error);
-        throw error;
-    } finally {
-        client.release();
-        await pool.end();
-    }
+  if (tableRes.rows.length > 0) {
+    await client.query(`
+            ALTER TABLE portal_appointment_requests 
+            ADD COLUMN IF NOT EXISTS visit_method VARCHAR(20) DEFAULT 'office'
+        `);
+    console.log(`  ✅ Added visit_method to portal_appointment_requests in ${schema}`);
+  }
 }
 
-addTelehealthColumns()
-    .then(() => {
-        console.log('\n✅ Done!');
-        process.exit(0);
-    })
-    .catch((error) => {
-        console.error('\n❌ Failed:', error);
-        process.exit(1);
-    });
+async function migrate() {
+  console.log('Starting multi-tenant telehealth migration...');
+  const client = await pool.connect();
+
+  try {
+    // 1. List all schemas
+    const schemasResult = await client.query(`
+            SELECT schema_name 
+            FROM information_schema.schemata 
+            WHERE schema_name LIKE 'tenant_%' OR schema_name LIKE 'sandbox_%' OR schema_name = 'sandbox'
+        `);
+
+    const schemas = schemasResult.rows.map(r => r.schema_name);
+    console.log(`Found schemas: ${schemas.join(', ')}`);
+
+    // Also include public for base tables
+    await runMigrationForSchema(client, 'public');
+
+    for (const schema of schemas) {
+      try {
+        await runMigrationForSchema(client, schema);
+      } catch (err) {
+        console.error(`❌ Failed to migrate schema ${schema}:`, err.message);
+      }
+    }
+
+    console.log('✨ Telehealth migration complete!');
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+if (require.main === module) {
+  migrate()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
+}
+
+module.exports = migrate;
