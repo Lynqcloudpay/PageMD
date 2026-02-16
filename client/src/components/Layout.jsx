@@ -34,7 +34,7 @@ const Layout = ({ children }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [showSearch, setShowSearch] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
     const [showSupportModal, setShowSupportModal] = useState(false);
     const { unreadCount: tasksCount } = useTasks();
 
@@ -297,47 +297,38 @@ const Layout = ({ children }) => {
 
                         {/* Logo Area */}
                         <div className={cn(
-                            "flex items-center h-16 border-b border-slate-800/50",
-                            sidebarCollapsed ? "justify-center px-0" : "px-4 justify-between"
+                            "flex items-center h-16 border-b border-slate-800/50 justify-center",
+                            !sidebarCollapsed && "px-4"
                         )}>
-                            {!sidebarCollapsed ? (
-                                <>
-                                    <Link to="/dashboard" className="flex items-center group">
+                            <button
+                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                className="flex items-center group transition-transform active:scale-95"
+                                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                            >
+                                {sidebarCollapsed ? (
+                                    <div className="relative">
                                         <img
-                                            src="/logo.png"
-                                            alt="PageMD Logo"
-                                            className="h-9 w-auto object-contain max-w-[130px] transition-opacity"
+                                            src="/logo-icon.png"
+                                            alt="PMD"
+                                            className="w-9 h-9 object-contain transition-opacity"
                                             style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
-                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                if (e.target.nextSibling) e.target.nextSibling.classList.remove('hidden');
+                                            }}
                                         />
-                                    </Link>
-                                    <button
-                                        onClick={() => setSidebarCollapsed(true)}
-                                        className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800/50 transition-all border border-transparent hover:border-slate-700/50"
-                                        title="Collapse sidebar"
-                                    >
-                                        <PanelLeftClose className="w-4 h-4" strokeWidth={2} />
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    onClick={() => setSidebarCollapsed(false)}
-                                    className="p-1 rounded-md hover:bg-slate-800 transition-all group"
-                                    title="Expand sidebar"
-                                >
+                                        <div className="hidden w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center text-slate-300 text-[10px] font-semibold">P</div>
+                                    </div>
+                                ) : (
                                     <img
-                                        src="/logo-icon.png"
-                                        alt="PMD"
-                                        className="w-9 h-9 object-contain group-hover:opacity-100 transition-opacity"
+                                        src="/logo.png"
+                                        alt="PageMD Logo"
+                                        className="h-9 w-auto object-contain max-w-[130px] transition-opacity"
                                         style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                            if (e.target.nextSibling) e.target.nextSibling.classList.remove('hidden');
-                                        }}
+                                        onError={(e) => { e.target.style.display = 'none'; }}
                                     />
-                                    <div className="hidden w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center text-slate-300 text-[10px] font-semibold">P</div>
-                                </button>
-                            )}
+                                )}
+                            </button>
                         </div>
 
                         {/* Search trigger */}
@@ -358,13 +349,13 @@ const Layout = ({ children }) => {
                         )}
 
                         {sidebarCollapsed && (
-                            <div className="flex justify-center pt-3 pb-1">
+                            <div className="flex justify-center pt-5 pb-2">
                                 <button
                                     onClick={() => setShowSearch(true)}
-                                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                                    className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 hover:bg-slate-700 transition-all border border-slate-700 shadow-md group"
                                     title="Search (⌘K)"
                                 >
-                                    <Search className="w-4 h-4" strokeWidth={1.8} />
+                                    <Search className="w-4 h-4 group-hover:scale-110 transition-transform" strokeWidth={3} />
                                 </button>
                             </div>
                         )}
