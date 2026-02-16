@@ -3,7 +3,8 @@ import {
     MessageCircle, X, Send, Sparkles, Activity, ChevronDown, Loader2, TrendingUp,
     Pill, FileText, Bot, User, Navigation, BarChart3, Trash2, History,
     Stethoscope, ClipboardList, Plus, CheckCircle2, AlertTriangle, Calendar,
-    Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe, FlaskConical, ArrowUpRight, ArrowDownRight
+    Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe, FlaskConical, ArrowUpRight, ArrowDownRight,
+    Mic, Square
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -417,8 +418,13 @@ export default function EchoPanel({ patientId, patientName }) {
     const [usage, setUsage] = useState(null);
     const [error, setError] = useState(null);
     const [proactiveGaps, setProactiveGaps] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const timerRef = useRef(null);
 
     const isPatientMode = !!patientId;
 
@@ -499,6 +505,65 @@ export default function EchoPanel({ patientId, patientName }) {
         }
     }, [input, loading, patientId, conversationId]);
 
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                await handleAudioUpload(audioBlob);
+                stream.getTracks().forEach(track => track.stop());
+                setRecordingTime(0);
+                if (timerRef.current) clearInterval(timerRef.current);
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            timerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } catch (err) {
+            console.error('Recording start failed:', err);
+            setError('Microphone access denied or error occurred.');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
+    const handleAudioUpload = async (blob) => {
+        setLoading(true);
+        try {
+            const formData = new FormData();
+            formData.append('audio', blob, 'recording.webm');
+
+            const { data } = await api.post('/echo/transcribe', formData);
+
+            if (data.success && data.text) {
+                sendMessage(data.text);
+            }
+        } catch (err) {
+            console.error('Transcription error:', err);
+            setError('Failed to transcribe audio.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     async function handleApproveAction(action, messageIndex) {
         // Now handles both single action objects and arrays for batch
         const actionsToCommit = Array.isArray(action) ? action : [action];
@@ -577,15 +642,15 @@ export default function EchoPanel({ patientId, patientName }) {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-[9999] w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 
+                className="fixed bottom-6 right-6 z-[9999] w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 
                            rounded-full shadow-lg shadow-blue-500/25 flex items-center justify-center 
                            hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 
-                           transition-all duration-200 group"
-                title="Open Echo AI Assistant"
+                           transition-all duration-200 group border-2 border-white/20"
+                title="Open Eko AI Assistant"
             >
-                <Sparkles className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
+                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-10 h-10 rounded-full object-cover group-hover:scale-110 transition-transform shadow-sm" />
                 {isPatientMode && proactiveGaps && (
-                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-500 border-2 border-white rounded-full 
+                    <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-amber-500 border-2 border-white rounded-full 
                                      animate-pulse shadow-sm" />
                 )}
             </button>
@@ -603,11 +668,11 @@ export default function EchoPanel({ patientId, patientName }) {
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
                     : 'bg-gradient-to-r from-slate-700 to-slate-800'}`}>
                 <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                        {isPatientMode ? <Bot className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
+                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10 overflow-hidden shadow-inner">
+                        <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-bold tracking-tight">Echo</h3>
+                        <h3 className="text-sm font-extrabold tracking-tight uppercase">Eko</h3>
                         <p className="text-[10px] opacity-80">
                             {patientName
                                 ? `Viewing ${patientName}`
@@ -654,23 +719,23 @@ export default function EchoPanel({ patientId, patientName }) {
 
                 {/* Welcome state */}
                 {messages.length === 0 && (
-                    <div className="text-center py-4 space-y-3">
-                        <div className={`w-12 h-12 mx-auto rounded-2xl flex items-center justify-center border ${isPatientMode
-                            ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
-                            : 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200'
-                            }`}>
-                            {isPatientMode
-                                ? <Sparkles className="w-6 h-6 text-blue-500" />
-                                : <Globe className="w-6 h-6 text-slate-500" />}
+                    <div className="text-center py-8 space-y-4">
+                        <div className="relative inline-block">
+                            <div className="absolute -inset-1 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-3xl blur opacity-25 animate-pulse" />
+                            <div className="relative w-24 h-24 overflow-hidden rounded-3xl border-2 border-white shadow-2xl shadow-blue-500/10">
+                                <img src="/echo-mascot.png?v=1" alt="Eko Mascot"
+                                    className="w-full h-full object-cover scale-[1.12]" />
+                            </div>
+                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-4 border-white rounded-full shadow-sm z-10" />
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-slate-700">
-                                {isPatientMode ? "Hi, I'm Echo" : "Hi, I'm Echo — Global Mode"}
+                            <p className="text-base font-black text-slate-800 tracking-tight">
+                                {isPatientMode ? "Hi, I'm Eko" : "Hi, I'm Eko — Global Mode"}
                             </p>
-                            <p className="text-xs text-slate-400 mt-1">
+                            <p className="text-[11px] text-slate-500 leading-relaxed max-w-[240px] mx-auto mt-2">
                                 {isPatientMode
-                                    ? 'Ask me anything about this patient. I can also draft notes and add to the chart.'
-                                    : 'Ask about your schedule, inbox, pending notes, or navigate the EMR.'}
+                                    ? 'Ask me anything about this chart. I can analyze trends, draft HPIs, and stage medical orders.'
+                                    : 'I can help you navigate the EMR, check your schedule, or manage your clinical inbox.'}
                             </p>
                         </div>
                         <div className={`grid gap-2 px-2 ${isPatientMode ? 'grid-cols-2' : 'grid-cols-2'}`}>
@@ -693,9 +758,8 @@ export default function EchoPanel({ patientId, patientName }) {
                 {messages.map((msg, i) => (
                     <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                         {msg.role === 'assistant' && (
-                            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 
-                                            flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-100">
-                                <Bot className="w-3.5 h-3.5 text-blue-500" />
+                            <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 mt-0.5 border border-blue-100 shadow-sm bg-blue-50">
+                                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
                             </div>
                         )}
                         <div className={`max-w-[85%] ${msg.role === 'user'
@@ -706,7 +770,7 @@ export default function EchoPanel({ patientId, patientName }) {
                             }`}>
                             <div className="text-[12px] leading-relaxed whitespace-pre-wrap">
                                 {msg.role === 'assistant' ? (
-                                    msg.content.split(/(\*\*.*?\*\*|!!.*?!!)/g).map((part, index) => {
+                                    (msg.content || '').split(/(\*\*.*?\*\*|!!.*?!!)/g).map((part, index) => {
                                         if (part.startsWith('**') && part.endsWith('**')) {
                                             return <strong key={index} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
                                         }
@@ -728,7 +792,7 @@ export default function EchoPanel({ patientId, patientName }) {
                                     {viz.type === 'diagnosis_suggestions' && <DiagnosisSuggestionsCard visualization={viz} />}
                                     {(viz.type === 'lab_analysis' || viz.type === 'lab_interpretation') && <LabResultsCard visualization={viz} />}
                                     {viz.type === 'clinical_gaps' && <ClinicalGapsCard visualization={viz} />}
-                                    {viz.type === 'staged_action' && (
+                                    {viz.action_id && (
                                         <StagedActionCard
                                             visualization={viz}
                                             onApprove={(v) => handleApproveAction(v, i)}
@@ -802,14 +866,13 @@ export default function EchoPanel({ patientId, patientName }) {
                 {/* Loading */}
                 {loading && (
                     <div className="flex gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 
-                                        flex items-center justify-center flex-shrink-0 border border-blue-100">
-                            <Bot className="w-3.5 h-3.5 text-blue-500" />
+                        <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 border border-blue-100 shadow-sm bg-blue-50">
+                            <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover animate-pulse scale-110" />
                         </div>
                         <div className="bg-slate-50 rounded-2xl rounded-bl-md px-3 py-2 border border-slate-100">
                             <div className="flex items-center gap-1.5">
                                 <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
-                                <span className="text-[11px] text-slate-400">Echo is thinking...</span>
+                                <span className="text-[11px] text-slate-400">Eko is thinking...</span>
                             </div>
                         </div>
                     </div>
@@ -830,23 +893,41 @@ export default function EchoPanel({ patientId, patientName }) {
                 <div className="flex items-end gap-2 bg-slate-50 rounded-xl border border-slate-200/60 
                                 focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100
                                 transition-all duration-150 px-3 py-2">
-                    <textarea
-                        ref={inputRef}
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={isPatientMode
-                            ? "Ask Echo about this patient..."
-                            : "Ask about schedule, inbox, or navigate..."}
-                        disabled={loading}
-                        rows={1}
-                        className="flex-1 bg-transparent text-[12px] text-slate-700 placeholder-slate-300
+                    <button
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0
+                                   ${isRecording
+                                ? 'bg-red-500 text-white animate-pulse'
+                                : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+                        title={isRecording ? 'Stop Recording' : 'Start Dictation'}
+                    >
+                        {isRecording ? <Square className="w-3 h-3" /> : <Mic className="w-3.5 h-3.5" />}
+                    </button>
+                    {isRecording ? (
+                        <div className="flex-1 flex items-center px-2 py-1">
+                            <span className="text-[11px] font-bold text-red-500 animate-pulse">
+                                Recording... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                            </span>
+                        </div>
+                    ) : (
+                        <textarea
+                            ref={inputRef}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={isPatientMode
+                                ? "Ask Eko about this patient..."
+                                : "Ask about schedule, inbox, or navigate..."}
+                            disabled={loading}
+                            rows={1}
+                            className="flex-1 bg-transparent text-[12px] text-slate-700 placeholder-slate-300
                                    resize-none outline-none max-h-[80px]"
-                        style={{ fieldSizing: 'content' }}
-                    />
+                            style={{ fieldSizing: 'content' }}
+                        />
+                    )}
                     <button
                         onClick={() => sendMessage()}
-                        disabled={!input.trim() || loading}
+                        disabled={(!input.trim() && !isRecording) || loading}
                         className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center 
                                    text-white disabled:opacity-30 disabled:bg-slate-300
                                    hover:bg-blue-600 transition-colors flex-shrink-0"

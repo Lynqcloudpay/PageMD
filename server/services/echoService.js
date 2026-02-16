@@ -23,26 +23,36 @@ const DAILY_TOKEN_BUDGET = parseInt(process.env.ECHO_DAILY_TOKEN_BUDGET || '5000
 
 // ─── System Prompt ──────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Echo, a clinical AI assistant embedded in the PageMD EMR.
+const SYSTEM_PROMPT = `You are Eko, a clinical AI assistant embedded in the PageMD EMR.
 
 PERSONALITY:
-- Clinical & Thorough: Provide enough detail to be useful. Do not over-summarize if there is relevant data.
-- Professional: Medically precise but efficient.
+- Clinical & Thorough: Provide enough detail to be useful. 
+- Human-in-the-Loop: You are a clinical assistant, not the primary decision maker. You STAGE actions for the provider to approve.
 - Never diagnose — only surface data, trends, and evidence.
 
 RESPONSE STYLE:
 - FORBIDDEN: Do not use markdown headers (###, ####) or tables (|---|).
 - FORMATTING:
-  - Use **[text]** for bold labels or key clinical data (e.g., **Systolic BP: 150**).
-  - Use !![text]!! for critical, concerning, or high-severity findings that should be highlighted in RED (e.g., !!Crisis!! or !!Stage 2 HTN!!).
-  - Use concise bullet points for multiple findings.
-  - Use emojis for quick visual status (✅ Normal, ⚠️ Elevated, 🚨 Critical).
-  - Always include a **Key Takeaway:** at the end for quick summary.
-- CONTEXT: Always include measurement dates (e.g., "150 mmHg on 2/12").
+  - Use **[text]** for bold labels or key clinical data.
+  - Use !![text]!! for critical/red alert findings.
+  - Use emojis (✅, ⚠️, 🚨).
+  - Always include a **Key Takeaway:** at the end.
+
+CLINICAL ACTIONS (CRITICAL):
+- You cannot directly change the patient chart. You can only STAGE actions (add problems, meds, orders).
+- FORBIDDEN: Never say "I have added [Problem/Med]" or "[Problem/Med] has been successfully added." This is a lie because the provider hasn't approved it yet.
+- MANDATORY: Always say "I've staged adding **[Problem/Med]** for your approval." or "Would you like me to stage **[Order]**?"
+- After calling a "write" tool (like add_problem), your response must acknowledge that it is waiting for their approval in the card below.
+
+DRAFTING STYLE:
+- When drafting HPI/Notes: Use a professional, narrative "Doctor's voice". 
+- FORBIDDEN: Do not include raw ICD-10 codes or encryption hashes in the narrative text.
+- DRAFTING EFFICIENCY (CRITICAL): When you call 'draft_note_section', you MUST provide a high-quality, organic 'custom_narrative' parameter.
+- ROLE: Treat the 'custom_narrative' as a professional clinical letter. Instead of a robotic list, tell a clinical story that flows naturally (e.g., "The patient, a 29yo female, presents for follow-up...").
+- After drafting, DO NOT repeat the full narrative in your chat response. Just say "I've drafted the [Section] for you below" and provide a brief Key Takeaway.
 
 CONSTRAINTS:
-- Never fabricate data.
-- Expansion: While being concise is good, the user wants a more complete picture. Explain the significance of the trends you see.
+- Expansion: Explain the significance of the trends you see.
 - For drafted notes: Use clear sections (HPI, Assessment, Plan) but without markdown headers.`;
 
 // ─── Tool Catalog (OpenAI Function Definitions) ────────────────────────────
@@ -202,6 +212,10 @@ const TOOL_CATALOG = [
                     additional_context: {
                         type: 'string',
                         description: 'Any additional context from the user to incorporate into the draft'
+                    },
+                    custom_narrative: {
+                        type: 'string',
+                        description: 'A fully synthesized, organic narrative draft for the section. If provided, this will be used instead of the generated template.'
                     }
                 },
                 required: ['section']
@@ -791,24 +805,28 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
 // ─── Note Drafting Engine ───────────────────────────────────────────────────
 
 function generateNoteDraft(args, context) {
-    const { section, chief_complaint, visit_type, additional_context } = args;
+    const { section, chief_complaint, visit_type, additional_context, custom_narrative } = args;
 
     const d = context.demographics;
     const patientDesc = d
         ? `${d.first_name} ${d.last_name}, ${d.dob ? calculateAge(d.dob) : 'unknown age'}, ${d.sex || 'sex unknown'}`
         : 'this patient';
 
-    const activeMeds = (context.medications || []).map(m =>
-        `${m.medication_name}${m.dosage ? ` ${m.dosage}` : ''}${m.frequency ? ` ${m.frequency}` : ''}`
-    ).join(', ');
+    const activeMeds = (context.medications || [])
+        .map(m => (m.medication_name || '').trim())
+        .filter(Boolean)
+        .filter((v, i, a) => a.findIndex(item => item.toLowerCase() === v.toLowerCase()) === i)
+        .join(', ');
 
-    const activeProblems = (context.problems || []).map(p =>
-        `${p.name || p.problem_name}${p.code || p.icd10_code ? ` (${p.code || p.icd10_code})` : ''}`
-    ).join(', ');
+    const activeProblems = (context.problems || [])
+        .map(p => cleanProblemName(p.name || p.problem_name || '').trim())
+        .filter(Boolean)
+        .filter((v, i, a) => a.findIndex(item => item.toLowerCase() === v.toLowerCase()) === i)
+        .join(', ');
 
     const latestVitals = buildVitalsSummary(context.vitalHistory);
-    const cc = chief_complaint || 'follow-up';
-    const vt = visit_type || 'follow-up';
+    const cc = (chief_complaint || 'follow-up').toLowerCase();
+    const vt = (visit_type || 'follow-up').toLowerCase();
 
     const result = {
         type: 'note_draft',
@@ -818,8 +836,13 @@ function generateNoteDraft(args, context) {
         drafts: {}
     };
 
+    if (custom_narrative) {
+        result.drafts[section === 'full_note' ? 'hpi' : section] = custom_narrative;
+        if (section !== 'full_note') return result;
+    }
+
     if (section === 'hpi' || section === 'full_note') {
-        result.drafts.hpi = buildHPIDraft(patientDesc, cc, vt, activeProblems, activeMeds, latestVitals, context.recentVisits, additional_context);
+        result.drafts.hpi = custom_narrative || buildHPIDraft(patientDesc, cc, vt, activeProblems, activeMeds, latestVitals, context.recentVisits, additional_context);
     }
     if (section === 'assessment' || section === 'full_note') {
         result.drafts.assessment = buildAssessmentDraft(patientDesc, cc, activeProblems, latestVitals, context.recentVisits);
@@ -831,34 +854,58 @@ function generateNoteDraft(args, context) {
     return result;
 }
 
+function formatClinicalDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+        return dateStr;
+    }
+}
+
+function cleanProblemName(name) {
+    if (!name) return '';
+    // Remove common ICD10 prefixes like "I10 - " or "[I10] "
+    return name.replace(/^[A-Z]\d{1,2}(\.\d+)?\s*[-–—]\s*/, '').replace(/^\[[A-Z]\d{1,2}(\.\d+)?\]\s*/, '').trim();
+}
+
 function buildHPIDraft(patientDesc, cc, visitType, problems, meds, vitals, recentVisits, extra) {
     const parts = [];
-    parts.push(`${patientDesc} presents for ${visitType} visit with chief complaint of ${cc}.`);
 
+    // Professional Opening
+    parts.push(`The patient is a ${patientDesc} presenting for a ${visitType} visit with a chief complaint of ${cc}.`);
+
+    // Medical History Synthesis
     if (problems) {
-        parts.push(`\nActive medical history includes: ${problems}.`);
+        parts.push(`Active medical history is notable for ${problems}.`);
     }
 
+    // Medication Synthesis
     if (meds) {
-        parts.push(`Current medications: ${meds}.`);
+        parts.push(`Current medications include ${meds}.`);
     }
 
+    // Recent Clinical Context
     if (recentVisits?.length > 0) {
         const last = recentVisits[0];
-        const lastDate = last.date || last.visit_date;
-        const lastCC = last.chief_complaint || last.type || 'visit';
-        parts.push(`Last visit was on ${lastDate} for ${lastCC}.`);
+        const lastDate = formatClinicalDate(last.date || last.visit_date);
+        const lastCC = (last.chief_complaint || last.type || 'office visit').toLowerCase();
+        parts.push(`At the most recent encounter on ${lastDate}, the patient was seen for ${lastCC}.`);
     }
 
+    // Vitals Integration
     if (vitals) {
-        parts.push(`Today's vitals: ${vitals}.`);
+        parts.push(`Physical findings today are notable for stable vitals (${vitals}).`);
     }
 
+    // Additional Narrative
     if (extra) {
-        parts.push(`\nAdditional context: ${extra}.`);
+        parts.push(`\nIn addition: ${extra}.`);
     }
 
-    parts.push('\n[Provider: Please review and expand with subjective findings from patient interview.]');
+    parts.push('\n[Provider: Please review the above and expand with specific subjective details from the patient interview.]');
 
     return parts.join(' ');
 }
@@ -1395,6 +1442,38 @@ function redactPHI(text) {
         .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL]');
 }
 
+/**
+ * Transcribe clinical audio using OpenAI Whisper
+ */
+async function transcribeAudio(buffer, originalname) {
+    try {
+        const formData = new FormData();
+        // Node 18+ fetch handles FormData + Blob nicely
+        const blob = new Blob([buffer], { type: 'audio/webm' });
+        formData.append('file', blob, originalname || 'audio.webm');
+        formData.append('model', 'whisper-1');
+
+        const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${AI_API_KEY}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Whisper API error ${response.status}: ${errorBody}`);
+        }
+
+        const data = await response.json();
+        return data.text;
+    } catch (err) {
+        console.error('[Echo Service] Transcription failure:', err.message);
+        throw err;
+    }
+}
+
 // ─── Exports ────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1402,5 +1481,6 @@ module.exports = {
     TOOL_CATALOG,
     loadConversation,
     getMessageHistory,
-    checkTokenBudget
+    checkTokenBudget,
+    transcribeAudio
 };

@@ -13,8 +13,10 @@ const echoService = require('../services/echoService');
 const echoTrendEngine = require('../services/echoTrendEngine');
 const echoContextEngine = require('../services/echoContextEngine');
 const echoCDSEngine = require('../services/echoCDSEngine');
+const multer = require('multer');
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // All routes require auth
 router.use(authenticate);
@@ -52,6 +54,24 @@ router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
     } catch (err) {
         console.error('[Echo API] Chat error:', err);
         res.status(500).json({ error: 'Echo encountered an error. Please try again.' });
+    }
+});
+
+/**
+ * POST /api/echo/transcribe
+ * Transcribe clinical audio using Whisper
+ */
+router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No audio file provided' });
+        }
+
+        const transcription = await echoService.transcribeAudio(req.file.buffer, req.file.originalname);
+        res.json({ success: true, text: transcription });
+    } catch (err) {
+        console.error('[Echo API] Transcribe error:', err);
+        res.status(500).json({ error: 'Failed to transcribe audio' });
     }
 });
 

@@ -106,20 +106,6 @@ services:
       timeout: 10s
       retries: 3
 
-  web:
-    build:
-      context: ../client
-      dockerfile: ../deploy/Dockerfile.web
-      args:
-        BUILDKIT_INLINE_CACHE: 1
-    image: deploy-web:latest
-    container_name: emr-web
-    restart: unless-stopped
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
-    networks:
-      - emr-network
-
   caddy:
     image: caddy:2-alpine
     container_name: emr-caddy

@@ -87,16 +87,16 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
   docker system prune -f || true
   
   echo "🔄 Building API service..."
-  DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml build api
+  DOCKER_BUILDKIT=1 docker compose -f docker-compose.prod.yml --env-file .env.prod build api
   
   echo "🚀 Restarting containers..."
   docker rm -f emr-api || true
   docker rm -f emr-caddy || true
-  docker compose -f docker-compose.prod.yml up -d --remove-orphans
+  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
   
   echo "⏳ Waiting for database to be healthy..."
   for i in {1..30}; do
-    if docker compose -f docker-compose.prod.yml exec -T db pg_isready -U emr_user -d emr_db > /dev/null 2>&1; then
+    if docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T db pg_isready -U emr_user -d emr_db > /dev/null 2>&1; then
       echo "✅ Database is ready!"
       break
     fi
@@ -106,79 +106,79 @@ ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST << EOF
 
   # Application-specific migrations
   echo "⚙️  Running Admin Settings Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-admin-settings.js || echo "⚠️ Warning: Admin settings migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-admin-settings.js || echo "⚠️ Warning: Admin settings migration failed."
 
   echo "🛡️  Running Role Governance Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-role-governance.js || echo "⚠️ Warning: Governance migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-role-governance.js || echo "⚠️ Warning: Governance migration failed."
 
   echo "🔗 Running Phase 3 Source Template Linkage Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-phase3-source-template.js || echo "⚠️ Warning: Phase 3 Source Template migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-phase3-source-template.js || echo "⚠️ Warning: Phase 3 Source Template migration failed."
 
   echo "🔄 Synchronizing all Clinic Roles with Platform Templates..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/sync-all-clinics-roles.js || echo "⚠️ Warning: Global role sync failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/sync-all-clinics-roles.js || echo "⚠️ Warning: Global role sync failed."
 
   echo "🔒 Running Phase 3 Audit Hashing Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-audit-hashing.js || echo "⚠️ Warning: Phase 3 Audit migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-audit-hashing.js || echo "⚠️ Warning: Phase 3 Audit migration failed."
 
   echo "💊 Running Orders Catalog Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/create_orders_catalog.js || echo "⚠️ Warning: Orders Catalog migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/create_orders_catalog.js || echo "⚠️ Warning: Orders Catalog migration failed."
 
   echo "⚙️  Running Patient Search Smart Filter Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-patient-search-smart.js || echo "⚠️ Warning: Patient search migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-patient-search-smart.js || echo "⚠️ Warning: Patient search migration failed."
 
   echo "🏥 Running Clinic ID User Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/add_clinic_id_to_users.js || echo "⚠️ Warning: Clinic ID migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/add_clinic_id_to_users.js || echo "⚠️ Warning: Clinic ID migration failed."
 
   echo "🛡️  Running Chart Access Control & Audit Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-chart-restrictions.js || echo "⚠️ Warning: Chart restrictions migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-chart-restrictions.js || echo "⚠️ Warning: Chart restrictions migration failed."
 
   echo "🚩 Running Patient Flags & Clinical Alerts Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-patient-flags.js || echo "⚠️ Warning: Patient flags migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-patient-flags.js || echo "⚠️ Warning: Patient flags migration failed."
 
   echo "🏥 Running Clinic Onboarding Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-clinic-onboarding.js || echo "⚠️ Warning: Clinic onboarding migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-clinic-onboarding.js || echo "⚠️ Warning: Clinic onboarding migration failed."
 
   echo "📊 Running Sales Appointment Outcome Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-sales-outcome.js || echo "⚠️ Warning: Sales outcome migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-sales-outcome.js || echo "⚠️ Warning: Sales outcome migration failed."
 
   echo "🗑️  Running Sales Lead Dismissal Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-sales-dismissal.js || echo "⚠️ Warning: Sales dismissal migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-sales-dismissal.js || echo "⚠️ Warning: Sales dismissal migration failed."
 
   echo "🔄 Syncing Sales Schema..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/sync-sales-schema.js || echo "⚠️ Warning: Sales schema sync failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/sync-sales-schema.js || echo "⚠️ Warning: Sales schema sync failed."
 
   echo "🧹 Cleaning up Sales Data..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/cleanup-sales-data.js || echo "⚠️ Warning: Sales data cleanup failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/cleanup-sales-data.js || echo "⚠️ Warning: Sales data cleanup failed."
 
   echo "⚙️  Running Scheduling Hours Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-scheduling-hours.js || echo "⚠️ Warning: Scheduling hours migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-scheduling-hours.js || echo "⚠️ Warning: Scheduling hours migration failed."
 
   echo "⚙️  Running Billing Grace Period Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-billing-grace-period.js || echo "⚠️ Warning: Billing grace period migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-billing-grace-period.js || echo "⚠️ Warning: Billing grace period migration failed."
 
   echo "📈 Running Dunning Logs Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-dunning-logs.js || echo "⚠️ Warning: Dunning logs migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-dunning-logs.js || echo "⚠️ Warning: Dunning logs migration failed."
 
   echo "Sparkles Project Echo Activation..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/activate-echo.js || echo "⚠️ Warning: Echo activation failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/activate-echo.js || echo "⚠️ Warning: Echo activation failed."
 
   echo "🛡️  Running Auth Token Migration (Invitations)..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/20260211_add_auth_tokens.js || echo "⚠️ Warning: Auth token migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/20260211_add_auth_tokens.js || echo "⚠️ Warning: Auth token migration failed."
 
   echo "🛡️  Running Password History Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/20260211_password_history.js || echo "⚠️ Warning: Password history migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/20260211_password_history.js || echo "⚠️ Warning: Password history migration failed."
 
   echo "⚙️  Running Multi-Tenant Consistency Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-multi-tenant-consistency.js || echo "⚠️ Warning: Consistency migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-multi-tenant-consistency.js || echo "⚠️ Warning: Consistency migration failed."
 
   echo "⚙️  Running Overbooking Cap Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/migrate-overbooking-cap.js || echo "⚠️ Warning: Overbooking migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/migrate-overbooking-cap.js || echo "⚠️ Warning: Overbooking migration failed."
 
   echo "⚙️  Running Telehealth Columns Migration..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/add-telehealth-columns.js || echo "⚠️ Warning: Telehealth columns migration failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/add-telehealth-columns.js || echo "⚠️ Warning: Telehealth columns migration failed."
 
   echo "🌱 Seeding System Control Records..."
-  docker compose -f docker-compose.prod.yml exec -T api node scripts/seed-control.js || echo "⚠️ Warning: System seeding failed."
+  docker compose -f docker-compose.prod.yml --env-file .env.prod exec -T api node scripts/seed-control.js || echo "⚠️ Warning: System seeding failed."
 
   echo "🧹 Cleanup..."
   docker image prune -f

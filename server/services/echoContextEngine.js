@@ -149,7 +149,7 @@ function buildContextPrompt(context) {
 async function getPatientDemographics(patientId) {
     try {
         const res = await pool.query(
-            `SELECT id, first_name, last_name, dob, sex, phone, email, mrn
+            `SELECT id, first_name, last_name, dob, sex, phone, email, mrn, encryption_metadata
              FROM patients WHERE id = $1`,
             [patientId]
         );
