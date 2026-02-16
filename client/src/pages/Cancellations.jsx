@@ -300,8 +300,8 @@ const Cancellations = () => {
         <div className="p-4 max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-semibold text-[#10141A] tracking-tight">Follow-up Tracker</h1>
-                <p className="text-sm text-slate-500 mt-1">Manage and track follow-ups for cancellations and no-shows</p>
+                <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Follow-up Tracker</h1>
+                <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Manage and track follow-ups for cancellations and no-shows</p>
             </div>
 
             {/* Stats Cards */}

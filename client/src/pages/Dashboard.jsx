@@ -148,40 +148,40 @@ const Dashboard = () => {
                         </div>
                         <ClipboardList className="w-5 h-5 text-orange-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
                         <div>
-                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Unread Labs</p>
-                            <p className="text-xl font-semibold text-[#10141A]">{stats?.unreadLabs || 0}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unread Labs</p>
+                            <p className="text-lg font-black text-slate-900">{stats?.unreadLabs || 0}</p>
                         </div>
-                        <Activity className="w-5 h-5 text-green-500 opacity-80" />
+                        <Activity className="w-4 h-4 text-blue-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/messages')}>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/messages')}>
                         <div>
-                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Messages</p>
-                            <p className="text-xl font-semibold text-[#10141A]">{stats?.unreadMessages || 0}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Messages</p>
+                            <p className="text-lg font-black text-slate-900">{stats?.unreadMessages || 0}</p>
                         </div>
-                        <MessageSquare className="w-5 h-5 text-purple-500 opacity-80" />
+                        <MessageSquare className="w-4 h-4 text-blue-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/pending-notes')}>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/pending-notes')}>
                         <div>
-                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Unsigned Notes</p>
-                            <p className="text-xl font-semibold text-[#10141A]">{stats?.pendingNotes || 0}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Unsigned Notes</p>
+                            <p className="text-lg font-black text-slate-900">{stats?.pendingNotes || 0}</p>
                         </div>
-                        <FileText className="w-5 h-5 text-red-500 opacity-80" />
+                        <FileText className="w-4 h-4 text-blue-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/cancellations')}>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/cancellations')}>
                         <div>
-                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Cancellations</p>
-                            <p className="text-xl font-semibold text-[#10141A]">{stats?.cancellationFollowups || 0}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cancellations</p>
+                            <p className="text-lg font-black text-slate-900">{stats?.cancellationFollowups || 0}</p>
                         </div>
-                        <XCircle className="w-5 h-5 text-amber-500 opacity-80" />
+                        <XCircle className="w-4 h-4 text-blue-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/patients')}>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/patients')}>
                         <div>
-                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Total Patients</p>
-                            <p className="text-xl font-semibold text-[#10141A]">{stats?.totalPatients || 0}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Patients</p>
+                            <p className="text-lg font-black text-slate-900">{stats?.totalPatients || 0}</p>
                         </div>
-                        <Users className="w-5 h-5 text-gray-500 opacity-80" />
+                        <Users className="w-4 h-4 text-blue-500 opacity-80" />
                     </div>
                 </div>
 
@@ -213,7 +213,7 @@ const Dashboard = () => {
                                 </div>
                             ) : todayAppointments.length > 0 ? (
                                 <table className="w-full text-left border-collapse">
-                                    <thead className="bg-[#F5F5F5] text-[#10141A]/40 text-[10px] uppercase tracking-wider font-medium">
+                                    <thead className="bg-blue-50/80 text-blue-900/60 text-[10px] uppercase tracking-widest font-black">
                                         <tr>
                                             <th className="px-5 py-2 border-b border-[#E4E4E4] font-medium">Time</th>
                                             <th className="px-5 py-2 border-b border-[#E4E4E4] font-medium">Patient</th>

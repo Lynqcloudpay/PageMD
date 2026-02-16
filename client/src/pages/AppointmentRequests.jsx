@@ -319,12 +319,12 @@ const AppointmentRequests = () => {
                 <div className="p-4 bg-gray-50 border-b border-gray-200">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                            <CalendarPlus className="w-5 h-5 text-amber-500" />
-                            <h1 className="text-lg font-semibold text-[#10141A]">Appt Requests</h1>
+                            <CalendarPlus className="w-5 h-5 text-blue-600" />
+                            <h1 className="text-sm font-black text-[#10141A] uppercase tracking-tighter">Appt Requests</h1>
                         </div>
                         <button
                             onClick={() => fetchData(true)}
-                            className={`p-2 hover:bg-white rounded-full transition-all ${refreshing ? 'animate-spin text-amber-500' : 'text-gray-400'}`}
+                            className={`p-2 hover:bg-white rounded-full transition-all ${refreshing ? 'animate-spin text-blue-600' : 'text-gray-400'}`}
                         >
                             <RefreshCw className="w-4 h-4" />
                         </button>
@@ -338,13 +338,13 @@ const AppointmentRequests = () => {
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 placeholder="Search requests..."
-                                className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-amber-500"
+                                className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                         <div className="flex p-1 bg-gray-200/50 rounded-lg">
                             <button
                                 onClick={() => setFilterStatus('new')}
-                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'new' ? 'bg-white text-amber-600 shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
                             >
                                 New ({requests.filter(r => r.status === 'new' && !r.subject?.includes('DECLINED')).length})
                             </button>

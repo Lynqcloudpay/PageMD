@@ -145,8 +145,8 @@ const Billing = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-semibold text-[#10141A]">Billing & Claims</h1>
-                    <p className="text-sm text-gray-600 mt-1">Manage claims, fee sheets, and billing operations</p>
+                    <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Billing & Claims</h1>
+                    <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Manage claims, fee sheets, and billing operations</p>
                 </div>
                 <div className="flex items-center space-x-2">
                     <button

@@ -1105,19 +1105,19 @@ const Schedule = () => {
                         {/* Left: Title and Date Navigation */}
                         <div className="flex items-center gap-8">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-100/50">
+                                <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
                                     <Calendar className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h1 className="text-xl font-semibold text-slate-700 tracking-tight">Schedule</h1>
-                                    <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Clinic Overview</p>
+                                    <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Schedule</h1>
+                                    <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Clinic Overview</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-2xl p-1 shadow-sm">
                                     <button
-                                        className="p-2 hover:bg-white text-slate-400 hover:text-indigo-500 rounded-xl transition-all hover:shadow-sm active:scale-95"
+                                        className="p-2 hover:bg-white text-slate-400 hover:text-blue-600 rounded-xl transition-all hover:shadow-sm active:scale-95"
                                         onClick={() => setCurrentDate(addDays(currentDate, -1))}
                                     >
                                         <ChevronLeft className="w-4 h-4" />
@@ -1142,7 +1142,7 @@ const Schedule = () => {
                                         />
                                     </div>
                                     <button
-                                        className="p-2 hover:bg-white text-slate-400 hover:text-indigo-500 rounded-xl transition-all hover:shadow-sm active:scale-95"
+                                        className="p-2 hover:bg-white text-slate-400 hover:text-blue-600 rounded-xl transition-all hover:shadow-sm active:scale-95"
                                         onClick={() => setCurrentDate(addDays(currentDate, 1))}
                                     >
                                         <ChevronRight className="w-4 h-4" />
@@ -1150,7 +1150,7 @@ const Schedule = () => {
                                 </div>
                                 <button
                                     className={`px-4 py-2 text-xs font-medium rounded-xl transition-all shadow-sm active:scale-95 ${format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
-                                        ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                        ? 'bg-blue-50 text-blue-600 border border-blue-100'
                                         : 'text-slate-500 bg-white border border-slate-100 hover:bg-slate-50'
                                         }`}
                                     onClick={() => setCurrentDate(new Date())}

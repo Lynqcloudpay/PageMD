@@ -209,13 +209,13 @@ const AdminSettings = () => {
       <div className="bg-white border-b border-slate-100 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center shadow-sm border border-indigo-100/50">
-              <Settings className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center shadow-sm border border-slate-100">
+              <Settings className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-slate-900 tracking-tight leading-none">Administration & Settings</h1>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Practice Control Panel</span>
+              <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Administration & Settings</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest leading-none">Practice Control Panel</span>
                 <span className="w-1 h-1 rounded-full bg-slate-200"></span>
                 <span className="text-[10px] font-medium text-slate-400">Manage clinical configuration, users, and security</span>
               </div>

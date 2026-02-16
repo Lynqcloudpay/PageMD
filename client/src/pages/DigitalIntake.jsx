@@ -105,8 +105,8 @@ const DigitalIntake = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-semibold text-[#10141A] tracking-tight">Digital Intake</h1>
-                    <p className="text-sm text-slate-500 mt-1 font-medium">Universal QR Workflow • Azure Blue Engine</p>
+                    <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Digital Intake</h1>
+                    <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button

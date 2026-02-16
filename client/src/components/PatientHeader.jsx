@@ -425,7 +425,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 />
             )}
 
-            <div className="bg-white/60 backdrop-blur-md border border-white/50 shadow-xl shadow-slate-200/30 rounded-2xl overflow-visible">
+            <div className="bg-white border-2 border-blue-50 shadow-2xl shadow-blue-900/10 rounded-3xl overflow-visible">
                 {/* Flags Manager Panel */}
                 {isFlagsPanelOpen && (
                     <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-200">
@@ -439,15 +439,11 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                     </div>
                 )}
                 {/* Top Bar: Identity & Actions */}
-                <div className="px-6 py-5 border-b border-white/30 flex items-center justify-between bg-gradient-to-br from-blue-50/80 via-white/70 to-indigo-50/60 backdrop-blur-sm text-slate-900 relative z-20 rounded-t-2xl">
-                    {/* Decorative Background Elements - Clipped in own container */}
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-t-2xl">
-                        {/* Decorative Bubbles */}
-                        <div className="absolute top-4 right-12 w-32 h-32 bg-gradient-to-br from-blue-200/40 to-sky-300/30 rounded-full blur-2xl animate-pulse" style={{ animationDuration: '4s' }} />
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl -mr-20 -mt-20" />
-                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-100/30 rounded-full blur-3xl -ml-10 -mb-10" />
-                        <div className="absolute top-1/2 left-1/4 w-20 h-20 bg-sky-200/20 rounded-full blur-xl" />
-                        <div className="absolute bottom-2 right-1/3 w-16 h-16 bg-violet-200/20 rounded-full blur-lg" />
+                <div className="px-4 py-4 border-b border-blue-50 flex items-center justify-between bg-white text-slate-900 relative z-20 rounded-t-3xl overflow-hidden">
+                    {/* Decorative Elements - Modern & Subtle */}
+                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60" />
+                        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-60" />
                     </div>
 
                     <div className="flex items-center gap-5 relative z-10">
@@ -457,7 +453,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 firstName={patient.first_name}
                                 lastName={patient.last_name}
                                 photoUrl={patient.photo_url}
-                                className="w-20 h-20 text-2xl shadow-xl ring-4 ring-white/80 cursor-pointer hover:ring-white hover:scale-105 transition-all duration-300"
+                                className="w-16 h-16 text-xl shadow-lg ring-4 ring-blue-50 cursor-pointer hover:ring-blue-100 transition-all duration-300 rounded-2xl"
                                 onClick={() => setIsPhotoModalOpen(true)}
                             />
                             <button
@@ -472,7 +468,7 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                         <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-3">
                                 <h1
-                                    className="text-2xl font-semibold tracking-tight text-slate-800 cursor-pointer hover:text-blue-600 transition-colors select-none"
+                                    className="text-xl font-black tracking-tight text-slate-900 cursor-pointer hover:text-blue-600 transition-colors select-none"
                                     onClick={() => navigate(`/patient/${patient?.id || id}/snapshot`)}
                                 >
                                     {patient.first_name || ''} {patient.last_name || ''}
@@ -499,9 +495,9 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                     <span>{formatDate(patient.dob)}</span>
                                 </div>
 
-                                {/* MRN Pill - Distinct Contrast */}
-                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50/80 backdrop-blur-sm text-amber-800 border border-amber-100/50 rounded-xl text-[10px] font-semibold tracking-wide shadow-sm">
-                                    <span className="opacity-60">MRN:</span>
+                                {/* MRN Pill - Vivid Contrast */}
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-xl text-[10px] font-black tracking-widest shadow-md">
+                                    <span className="opacity-70">MRN:</span>
                                     <span>{patient.mrn}</span>
                                 </div>
 
@@ -609,16 +605,16 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                 if (onMessage) onMessage();
                                 else onAction?.('message');
                             }}
-                            className="px-4 py-2.5 text-[13px] font-medium text-blue-600 bg-blue-50/80 backdrop-blur-sm border border-blue-100/50 rounded-xl hover:bg-blue-100/80 transition-all flex items-center gap-2 shadow-sm"
+                            className="px-4 py-2 text-[12px] font-black text-blue-600 bg-white border-2 border-blue-100 rounded-xl hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 shadow-sm"
                         >
-                            <MessageSquare size={16} strokeWidth={2.5} />
+                            <MessageSquare size={14} strokeWidth={3} />
                             Message
                         </button>
                         <button
                             onClick={handleOpenChart}
-                            className="px-5 py-2.5 text-[13px] font-semibold text-white bg-gradient-to-r from-primary-500 to-primary-600 rounded-xl hover:from-primary-600 hover:to-primary-700 shadow-lg shadow-primary-500/25 transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2"
+                            className="px-5 py-2 text-[12px] font-black text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all hover:-translate-y-0.5 active:scale-95 flex items-center gap-2"
                         >
-                            <ExternalLink size={16} strokeWidth={2} />
+                            <ExternalLink size={14} strokeWidth={3} />
                             Open Chart
                         </button>
                     </div>
@@ -626,40 +622,40 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                 </div>
 
                 {/* Detail Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-px bg-slate-50/50 border-t border-white/30 rounded-b-2xl relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 bg-white border-t border-blue-50 rounded-b-3xl">
                     {/* Contact */}
-                    <div className="bg-white/60 backdrop-blur-sm p-2 px-4 border-r border-white/30">
-                        <InfoItem icon={Phone} label="Contact" color="text-blue-500">
-                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.phone || <span className="text-slate-300 font-normal italic">No phone</span>}</div>
-                            {patient.email && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.email}</div>}
+                    <div className="p-4 border-r border-blue-50">
+                        <InfoItem icon={Phone} label="Contact">
+                            <div className="font-bold text-[12px] text-slate-900 leading-tight truncate">{patient.phone || <span className="text-slate-300 font-normal italic">No phone</span>}</div>
+                            {patient.email && <div className="text-slate-500 text-[11px] font-medium truncate leading-tight mt-0.5">{patient.email}</div>}
                         </InfoItem>
                     </div>
                     {/* Address */}
-                    <div className="bg-white/60 backdrop-blur-sm p-2 px-4 border-r border-white/30">
-                        <InfoItem icon={MapPin} label="Primary Address" color="text-indigo-500">
-                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.address_line1 || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
-                            {patient.city && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.city}, {patient.state}</div>}
+                    <div className="p-4 border-r border-blue-50">
+                        <InfoItem icon={MapPin} label="Address">
+                            <div className="font-bold text-[12px] text-slate-900 leading-tight truncate">{patient.address_line1 || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
+                            {patient.city && <div className="text-slate-500 text-[11px] font-medium truncate leading-tight mt-0.5">{patient.city}, {patient.state}</div>}
                         </InfoItem>
                     </div>
                     {/* Insurance */}
-                    <div className="bg-white/60 backdrop-blur-sm p-2 px-4 border-r border-white/30">
-                        <InfoItem icon={Shield} label="Insurance" color="text-emerald-500">
-                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.insurance_provider || <span className="text-slate-300 font-normal italic">Self Pay</span>}</div>
-                            {patient.insurance_id && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">ID: {patient.insurance_id}</div>}
+                    <div className="p-4 border-r border-blue-50">
+                        <InfoItem icon={Shield} label="Insurance">
+                            <div className="font-bold text-[12px] text-slate-900 leading-tight truncate">{patient.insurance_provider || <span className="text-slate-300 font-normal italic">Self Pay</span>}</div>
+                            {patient.insurance_id && <div className="text-slate-500 text-[11px] font-medium truncate leading-tight mt-0.5">ID: {patient.insurance_id}</div>}
                         </InfoItem>
                     </div>
                     {/* Pharmacy */}
-                    <div className="bg-white/60 backdrop-blur-sm p-2 px-4 border-r border-white/30">
-                        <InfoItem icon={FlaskConical} label="Pharmacy" color="text-amber-500">
-                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.pharmacy_name || <span className="text-slate-300 font-normal italic">Not specified</span>}</div>
-                            {patient.pharmacy_phone && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.pharmacy_phone}</div>}
+                    <div className="p-4 border-r border-blue-50">
+                        <InfoItem icon={FlaskConical} label="Pharmacy">
+                            <div className="font-bold text-[12px] text-slate-900 leading-tight truncate">{patient.pharmacy_name || <span className="text-slate-300 font-normal italic">Not specified</span>}</div>
+                            {patient.pharmacy_phone && <div className="text-slate-500 text-[11px] font-medium truncate leading-tight mt-0.5">{patient.pharmacy_phone}</div>}
                         </InfoItem>
                     </div>
                     {/* Emergency */}
-                    <div className="bg-white/60 backdrop-blur-sm p-2 px-4">
-                        <InfoItem icon={AlertTriangle} label="Emergency Contact" color="text-rose-500">
-                            <div className="font-semibold text-[11px] text-slate-900 leading-tight truncate">{patient.emergency_contact_name || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
-                            {patient.emergency_contact_phone && <div className="text-slate-400 text-[10px] font-medium truncate leading-tight mt-0.5">{patient.emergency_contact_phone}</div>}
+                    <div className="p-4">
+                        <InfoItem icon={AlertTriangle} label="Emergency">
+                            <div className="font-bold text-[12px] text-slate-900 leading-tight truncate">{patient.emergency_contact_name || <span className="text-slate-300 font-normal italic">Not set</span>}</div>
+                            {patient.emergency_contact_phone && <div className="text-slate-500 text-[11px] font-medium truncate leading-tight mt-0.5">{patient.emergency_contact_phone}</div>}
                         </InfoItem>
                     </div>
                 </div>

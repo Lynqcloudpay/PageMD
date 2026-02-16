@@ -155,7 +155,7 @@ const Patients = () => {
                 {/* Header - Compact Design */}
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
                     <div>
-                        <h1 className="text-2xl font-semibold text-[#10141A] mb-0.5">Patients</h1>
+                        <h1 className="text-xl font-black text-[#10141A] mb-0.5 uppercase tracking-tight">Patients</h1>
                         <p className="text-gray-500 text-xs">Manage your patient list</p>
                     </div>
                     <div className="flex gap-2">
@@ -170,7 +170,7 @@ const Patients = () => {
                 </div>
 
                 {/* 4-Field Smart Search Row */}
-                <div className="mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-sm" onKeyDown={handleKeyDown}>
+                <div className="mb-6 bg-blue-50/50 p-4 rounded-xl border border-blue-100 shadow-sm" onKeyDown={handleKeyDown}>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         {/* Name Search */}
                         <div className="relative">
@@ -236,7 +236,7 @@ const Patients = () => {
 
                 {/* Pending Appointments Section - Compact Cards */}
                 {pendingPatients.length > 0 && (
-                    <div className="mb-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg p-3 shadow-sm">
+                    <div className="mb-4 bg-blue-50/80 border-l-4 border-blue-600 rounded-lg p-3 shadow-md">
                         <h2 className="font-semibold text-gray-800 mb-3 flex items-center text-sm">
                             <div className="w-6 h-6 rounded bg-blue-100 flex items-center justify-center mr-2">
                                 <Clock className="w-3.5 h-3.5 text-blue-600" />

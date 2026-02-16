@@ -169,8 +169,8 @@ const UserManagement = ({ inline = false }) => {
       {!inline && (
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">User Management</h1>
-            <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1">System Access & Role Control</p>
+            <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">User Management</h1>
+            <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">System Access & Role Control</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}

@@ -159,7 +159,7 @@
 
   /* Card — clean, no hover transforms */
   .card {
-    @apply rounded-2xl p-6 transition-shadow;
+    @apply rounded-xl p-4 transition-shadow;
     background-color: #FFFFFF;
     border: 1px solid #E4E4E4;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
@@ -171,7 +171,7 @@
 
   /* Input — frosted feel */
   .input {
-    @apply w-full px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all;
+    @apply w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all;
     background-color: #FFFFFF;
     border: 1px solid #E4E4E4;
     color: #10141A;

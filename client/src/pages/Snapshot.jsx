@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
@@ -1561,7 +1562,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 />
 
                 {/* Quick Navigation Bar - Neutralized */}
-                <div className="px-6 py-3 bg-white border-b border-gray-200/60 mb-6 sticky top-0 z-40 rounded-b-xl mx-2 shadow-[0_1px_3px_rgba(0,49,51,0.05)]">
+                <div className="px-6 py-4 bg-white border-b border-slate-200 mb-6 sticky top-0 z-40 rounded-b-2xl mx-2 shadow-[0_4px_20px_rgba(15,23,42,0.08)]">
                     <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-hide">
                             <button
@@ -1569,9 +1570,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setPatientChartTab('hub');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
+                                className={cn(
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    patientChartTab === 'hub'
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
+                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                )}
                             >
-                                <UserCircle className="w-3.5 h-3.5 text-slate-500" />
+                                <UserCircle className={cn("w-3.5 h-3.5", patientChartTab === 'hub' ? "text-white" : "text-slate-400")} />
                                 <span>Patient Hub</span>
                             </button>
                             <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
@@ -1580,12 +1586,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setPatientChartTab('images');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
+                                className={cn(
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    patientChartTab === 'images'
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
+                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                )}
                             >
-                                <FileImage className="w-3.5 h-3.5 text-slate-500" />
+                                <FileImage className={cn("w-3.5 h-3.5", patientChartTab === 'images' ? "text-white" : "text-slate-400")} />
                                 <span>Images</span>
                                 {(documents || []).filter(d => d.doc_type === 'imaging').length > 0 && (
-                                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-black", patientChartTab === 'images' ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
                                         {(documents || []).filter(d => d.doc_type === 'imaging').length}
                                     </span>
                                 )}
@@ -1595,12 +1606,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setPatientChartTab('labs');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
+                                className={cn(
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    patientChartTab === 'labs'
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
+                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                )}
                             >
-                                <FlaskConical className="w-3.5 h-3.5 text-slate-500" />
+                                <FlaskConical className={cn("w-3.5 h-3.5", patientChartTab === 'labs' ? "text-white" : "text-slate-400")} />
                                 <span>Labs</span>
                                 {(orders || []).filter(o => o.order_type === 'lab').length > 0 && (
-                                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-black", patientChartTab === 'labs' ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
                                         {(orders || []).filter(o => o.order_type === 'lab').length}
                                     </span>
                                 )}
@@ -1610,12 +1626,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setPatientChartTab('documents');
                                     setShowPatientChart(true);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-all whitespace-nowrap border border-transparent hover:border-slate-200"
+                                className={cn(
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    patientChartTab === 'documents'
+                                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
+                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                )}
                             >
-                                <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                <FileText className={cn("w-3.5 h-3.5", patientChartTab === 'documents' ? "text-white" : "text-slate-400")} />
                                 <span>Documents</span>
                                 {(documents || []).filter(d => d.doc_type !== 'imaging').length > 0 && (
-                                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-black", patientChartTab === 'documents' ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
                                         {(documents || []).filter(d => d.doc_type !== 'imaging').length}
                                     </span>
                                 )}
@@ -1657,7 +1678,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="relative group/visit">
                                 <button
                                     onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
-                                    className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-white bg-blue-600 rounded-lg transition-all hover:bg-blue-700 hover:shadow-md shadow-sm"
+                                    className="flex items-center gap-2 px-6 py-2.5 text-[12px] font-black text-white bg-blue-600 rounded-xl transition-all hover:bg-blue-700 hover:shadow-xl hover:scale-105 shadow-lg shadow-blue-500/20 active:scale-95"
                                 >
                                     {todayDraftVisit ? (
                                         <>
@@ -1684,8 +1705,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </button>
                             )}
                         </div>
-                    </div>
-                </div>
+                    </div >
+                </div >
 
                 <div className="px-6">
 
@@ -1750,9 +1771,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Visit History Section */}
-                                    <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_4px_rgba(0,49,51,0.04)]">
+                                    <div className="bg-white rounded-xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)] overflow-hidden">
                                         <div
-                                            className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/80 cursor-pointer hover:bg-gray-100 transition-colors group/header rounded-t-xl"
+                                            className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors group/header"
                                             onClick={() => setShowVisitFoldersModal(true)}
                                             title={`View all ${filteredNotes.length} medical encounters`}
                                         >
@@ -1821,8 +1842,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Health Maintenance Section - Specialized */}
-                                    <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_4px_rgba(0,49,51,0.04)] overflow-hidden">
-                                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+                                    <div className="bg-white rounded-xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)] overflow-hidden">
+                                        <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                                             <div className="flex items-center gap-2">
                                                 <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
                                                     <ShieldCheck className="w-3.5 h-3.5" />
@@ -1877,7 +1898,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         setPatientChartTab('reports');
                                                         setShowPatientChart(true);
                                                     }}
-                                                    className="w-full py-2.5 bg-gray-50 border border-gray-200 text-[10px] font-bold text-gray-500 hover:text-cyan-700 hover:border-cyan-300 hover:bg-white transition-all rounded-lg flex items-center justify-center gap-2 group/btn"
+                                                    className="w-full py-3 bg-white border-2 border-blue-100 text-[10px] font-black text-blue-600 hover:text-white hover:bg-blue-600 hover:border-blue-600 transition-all rounded-xl flex items-center justify-center gap-2 group/btn shadow-sm"
                                                 >
                                                     Clinical Quality Measures <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                                                 </button>
@@ -1926,17 +1947,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     )}
 
-                                    {/* Vitals Trend Wave - High Contrast Teal */}
-                                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-[0_4px_12px_rgba(0,49,51,0.06)] mb-6 relative overflow-hidden group/wave">
+                                    {/* Vitals Trend Wave - High Contrast Blue */}
+                                    <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.06)] mb-4 relative overflow-hidden group/wave">
 
 
                                         <div className="flex justify-between items-center mb-6 relative">
                                             <div className="flex items-center gap-3">
-                                                <div className="p-3 bg-cyan-600 text-white rounded-xl shadow-[0_4px_10px_rgba(8,145,178,0.2)]">
-                                                    <Waves className="w-5 h-5 opacity-90" />
+                                                <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/20">
+                                                    <Waves className="w-4 h-4 opacity-90" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-[10px] font-medium text-slate-400 tracking-wider mb-0.5 text-left">Clinical Trend Wave</h3>
+                                                    <h3 className="text-[10px] font-black text-slate-500 tracking-widest mb-0.5 text-left uppercase">Clinical Trend Wave</h3>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-bold text-gray-800">Cardiovascular Performance</span>
                                                         <span className={`px-2 py-0.5 bg-${vitalStatus.color}-50 text-${vitalStatus.color}-600 text-[9px] font-bold uppercase rounded-lg border border-${vitalStatus.color}-100`}>
@@ -1948,16 +1969,16 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex gap-6 bg-gray-50 p-2 px-4 rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
-                                                    <span className="text-[9px] font-medium text-slate-500 tracking-wide">Sys. BP</span>
+                                                    <span className="text-[9px] font-bold text-slate-600 tracking-wide">Sys. BP</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
-                                                    <span className="text-[9px] font-medium text-slate-500 tracking-wide">Heart Rate</span>
+                                                    <span className="text-[9px] font-bold text-slate-600 tracking-wide">Heart Rate</span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="h-56 w-full relative min-h-[224px]">
+                                        <div className="h-44 w-full relative min-h-[176px]">
                                             {vitals.filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A')).length > 0 ? (
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <AreaChart
@@ -2093,15 +2114,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     {/* Detailed Boards Grid - Custom Proportions for Clinical Depth */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-4">
                                         {/* Column 1: Problems - Geometric Match */}
-                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_2px_4px_rgba(0,49,51,0.04)] border border-gray-200 overflow-hidden h-[416px]">
-                                            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-rose-50 overflow-hidden h-[340px] border-t-rose-500">
+                                            <div className="px-4 py-3.5 border-b border-rose-50 flex items-center justify-between bg-rose-50/30">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-rose-50 text-rose-500 rounded-lg">
+                                                    <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">
                                                         <Activity className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-medium text-[11px] text-slate-600 tracking-wide">Problem List</h3>
+                                                    <h3 className="font-black text-[11px] text-slate-900 uppercase tracking-wider">Problem List</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] font-black text-blue-600 hover:underline">Edit</button>
                                             </div>
                                             <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {(problems || []).length > 0 ? (
@@ -2125,15 +2146,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
 
                                         {/* Column 2: Medications - Now Compact lg:col-span-1 */}
-                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_2px_4px_rgba(0,49,51,0.04)] border border-gray-200 overflow-hidden h-[416px]">
-                                            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-blue-50 overflow-hidden h-[340px] border-t-blue-500">
+                                            <div className="px-4 py-3.5 border-b border-blue-50 flex items-center justify-between bg-blue-50/30">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
+                                                    <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
                                                         <Pill className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-medium text-[11px] text-slate-600 tracking-wide">Medications</h3>
+                                                    <h3 className="font-black text-[11px] text-slate-900 uppercase tracking-wider">Medications</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] font-black text-blue-600 hover:underline">Edit</button>
                                             </div>
                                             <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {(medications || []).filter(m => m.active !== false).length > 0 ? (
@@ -2166,15 +2187,15 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         {/* Middle Stack: Allergies & Surgical */}
                                         <div className="flex flex-col gap-4 h-[416px]">
                                             {/* Allergies - Increased Height */}
-                                            <div className="flex-1 bg-white rounded-xl shadow-[0_2px_4px_rgba(0,49,51,0.04)] border border-gray-200 flex flex-col overflow-hidden">
-                                                <div className="px-4 py-2.5 border-b border-gray-100 flex items-center bg-gray-50/80 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-amber-50 flex flex-col overflow-hidden border-t-amber-500">
+                                                <div className="px-4 py-3 border-b border-amber-50 flex items-center bg-amber-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
-                                                        <div className="p-1 bg-amber-50 text-amber-500 rounded-md">
-                                                            <AlertCircle className="w-3 h-3" />
+                                                        <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg">
+                                                            <AlertCircle className="w-3.5 h-3.5" />
                                                         </div>
-                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Allergies</h3>
+                                                        <h3 className="font-black text-[11px] text-slate-900 uppercase tracking-wider">Allergies</h3>
                                                     </div>
-                                                    <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
+                                                    <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="text-[10px] font-black text-blue-600 hover:underline">Edit</button>
                                                 </div>
                                                 <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                     {(allergies || []).length > 0 ? (
@@ -2198,8 +2219,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
 
                                             {/* Surgical History - Compact but with more space */}
-                                            <div className="flex-1 bg-white rounded-xl shadow-[0_2px_4px_rgba(0,49,51,0.04)] border border-gray-200 flex flex-col overflow-hidden">
-                                                <div className="px-4 py-2 border-b border-gray-100 flex items-center bg-gray-50/80 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-violet-50 flex flex-col overflow-hidden border-t-violet-500">
+                                                <div className="px-4 py-3 border-b border-violet-50 flex items-center bg-violet-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-violet-50 text-violet-500 rounded-md">
                                                             <Scissors className="w-3 h-3" />
@@ -2233,8 +2254,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         {/* Column 4: Social & Family Stack */}
                                         <div className="flex flex-col gap-4 h-[416px]">
                                             {/* Family History - Top */}
-                                            <div className="flex-1 bg-white rounded-xl shadow-[0_2px_4px_rgba(0,49,51,0.04)] border border-gray-200 flex flex-col overflow-hidden">
-                                                <div className="px-4 py-2.5 border-b border-gray-100 flex items-center bg-gray-50/80 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-emerald-50 flex flex-col overflow-hidden border-t-emerald-500">
+                                                <div className="px-4 py-3 border-b border-emerald-50 flex items-center bg-emerald-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-emerald-50 text-emerald-500 rounded-md">
                                                             <ShieldPlus className="w-3 h-3" />
@@ -2264,8 +2285,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
 
                                             {/* Social History - Fixed Bottom to align with Surgical */}
-                                            <div className="flex-1 bg-white rounded-xl shadow-[0_2px_4px_rgba(0,49,51,0.04)] border border-gray-200 flex flex-col overflow-hidden">
-                                                <div className="px-4 py-2 border-b border-gray-100 flex items-center bg-gray-50/80 justify-between">
+                                            <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-indigo-50 flex flex-col overflow-hidden border-t-indigo-500">
+                                                <div className="px-4 py-3 border-b border-indigo-50 flex items-center bg-indigo-50/30 justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">
                                                             <Users className="w-3 h-3" />
@@ -2305,7 +2326,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         ) : null}
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Demographics Modal */}
             {

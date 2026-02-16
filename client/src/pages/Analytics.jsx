@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BarChart3, TrendingUp, Users, Calendar, DollarSign, Clock, 
+import {
+  BarChart3, TrendingUp, Users, Calendar, DollarSign, Clock,
   Activity, FileText, Pill, AlertTriangle, CheckCircle, ArrowUp, ArrowDown,
   PieChart, Target, Stethoscope
 } from 'lucide-react';
@@ -17,7 +17,7 @@ const generateMockData = () => ({
     noShowRate: { value: 4.2, unit: '%', change: -1.2, trend: 'down' },
     patientSatisfaction: { value: 4.7, unit: '/5', change: 0.2, trend: 'up' },
   },
-  
+
   // Clinical Quality Measures
   qualityMeasures: [
     { name: 'Diabetes: A1c Control (<8%)', target: 80, actual: 76, patients: 342, compliant: 260 },
@@ -27,7 +27,7 @@ const generateMockData = () => ({
     { name: 'Preventive: Breast Cancer Screening', target: 70, actual: 72, patients: 634, compliant: 456 },
     { name: 'Tobacco: Cessation Counseling', target: 85, actual: 91, patients: 423, compliant: 385 },
   ],
-  
+
   // Appointment Statistics
   appointments: {
     completed: 892,
@@ -42,7 +42,7 @@ const generateMockData = () => ({
       { type: 'Procedure', count: 53 },
     ],
   },
-  
+
   // Provider Productivity
   providerStats: [
     { name: 'Dr. Rodriguez', patients: 847, appointments: 312, revenue: 156000, satisfaction: 4.8 },
@@ -50,7 +50,7 @@ const generateMockData = () => ({
     { name: 'Dr. Smith', patients: 698, appointments: 265, revenue: 128000, satisfaction: 4.7 },
     { name: 'NP Johnson', patients: 412, appointments: 198, revenue: 78000, satisfaction: 4.9 },
   ],
-  
+
   // Financial Metrics
   financials: {
     collections: 245000,
@@ -62,7 +62,7 @@ const generateMockData = () => ({
     denialRate: 3.2,
     collectionRate: 78.5,
   },
-  
+
   // Top Diagnoses
   topDiagnoses: [
     { code: 'E11.9', description: 'Type 2 Diabetes', count: 342 },
@@ -74,7 +74,7 @@ const generateMockData = () => ({
     { code: 'J45.909', description: 'Asthma', count: 112 },
     { code: 'K21.0', description: 'GERD', count: 98 },
   ],
-  
+
   // Pending Items
   pendingItems: {
     labResults: 45,
@@ -120,9 +120,8 @@ const Analytics = () => {
           <Icon className={`w-5 h-5 ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
         </div>
       </div>
-      <div className={`flex items-center mt-2 text-sm ${
-        (trend === 'up' && change > 0) || (trend === 'down' && change < 0) ? 'text-green-600' : 'text-red-600'
-      }`}>
+      <div className={`flex items-center mt-2 text-sm ${(trend === 'up' && change > 0) || (trend === 'down' && change < 0) ? 'text-green-600' : 'text-red-600'
+        }`}>
         {change > 0 ? <ArrowUp className="w-4 h-4 mr-1" /> : <ArrowDown className="w-4 h-4 mr-1" />}
         <span>{Math.abs(change)}% from last {dateRange}</span>
       </div>
@@ -132,7 +131,7 @@ const Analytics = () => {
   const QualityMeasureBar = ({ measure }) => {
     const percentage = measure.actual;
     const isAtTarget = measure.actual >= measure.target;
-    
+
     return (
       <div className="mb-4">
         <div className="flex items-center justify-between mb-1">
@@ -142,13 +141,12 @@ const Analytics = () => {
           </span>
         </div>
         <div className="relative h-3 bg-paper-200 rounded-full overflow-hidden">
-          <div 
-            className={`absolute left-0 top-0 h-full rounded-full transition-all ${
-              isAtTarget ? 'bg-green-500' : 'bg-yellow-500'
-            }`}
+          <div
+            className={`absolute left-0 top-0 h-full rounded-full transition-all ${isAtTarget ? 'bg-green-500' : 'bg-yellow-500'
+              }`}
             style={{ width: `${percentage}%` }}
           />
-          <div 
+          <div
             className="absolute top-0 h-full w-0.5 bg-ink-400"
             style={{ left: `${measure.target}%` }}
             title={`Target: ${measure.target}%`}
@@ -166,68 +164,74 @@ const Analytics = () => {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-ink-900">Practice Analytics</h1>
-          <p className="text-ink-500">Performance metrics and insights</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
+            <BarChart3 className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Practice Analytics</h1>
+            <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Performance metrics and insights</p>
+          </div>
         </div>
         <div className="flex items-center space-x-2">
-          <select 
+          <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            className="px-3 py-2 border border-paper-300 rounded-md text-sm"
+            className="px-3 py-2 border border-slate-100 rounded-xl text-[11px] font-bold uppercase tracking-wider text-slate-600 focus:ring-4 focus:ring-blue-50 transition-all select-none outline-none appearance-none bg-white cursor-pointer"
           >
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="quarter">This Quarter</option>
             <option value="year">This Year</option>
           </select>
-          <button className="px-4 py-2 text-white rounded-md text-sm transition-all duration-200 hover:shadow-md" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)' }} onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #2563EB, #1D4ED8)'} onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #3B82F6, #2563EB)'}>
+          <button className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 hover:shadow-lg active:scale-95">
             Export Report
           </button>
         </div>
       </div>
 
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <KPICard 
-          title="Total Patients" 
-          value={data.kpis.totalPatients.value} 
+        <KPICard
+          title="Total Patients"
+          value={data.kpis.totalPatients.value}
           change={data.kpis.totalPatients.change}
           trend={data.kpis.totalPatients.trend}
           icon={Users}
         />
-        <KPICard 
-          title="Appointments Today" 
-          value={data.kpis.appointmentsToday.value} 
+        <KPICard
+          title="Appointments Today"
+          value={data.kpis.appointmentsToday.value}
           change={data.kpis.appointmentsToday.change}
           trend={data.kpis.appointmentsToday.trend}
           icon={Calendar}
         />
-        <KPICard 
-          title="Avg Wait Time" 
+        <KPICard
+          title="Avg Wait Time"
           value={data.kpis.avgWaitTime.value}
           unit={data.kpis.avgWaitTime.unit}
           change={data.kpis.avgWaitTime.change}
           trend={data.kpis.avgWaitTime.trend}
           icon={Clock}
         />
-        <KPICard 
-          title="Monthly Revenue" 
-          value={data.kpis.revenue.value} 
+        <KPICard
+          title="Monthly Revenue"
+          value={data.kpis.revenue.value}
           change={data.kpis.revenue.change}
           trend={data.kpis.revenue.trend}
           icon={DollarSign}
         />
-        <KPICard 
-          title="No-Show Rate" 
+        <KPICard
+          title="No-Show Rate"
           value={data.kpis.noShowRate.value}
           unit={data.kpis.noShowRate.unit}
           change={data.kpis.noShowRate.change}
           trend={data.kpis.noShowRate.trend}
           icon={AlertTriangle}
         />
-        <KPICard 
-          title="Patient Satisfaction" 
+        <KPICard
+          title="Patient Satisfaction"
           value={data.kpis.patientSatisfaction.value}
           unit={data.kpis.patientSatisfaction.unit}
           change={data.kpis.patientSatisfaction.change}
@@ -259,7 +263,7 @@ const Analytics = () => {
             <Calendar className="w-5 h-5 mr-2 text-paper-600" />
             Appointment Overview
           </h2>
-          
+
           {/* Summary Stats */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="text-center p-3 bg-green-50 rounded-lg">
@@ -291,7 +295,7 @@ const Analytics = () => {
                   <span className="text-sm text-ink-600">{type.type}</span>
                   <div className="flex items-center space-x-2">
                     <div className="w-24 h-2 bg-paper-200 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className="h-full bg-paper-500 rounded-full"
                         style={{ width: `${percentage}%` }}
                       />
@@ -431,7 +435,7 @@ const Analytics = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

@@ -1,47 +1,40 @@
-# PageMD Global UI Redesign — Plan
+# PageMD Global UI Redesign — V3 (Vivid Navy & Blue)
 
-**Goal:** Transform the PageMD EMR into a premium, HD healthcare dashboard based on the "Teal Dashboard" reference image.
+**Goal:** Transform the UI into a high-vibrancy, professional clinical dashboard using Navy and Sapphire Blue. Eliminate all green/teal hues.
 
-## 🎨 Design System (Teal High-Contrast)
+## 🎨 Design System (Vivid Navy)
 
 | Category | Value | Reasoning |
 |----------|-------|-----------|
-| **Sidebar BG** | `#003133` (Deep Teal) | Provides strong anchor and contrast against content. |
-| **Page BG** | `#F0F4F5` (Light Teal-Gray) | Soft color that makes white cards "pop". |
-| **Surface** | `#FFFFFF` (Solid White) | Maximum clarity for clinical data. |
-| **Border** | `#E2E8E9` (Soft Teal-Border) | Replaces generic gray with branded depth. |
-| **Primary** | `#0891B2` (Cyan-600) | Vibrant, health-focused teal. |
-| **Active State** | `#FFFFFF15` (Translucent White) | Subtle highlight in dark sidebar. |
-| **Typography** | Figtree / Noto Sans | Premium, legible, professional. |
+| **Sidebar BG** | `#0F172A` (Rich Navy) | Darker than content, high contrast, non-green. |
+| **Page BG** | `#F8FAFC` (Clean Gray) | Neutral and crisp, prevents "washed out" feel. |
+| **Brand Primary**| `#2563EB` (Sapphire Blue) | Vivid, trustworthy, energetic health blue. |
+| **Surface** | `#FFFFFF` | Solid white. |
+| **Text (Body)** | `#111827` (Gray-900) | High contrast for readability. |
+| **Borders** | `#E5E7EB` (Gray-200) | Crisp definition. |
 
-## 🛠️ Step 1: Layout & Sidebar Shell
-- Update `Layout.jsx` to support a narrow (~72px) dark teal sidebar.
-- Move Logo to the top center of the sidebar.
-- Style `SidebarItem` with white icons and a clean "active indicator" (vertical teal bar).
-- Implement a white header strip with breadcrumbs and global search (matching image).
+## 🛠️ Step 1: Sidebar Overhaul
+- Change sidebar background to `#0F172A`.
+- Active state: `#2563EB` (Solid Blue) bar on the left.
+- Icons: Bright white/blue accents.
 
-## 🩺 Step 2: Snapshot Overhaul
-- Replace ALL frosted-lg/backdrop-blur elements with solid white cards.
-- **Card Styling**: `border border-gray-100 shadow-sm rounded-lg`.
-- **Headers**: Subtle gray-50 background on card headers to separate from body.
-- **Buttons**: Replace gradients with solid teal (`bg-teal-600`) and indigo fills.
-- **Spacing**: Rigid 8-point grid (16px/24px padding).
+## 🩺 Step 2: Vivid Snapshot (Fixing "Washed Out")
+- **Eliminate Mint**: Change page background to clean `#F8FAFC`.
+- **Vivid Headers**: Each card gets a strong top border or saturated header icon.
+- **Problems Header**: `border-t-2 border-rose-500`.
+- **Meds Header**: `border-t-2 border-blue-500`.
+- **Allergies Header**: `border-t-2 border-amber-500`.
+- **Shadows**: Increase to `shadow-md` for distinct depth.
 
-## 📋 Step 3: Global Component Sync
-- **PatientHeader**: Ensure it fits the light-bg/white-card aesthetic.
-- **Tables**: Crisp lines, no background nesting.
-- **Navigation**: Breadcrumb styling in the header.
-
-## ✅ Step 4: Verification
-- Visual audit against reference image.
-- Build test to ensure no breaking changes.
-- Contrast check (WCAG 2.1 AA compliant).
+## ✅ Step 3: Global Text Contrast
+- Audit all text labels. Anything `gray-400` becomes `gray-600` or `gray-900`.
+- CTA buttons switch from Cyan to **Indigo/Blue-600**.
 
 ---
 
 ## Agent Participation Matrix
 | Agent | Task |
 |-------|------|
-| **project-planner** | Coordination & Roadmap |
-| **frontend-specialist** | Implementation of Layout, Sidebar & Snapshot |
-| **test-engineer** | `vite build` verification & visual audit |
+| **project-planner** | Coordination |
+| **frontend-specialist** | Implementation of Navy Sidebar & Vivid Snapshot |
+| **test-engineer** | build & contrast audit |

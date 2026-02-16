@@ -512,8 +512,8 @@ const Inbasket = () => {
             {/* Sidebar */}
             <div className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-10">
                 <div className="p-4 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
-                        <Inbox className="w-5 h-5" /> In Basket
+                    <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 mb-4 uppercase tracking-tighter">
+                        <Inbox className="w-4 h-4" /> In Basket
                     </h2>
 
 
