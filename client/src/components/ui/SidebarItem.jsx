@@ -7,38 +7,38 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
         <Link
             to={to}
             className={cn(
-                "group relative flex items-center gap-2.5 rounded-lg transition-all duration-200 cursor-pointer",
-                collapsed ? "justify-center mx-1 p-1.5" : "mx-2 px-2.5 py-[7px]",
+                "group relative flex items-center transition-all duration-200 cursor-pointer",
+                collapsed ? "justify-center w-12 h-12 mx-auto rounded-xl" : "mx-3 px-3 py-2.5 rounded-lg",
                 active
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-100/70"
+                    ? "bg-white/10 text-white shadow-sm shadow-black/20"
+                    : "text-white/50 hover:text-white/90 hover:bg-white/5"
             )}
             title={collapsed ? label : undefined}
         >
             <div className="relative flex items-center justify-center w-5 h-5 flex-shrink-0">
                 <Icon className={cn(
-                    "w-[17px] h-[17px] transition-colors duration-200",
-                    active ? "text-blue-600" : "text-gray-400 group-hover:text-gray-600"
-                )} strokeWidth={1.8} />
+                    "w-[20px] h-[20px] transition-all duration-200",
+                    active ? "text-white" : "text-white/40 group-hover:text-white/80"
+                )} strokeWidth={active ? 2 : 1.5} />
             </div>
 
             {!collapsed && (
                 <>
                     <span className={cn(
-                        "text-[12px] transition-colors duration-200 flex-1 tracking-[-0.01em]",
-                        active ? "text-blue-700 font-semibold" : "text-gray-600 font-medium"
+                        "text-[13px] transition-colors duration-200 flex-1 ml-3 tracking-[-0.01em]",
+                        active ? "text-white font-semibold" : "text-white/60 font-medium"
                     )}>
                         {label}
                     </span>
 
                     {badge && (
                         <span className={cn(
-                            "min-w-[16px] h-[16px] px-1 text-[9px] font-semibold rounded-full flex items-center justify-center transition-all",
+                            "min-w-[18px] h-[18px] px-1.5 text-[10px] font-bold rounded-full flex items-center justify-center transition-all",
                             active
-                                ? "bg-blue-600 text-white"
+                                ? "bg-cyan-500 text-white"
                                 : badgeColor === 'amber'
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-gray-200 text-gray-600"
+                                    ? "bg-amber-500 text-white"
+                                    : "bg-white/20 text-white"
                         )}>
                             {badge}
                         </span>
@@ -46,17 +46,9 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
                 </>
             )}
 
-            {/* Active indicator — left bar */}
+            {/* Active Indicator Bar - Matches Reference Image */}
             {active && (
-                <div className="absolute left-0 top-[20%] bottom-[20%] w-[3px] bg-blue-600 rounded-r-full" />
-            )}
-
-            {/* Collapsed badge dot */}
-            {collapsed && badge && (
-                <div className={cn(
-                    "absolute -top-0.5 -right-0.5 w-[6px] h-[6px] rounded-full",
-                    badgeColor === 'amber' ? "bg-amber-500" : "bg-blue-600"
-                )} />
+                <div className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-cyan-400 rounded-r-full shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
             )}
         </Link>
     );
