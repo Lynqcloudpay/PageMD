@@ -300,7 +300,7 @@ const Cancellations = () => {
         <div className="p-4 max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Follow-up Tracker</h1>
+                <h1 className="text-2xl font-semibold text-[#10141A] tracking-tight">Follow-up Tracker</h1>
                 <p className="text-sm text-slate-500 mt-1">Manage and track follow-ups for cancellations and no-shows</p>
             </div>
 
@@ -320,7 +320,7 @@ const Cancellations = () => {
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${activeTab === 'pending' ? 'text-amber-700' : 'text-slate-700'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'pending' ? 'text-amber-700' : 'text-[#10141A]/60'}`}>
                             {stats.pending_count || 0}
                         </span>
                         <span className="text-xs text-slate-400 font-medium">notes</span>
@@ -341,7 +341,7 @@ const Cancellations = () => {
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-slate-700'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-[#10141A]/60'}`}>
                             {stats.addressed_count || 0}
                         </span>
                         <span className="text-xs text-slate-400 font-medium">done</span>
@@ -362,7 +362,7 @@ const Cancellations = () => {
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${activeTab === 'dismissed' ? 'text-rose-700' : 'text-slate-700'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'dismissed' ? 'text-[#CE6969]' : 'text-[#10141A]/60'}`}>
                             {stats.dismissed_count || 0}
                         </span>
                         <span className="text-xs text-slate-400 font-medium">closed</span>
@@ -383,7 +383,7 @@ const Cancellations = () => {
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${activeTab === 'all' ? 'text-blue-700' : 'text-slate-700'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'all' ? 'text-[#83A2DB]' : 'text-[#10141A]/60'}`}>
                             {stats.total_count || 0}
                         </span>
                         <span className="text-xs text-slate-400 font-medium">records</span>
@@ -464,7 +464,7 @@ const Cancellations = () => {
                                                 {group.displayDate}
                                             </h3>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
                                                     ? 'bg-slate-200 text-slate-600'
                                                     : 'bg-blue-100 text-blue-700'
                                                     }`}>
@@ -732,7 +732,7 @@ const Cancellations = () => {
                 <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
                         <div className="bg-green-600 px-4 py-3 rounded-t-xl flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-white">Mark as Addressed</h2>
+                            <h2 className="text-lg font-semibold text-white">Mark as Addressed</h2>
                             <button onClick={() => { setShowAddressModal(false); setAddressingFollowup(null); setAddressNote(''); }} className="text-white hover:text-green-100">
                                 <X className="w-5 h-5" />
                             </button>
@@ -776,7 +776,7 @@ const Cancellations = () => {
                 <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
                         <div className="bg-red-600 px-4 py-3 rounded-t-xl flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-white">Dismiss Follow-up</h2>
+                            <h2 className="text-lg font-semibold text-white">Dismiss Follow-up</h2>
                             <button onClick={() => { setShowDismissModal(false); setDissmissingFollowup(null); setDismissReason(''); setDismissNote(''); }} className="text-white hover:text-red-100">
                                 <X className="w-5 h-5" />
                             </button>

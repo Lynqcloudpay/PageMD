@@ -451,7 +451,7 @@ const InbasketRedesign = () => {
         <div className="h-[calc(100vh-64px)] flex bg-gray-50">
             <div className="w-72 bg-white border-r border-gray-200 flex flex-col">
                 <div className="p-4 border-b border-gray-100">
-                    <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <h1 className="text-xl font-semibold text-[#10141A] flex items-center gap-2">
                         <Inbox className="w-6 h-6 text-blue-600" />
                         Clinical Inbox
                     </h1>
@@ -514,7 +514,7 @@ const InbasketRedesign = () => {
                                 key={section.id}
                                 onClick={() => setActiveSection(section.id)}
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-all ${isActive
-                                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm'
+                                    ? 'bg-[#83A2DB]/8 border border-[#83A2DB]/20 shadow-[0_1px_4px_rgba(0,0,0,0.03)]'
                                     : 'hover:bg-gray-50'
                                     }`}
                             >
@@ -722,13 +722,13 @@ const InbasketRedesign = () => {
                 selectedItem && (
                     <div className="w-[480px] bg-white border-l border-gray-200 flex flex-col">
                         {/* Detail Header */}
-                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+                        <div className="p-4 border-b border-[#E4E4E4]">
                             <div className="flex items-start justify-between">
                                 <div>
                                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${getPriorityBadge(selectedItem.priority)}`}>
                                         {selectedItem.priority}
                                     </span>
-                                    <h2 className="text-lg font-bold text-gray-900 mt-2">{selectedItem.subject}</h2>
+                                    <h2 className="text-lg font-medium text-[#10141A] mt-2">{selectedItem.subject}</h2>
                                     <button
                                         onClick={() => openPatientChart(selectedItem)}
                                         className="text-blue-600 hover:underline text-sm flex items-center gap-1 mt-1"
@@ -950,9 +950,9 @@ const InbasketRedesign = () => {
                 showNewChat && !selectedItem && (
                     <div className="w-[420px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-20">
                         {/* Header */}
-                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
+                        <div className="p-4 border-b border-[#E4E4E4]">
                             <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-lg font-bold text-gray-900">
+                                <h3 className="text-lg font-medium text-[#10141A]">
                                     {composeData.type === 'portal_message' ? 'New Patient Message' : 'New Staff Message'}
                                 </h3>
                                 <button onClick={() => setShowNewChat(false)} className="text-gray-400 hover:text-gray-600">

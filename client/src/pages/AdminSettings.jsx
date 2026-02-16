@@ -198,7 +198,7 @@ const AdminSettings = () => {
         <div className="p-4 bg-indigo-50 rounded-2xl animate-pulse">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
         </div>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Loading Systems...</p>
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-widest animate-pulse">Loading Systems...</p>
       </div>
     );
   }
@@ -213,9 +213,9 @@ const AdminSettings = () => {
               <Settings className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-none">Administration & Settings</h1>
+              <h1 className="text-xl font-semibold text-slate-900 tracking-tight leading-none">Administration & Settings</h1>
               <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Practice Control Panel</span>
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Practice Control Panel</span>
                 <span className="w-1 h-1 rounded-full bg-slate-200"></span>
                 <span className="text-[10px] font-medium text-slate-400">Manage clinical configuration, users, and security</span>
               </div>
@@ -225,7 +225,7 @@ const AdminSettings = () => {
           {/* Save Status - Positioned in Header if active */}
           {saveStatus && (
             <div className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold animate-in fade-in zoom-in duration-300",
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-medium animate-in fade-in zoom-in duration-300",
               saveStatus.type === 'success' ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
             )}>
               {saveStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
@@ -246,7 +246,7 @@ const AdminSettings = () => {
                 setActiveTab(tab.id);
               }}
               className={cn(
-                "flex items-center gap-2 px-5 py-3.5 text-[11px] font-bold uppercase tracking-wider transition-all relative whitespace-nowrap",
+                "flex items-center gap-2 px-5 py-3.5 text-[11px] font-medium uppercase tracking-wider transition-all relative whitespace-nowrap",
                 activeTab === tab.id
                   ? "text-indigo-600"
                   : "text-slate-400 hover:text-slate-600"
@@ -399,12 +399,12 @@ const PracticeSettingsTab = ({
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Building2 className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Practice Information</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Practice Information</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
           <div className="md:col-span-2">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Practice Name *</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Practice Name *</label>
             <input
               type="text"
               value={settings.practice_name || ''}
@@ -415,7 +415,7 @@ const PracticeSettingsTab = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Practice Type</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Practice Type</label>
             <input
               type="text"
               value={settings.practice_type || ''}
@@ -427,7 +427,7 @@ const PracticeSettingsTab = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Tax ID</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Tax ID</label>
               <input
                 type="text"
                 value={settings.tax_id || ''}
@@ -437,7 +437,7 @@ const PracticeSettingsTab = ({
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">NPI</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">NPI</label>
               <input
                 type="text"
                 maxLength={10}
@@ -450,7 +450,7 @@ const PracticeSettingsTab = ({
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Clinic Address</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Clinic Address</label>
             <div className="space-y-3">
               <input
                 type="text"
@@ -495,7 +495,7 @@ const PracticeSettingsTab = ({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Phone</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Phone</label>
               <input
                 type="tel"
                 value={settings.phone || ''}
@@ -504,7 +504,7 @@ const PracticeSettingsTab = ({
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Fax</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Fax</label>
               <input
                 type="tel"
                 value={settings.fax || ''}
@@ -515,7 +515,7 @@ const PracticeSettingsTab = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Official Email</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Official Email</label>
             <input
               type="email"
               value={settings.email || ''}
@@ -532,7 +532,7 @@ const PracticeSettingsTab = ({
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Globe className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Practice Branding</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Practice Branding</h2>
         </div>
 
         <div className="flex flex-col md:flex-row items-center md:items-start gap-12">
@@ -544,7 +544,7 @@ const PracticeSettingsTab = ({
                 ) : (
                   <div className="flex flex-col items-center gap-3 text-slate-300">
                     <Building2 className="w-12 h-12 stroke-[1]" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">No Logo</span>
+                    <span className="text-[10px] font-medium uppercase tracking-widest">No Logo</span>
                   </div>
                 )}
 
@@ -587,7 +587,7 @@ const PracticeSettingsTab = ({
 
           <div className="flex-1 space-y-6 py-4">
             <div>
-              <h4 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest mb-3">Logo Guidelines</h4>
+              <h4 className="text-[11px] font-medium text-slate-800 uppercase tracking-widest mb-3">Logo Guidelines</h4>
               <p className="text-sm text-slate-500 leading-relaxed max-w-lg">
                 Your practice logo defines your official documentation identity. It will appear on all patient notes, prescriptions, and portals.
               </p>
@@ -601,14 +601,14 @@ const PracticeSettingsTab = ({
               ].map((item, idx) => (
                 <div key={idx} className="flex items-center gap-2 px-4 py-2 bg-slate-50/80 rounded-xl border border-slate-100">
                   <item.icon className="w-3 h-3 text-emerald-500" />
-                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{item.label}</span>
+                  <span className="text-[10px] font-medium text-slate-600 uppercase tracking-wider">{item.label}</span>
                 </div>
               ))}
             </div>
 
             <div className="pt-4 divide-y divide-slate-100">
               <div className="py-4">
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Practice Website</label>
+                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Practice Website</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                     <Globe className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
@@ -633,12 +633,12 @@ const PracticeSettingsTab = ({
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Clock className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Regional & Systems</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Regional & Systems</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Timezone</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Timezone</label>
             <select
               value={settings.timezone || 'America/New_York'}
               onChange={(e) => updateField('timezone', e.target.value)}
@@ -653,7 +653,7 @@ const PracticeSettingsTab = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Date Format</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Date Format</label>
             <select
               value={settings.date_format || 'MM/DD/YYYY'}
               onChange={(e) => updateField('date_format', e.target.value)}
@@ -666,7 +666,7 @@ const PracticeSettingsTab = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Time Format</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Time Format</label>
             <select
               value={settings.time_format || '12h'}
               onChange={(e) => updateField('time_format', e.target.value)}
@@ -678,7 +678,7 @@ const PracticeSettingsTab = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Scheduling Start Time</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Scheduling Start Time</label>
             <input
               type="time"
               value={settings.scheduling_start_time ? settings.scheduling_start_time.substring(0, 5) : '07:00'}
@@ -688,7 +688,7 @@ const PracticeSettingsTab = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Scheduling End Time</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-2 px-1">Scheduling End Time</label>
             <input
               type="time"
               value={settings.scheduling_end_time ? settings.scheduling_end_time.substring(0, 5) : '19:00'}
@@ -704,7 +704,7 @@ const PracticeSettingsTab = ({
         <button
           onClick={onSave}
           disabled={saving}
-          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+          className="pointer-events-auto group px-8 py-3.5 bg-[#83A2DB] text-white rounded-2xl font-semibold text-xs uppercase tracking-widest flex items-center gap-3 shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:bg-[#83A2DB]/90 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -765,13 +765,13 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Lock className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Password Policy</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Password Policy</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
           <div className="space-y-6">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Min Length Requirement</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Min Length Requirement</label>
               <input
                 type="number"
                 min={6}
@@ -783,7 +783,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
             </div>
 
             <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-3">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Complexity Rules</p>
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-2">Complexity Rules</p>
               {[
                 { id: 'password_require_uppercase', label: 'Uppercase Letters' },
                 { id: 'password_require_lowercase', label: 'Lowercase Letters' },
@@ -811,7 +811,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
           <div className="space-y-6">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Audit Trail Retention</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Audit Trail Retention</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                   <Clock className="w-4 h-4 text-slate-300 group-focus-within:text-indigo-400 transition-colors" />
@@ -837,12 +837,12 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <ShieldCheck className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Access Control</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Access Control</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Session Timeout</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Session Timeout</label>
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -852,11 +852,11 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
                 onChange={(e) => updateField('session_timeout_minutes', parseInt(e.target.value))}
                 className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
               />
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Min</span>
+              <span className="text-[10px] font-medium text-slate-400 uppercase">Min</span>
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Inactivity Lock</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Inactivity Lock</label>
             <div className="flex items-center gap-3">
               <input
                 type="number"
@@ -866,11 +866,11 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
                 onChange={(e) => updateField('inactivity_timeout_minutes', parseInt(e.target.value))}
                 className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
               />
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Min</span>
+              <span className="text-[10px] font-medium text-slate-400 uppercase">Min</span>
             </div>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Max Login Fails</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Max Login Fails</label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -878,9 +878,9 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
                 max={10}
                 value={settings.max_login_attempts || 5}
                 onChange={(e) => updateField('max_login_attempts', parseInt(e.target.value))}
-                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center font-bold text-rose-600"
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center font-medium text-rose-600"
               />
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Attempts</span>
+              <span className="text-[10px] font-medium text-slate-400 uppercase">Attempts</span>
             </div>
           </div>
         </div>
@@ -889,7 +889,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
           <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100/30">
             <div className="flex items-center gap-3 mb-4">
               <Lock className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-sm font-bold text-slate-800">Multi-Factor Authentication (MFA)</h3>
+              <h3 className="text-sm font-medium text-slate-800">Multi-Factor Authentication (MFA)</h3>
             </div>
             <div className="space-y-4">
               {[
@@ -918,7 +918,7 @@ const SecuritySettingsTab = ({ settings, setSettings, onSave, saving }) => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+          className="pointer-events-auto group px-8 py-3.5 bg-[#83A2DB] text-white rounded-2xl font-semibold text-xs uppercase tracking-widest flex items-center gap-3 shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:bg-[#83A2DB]/90 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -950,12 +950,12 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Stethoscope className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Visit Requirements</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Visit Requirements</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Mandatory Documentation</p>
+            <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mb-4">Mandatory Documentation</p>
             {[
               { id: 'require_dx_on_visit', label: 'Require diagnosis for visit sign-off' },
               { id: 'require_vitals_on_visit', label: 'Require vitals entry for checkout' }
@@ -977,7 +977,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
 
           <div className="space-y-6">
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Default Visit Duration</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Default Visit Duration</label>
               <div className="flex items-center gap-3">
                 <input
                   type="number"
@@ -987,12 +987,12 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
                   onChange={(e) => updateField('default_visit_duration_minutes', parseInt(e.target.value))}
                   className="w-24 px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
                 />
-                <span className="text-[10px] font-bold text-slate-400 uppercase">Minutes</span>
+                <span className="text-[10px] font-medium text-slate-400 uppercase">Minutes</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Scheduling Density</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Scheduling Density</label>
               <div className="flex items-center gap-3">
                 <input
                   type="number"
@@ -1008,7 +1008,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
                   type="button"
                   onClick={() => updateField('max_appointments_per_slot', settings.max_appointments_per_slot ? null : 2)}
                   className={cn(
-                    "px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all",
+                    "px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-wider border transition-all",
                     !settings.max_appointments_per_slot ? "bg-indigo-50 border-indigo-100 text-indigo-600" : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
                   )}
                 >
@@ -1029,7 +1029,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Bell className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Clinical Decision Support</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Clinical Decision Support</h2>
         </div>
 
         <div className="space-y-4 max-w-lg">
@@ -1063,7 +1063,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Database className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Data Retention Policy</h2>
+          <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-widest leading-none">Data Retention Policy</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -1073,7 +1073,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
             { id: 'document_retention_days', label: 'Clinical Documents' }
           ].map(field => (
             <div key={field.id}>
-              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">{field.label}</label>
+              <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">{field.label}</label>
               <div className="flex items-center gap-3">
                 <input
                   type="number"
@@ -1083,7 +1083,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
                   onChange={(e) => updateField(field.id, parseInt(e.target.value))}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 text-sm transition-all text-center"
                 />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Days</span>
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">Days</span>
               </div>
             </div>
           ))}
@@ -1100,7 +1100,7 @@ const ClinicalSettingsTab = ({ settings, setSettings, onSave, saving }) => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-medium text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1131,12 +1131,12 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Mail className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Email Notifications</h2>
+          <h2 className="text-sm font-medium text-slate-800 uppercase tracking-widest leading-none">Email Notifications</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">From Name</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">From Name</label>
             <input
               type="text"
               value={settings.from_name || ''}
@@ -1147,7 +1147,7 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">From Email</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">From Email</label>
             <input
               type="email"
               value={settings.from_email || ''}
@@ -1157,7 +1157,7 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Reply-To Address</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Reply-To Address</label>
             <input
               type="email"
               value={settings.reply_to_email || ''}
@@ -1167,7 +1167,7 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-1">Sandbox Test Address</label>
+            <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-widest mb-3 px-1">Sandbox Test Address</label>
             <input
               type="email"
               value={settings.test_email || ''}
@@ -1189,7 +1189,7 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
             >
               {settings.enabled && <CheckCircle2 className="w-3 h-3 text-white" />}
             </div>
-            <span className="text-sm text-slate-600 font-bold group-hover:text-slate-900 transition-colors">Enable automatic email transmissions</span>
+            <span className="text-sm text-slate-600 font-medium group-hover:text-slate-900 transition-colors">Enable automatic email transmissions</span>
           </label>
         </div>
       </div>
@@ -1198,7 +1198,7 @@ const EmailSettingsTab = ({ settings, setSettings, onSave, saving }) => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+          className="pointer-events-auto group px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-medium text-xs uppercase tracking-widest flex items-center gap-3 shadow-2xl shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
         >
           {saving ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1237,7 +1237,7 @@ const FeaturesTab = ({ features, onToggle }) => {
           <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
             <Zap className="w-4 h-4 text-slate-500" />
           </div>
-          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest leading-none">Feature Control Matrix</h2>
+          <h2 className="text-sm font-medium text-slate-800 uppercase tracking-widest leading-none">Feature Control Matrix</h2>
         </div>
         <p className="text-sm text-slate-500 max-w-xl">
           Toggle internal system flags to enable or disable modules. Changes are applied instantly across the entire clinic instance.
@@ -1247,7 +1247,7 @@ const FeaturesTab = ({ features, onToggle }) => {
           {Object.keys(groupedFeatures).map(category => (
             <div key={category} className="space-y-4">
               <div className="flex items-center gap-4">
-                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">{categoryLabels[category] || category}</h3>
+                <h3 className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">{categoryLabels[category] || category}</h3>
                 <div className="h-px bg-slate-100 w-full"></div>
               </div>
 
@@ -1255,7 +1255,7 @@ const FeaturesTab = ({ features, onToggle }) => {
                 {groupedFeatures[category].map(feature => (
                   <div key={feature.id} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-sm transition-all group">
                     <div className="flex-1 pr-4">
-                      <div className="text-sm font-bold text-slate-700 group-hover:text-indigo-900 transition-colors uppercase tracking-tight">{feature.description || feature.feature_key}</div>
+                      <div className="text-sm font-medium text-slate-700 group-hover:text-indigo-900 transition-colors uppercase tracking-tight">{feature.description || feature.feature_key}</div>
                       {feature.requires_config && (
                         <div className="text-[10px] text-slate-400 font-medium mt-1 uppercase tracking-wide">Requires Configuration</div>
                       )}
@@ -1263,7 +1263,7 @@ const FeaturesTab = ({ features, onToggle }) => {
                     <button
                       onClick={() => onToggle(feature.feature_key, !feature.enabled)}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm",
+                        "flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-medium uppercase tracking-wider transition-all shadow-sm",
                         feature.enabled
                           ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-100"
                           : "bg-slate-200 text-slate-600 hover:bg-slate-300 border border-slate-200"
@@ -1413,7 +1413,7 @@ const BillingSettingsTab = () => {
             </p>
             <button
               onClick={openPortal}
-              className="mt-3 px-3 py-1.5 bg-white border border-current rounded-lg text-[10px] font-bold uppercase transition-transform active:scale-95"
+              className="mt-3 px-3 py-1.5 bg-white border border-current rounded-lg text-[10px] font-medium uppercase transition-transform active:scale-95"
             >
               Update Payment Details
             </button>

@@ -7,52 +7,56 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
         <Link
             to={to}
             className={cn(
-                "group relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-[1.2rem] transition-all duration-300 overflow-hidden mb-0.5",
+                "group relative flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer",
+                collapsed ? "justify-center px-0 mx-1" : "mx-2",
                 active
-                    ? "text-blue-700 bg-white/95 shadow-md scale-[1.02] z-20"
-                    : "text-slate-800 hover:text-blue-600 hover:bg-white/50"
+                    ? "bg-[#83A2DB]/10 text-[#10141A]"
+                    : "text-[#10141A]/60 hover:text-[#10141A] hover:bg-[#10141A]/[0.03]"
             )}
+            title={collapsed ? label : undefined}
         >
-            {/* The "Bubble" animation from login page */}
-            <div className={cn(
-                "absolute inset-0 z-0 transition-all duration-700 ease-out scale-0 origin-center rounded-full bg-blue-50/50 group-hover:scale-[3]",
-                active && "scale-[3] bg-white"
-            )} />
-
-            <div className="relative z-10 flex items-center w-full">
+            <div className="relative flex items-center justify-center w-5 h-5 flex-shrink-0">
                 <Icon className={cn(
-                    "w-5 h-5 transition-transform duration-300 group-hover:scale-110",
-                    active ? "text-blue-600" : "text-slate-500 group-hover:text-blue-500"
-                )} />
-
-                {!collapsed && (
-                    <>
-                        <span className={cn(
-                            "ml-3 text-[14px] font-bold transition-all duration-300 flex-1 tracking-tight",
-                            active ? "text-blue-700" : "text-slate-800 group-hover:text-blue-600"
-                        )}>
-                            {label}
-                        </span>
-
-                        {badge && (
-                            <span className={cn(
-                                "px-2 py-0.5 text-[10px] font-bold rounded-full transition-all",
-                                active
-                                    ? "bg-blue-600 text-white"
-                                    : badgeColor === 'amber'
-                                        ? "bg-amber-100 text-amber-600"
-                                        : "bg-blue-100 text-blue-600"
-                            )}>
-                                {badge}
-                            </span>
-                        )}
-                    </>
-                )}
+                    "w-[18px] h-[18px] transition-colors duration-200",
+                    active ? "text-[#83A2DB]" : "text-[#10141A]/40 group-hover:text-[#10141A]/70"
+                )} strokeWidth={1.8} />
             </div>
 
-            {/* Subtle indicator for active state */}
+            {!collapsed && (
+                <>
+                    <span className={cn(
+                        "text-[13px] font-normal transition-colors duration-200 flex-1 tracking-[-0.01em]",
+                        active ? "text-[#10141A] font-medium" : ""
+                    )}>
+                        {label}
+                    </span>
+
+                    {badge && (
+                        <span className={cn(
+                            "min-w-[18px] h-[18px] px-1.5 text-[10px] font-medium rounded-full flex items-center justify-center transition-all",
+                            active
+                                ? "bg-[#83A2DB] text-white"
+                                : badgeColor === 'amber'
+                                    ? "bg-amber-50 text-amber-600"
+                                    : "bg-[#83A2DB]/10 text-[#83A2DB]"
+                        )}>
+                            {badge}
+                        </span>
+                    )}
+                </>
+            )}
+
+            {/* Minimal active indicator */}
             {active && (
-                <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-blue-500 rounded-r-full z-20 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                <div className="absolute left-0 top-[30%] bottom-[30%] w-[2px] bg-[#83A2DB] rounded-r-full" />
+            )}
+
+            {/* Collapsed badge dot */}
+            {collapsed && badge && (
+                <div className={cn(
+                    "absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full",
+                    badgeColor === 'amber' ? "bg-amber-400" : "bg-[#83A2DB]"
+                )} />
             )}
         </Link>
     );

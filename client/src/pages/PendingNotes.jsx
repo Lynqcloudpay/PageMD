@@ -180,7 +180,7 @@ const PendingNotes = () => {
         <div className="p-6 max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Pending Notes</h1>
+                <h1 className="text-2xl font-semibold text-[#10141A] tracking-tight">Pending Notes</h1>
                 <p className="text-sm text-slate-500 mt-1">{pendingVisits.length} note{pendingVisits.length !== 1 ? 's' : ''} pending completion or signature</p>
             </div>
 
@@ -200,7 +200,7 @@ const PendingNotes = () => {
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${filterStatus === 'all' ? 'text-blue-700' : 'text-slate-700'}`}>
+                        <span className={`text-3xl font-semibold ${filterStatus === 'all' ? 'text-[#83A2DB]' : 'text-[#10141A]/60'}`}>
                             {pendingVisits.length}
                         </span>
                         <span className="text-xs text-slate-400 font-medium">notes</span>
@@ -221,7 +221,7 @@ const PendingNotes = () => {
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${filterStatus === 'draft' ? 'text-emerald-700' : 'text-slate-700'}`}>
+                        <span className={`text-3xl font-semibold ${filterStatus === 'draft' ? 'text-emerald-700' : 'text-[#10141A]/60'}`}>
                             {pendingVisits.filter(v => getNoteStatus(v).label === 'Ready to Sign').length}
                         </span>
                         <span className="text-xs text-slate-400 font-medium">review</span>
@@ -242,7 +242,7 @@ const PendingNotes = () => {
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${filterStatus === 'incomplete' ? 'text-amber-700' : 'text-slate-700'}`}>
+                        <span className={`text-3xl font-semibold ${filterStatus === 'incomplete' ? 'text-amber-700' : 'text-[#10141A]/60'}`}>
                             {pendingVisits.filter(v => {
                                 const status = getNoteStatus(v);
                                 return status.label === 'Incomplete' || status.label === 'Not Started';
@@ -336,7 +336,7 @@ const PendingNotes = () => {
                                             {group.displayDate}
                                         </h3>
                                         <div className="flex items-center gap-2 mt-0.5">
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
+                                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
                                                 ? 'bg-slate-200 text-slate-600'
                                                 : 'bg-blue-100 text-blue-700'
                                                 }`}>

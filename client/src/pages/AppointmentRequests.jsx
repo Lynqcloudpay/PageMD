@@ -320,7 +320,7 @@ const AppointmentRequests = () => {
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             <CalendarPlus className="w-5 h-5 text-amber-500" />
-                            <h1 className="text-lg font-bold text-gray-900">Appt Requests</h1>
+                            <h1 className="text-lg font-semibold text-[#10141A]">Appt Requests</h1>
                         </div>
                         <button
                             onClick={() => fetchData(true)}
@@ -344,19 +344,19 @@ const AppointmentRequests = () => {
                         <div className="flex p-1 bg-gray-200/50 rounded-lg">
                             <button
                                 onClick={() => setFilterStatus('new')}
-                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'new' ? 'bg-white text-amber-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'new' ? 'bg-white text-amber-600 shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
                             >
                                 New ({requests.filter(r => r.status === 'new' && !r.subject?.includes('DECLINED')).length})
                             </button>
                             <button
                                 onClick={() => setFilterStatus('declined')}
-                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'declined' ? 'bg-white text-rose-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'declined' ? 'bg-white text-[#CE6969] shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
                             >
                                 Refusals ({requests.filter(r => r.subject?.includes('DECLINED')).length})
                             </button>
                             <button
                                 onClick={() => setFilterStatus('completed')}
-                                className={`flex-1 py-1 px-3 text-xs font-bold rounded-md transition-all ${filterStatus === 'completed' ? 'bg-white text-gray-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'completed' ? 'bg-white text-[#10141A]/70 shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
                             >
                                 History
                             </button>
@@ -413,18 +413,18 @@ const AppointmentRequests = () => {
                 {selectedRequest ? (
                     <div className="flex-1 flex flex-col overflow-hidden m-6 bg-white rounded-2xl shadow-sm border border-gray-200 ring-1 ring-black/5">
                         {/* Detail Header */}
-                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-amber-50/30 to-transparent">
+                        <div className="p-6 border-b border-[#E4E4E4] flex items-center justify-between">
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedRequest.subject || 'Appointment Request'}</h2>
+                                <h2 className="text-2xl font-semibold text-[#10141A] mb-1">{selectedRequest.subject || 'Appointment Request'}</h2>
                                 <button
                                     onClick={() => openPatientChart(selectedRequest)}
                                     className="flex items-center gap-2 group"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs ring-2 ring-white">
+                                    <div className="w-8 h-8 rounded-full bg-[#83A2DB]/15 text-[#83A2DB] flex items-center justify-center font-medium text-xs ring-2 ring-white">
                                         {getPatientDisplayName(selectedRequest).charAt(0)}
                                     </div>
                                     <div className="text-left">
-                                        <div className="text-base font-bold text-gray-900 group-hover:text-amber-600 transition-colors flex items-center gap-1">
+                                        <div className="text-base font-medium text-[#10141A] group-hover:text-[#83A2DB] transition-colors flex items-center gap-1">
                                             {getPatientDisplayName(selectedRequest)}
                                             <ChevronRight className="w-4 h-4 translate-y-px" />
                                         </div>
@@ -583,7 +583,7 @@ const AppointmentRequests = () => {
                         <div className="w-24 h-24 bg-amber-50 rounded-3xl flex items-center justify-center mb-6">
                             <CalendarPlus className="w-12 h-12 text-amber-400" />
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Manage Appointment Requests</h2>
+                        <h2 className="text-2xl font-semibold text-[#10141A] mb-2">Manage Appointment Requests</h2>
                         <p className="text-gray-500 max-w-sm">Select a registration request from the list to approve, schedule, or deny the appointment.</p>
                     </div>
                 )}

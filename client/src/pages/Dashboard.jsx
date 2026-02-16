@@ -102,27 +102,27 @@ const Dashboard = () => {
         return (
             <div className="p-8 flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <div className="inline-block spinner text-strong-azure w-8 h-8"></div>
-                    <p className="mt-4 text-deep-gray/70 font-medium">Loading clinical desktop...</p>
+                    <div className="inline-block spinner text-[#83A2DB] w-8 h-8"></div>
+                    <p className="mt-4 text-[#10141A]/60 font-light">Loading clinical desktop...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="w-full bg-[#F8FAFC] min-h-screen">
+        <div className="w-full bg-[#F5F5F5] min-h-screen">
             {/* Top Compact Header */}
-            <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+            <div className="bg-white/80 backdrop-blur-xl border-b border-[#E4E4E4] px-6 py-3 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center space-x-4">
-                    <h1 className="text-xl font-bold text-gray-900 border-r border-gray-200 pr-4">Dashboard</h1>
-                    <p className="text-sm font-medium text-gray-500">
+                    <h1 className="text-xl font-semibold text-[#10141A] border-r border-[#E4E4E4] pr-4">Dashboard</h1>
+                    <p className="text-sm font-light text-[#10141A]/50">
                         {format(new Date(), 'EEEE, MMMM d, yyyy')}
                     </p>
                 </div>
                 <div className="flex items-center space-x-3">
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-[#83A2DB]/10 text-[#83A2DB] rounded-full border border-[#83A2DB]/20">
                         <User className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">{user?.firstName} {user?.lastName}</span>
+                        <span className="text-xs font-medium">{user?.firstName} {user?.lastName}</span>
                     </div>
                     <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/patients')}>
                         New Patient
@@ -134,52 +134,52 @@ const Dashboard = () => {
 
                 {/* Stats Bar - Extreme Density */}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-blue-300 transition-colors cursor-pointer">
+                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer">
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Today's Visits</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.visitsToday || 0}</p>
+                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Today's Visits</p>
+                            <p className="text-xl font-semibold text-[#10141A]">{stats?.visitsToday || 0}</p>
                         </div>
                         <Calendar className="w-5 h-5 text-blue-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-orange-300 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
+                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">In Basket</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.pendingOrders || 0}</p>
+                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">In Basket</p>
+                            <p className="text-xl font-semibold text-[#10141A]">{stats?.pendingOrders || 0}</p>
                         </div>
                         <ClipboardList className="w-5 h-5 text-orange-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-green-300 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
+                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/tasks')}>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unread Labs</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.unreadLabs || 0}</p>
+                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Unread Labs</p>
+                            <p className="text-xl font-semibold text-[#10141A]">{stats?.unreadLabs || 0}</p>
                         </div>
                         <Activity className="w-5 h-5 text-green-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-purple-300 transition-colors cursor-pointer" onClick={() => navigate('/messages')}>
+                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/messages')}>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Messages</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.unreadMessages || 0}</p>
+                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Messages</p>
+                            <p className="text-xl font-semibold text-[#10141A]">{stats?.unreadMessages || 0}</p>
                         </div>
                         <MessageSquare className="w-5 h-5 text-purple-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-red-300 transition-colors cursor-pointer" onClick={() => navigate('/pending-notes')}>
+                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/pending-notes')}>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unsigned Notes</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.pendingNotes || 0}</p>
+                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Unsigned Notes</p>
+                            <p className="text-xl font-semibold text-[#10141A]">{stats?.pendingNotes || 0}</p>
                         </div>
                         <FileText className="w-5 h-5 text-red-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-amber-300 transition-colors cursor-pointer" onClick={() => navigate('/cancellations')}>
+                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/cancellations')}>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cancellations</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.cancellationFollowups || 0}</p>
+                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Cancellations</p>
+                            <p className="text-xl font-semibold text-[#10141A]">{stats?.cancellationFollowups || 0}</p>
                         </div>
                         <XCircle className="w-5 h-5 text-amber-500 opacity-80" />
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm hover:border-gray-300 transition-colors cursor-pointer" onClick={() => navigate('/patients')}>
+                    <div className="bg-white p-3 rounded-xl border border-[#E4E4E4] flex items-center justify-between shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:border-[#83A2DB]/40 transition-colors cursor-pointer" onClick={() => navigate('/patients')}>
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Patients</p>
-                            <p className="text-xl font-bold text-gray-900">{stats?.totalPatients || 0}</p>
+                            <p className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-wider">Total Patients</p>
+                            <p className="text-xl font-semibold text-[#10141A]">{stats?.totalPatients || 0}</p>
                         </div>
                         <Users className="w-5 h-5 text-gray-500 opacity-80" />
                     </div>
@@ -189,12 +189,12 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                     {/* LEFT Column: Daily Schedule (Elation style) */}
-                    <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                    <div className="lg:col-span-8 bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-[#E4E4E4] overflow-hidden">
+                        <div className="px-5 py-4 border-b border-[#E4E4E4] flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-blue-600" />
-                                <h2 className="font-bold text-gray-900">Provider Schedule</h2>
-                                <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-bold">
+                                <Calendar className="w-4 h-4 text-[#83A2DB]" />
+                                <h2 className="font-medium text-[#10141A]">Provider Schedule</h2>
+                                <span className="bg-[#83A2DB]/10 text-[#83A2DB] text-xs px-2 py-0.5 rounded-full font-medium">
                                     {todayAppointments.length} Appointments
                                 </span>
                             </div>
@@ -213,13 +213,13 @@ const Dashboard = () => {
                                 </div>
                             ) : todayAppointments.length > 0 ? (
                                 <table className="w-full text-left border-collapse">
-                                    <thead className="bg-[#FAFBFC] text-gray-400 text-[10px] uppercase tracking-wider font-bold">
+                                    <thead className="bg-[#F5F5F5] text-[#10141A]/40 text-[10px] uppercase tracking-wider font-medium">
                                         <tr>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Time</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Patient</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Reason/Type</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Status</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-bold">Provider</th>
+                                            <th className="px-5 py-2 border-b border-[#E4E4E4] font-medium">Time</th>
+                                            <th className="px-5 py-2 border-b border-[#E4E4E4] font-medium">Patient</th>
+                                            <th className="px-5 py-2 border-b border-[#E4E4E4] font-medium">Reason/Type</th>
+                                            <th className="px-5 py-2 border-b border-[#E4E4E4] font-medium">Status</th>
+                                            <th className="px-5 py-2 border-b border-[#E4E4E4] font-medium">Provider</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
@@ -228,13 +228,13 @@ const Dashboard = () => {
                                             .map((appt) => (
                                                 <tr key={appt.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer" onClick={() => navigate(`/patient/${appt.patientId}/snapshot`)}>
                                                     <td className="px-5 py-2 whitespace-nowrap">
-                                                        <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                                                        <span className="text-xs font-medium text-[#10141A] bg-[#F5F5F5] px-2 py-0.5 rounded">
                                                             {appt.time}
                                                         </span>
                                                     </td>
                                                     <td className="px-5 py-2">
                                                         <div className="flex flex-col">
-                                                            <span className="text-sm font-bold text-gray-900 group-hover:text-blue-700">{appt.patientName}</span>
+                                                            <span className="text-sm font-medium text-[#10141A] group-hover:text-[#83A2DB]">{appt.patientName}</span>
                                                             <span className="text-[10px] text-gray-500 flex items-center gap-1">
                                                                 #{appt.patientId?.substring(0, 8).toUpperCase()} • {appt.patient_dob ? format(new Date(appt.patient_dob), 'MM/dd/yyyy') : 'DOB: Unknown'}
                                                             </span>
@@ -247,7 +247,7 @@ const Dashboard = () => {
                                                         </div>
                                                     </td>
                                                     <td className="px-5 py-2">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-tight
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-tight
                                                             ${appt.status === 'scheduled' ? 'bg-blue-50 text-blue-700' :
                                                                 appt.status === 'checked-in' ? 'bg-green-50 text-green-700' :
                                                                     appt.status === 'in-room' ? 'bg-purple-50 text-purple-700' : 'bg-gray-50 text-gray-600'}
@@ -280,16 +280,16 @@ const Dashboard = () => {
                     {/* RIGHT Column: Clinical Desktop (Tabbed In-Basket) */}
                     <div className="lg:col-span-4 space-y-6 sticky top-20">
                         {/* Tabbed In-Basket */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div className="flex border-b border-gray-100 bg-gray-50">
+                        <div className="bg-white rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-[#E4E4E4] overflow-hidden">
+                            <div className="flex border-b border-[#E4E4E4]">
                                 {['inbox', 'refills', 'labs'].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveDesktopTab(tab)}
-                                        className={`flex-1 px-4 py-3 text-[11px] font-bold uppercase tracking-widest transition-all
+                                        className={`flex-1 px-4 py-3 text-[11px] font-medium uppercase tracking-widest transition-all
                                             ${activeDesktopTab === tab
-                                                ? 'bg-white text-blue-600 border-b-2 border-blue-600'
-                                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100/50'}
+                                                ? 'bg-white text-[#83A2DB] border-b-2 border-[#83A2DB]'
+                                                : 'text-[#10141A]/40 hover:text-[#10141A]/60'}
                                         `}
                                     >
                                         {tab}
@@ -318,10 +318,10 @@ const Dashboard = () => {
                                                 return (
                                                     <div key={item.id} className="p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 cursor-pointer shadow-sm group" onClick={() => navigate(`/tasks?id=${item.id}`)}>
                                                         <div className="flex items-center justify-between mb-1">
-                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{timeStr}</span>
+                                                            <span className="text-[10px] font-medium text-[#10141A]/40 uppercase tracking-tighter">{timeStr}</span>
                                                             {item.priority === 'stat' && <span className="bg-red-100 text-red-700 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Urgent</span>}
                                                         </div>
-                                                        <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600">
+                                                        <p className="text-sm font-medium text-[#10141A] group-hover:text-[#83A2DB]">
                                                             {item.patient_name || 'System'}
                                                         </p>
                                                         <p className="text-xs text-gray-600 truncate">{item.subject}</p>
@@ -334,7 +334,7 @@ const Dashboard = () => {
                                                 <p className="text-xs font-semibold">Inbox is clear</p>
                                             </div>
                                         )}
-                                        <button onClick={() => navigate('/tasks')} className="w-full py-2 text-[11px] font-bold text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-lg transition-colors">
+                                        <button onClick={() => navigate('/tasks')} className="w-full py-2 text-[11px] font-medium text-[#83A2DB] uppercase tracking-widest hover:bg-[#83A2DB]/5 rounded-lg transition-colors">
                                             View Full Inbox →
                                         </button>
                                     </div>
@@ -359,49 +359,49 @@ const Dashboard = () => {
 
 
                         {/* Quick Start Card - Light Theme */}
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-5 overflow-hidden relative group">
+                        <div className="bg-white/80 backdrop-blur-xl rounded-xl shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-[#E4E4E4] p-5 overflow-hidden relative group">
                             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                                <Zap className="w-20 h-20 text-blue-600" />
+                                <Zap className="w-20 h-20 text-[#83A2DB]" />
                             </div>
-                            <h3 className="text-lg font-bold mb-1 relative z-10 text-gray-900">Quick Launch</h3>
+                            <h3 className="text-lg font-medium mb-1 relative z-10 text-[#10141A]">Quick Launch</h3>
                             <p className="text-xs text-gray-500 mb-4 relative z-10">Instant access to primary workflows</p>
 
                             <div className="flex flex-col gap-2 relative z-10">
-                                <button onClick={() => navigate('/patients')} className="flex items-center gap-3 w-full bg-white hover:bg-blue-50 p-3 rounded-lg transition-colors border border-gray-200 hover:border-blue-300 shadow-sm">
-                                    <div className="p-2 bg-blue-500 rounded-md text-white">
+                                <button onClick={() => navigate('/patients')} className="flex items-center gap-3 w-full bg-white hover:bg-[#83A2DB]/5 p-3 rounded-lg transition-colors border border-[#E4E4E4] hover:border-[#83A2DB]/30 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+                                    <div className="p-2 bg-[#83A2DB] rounded-md text-white">
                                         <Users className="w-4 h-4" />
                                     </div>
-                                    <span className="text-sm font-semibold text-gray-800">Patient Registry</span>
+                                    <span className="text-sm font-medium text-[#10141A]">Patient Registry</span>
                                 </button>
-                                <button onClick={() => navigate('/schedule')} className="flex items-center gap-3 w-full bg-white hover:bg-green-50 p-3 rounded-lg transition-colors border border-gray-200 hover:border-green-300 shadow-sm">
-                                    <div className="p-2 bg-green-500 rounded-md text-white">
+                                <button onClick={() => navigate('/schedule')} className="flex items-center gap-3 w-full bg-white hover:bg-[#83A2DB]/5 p-3 rounded-lg transition-colors border border-[#E4E4E4] hover:border-[#83A2DB]/30 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+                                    <div className="p-2 bg-[#83A2DB] rounded-md text-white">
                                         <Calendar className="w-4 h-4" />
                                     </div>
-                                    <span className="text-sm font-semibold text-gray-800">Scheduling Hub</span>
+                                    <span className="text-sm font-medium text-[#10141A]">Scheduling Hub</span>
                                 </button>
-                                <button onClick={() => navigate('/tasks')} className="flex items-center gap-3 w-full bg-white hover:bg-purple-50 p-3 rounded-lg transition-colors border border-gray-200 hover:border-purple-300 shadow-sm">
-                                    <div className="p-2 bg-purple-500 rounded-md text-white">
+                                <button onClick={() => navigate('/tasks')} className="flex items-center gap-3 w-full bg-white hover:bg-[#83A2DB]/5 p-3 rounded-lg transition-colors border border-[#E4E4E4] hover:border-[#83A2DB]/30 shadow-[0_1px_4px_rgba(0,0,0,0.03)]">
+                                    <div className="p-2 bg-[#83A2DB] rounded-md text-white">
                                         <ClipboardList className="w-4 h-4" />
                                     </div>
-                                    <span className="text-sm font-semibold text-gray-800">Clinical Task List</span>
+                                    <span className="text-sm font-medium text-[#10141A]">Clinical Task List</span>
                                 </button>
                             </div>
                         </div>
 
                         {/* Help / Updates */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="bg-white rounded-xl border border-[#E4E4E4] p-4">
                             <div className="flex items-center gap-2 mb-3">
-                                <Bell className="w-4 h-4 text-orange-500" />
-                                <h4 className="text-xs font-bold text-gray-900 border-b-2 border-orange-100 flex-1 uppercase tracking-widest">Platform Updates</h4>
+                                <Bell className="w-4 h-4 text-[#CE6969]" />
+                                <h4 className="text-xs font-medium text-[#10141A] border-b border-[#E4E4E4] flex-1 uppercase tracking-widest">Platform Updates</h4>
                             </div>
                             <div className="space-y-3">
                                 <div className="p-2 hover:bg-gray-50 rounded cursor-pointer border-l-2 border-blue-500 pl-3">
-                                    <p className="text-xs font-bold text-gray-900">E-Prescribing is LIVE</p>
-                                    <p className="text-[10px] text-gray-500">You can now send prescriptions directly to pharmacies.</p>
+                                    <p className="text-xs font-medium text-[#10141A]">E-Prescribing is LIVE</p>
+                                    <p className="text-[10px] text-[#10141A]/50">You can now send prescriptions directly to pharmacies.</p>
                                 </div>
                                 <div className="p-2 hover:bg-gray-50 rounded cursor-pointer border-l-2 border-green-500 pl-3">
-                                    <p className="text-xs font-bold text-gray-900">Integrated Lab Results</p>
-                                    <p className="text-[10px] text-gray-500">LabCorp and Quest integrations are now available.</p>
+                                    <p className="text-xs font-medium text-[#10141A]">Integrated Lab Results</p>
+                                    <p className="text-[10px] text-[#10141A]/50">LabCorp and Quest integrations are now available.</p>
                                 </div>
                             </div>
                         </div>

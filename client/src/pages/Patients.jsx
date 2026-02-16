@@ -155,7 +155,7 @@ const Patients = () => {
                 {/* Header - Compact Design */}
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-800 mb-0.5">Patients</h1>
+                        <h1 className="text-2xl font-semibold text-[#10141A] mb-0.5">Patients</h1>
                         <p className="text-gray-500 text-xs">Manage your patient list</p>
                     </div>
                     <div className="flex gap-2">
@@ -227,7 +227,7 @@ const Patients = () => {
                         </button>
                         <button
                             onClick={triggerSearch}
-                            className="px-4 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold rounded-lg transition-all border border-blue-200"
+                            className="px-4 py-1.5 bg-[#83A2DB]/10 text-[#83A2DB] hover:bg-[#83A2DB]/15 text-xs font-medium rounded-lg transition-all border border-[#83A2DB]/20"
                         >
                             Search (Enter)
                         </button>
@@ -312,7 +312,7 @@ const Patients = () => {
                                 <h3 className="text-lg font-medium text-gray-900 mb-1">No patients found</h3>
                                 <p className="text-sm text-gray-500 mb-6">We couldn't find any patients matching those criteria.</p>
                                 <div className="space-y-4 max-w-xs mx-auto text-left bg-gray-50 p-4 rounded-lg border border-gray-100">
-                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suggestions:</p>
+                                    <p className="text-xs font-medium text-[#10141A]/40 uppercase tracking-widest">Suggestions:</p>
                                     <ul className="text-xs text-gray-600 space-y-2 list-disc pl-4">
                                         <li>Try searching for part of the name (e.g. "chr" for "Christopher")</li>
                                         <li>Verify the MRN is correct</li>
@@ -421,7 +421,7 @@ const PatientListItem = ({ patient, index, onClick, highlight }) => (
         className="p-3 hover:bg-blue-50 cursor-pointer transition-all flex items-center justify-between group border-l-4 border-transparent hover:border-blue-500"
     >
         <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-sm font-bold text-blue-700 group-hover:bg-blue-200 transition-all">
+            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#83A2DB]/10 flex items-center justify-center text-sm font-medium text-[#83A2DB] group-hover:bg-[#83A2DB]/15 transition-all">
                 {index + 1}
             </div>
             <div className="flex-1 min-w-0">

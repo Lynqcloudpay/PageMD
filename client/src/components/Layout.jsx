@@ -6,7 +6,7 @@ import {
     Clock, History, User, ClipboardList, BarChart3,
     MessageSquare, Video, Moon, Sun, Menu, ChevronRight, Bell,
     Zap, Command, DollarSign, Shield, Shield as ShieldCheck, AlertCircle, HelpCircle, Inbox,
-    AlertTriangle, CalendarPlus
+    AlertTriangle, CalendarPlus, ChevronLeft, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { usePatient } from '../context/PatientContext';
 import { useAuth } from '../context/AuthContext';
@@ -53,8 +53,6 @@ const Layout = ({ children }) => {
     // Fetch unread counts
     useEffect(() => {
 
-
-        // Fetch pending notes count
         const fetchPendingNotesCount = async () => {
             try {
                 const response = await visitsAPI.getPending();
@@ -70,7 +68,6 @@ const Layout = ({ children }) => {
             }
         };
 
-        // Fetch pending cancellations count
         const fetchPendingCancellationsCount = async () => {
             try {
                 const response = await followupsAPI.getStats();
@@ -83,7 +80,6 @@ const Layout = ({ children }) => {
             }
         };
 
-        // Fetch inbox count
         const fetchInboxCount = async () => {
             try {
                 const response = await inboxAPI.getStats();
@@ -94,7 +90,6 @@ const Layout = ({ children }) => {
             }
         };
 
-        // Fetch pending intake count
         const fetchPendingIntakeCount = async () => {
             try {
                 const response = await intakeAPI.getStats();
@@ -105,7 +100,6 @@ const Layout = ({ children }) => {
             }
         };
 
-        // Fetch pending telehealth count
         const fetchPendingTelehealthCount = async () => {
             try {
                 const response = await telehealthAPI.getStats();
@@ -116,7 +110,6 @@ const Layout = ({ children }) => {
             }
         };
 
-        // Fetch privacy alerts count
         const fetchPrivacyAlertsCount = async () => {
             try {
                 const response = await complianceAPI.getAlerts({ unresolvedOnly: true });
@@ -135,8 +128,6 @@ const Layout = ({ children }) => {
             }
         };
 
-        // Initial fetch
-
         fetchPendingNotesCount();
         fetchPendingCancellationsCount();
         fetchInboxCount();
@@ -145,9 +136,7 @@ const Layout = ({ children }) => {
         fetchPrivacyAlertsCount();
         fetchAppointmentRequestsCount();
 
-        // Refresh counts periodically (every 2 seconds)
         const interval = setInterval(() => {
-
             fetchPendingNotesCount();
             fetchPendingCancellationsCount();
             fetchInboxCount();
@@ -160,25 +149,18 @@ const Layout = ({ children }) => {
         return () => clearInterval(interval);
     }, []);
 
-    // Use permissions instead of role checks
     const { can, getScope } = usePermissions();
     const scope = getScope();
 
-    // Check permissions for navigation items
     const canViewSchedule = can('schedule:view');
     const canManageUsers = can('users:manage');
     const canViewPatients = can('patients:view_list');
     const canViewBilling = can('billing:view');
     const canViewReports = can('reports:view');
-
-    // Show "My Schedule" if user has schedule:view and scope is SELF (clinicians)
     const showMySchedule = canViewSchedule && scope.scheduleScope === 'SELF';
 
-    // Navigation items with icons and badges (gated by permissions)
-    // Use defensive checks to prevent crashes if permissions undefined
     const navigationSection = [
         { path: '/dashboard', icon: BarChart3, label: 'Dashboard', badge: null },
-        // Schedule - requires schedule:view permission
         ...(canViewSchedule ? [
             { path: '/schedule', icon: Calendar, label: 'Schedule', badge: null },
             ...(showMySchedule ? [
@@ -187,7 +169,6 @@ const Layout = ({ children }) => {
         ] : []),
         { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
         { path: '/appointment-requests', icon: CalendarPlus, label: 'Appt Requests', badge: appointmentRequestsCount > 0 ? appointmentRequestsCount : null, badgeColor: 'amber' },
-        // Patients - requires patients:view_list permission
         ...(canViewPatients ? [
             { path: '/patients', icon: Users, label: 'Patients', badge: null }
         ] : []),
@@ -197,14 +178,12 @@ const Layout = ({ children }) => {
     const workflowSection = [
         { path: '/tasks', icon: Inbox, label: 'In Basket', badge: inboxCount > 0 ? inboxCount : null },
         { path: '/digital-intake', icon: FileText, label: 'Digital Intake', badge: pendingIntakeCount > 0 ? pendingIntakeCount : null },
-        // Billing - requires billing:view permission
         ...(canViewBilling ? [
             { path: '/billing', icon: DollarSign, label: 'Billing', badge: null }
         ] : []),
         ...(user?.enabledFeatures?.telehealth === true ? [
             { path: '/telehealth', icon: Video, label: 'Telehealth', badge: pendingTelehealthCount > 0 ? pendingTelehealthCount : null }
         ] : []),
-        // Admin items - requires users:manage or reports:view
         ...(canManageUsers ? [
             { path: '/admin-settings', icon: Settings, label: 'Settings', badge: null }
         ] : []),
@@ -264,7 +243,7 @@ const Layout = ({ children }) => {
                 mrn: patientData.mrn,
                 first_name: patientData.first_name,
                 last_name: patientData.last_name
-            }, true); // Navigate to patient
+            }, true);
         } catch (error) {
             addTab({
                 id: patient.id,
@@ -272,7 +251,7 @@ const Layout = ({ children }) => {
                 mrn: patient.mrn,
                 first_name: patient.name?.split(' ')[0] || '',
                 last_name: patient.name?.split(' ').slice(1).join(' ') || ''
-            }, true); // Navigate to patient
+            }, true);
         }
         navigate(`/patient/${patient.id}/snapshot`);
         setSearchQuery('');
@@ -285,7 +264,6 @@ const Layout = ({ children }) => {
             e.preventDefault();
             setShowSearch(true);
         }
-        // Shift+? to open support modal
         if (e.shiftKey && e.key === '?') {
             e.preventDefault();
             setShowSupportModal(true);
@@ -302,77 +280,102 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-white transition-colors">
+        <div className="flex flex-col min-h-screen bg-[#F5F5F5] transition-colors">
             {user?.isSandbox && <DemoBanner />}
             <div className="flex flex-1">
 
-                {/* Sidebar - Floating Bubble */}
+                {/* ═══════════════════════════════════════════════ */}
+                {/* Sidebar — Frosted Glass Panel                  */}
+                {/* ═══════════════════════════════════════════════ */}
                 <aside
-                    className={`${sidebarCollapsed ? 'w-24' : 'w-[19rem]'} fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-500 ease-in-out px-2 py-4`}
+                    className={cn(
+                        "fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-300 ease-out",
+                        sidebarCollapsed ? 'w-[4.5rem]' : 'w-[16rem]'
+                    )}
                 >
-                    <div className={cn(
-                        "flex flex-col h-full bg-gradient-to-br from-blue-200/50 via-blue-100/40 to-white/10 backdrop-blur-2xl rounded-[2.5rem] shadow-xl border border-white/60 relative overflow-hidden transition-all duration-500",
-                        sidebarCollapsed ? "rounded-[2.2rem]" : "rounded-[2.5rem]"
-                    )}>
-                        {/* Decorative background bubbles */}
-                        <div className="absolute -top-10 -left-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
-                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex flex-col h-full bg-white/75 backdrop-blur-xl border-r border-[#E4E4E4]/60">
 
-                        {/* Logo/Brand Area + Relocated Toggle */}
-                        <div className="px-5 py-5 flex items-center justify-between relative z-10">
+                        {/* Logo Area */}
+                        <div className={cn(
+                            "flex items-center h-14 border-b border-[#E4E4E4]/40",
+                            sidebarCollapsed ? "justify-center px-0" : "px-5 justify-between"
+                        )}>
                             {!sidebarCollapsed ? (
                                 <>
                                     <Link to="/dashboard" className="flex items-center group">
-                                        <div className="p-1 transition-all group-hover:scale-105 duration-300">
-                                            <img
-                                                src="/logo.png"
-                                                alt="PageMD Logo"
-                                                className="h-9 w-auto object-contain max-w-[150px]"
-                                                onError={(e) => { e.target.style.display = 'none'; }}
-                                            />
-                                        </div>
+                                        <img
+                                            src="/logo.png"
+                                            alt="PageMD Logo"
+                                            className="h-7 w-auto object-contain max-w-[130px] opacity-80 group-hover:opacity-100 transition-opacity"
+                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
                                     </Link>
                                     <button
-                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                        className="p-2 rounded-xl hover:bg-white/60 text-slate-400 hover:text-blue-600 transition-all group ml-1"
+                                        onClick={() => setSidebarCollapsed(true)}
+                                        className="p-1.5 rounded-lg text-[#10141A]/30 hover:text-[#10141A]/60 hover:bg-[#10141A]/[0.03] transition-all"
                                         title="Collapse sidebar"
                                     >
-                                        <Menu className="w-4 h-4 transition-transform duration-500 group-hover:rotate-180" />
+                                        <PanelLeftClose className="w-4 h-4" strokeWidth={1.5} />
                                     </button>
                                 </>
                             ) : (
                                 <button
-                                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                    className="w-full transition-all hover:scale-105 active:scale-95 group flex items-center justify-center p-0"
+                                    onClick={() => setSidebarCollapsed(false)}
+                                    className="p-1.5 rounded-lg hover:bg-[#10141A]/[0.03] transition-all group"
                                     title="Expand sidebar"
                                 >
                                     <img
                                         src="/logo-icon.png"
                                         alt="PMD"
-                                        className="w-[85%] h-auto object-contain transition-transform duration-500 group-hover:rotate-3"
+                                        className="w-7 h-7 object-contain opacity-60 group-hover:opacity-100 transition-opacity"
                                         onError={(e) => {
-                                            // Fallback if image missing
                                             e.target.style.display = 'none';
-                                            e.target.nextSibling.classList.remove('hidden');
+                                            if (e.target.nextSibling) e.target.nextSibling.classList.remove('hidden');
                                         }}
                                     />
-                                    <div className="hidden bg-blue-600 rounded-2xl w-14 h-14 flex items-center justify-center text-white text-2xl font-bold">P</div>
+                                    <div className="hidden w-7 h-7 rounded-lg bg-[#83A2DB]/10 flex items-center justify-center text-[#83A2DB] text-xs font-medium">P</div>
                                 </button>
                             )}
                         </div>
 
-                        {/* Navigation Section - COMPACT & NO SCROLL */}
-                        <nav className="flex-1 overflow-hidden px-2 py-0 flex flex-col relative z-10 gap-1">
-                            {/* Primary Navigation */}
-                            <div className="flex-shrink-0">
+                        {/* Search trigger */}
+                        {!sidebarCollapsed && (
+                            <div className="px-3 pt-3 pb-1">
+                                <button
+                                    onClick={() => setShowSearch(true)}
+                                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-[#10141A]/[0.03] text-[#10141A]/30 text-[12px] hover:bg-[#10141A]/[0.05] transition-colors"
+                                >
+                                    <Search className="w-3.5 h-3.5" strokeWidth={1.8} />
+                                    <span>Search...</span>
+                                    <kbd className="ml-auto text-[10px] font-mono text-[#10141A]/20 bg-white/80 px-1.5 py-0.5 rounded">⌘K</kbd>
+                                </button>
+                            </div>
+                        )}
+
+                        {sidebarCollapsed && (
+                            <div className="flex justify-center pt-3 pb-1">
+                                <button
+                                    onClick={() => setShowSearch(true)}
+                                    className="p-2 rounded-xl text-[#10141A]/30 hover:text-[#10141A]/60 hover:bg-[#10141A]/[0.03] transition-all"
+                                    title="Search (⌘K)"
+                                >
+                                    <Search className="w-[18px] h-[18px]" strokeWidth={1.8} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Navigation */}
+                        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 flex flex-col gap-0.5">
+                            {/* Primary section */}
+                            <div>
                                 {!sidebarCollapsed && (
-                                    <div className="px-4 mb-2">
-                                        <div className="text-[10px] font-bold text-blue-900/60 uppercase tracking-[0.2em]">
+                                    <div className="px-5 pt-2 pb-1.5">
+                                        <span className="text-[10px] font-medium text-[#10141A]/25 uppercase tracking-[0.12em]">
                                             Navigation
-                                        </div>
+                                        </span>
                                     </div>
                                 )}
-                                <div className="space-y-0.5">
+                                <div className="space-y-px">
                                     {navigationSection.map((item) => (
                                         <SidebarItem
                                             key={item.path}
@@ -380,6 +383,7 @@ const Layout = ({ children }) => {
                                             icon={item.icon}
                                             label={item.label}
                                             badge={item.badge}
+                                            badgeColor={item.badgeColor}
                                             active={isActive(item.path)}
                                             collapsed={sidebarCollapsed}
                                         />
@@ -387,16 +391,21 @@ const Layout = ({ children }) => {
                                 </div>
                             </div>
 
-                            {/* Workflow Section */}
-                            <div className="flex-shrink-0">
+                            {/* Divider */}
+                            <div className={cn("my-2", sidebarCollapsed ? "mx-3" : "mx-5")}>
+                                <div className="h-px bg-[#10141A]/[0.05]" />
+                            </div>
+
+                            {/* Workflow section */}
+                            <div>
                                 {!sidebarCollapsed && (
-                                    <div className="px-4 mb-2">
-                                        <div className="text-[10px] font-bold text-blue-900/60 uppercase tracking-[0.2em]">
+                                    <div className="px-5 pb-1.5">
+                                        <span className="text-[10px] font-medium text-[#10141A]/25 uppercase tracking-[0.12em]">
                                             Workflows
-                                        </div>
+                                        </span>
                                     </div>
                                 )}
-                                <div className="space-y-0.5">
+                                <div className="space-y-px">
                                     {workflowSection.map((item) => (
                                         <SidebarItem
                                             key={item.path}
@@ -412,24 +421,24 @@ const Layout = ({ children }) => {
                             </div>
                         </nav>
 
-                        {/* Bottom User Profile Section - Compact */}
-                        <div className="p-4 relative z-10">
+                        {/* User profile — bottom */}
+                        <div className="border-t border-[#E4E4E4]/40 p-3">
                             {user && (
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => navigate('/profile')}
                                         className={cn(
-                                            "flex items-center gap-3 p-2 rounded-2xl transition-all flex-1 group",
-                                            sidebarCollapsed ? "justify-center" : "hover:bg-white/60"
+                                            "flex items-center gap-2.5 p-1.5 rounded-xl transition-all flex-1 group",
+                                            sidebarCollapsed ? "justify-center" : "hover:bg-[#10141A]/[0.03]"
                                         )}
                                     >
-                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-[12px] font-bold flex-shrink-0 shadow-md transition-transform group-hover:scale-105">
+                                        <div className="w-7 h-7 rounded-lg bg-[#83A2DB]/12 flex items-center justify-center text-[#83A2DB] text-[11px] font-medium flex-shrink-0">
                                             {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
                                         </div>
                                         {!sidebarCollapsed && (
                                             <div className="text-left flex-1 min-w-0">
-                                                <div className="text-[12px] font-bold text-slate-800 leading-tight truncate">{user.firstName} {user.lastName}</div>
-                                                <div className="text-[9px] text-slate-400 font-bold truncate uppercase tracking-tighter">{user.role_name || user.role || 'User'}</div>
+                                                <div className="text-[12px] font-medium text-[#10141A]/80 leading-tight truncate">{user.firstName} {user.lastName}</div>
+                                                <div className="text-[10px] text-[#10141A]/30 font-normal truncate">{user.role_name || user.role || 'User'}</div>
                                             </div>
                                         )}
                                     </button>
@@ -441,10 +450,10 @@ const Layout = ({ children }) => {
                                                     navigate('/login');
                                                 }
                                             }}
-                                            className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                                            className="p-1.5 rounded-lg text-[#10141A]/25 hover:text-[#CE6969] hover:bg-[#CE6969]/[0.06] transition-all"
                                             title="Sign Out"
                                         >
-                                            <LogOut className="w-4 h-4" />
+                                            <LogOut className="w-4 h-4" strokeWidth={1.5} />
                                         </button>
                                     )}
                                 </div>
@@ -453,22 +462,24 @@ const Layout = ({ children }) => {
                     </div>
                 </aside>
 
-                {/* Patient Search Modal */}
+                {/* ═══════════════════════════════════════════════ */}
+                {/* Patient Search Modal                           */}
+                {/* ═══════════════════════════════════════════════ */}
                 {showSearch && (
                     <div
-                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-start justify-center pt-20 animate-fade-in"
+                        className="fixed inset-0 bg-[#10141A]/40 backdrop-blur-sm z-50 flex items-start justify-center pt-[12vh] animate-fade-in"
                         onClick={() => setShowSearch(false)}
                     >
                         <div
-                            className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 animate-scale-in border border-deep-gray/10"
+                            className="bg-white rounded-2xl shadow-large w-full max-w-xl mx-4 animate-scale-in border border-[#E4E4E4]"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="p-4 border-b border-deep-gray/10 flex items-center space-x-3 bg-white">
-                                <Search className="w-5 h-5 text-strong-azure" />
+                            <div className="p-4 border-b border-[#E4E4E4]/60 flex items-center gap-3">
+                                <Search className="w-4 h-4 text-[#83A2DB]" strokeWidth={1.8} />
                                 <input
                                     type="text"
-                                    placeholder="Search by name or MRN... (Press Cmd/Ctrl+K to open)"
-                                    className="flex-1 outline-none bg-transparent text-deep-gray placeholder:text-soft-gray/60 text-base font-medium"
+                                    placeholder="Search by name or MRN..."
+                                    className="flex-1 outline-none bg-transparent text-[#10141A] placeholder:text-[#10141A]/25 text-sm font-normal"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     autoFocus
@@ -484,33 +495,33 @@ const Layout = ({ children }) => {
                                         setSearchQuery('');
                                         setSearchResults([]);
                                     }}
-                                    className="p-2 hover:bg-soft-gray rounded-lg transition-colors"
+                                    className="p-1.5 hover:bg-[#10141A]/[0.04] rounded-lg transition-colors"
                                 >
-                                    <X className="w-5 h-5 text-deep-gray/60 hover:text-deep-gray" />
+                                    <X className="w-4 h-4 text-[#10141A]/30" strokeWidth={1.5} />
                                 </button>
                             </div>
-                            <div className="max-h-96 overflow-y-auto">
+                            <div className="max-h-80 overflow-y-auto">
                                 {loading ? (
                                     <div className="p-12 text-center">
-                                        <div className="inline-block spinner text-strong-azure"></div>
-                                        <p className="mt-4 text-sm text-deep-gray">Searching...</p>
+                                        <div className="inline-block spinner text-[#83A2DB]"></div>
+                                        <p className="mt-3 text-xs text-[#10141A]/40">Searching...</p>
                                     </div>
                                 ) : searchResults.length > 0 ? (
-                                    <div className="divide-y divide-deep-gray/10">
+                                    <div className="divide-y divide-[#E4E4E4]/40">
                                         {searchResults.map((patient) => (
                                             <button
                                                 key={patient.id}
                                                 onClick={() => handleSearchSelect(patient)}
-                                                className="w-full p-4 text-left hover:bg-soft-gray transition-all focus:outline-none group"
+                                                className="w-full p-3.5 text-left hover:bg-[#83A2DB]/[0.04] transition-all focus:outline-none group"
                                             >
-                                                <div className="font-semibold text-deep-gray group-hover:text-strong-azure flex items-center justify-between">
-                                                    <span>{patient.name || 'Unknown'}</span>
+                                                <div className="text-sm font-medium text-[#10141A]/80 group-hover:text-[#10141A]">
+                                                    {patient.name || 'Unknown'}
                                                 </div>
-                                                <div className="text-sm text-deep-gray/70 mt-1 flex items-center space-x-2">
-                                                    <span className="px-2 py-0.5 bg-soft-gray rounded text-xs font-medium text-deep-gray">{patient.mrn || 'N/A'}</span>
-                                                    <span>•</span>
+                                                <div className="text-xs text-[#10141A]/35 mt-1 flex items-center gap-2">
+                                                    <span className="px-1.5 py-0.5 bg-[#10141A]/[0.04] rounded text-[10px] font-medium text-[#10141A]/50">{patient.mrn || 'N/A'}</span>
+                                                    <span className="text-[#E4E4E4]">·</span>
                                                     <span>{patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</span>
-                                                    <span>•</span>
+                                                    <span className="text-[#E4E4E4]">·</span>
                                                     <span>{patient.sex || 'N/A'}</span>
                                                 </div>
                                             </button>
@@ -518,14 +529,14 @@ const Layout = ({ children }) => {
                                     </div>
                                 ) : searchQuery.trim() ? (
                                     <div className="p-12 text-center">
-                                        <p className="text-deep-gray">No patients found for "{searchQuery}"</p>
-                                        <p className="text-xs text-deep-gray/60 mt-2">Try searching by name or MRN</p>
+                                        <p className="text-sm text-[#10141A]/50">No patients found for "{searchQuery}"</p>
+                                        <p className="text-[11px] text-[#10141A]/25 mt-1.5">Try searching by name or MRN</p>
                                     </div>
                                 ) : (
                                     <div className="p-12 text-center">
-                                        <Search className="w-12 h-12 text-soft-gray/60 mx-auto mb-4" />
-                                        <p className="text-deep-gray">Start typing to search...</p>
-                                        <p className="text-xs text-deep-gray/60 mt-2">Press Cmd/Ctrl+K to open this search</p>
+                                        <Search className="w-8 h-8 text-[#10141A]/10 mx-auto mb-3" strokeWidth={1.5} />
+                                        <p className="text-sm text-[#10141A]/40">Start typing to search...</p>
+                                        <p className="text-[11px] text-[#10141A]/20 mt-1">⌘K to open this search</p>
                                     </div>
                                 )}
                             </div>
@@ -533,65 +544,60 @@ const Layout = ({ children }) => {
                     </div>
                 )}
 
-                {/* Main Content - Floating Bubble */}
+                {/* ═══════════════════════════════════════════════ */}
+                {/* Main Content Area                              */}
+                {/* ═══════════════════════════════════════════════ */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-500 ease-in-out relative flex flex-col h-screen overflow-hidden",
-                        sidebarCollapsed ? "ml-[6.5rem]" : "ml-[19.5rem]"
+                        "flex-1 transition-all duration-300 ease-out relative flex flex-col h-screen overflow-hidden",
+                        sidebarCollapsed ? "ml-[4.5rem]" : "ml-[16rem]"
                     )}
                 >
-                    <div className="flex-1 my-4 mr-4 bg-white rounded-[2.5rem] shadow-[0_15px_40px_rgba(0,0,0,0.08)] border border-slate-100 flex flex-col relative overflow-hidden">
-                        {/* Header inside the bubble */}
-                        <div className="h-12 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 flex items-center justify-between flex-shrink-0 relative z-40">
-                            <div className="flex-1 overflow-hidden">
-                                <PatientTabs />
-                            </div>
-                            <div className="flex items-center gap-2 px-4 flex-shrink-0 overflow-visible">
-                                <AlertBell />
-                            </div>
+                    {/* Header strip */}
+                    <div className="h-14 bg-white/80 backdrop-blur-xl border-b border-[#E4E4E4]/40 px-6 flex items-center justify-between flex-shrink-0 relative z-40">
+                        <div className="flex-1 overflow-hidden">
+                            <PatientTabs />
                         </div>
+                        <div className="flex items-center gap-2 pl-4 flex-shrink-0 overflow-visible">
+                            <AlertBell />
+                        </div>
+                    </div>
 
-                        {/* Page Content */}
-                        <div className="flex-1 overflow-y-auto min-h-0 relative h-full">
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={location.pathname}
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -8 }}
-                                    transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-                                    className="h-full w-full"
-                                >
-                                    {children}
-                                </motion.div>
-                            </AnimatePresence>
-                        </div>
+                    {/* Page Content */}
+                    <div className="flex-1 overflow-y-auto min-h-0 relative h-full bg-[#F5F5F5]">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={location.pathname}
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                                className="h-full w-full"
+                            >
+                                {children}
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
                 </main>
 
-                {/* Support Modal placeholder - moved to bottom */}
-
-                {/* Privacy Enforcement Modal */}
                 <BreakTheGlassModal />
-
-                {/* Mobile Menu */}
                 <MobileMenu />
 
-                {/* Echo AI - Global Overlay (Only on Patient Routes) */}
+                {/* Echo AI */}
                 {location.pathname.includes('/patient/') && (
                     <EchoPanel
                         patientId={location.pathname.split('/')[2]}
-                        patientName={null} // Will be fetched/derived in Snapshot or Context
+                        patientName={null}
                     />
                 )}
 
-                {/* Global Floating Actions */}
+                {/* Help button — frosted, no gradient */}
                 <button
                     onClick={() => setShowSupportModal(true)}
-                    className="fixed bottom-[4.5rem] right-6 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all z-[9999] flex items-center justify-center group opacity-80 hover:opacity-100"
+                    className="fixed bottom-[4.5rem] right-6 w-9 h-9 rounded-full bg-white/80 backdrop-blur-md border border-[#E4E4E4] text-[#10141A]/40 shadow-soft hover:shadow-medium hover:text-[#83A2DB] transition-all z-[9999] flex items-center justify-center"
                     title="Report an Issue (Shift+?)"
                 >
-                    <HelpCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <HelpCircle className="w-4 h-4" strokeWidth={1.5} />
                 </button>
 
                 <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />

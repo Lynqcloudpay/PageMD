@@ -145,7 +145,7 @@ const Billing = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Billing & Claims</h1>
+                    <h1 className="text-2xl font-semibold text-[#10141A]">Billing & Claims</h1>
                     <p className="text-sm text-gray-600 mt-1">Manage claims, fee sheets, and billing operations</p>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -179,7 +179,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Total Claims</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">{statistics.total}</p>
+                            <p className="text-2xl font-semibold text-[#10141A] mt-1">{statistics.total}</p>
                         </div>
                         <Receipt className="w-8 h-8 text-primary-600" />
                     </div>
@@ -188,7 +188,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Pending</p>
-                            <p className="text-2xl font-bold text-yellow-600 mt-1">{statistics.pending}</p>
+                            <p className="text-2xl font-semibold text-yellow-600 mt-1">{statistics.pending}</p>
                         </div>
                         <Clock className="w-8 h-8 text-yellow-600" />
                     </div>
@@ -197,7 +197,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Paid</p>
-                            <p className="text-2xl font-bold text-green-600 mt-1">{statistics.paid}</p>
+                            <p className="text-2xl font-semibold text-green-600 mt-1">{statistics.paid}</p>
                         </div>
                         <CheckCircle2 className="w-8 h-8 text-green-600" />
                     </div>
@@ -206,7 +206,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Total Amount</p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">${statistics.totalAmount.toFixed(2)}</p>
+                            <p className="text-2xl font-semibold text-[#10141A] mt-1">${statistics.totalAmount.toFixed(2)}</p>
                         </div>
                         <TrendingUp className="w-8 h-8 text-primary-600" />
                     </div>
@@ -800,7 +800,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${sb.status === 'FINALIZED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${sb.status === 'FINALIZED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                                                 }`}>
                                                 {sb.status}
                                             </span>

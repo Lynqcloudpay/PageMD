@@ -1064,7 +1064,7 @@ const Telehealth = () => {
                       setShowFullChart(true);
                       setPatientChartTab('overview');
                     }}
-                    className="w-full group flex items-center justify-between p-4 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl shadow-lg shadow-blue-900/10 hover:shadow-blue-900/20 transition-all hover:-translate-y-0.5"
+                    className="w-full group flex items-center justify-between p-4 bg-[#83A2DB] text-white rounded-2xl shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:shadow-[0_4px_16px_rgba(131,162,219,0.3)] transition-all hover:-translate-y-0.5"
                   >
                     <div className="flex items-center gap-4">
                       <div className="bg-white/10 p-2.5 rounded-xl">
@@ -1791,7 +1791,7 @@ const Telehealth = () => {
 
       {/* Friendly Security Badge */}
       <div className="mb-6 p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 w-32 h-full bg-gradient-to-l from-blue-50/20 to-transparent translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
+        <div className="absolute right-0 top-0 w-32 h-full bg-[#83A2DB]/5 translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
         <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-400 relative z-10 border border-blue-100/30">
           <Shield size={18} />
         </div>

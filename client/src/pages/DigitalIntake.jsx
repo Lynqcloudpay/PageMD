@@ -105,7 +105,7 @@ const DigitalIntake = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Digital Intake</h1>
+                    <h1 className="text-2xl font-semibold text-[#10141A] tracking-tight">Digital Intake</h1>
                     <p className="text-sm text-slate-500 mt-1 font-medium">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ const DigitalIntake = () => {
                                 <stat.icon size={16} />
                             </div>
                         </div>
-                        <div className="text-2xl font-bold text-slate-800">{stat.value}</div>
+                        <div className="text-2xl font-semibold text-[#10141A]">{stat.value}</div>
                     </div>
                 ))}
             </div>
@@ -185,7 +185,7 @@ const DigitalIntake = () => {
                                             className={`flex-1 min-w-0 flex items-center gap-4 ${session.patient_id ? 'cursor-pointer' : ''}`}
                                             onClick={() => session.patient_id && navigate(`/patient/${session.patient_id}/snapshot`)}
                                         >
-                                            <div className={`w-10 h-10 bg-white border border-slate-200 text-slate-600 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm group-hover:border-blue-200 group-hover:text-blue-600 transition-colors ${session.patient_id ? 'group-hover:bg-blue-50' : ''}`}>
+                                            <div className={`w-10 h-10 bg-white border border-[#E4E4E4] text-[#10141A]/60 rounded-xl flex items-center justify-center font-medium text-sm shadow-[0_1px_4px_rgba(0,0,0,0.03)] group-hover:border-[#83A2DB]/30 group-hover:text-[#83A2DB] transition-colors ${session.patient_id ? 'group-hover:bg-[#83A2DB]/5' : ''}`}>
                                                 {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
                                             </div>
                                             <div>
@@ -312,19 +312,19 @@ const DigitalIntake = () => {
                                 fgColor="#2563eb"
                             />
                         </div>
-                        <div className="mt-6 text-2xl font-bold text-slate-900 tracking-tight">Scan to Register</div>
-                        <div className="text-blue-500 font-bold text-xs tracking-widest uppercase mt-1">{user?.clinicName || 'Your Clinic'}</div>
+                        <div className="mt-6 text-2xl font-semibold text-[#10141A] tracking-tight">Scan to Register</div>
+                        <div className="text-[#83A2DB] font-medium text-xs tracking-widest uppercase mt-1">{user?.clinicName || 'Your Clinic'}</div>
                     </div>
 
                     <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 text-left space-y-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Clinic Link</span>
+                            <span className="text-xs font-medium text-[#83A2DB] uppercase tracking-widest">Clinic Link</span>
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(universalURL);
                                     showSuccess('Link copied to clipboard');
                                 }}
-                                className="flex items-center gap-1 text-blue-600 font-bold text-xs hover:text-blue-700 transition-colors"
+                                className="flex items-center gap-1 text-[#83A2DB] font-medium text-xs hover:text-[#83A2DB]/80 transition-colors"
                             >
                                 <Copy className="w-4 h-4" /> Copy
                             </button>
@@ -333,7 +333,7 @@ const DigitalIntake = () => {
                             href={universalURL}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-700 font-mono text-sm break-all font-bold hover:underline block"
+                            className="text-[#83A2DB] font-mono text-sm break-all font-medium hover:underline block"
                         >
                             {universalURL}
                         </a>
@@ -341,7 +341,7 @@ const DigitalIntake = () => {
 
                     <button
                         onClick={() => window.print()}
-                        className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
+                        className="w-full py-4 bg-[#83A2DB] text-white rounded-xl font-medium text-lg shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:bg-[#83A2DB]/90 active:scale-95 transition-all"
                     >
                         Print Signage
                     </button>
