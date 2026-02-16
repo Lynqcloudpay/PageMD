@@ -1786,7 +1786,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <ChevronRight className="w-3 h-3 text-slate-300 group-hover/header:text-slate-500 group-hover/header:translate-x-0.5 transition-all" />
                                         </div>
-                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[180px]">
+                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[400px]">
                                             {filteredNotes.length > 0 ? (
                                                 <div className="space-y-2">
                                                     {filteredNotes.slice(0, 5).map(note => (
@@ -1841,70 +1841,8 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
                                     </div>
 
-                                    {/* Health Maintenance Section - Specialized */}
-                                    <div className="bg-white rounded-xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)] overflow-hidden">
-                                        <div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                                            <div className="flex items-center gap-2">
-                                                <div className="p-1.5 bg-blue-50 text-blue-500 rounded-lg">
-                                                    <ShieldCheck className="w-3.5 h-3.5" />
-                                                </div>
-                                                <select
-                                                    value={hmSpecialtyFilter}
-                                                    onChange={(e) => setHmSpecialtyFilter(e.target.value)}
-                                                    className="bg-transparent text-[11px] font-medium text-slate-600 tracking-wide outline-none cursor-pointer hover:text-blue-600 transition-colors"
-                                                >
-                                                    {Object.keys(HM_PRESETS).map(spec => (
-                                                        <option key={spec} value={spec}>{spec} Optimization</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <button onClick={() => handleEditHM(null)} className="p-1 hover:bg-blue-50 rounded-full transition-colors z-10 cursor-pointer">
-                                                <Plus className="w-3.5 h-3.5 text-blue-500" />
-                                            </button>
-                                        </div>
-                                        <div className="p-4 space-y-4 h-[200px] overflow-y-auto scrollbar-hide">
-                                            {combinedOptimizationItems.length > 0 ? (
-                                                combinedOptimizationItems.map(item => (
-                                                    <div key={item.id} className="flex items-center justify-between group/item cursor-pointer" onClick={() => !item.is_automated && !item.is_metric && handleEditHM(item)}>
-                                                        <div className="flex flex-col min-w-0">
-                                                            <span className={`text-[10px] font-medium truncate ${item.is_automated || item.is_metric ? 'text-slate-400 italic' : 'text-slate-600'}`}>
-                                                                {item.item_name}
-                                                            </span>
-                                                            <span className="text-[9px] text-slate-400 font-medium">
-                                                                {item.is_metric ? 'Continuous Metric' : item.is_automated ? item.description : item.status === 'Completed' ? `Last: ${new Date(item.last_performed).toLocaleDateString()}` : `Due: ${new Date(item.due_date).toLocaleDateString()}`}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[8px] font-medium tracking-tight px-1.5 py-0.5 rounded-lg border ${item.is_automated ? 'text-indigo-400 border-indigo-100 bg-indigo-50/30' :
-                                                                item.is_metric ? 'text-slate-300 border-slate-100 bg-slate-50' :
-                                                                    item.status === 'Overdue' ? 'text-rose-500 bg-rose-50 border-rose-100 animate-pulse' :
-                                                                        item.status === 'Completed' ? 'text-emerald-500 bg-emerald-50 border-emerald-100' :
-                                                                            'text-blue-500 bg-blue-50 border-blue-100'
-                                                                }`}>
-                                                                {item.status}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="text-center py-4 bg-white/50 rounded-xl border border-dashed border-slate-200">
-                                                    <p className="text-[10px] text-slate-400 font-medium italic">No specialty tracking set</p>
-                                                </div>
-                                            )}
+                                    {/* Health Maintenance Section Removed per Request */}
 
-                                            <div className="pt-2">
-                                                <button
-                                                    onClick={() => {
-                                                        setPatientChartTab('reports');
-                                                        setShowPatientChart(true);
-                                                    }}
-                                                    className="w-full py-3 bg-white border-2 border-blue-100 text-[10px] font-black text-blue-600 hover:text-white hover:bg-blue-600 hover:border-blue-600 transition-all rounded-xl flex items-center justify-center gap-2 group/btn shadow-sm"
-                                                >
-                                                    Clinical Quality Measures <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Main Dashboard Content */}
@@ -2112,9 +2050,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Detailed Boards Grid - Custom Proportions for Clinical Depth */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_0.8fr_0.8fr] gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         {/* Column 1: Problems - Geometric Match */}
-                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-rose-50 overflow-hidden h-[340px] border-t-rose-500">
+                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-rose-50 overflow-hidden h-[420px] border-t-rose-500">
                                             <div className="px-4 py-3.5 border-b border-rose-50 flex items-center justify-between bg-rose-50/30">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">
@@ -2146,7 +2084,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
 
                                         {/* Column 2: Medications - Now Compact lg:col-span-1 */}
-                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-blue-50 overflow-hidden h-[340px] border-t-blue-500">
+                                        <div className="flex flex-col bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-blue-50 overflow-hidden h-[420px] border-t-blue-500">
                                             <div className="px-4 py-3.5 border-b border-blue-50 flex items-center justify-between bg-blue-50/30">
                                                 <div className="flex items-center gap-2">
                                                     <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
@@ -2185,7 +2123,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
 
                                         {/* Middle Stack: Allergies & Surgical */}
-                                        <div className="flex flex-col gap-4 h-[416px]">
+                                        <div className="flex flex-col gap-6 h-[420px]">
                                             {/* Allergies - Increased Height */}
                                             <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-amber-50 flex flex-col overflow-hidden border-t-amber-500">
                                                 <div className="px-4 py-3 border-b border-amber-50 flex items-center bg-amber-50/30 justify-between">
@@ -2252,7 +2190,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                         </div>
 
                                         {/* Column 4: Social & Family Stack */}
-                                        <div className="flex flex-col gap-4 h-[416px]">
+                                        <div className="flex flex-col gap-6 h-[420px]">
                                             {/* Family History - Top */}
                                             <div className="flex-1 bg-white rounded-xl shadow-[0_4px_20px_rgba(15,23,42,0.05)] border-2 border-emerald-50 flex flex-col overflow-hidden border-t-emerald-500">
                                                 <div className="px-4 py-3 border-b border-emerald-50 flex items-center bg-emerald-50/30 justify-between">
