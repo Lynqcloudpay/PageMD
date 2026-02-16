@@ -87,6 +87,10 @@ services:
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
+      # Echo AI
+      AI_API_KEY: ${AI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ECHO_MODEL: ${ECHO_MODEL:-gpt-4o}
     depends_on:
       db:
         condition: service_healthy
