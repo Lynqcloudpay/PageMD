@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     MessageCircle, X, Send, Sparkles, Activity, ChevronDown, Loader2, TrendingUp,
-    Pill, FileText, Bot, User, Navigation, BarChart3, Trash2, History
+    Pill, FileText, Bot, User, Navigation, BarChart3, Trash2, History,
+    Stethoscope, ClipboardList, Plus, CheckCircle2, AlertTriangle, Calendar,
+    Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -47,7 +49,6 @@ function EchoTrendChart({ visualization }) {
                 )}
             </div>
             <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ maxHeight: '140px' }}>
-                {/* Grid lines */}
                 {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
                     const y = padding.top + chartH * (1 - pct);
                     const val = Math.round(minVal + (maxVal - minVal) * pct);
@@ -61,7 +62,6 @@ function EchoTrendChart({ visualization }) {
                     );
                 })}
 
-                {/* Threshold lines */}
                 {chartConfig?.thresholds?.map((t, i) => {
                     if (t.value >= minVal && t.value <= maxVal) {
                         const y = scaleY(t.value);
@@ -77,16 +77,13 @@ function EchoTrendChart({ visualization }) {
                     return null;
                 })}
 
-                {/* Data line */}
                 <path d={pathD} fill="none" stroke={severityColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 
-                {/* Data points */}
                 {dataPoints.map((dp, i) => (
                     <circle key={i} cx={scaleX(i)} cy={scaleY(dp.value)} r="3"
                         fill={severityColor} stroke="white" strokeWidth="1.5" />
                 ))}
 
-                {/* Date labels */}
                 {dataPoints.filter((_, i) => i === 0 || i === dataPoints.length - 1).map((dp, i) => (
                     <text key={`d-${i}`}
                         x={scaleX(i === 0 ? 0 : dataPoints.length - 1)}
@@ -108,6 +105,119 @@ function EchoTrendChart({ visualization }) {
     );
 }
 
+// ─── Note Draft Card ────────────────────────────────────────────────────────
+
+function NoteDraftCard({ visualization }) {
+    const [copied, setCopied] = useState({});
+
+    const copyToClipboard = (section, text) => {
+        navigator.clipboard.writeText(text);
+        setCopied(prev => ({ ...prev, [section]: true }));
+        setTimeout(() => setCopied(prev => ({ ...prev, [section]: false })), 2000);
+    };
+
+    if (!visualization?.drafts) return null;
+
+    return (
+        <div className="mt-2 space-y-2">
+            {Object.entries(visualization.drafts).map(([section, text]) => (
+                <div key={section} className="bg-emerald-50/70 rounded-lg p-2.5 border border-emerald-200/60">
+                    <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                            <PenTool className="w-3 h-3 text-emerald-600" />
+                            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                                {section === 'hpi' ? 'HPI' : section.charAt(0).toUpperCase() + section.slice(1)}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => copyToClipboard(section, text)}
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium
+                                       text-emerald-600 hover:bg-emerald-100 transition-colors"
+                        >
+                            {copied[section] ? (
+                                <><CheckCircle2 className="w-2.5 h-2.5" /> Copied</>
+                            ) : (
+                                <><Copy className="w-2.5 h-2.5" /> Copy</>
+                            )}
+                        </button>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 leading-relaxed whitespace-pre-wrap">
+                        {text}
+                    </p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ─── Diagnosis Suggestions Card ─────────────────────────────────────────────
+
+function DiagnosisSuggestionsCard({ visualization }) {
+    if (!visualization?.suggestions?.length) return null;
+
+    return (
+        <div className="mt-2 bg-amber-50/70 rounded-lg p-2.5 border border-amber-200/60">
+            <div className="flex items-center gap-1.5 mb-1.5">
+                <Search className="w-3 h-3 text-amber-600" />
+                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+                    Suggested Diagnoses
+                </span>
+            </div>
+            <div className="space-y-1">
+                {visualization.suggestions.map((dx, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 px-2 py-1 bg-white/60 rounded-md">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <code className="text-[10px] font-mono font-bold text-amber-700 flex-shrink-0">
+                                {dx.icd10_code}
+                            </code>
+                            <span className="text-[11px] text-slate-700 truncate">{dx.description}</span>
+                        </div>
+                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${dx.relevance === 'high' ? 'bg-amber-200 text-amber-800' :
+                                dx.relevance === 'medium' ? 'bg-amber-100 text-amber-600' :
+                                    'bg-slate-100 text-slate-500'
+                            }`}>
+                            {dx.relevance}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─── Write Action Card ──────────────────────────────────────────────────────
+
+function WriteActionCard({ action }) {
+    if (!action) return null;
+
+    const iconMap = {
+        add_problem: Stethoscope,
+        add_medication: Pill,
+        create_order: ClipboardList
+    };
+    const Icon = iconMap[action.type] || Plus;
+
+    return (
+        <div className={`mt-2 rounded-lg p-2 border ${action.success
+                ? 'bg-green-50/70 border-green-200/60'
+                : 'bg-red-50/70 border-red-200/60'
+            }`}>
+            <div className="flex items-center gap-1.5">
+                {action.success ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                ) : (
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                )}
+                <Icon className="w-3 h-3 text-slate-500" />
+                <span className={`text-[11px] font-medium ${action.success ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                    {action.message}
+                </span>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Echo Panel ────────────────────────────────────────────────────────
 
 export default function EchoPanel({ patientId, patientName }) {
@@ -122,19 +232,21 @@ export default function EchoPanel({ patientId, patientName }) {
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
-    // Auto-scroll to bottom
+    const isPatientMode = !!patientId;
+
+    // Auto-scroll
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Focus input when panel opens
+    // Focus input
     useEffect(() => {
         if (isOpen) {
             setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [isOpen]);
 
-    // Reset conversation when patient changes
+    // Reset on patient change
     useEffect(() => {
         setMessages([]);
         setConversationId(null);
@@ -148,7 +260,6 @@ export default function EchoPanel({ patientId, patientName }) {
         setInput('');
         setError(null);
 
-        // Add user message
         const userMessage = { role: 'user', content: text, timestamp: new Date() };
         setMessages(prev => [...prev, userMessage]);
         setLoading(true);
@@ -173,13 +284,13 @@ export default function EchoPanel({ patientId, patientName }) {
 
             const data = await response.json();
 
-            // Add assistant message
             const assistantMessage = {
                 role: 'assistant',
                 content: data.response,
                 timestamp: new Date(),
                 toolCalls: data.toolCalls,
                 visualizations: data.visualizations,
+                writeActions: data.writeActions,
                 usage: data.usage
             };
             setMessages(prev => [...prev, assistantMessage]);
@@ -213,13 +324,24 @@ export default function EchoPanel({ patientId, patientName }) {
         setError(null);
     };
 
-    // Quick action buttons
-    const quickActions = [
+    // Quick actions — context-aware
+    const patientActions = [
         { label: 'Summarize chart', icon: FileText, prompt: 'Give me a concise summary of this patient.' },
         { label: 'BP trend', icon: TrendingUp, prompt: 'Show me the blood pressure trend for this patient.' },
         { label: 'Active meds', icon: Pill, prompt: 'List all active medications.' },
-        { label: 'Vital overview', icon: Activity, prompt: 'Analyze all vital sign trends.' }
+        { label: 'Draft HPI', icon: PenTool, prompt: 'Draft an HPI for a follow-up visit.' },
+        { label: 'Vital overview', icon: Activity, prompt: 'Analyze all vital sign trends.' },
+        { label: 'Suggest Dx', icon: Stethoscope, prompt: 'Suggest diagnoses based on the chief complaint and patient history.' },
     ];
+
+    const globalActions = [
+        { label: 'Today\'s schedule', icon: Calendar, prompt: 'Show me today\'s schedule summary.' },
+        { label: 'Pending notes', icon: FileText, prompt: 'How many unsigned notes do I have?' },
+        { label: 'Inbox summary', icon: Inbox, prompt: 'Give me my inbox summary.' },
+        { label: 'Navigate', icon: Navigation, prompt: 'Take me to the schedule.' },
+    ];
+
+    const quickActions = isPatientMode ? patientActions : globalActions;
 
     // ─── Render ─────────────────────────────────────────────────────────
 
@@ -240,25 +362,36 @@ export default function EchoPanel({ patientId, patientName }) {
     }
 
     return (
-        <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-h-[600px] flex flex-col
+        <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-h-[650px] flex flex-col
                         bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200/60
                         overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 
-                            bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+            <div className={`flex items-center justify-between px-4 py-3 text-white
+                            ${isPatientMode
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                    : 'bg-gradient-to-r from-slate-700 to-slate-800'}`}>
                 <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                        <Bot className="w-4 h-4" />
+                        {isPatientMode ? <Bot className="w-4 h-4" /> : <Globe className="w-4 h-4" />}
                     </div>
                     <div>
                         <h3 className="text-sm font-bold tracking-tight">Echo</h3>
-                        <p className="text-[10px] text-blue-100 opacity-80">
-                            {patientName ? `Viewing ${patientName}` : 'AI Clinical Assistant'}
+                        <p className="text-[10px] opacity-80">
+                            {patientName
+                                ? `Viewing ${patientName}`
+                                : isPatientMode
+                                    ? 'Patient Chart Mode'
+                                    : 'Global Mode'}
                         </p>
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
+                    {/* Mode indicator badge */}
+                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full mr-1 ${isPatientMode ? 'bg-blue-400/30 text-blue-100' : 'bg-slate-500/30 text-slate-300'
+                        }`}>
+                        {isPatientMode ? 'CHART' : 'GLOBAL'}
+                    </span>
                     {conversationId && (
                         <button onClick={clearConversation}
                             className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
@@ -274,37 +407,43 @@ export default function EchoPanel({ patientId, patientName }) {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[400px]
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[440px]
                             scrollbar-thin scrollbar-thumb-slate-200">
 
                 {/* Welcome state */}
                 {messages.length === 0 && (
-                    <div className="text-center py-6 space-y-4">
-                        <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 
-                                        flex items-center justify-center border border-blue-100">
-                            <Sparkles className="w-6 h-6 text-blue-500" />
+                    <div className="text-center py-4 space-y-3">
+                        <div className={`w-12 h-12 mx-auto rounded-2xl flex items-center justify-center border ${isPatientMode
+                                ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100'
+                                : 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200'
+                            }`}>
+                            {isPatientMode
+                                ? <Sparkles className="w-6 h-6 text-blue-500" />
+                                : <Globe className="w-6 h-6 text-slate-500" />}
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-slate-700">Hi, I'm Echo</p>
+                            <p className="text-sm font-semibold text-slate-700">
+                                {isPatientMode ? "Hi, I'm Echo" : "Hi, I'm Echo — Global Mode"}
+                            </p>
                             <p className="text-xs text-slate-400 mt-1">
-                                {patientId ? 'Ask me anything about this patient.' : 'Select a patient to get started.'}
+                                {isPatientMode
+                                    ? 'Ask me anything about this patient. I can also draft notes and add to the chart.'
+                                    : 'Ask about your schedule, inbox, pending notes, or navigate the EMR.'}
                             </p>
                         </div>
-                        {patientId && (
-                            <div className="grid grid-cols-2 gap-2 px-2">
-                                {quickActions.map((action, i) => (
-                                    <button key={i}
-                                        onClick={() => sendMessage(action.prompt)}
-                                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] 
-                                                       font-medium text-slate-500 bg-slate-50 border border-slate-100
-                                                       hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100
-                                                       transition-all duration-150">
-                                        <action.icon className="w-3.5 h-3.5" />
-                                        {action.label}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        <div className={`grid gap-2 px-2 ${isPatientMode ? 'grid-cols-2' : 'grid-cols-2'}`}>
+                            {quickActions.map((action, i) => (
+                                <button key={i}
+                                    onClick={() => sendMessage(action.prompt)}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] 
+                                                   font-medium text-slate-500 bg-slate-50 border border-slate-100
+                                                   hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100
+                                                   transition-all duration-150">
+                                    <action.icon className="w-3.5 h-3.5" />
+                                    {action.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -331,6 +470,8 @@ export default function EchoPanel({ patientId, patientName }) {
                             {msg.visualizations?.map((viz, vi) => (
                                 <div key={vi}>
                                     {viz.type === 'vital_trend' && <EchoTrendChart visualization={viz} />}
+                                    {viz.type === 'note_draft' && <NoteDraftCard visualization={viz} />}
+                                    {viz.type === 'diagnosis_suggestions' && <DiagnosisSuggestionsCard visualization={viz} />}
                                     {viz.type === 'navigation' && (
                                         <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-100">
                                             <div className="flex items-center gap-1.5">
@@ -345,13 +486,22 @@ export default function EchoPanel({ patientId, patientName }) {
                                 </div>
                             ))}
 
+                            {/* Write Actions */}
+                            {msg.writeActions?.map((wa, wi) => (
+                                <WriteActionCard key={wi} action={wa} />
+                            ))}
+
                             {/* Tool call indicators */}
                             {msg.toolCalls?.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1.5">
                                     {msg.toolCalls.map((tc, ti) => (
                                         <span key={ti} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 
                                                                     rounded-full bg-slate-100 text-[9px] text-slate-400">
-                                            <BarChart3 className="w-2.5 h-2.5" />
+                                            {tc.name.includes('add_') || tc.name.includes('create_') ? (
+                                                <Zap className="w-2.5 h-2.5 text-amber-500" />
+                                            ) : (
+                                                <BarChart3 className="w-2.5 h-2.5" />
+                                            )}
                                             {tc.name.replace(/_/g, ' ')}
                                         </span>
                                     ))}
@@ -367,7 +517,7 @@ export default function EchoPanel({ patientId, patientName }) {
                     </div>
                 ))}
 
-                {/* Loading indicator */}
+                {/* Loading */}
                 {loading && (
                     <div className="flex gap-2">
                         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 
@@ -388,7 +538,6 @@ export default function EchoPanel({ patientId, patientName }) {
 
             {/* Input */}
             <div className="px-3 pb-3 pt-1">
-                {/* Token usage indicator */}
                 {usage && (
                     <div className="flex items-center justify-between px-2 mb-1.5">
                         <span className="text-[9px] text-slate-300">
@@ -404,8 +553,10 @@ export default function EchoPanel({ patientId, patientName }) {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={patientId ? "Ask Echo about this patient..." : "Select a patient first..."}
-                        disabled={!patientId || loading}
+                        placeholder={isPatientMode
+                            ? "Ask Echo about this patient..."
+                            : "Ask about schedule, inbox, or navigate..."}
+                        disabled={loading}
                         rows={1}
                         className="flex-1 bg-transparent text-[12px] text-slate-700 placeholder-slate-300
                                    resize-none outline-none max-h-[80px]"
@@ -413,7 +564,7 @@ export default function EchoPanel({ patientId, patientName }) {
                     />
                     <button
                         onClick={() => sendMessage()}
-                        disabled={!input.trim() || loading || !patientId}
+                        disabled={!input.trim() || loading}
                         className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center 
                                    text-white disabled:opacity-30 disabled:bg-slate-300
                                    hover:bg-blue-600 transition-colors flex-shrink-0"

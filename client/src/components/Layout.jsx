@@ -570,13 +570,11 @@ const Layout = ({ children }) => {
                 <BreakTheGlassModal />
                 <MobileMenu />
 
-                {/* Echo AI */}
-                {location.pathname.includes('/patient/') && (
-                    <EchoPanel
-                        patientId={location.pathname.split('/')[2]}
-                        patientName={null}
-                    />
-                )}
+                {/* Echo AI — Global Availability (Phase 2A) */}
+                <EchoPanel
+                    patientId={location.pathname.includes('/patient/') ? location.pathname.split('/patient/')[1]?.split('/')[0] : null}
+                    patientName={null}
+                />
 
                 {/* Help button — frosted, no gradient */}
                 <button
