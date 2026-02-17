@@ -19,6 +19,9 @@ const echoCDSEngine = require('./echoCDSEngine');
 const echoScoreEngine = require('./echoScoreEngine');
 
 const AI_API_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+if (!AI_API_KEY) {
+    console.warn('[Echo] WARNING: Neither AI_API_KEY nor OPENAI_API_KEY found in environment.');
+}
 const ECHO_MODEL = process.env.ECHO_MODEL || 'gpt-4o';
 const DAILY_TOKEN_BUDGET = parseInt(process.env.ECHO_DAILY_TOKEN_BUDGET || '500000');
 
@@ -1349,7 +1352,7 @@ async function chat({ message, patientId, conversationId, user, uiContext }) {
         finalResponse = llmResponse.content || '';
 
     } catch (err) {
-        console.error('[Echo] Chat error:', err);
+        console.error('[Echo] Chat error stack:', err.stack);
         finalResponse = 'I encountered an error processing your request. Please try again.';
     }
 
@@ -1415,7 +1418,7 @@ async function callLLM(messages, tools) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${AI_API_KEY}`
+            'Authorization': `Bearer ${AI_API_KEY || process.env.OPENAI_API_KEY}`
         },
         body: JSON.stringify(body)
     });
