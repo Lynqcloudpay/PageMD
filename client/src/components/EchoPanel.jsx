@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
     MessageCircle, X, Send, Sparkles, Activity, ChevronDown, Loader2, TrendingUp,
     Pill, FileText, Bot, User, Navigation, BarChart3, Trash2, History,
     Stethoscope, ClipboardList, Plus, CheckCircle2, AlertTriangle, Calendar,
     Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe, FlaskConical, ArrowUpRight, ArrowDownRight,
-    Mic, Square
+    Mic, Square, Paperclip, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -38,48 +39,54 @@ function EchoTrendChart({ visualization }) {
 
     const severityColor = clinicalContext?.severity === 'high' ? '#ef4444' :
         clinicalContext?.severity === 'moderate' ? '#f59e0b' : '#3b82f6';
+    const gradientId = `chartGradient-${label.replace(/\s+/g, '')}`;
 
     return (
-        <div className="bg-slate-50 rounded-lg p-3 mt-2 border border-slate-200/60">
-            <div className="flex items-center justify-between mb-1">
-                <span className="text-[11px] font-semibold text-slate-600">{label}</span>
+        <div className="bg-white rounded-xl p-4 mt-2 border border-slate-200/60 shadow-sm transition-all hover:shadow-md group">
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-slate-50 group-hover:bg-blue-50 transition-colors">
+                        <TrendingUp className={`w-3.5 h-3.5 ${severityColor === '#ef4444' ? 'text-red-500' : 'text-blue-500'}`} />
+                    </div>
+                    <span className="text-[12px] font-bold text-slate-700 tracking-tight">{label}</span>
+                </div>
                 {stats?.trend && stats.trend !== 'stable' && (
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${stats.trend === 'rising' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${stats.trend === 'rising'
+                        ? 'bg-red-50 text-red-600 border-red-100'
+                        : 'bg-blue-50 text-blue-600 border-blue-100'
                         }`}>
-                        {stats.trend === 'rising' ? '↑ Rising' : '↓ Falling'}
-                    </span>
+                        {stats.trend === 'rising' ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider">
+                            {stats.trend === 'rising' ? 'Rising' : 'Falling'}
+                        </span>
+                    </div>
                 )}
             </div>
             <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ maxHeight: '140px' }}>
+                <defs>
+                    <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={severityColor} stopOpacity="0.2" />
+                        <stop offset="100%" stopColor={severityColor} stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+
                 {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
                     const y = padding.top + chartH * (1 - pct);
                     const val = Math.round(minVal + (maxVal - minVal) * pct);
                     return (
                         <g key={i}>
                             <line x1={padding.left} y1={y} x2={width - padding.right} y2={y}
-                                stroke="#e2e8f0" strokeWidth="0.5" />
-                            <text x={padding.left - 4} y={y + 3} textAnchor="end"
-                                className="text-[8px]" fill="#94a3b8">{val}</text>
+                                stroke="#f1f5f9" strokeWidth="1" />
+                            <text x={padding.left - 8} y={y + 3} textAnchor="end"
+                                className="text-[8px] font-medium" fill="#94a3b8">{val}</text>
                         </g>
                     );
                 })}
 
-                {chartConfig?.thresholds?.map((t, i) => {
-                    if (t.value >= minVal && t.value <= maxVal) {
-                        const y = scaleY(t.value);
-                        return (
-                            <g key={`t-${i}`}>
-                                <line x1={padding.left} y1={y} x2={width - padding.right} y2={y}
-                                    stroke={t.color} strokeWidth="1" strokeDasharray="4,3" opacity="0.6" />
-                                <text x={width - padding.right + 2} y={y + 3}
-                                    className="text-[7px]" fill={t.color}>{t.label}</text>
-                            </g>
-                        );
-                    }
-                    return null;
-                })}
+                <path d={`${pathD} L ${scaleX(dataPoints.length - 1)} ${padding.top + chartH} L ${padding.left} ${padding.top + chartH} Z`}
+                    fill={`url(#${gradientId})`} />
 
-                <path d={pathD} fill="none" stroke={severityColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d={pathD} fill="none" stroke={severityColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
                 {dataPoints.map((dp, i) => (
                     <circle key={i} cx={scaleX(i)} cy={scaleY(dp.value)} r="3"
@@ -121,31 +128,33 @@ function NoteDraftCard({ visualization }) {
     if (!visualization?.drafts) return null;
 
     return (
-        <div className="mt-2 space-y-2">
+        <div className="mt-3 space-y-2.5">
             {Object.entries(visualization.drafts).map(([section, text]) => (
-                <div key={section} className="bg-emerald-50/70 rounded-lg p-2.5 border border-emerald-200/60">
-                    <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5">
-                            <PenTool className="w-3 h-3 text-emerald-600" />
-                            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                                {section === 'hpi' ? 'HPI' : section.charAt(0).toUpperCase() + section.slice(1)}
+                <div key={section} className="bg-white rounded-xl p-3 border border-emerald-200/60 shadow-sm relative group overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <div className="p-1 rounded-lg bg-emerald-50 text-emerald-600">
+                                <PenTool className="w-3.5 h-3.5" />
+                            </div>
+                            <span className="text-[11px] font-black text-emerald-900 uppercase tracking-widest">
+                                {section === 'hpi' ? 'HPI Draft' : `Draft: ${section}`}
                             </span>
                         </div>
                         <button
                             onClick={() => copyToClipboard(section, text)}
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium
-                                       text-emerald-600 hover:bg-emerald-100 transition-colors"
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all
+                                       ${copied[section]
+                                    ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                                    : 'text-emerald-600 hover:bg-emerald-50'}`}
                         >
-                            {copied[section] ? (
-                                <><CheckCircle2 className="w-2.5 h-2.5" /> Copied</>
-                            ) : (
-                                <><Copy className="w-2.5 h-2.5" /> Copy</>
-                            )}
+                            {copied[section] ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                            {copied[section] ? 'Copied' : 'Copy'}
                         </button>
                     </div>
-                    <p className="text-[11px] text-emerald-800 leading-relaxed whitespace-pre-wrap">
+                    <div className="text-[12px] text-slate-700 leading-relaxed font-serif italic bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
                         {text}
-                    </p>
+                    </div>
                 </div>
             ))}
         </div>
@@ -204,39 +213,49 @@ function StagedActionCard({ visualization, onApprove, onReject }) {
     const isRejected = visualization.status === 'rejected';
 
     return (
-        <div className={`mt-2 rounded-lg p-2.5 border transition-all duration-200 ${isCommitted
-            ? 'bg-green-50 border-green-200 shadow-sm'
+        <div className={`mt-2.5 rounded-2xl p-3 border transition-all duration-300 relative overflow-hidden ${isCommitted
+            ? 'bg-green-50/50 border-green-200'
             : isRejected
                 ? 'bg-slate-50 border-slate-200 opacity-60'
-                : 'bg-blue-50/80 border-blue-200 shadow-sm'
+                : 'bg-white border-blue-200 shadow-sm hover:shadow-md hover:border-blue-300'
             }`}>
-            <div className="flex items-center gap-2">
-                <div className={`p-1.5 rounded-lg ${isCommitted ? 'bg-green-100' : isRejected ? 'bg-slate-100' : 'bg-blue-100'}`}>
-                    <Icon className={`w-3.5 h-3.5 ${isCommitted ? 'text-green-600' : isRejected ? 'text-slate-500' : 'text-blue-600'}`} />
+            {/* Background Accent */}
+            {!isCommitted && !isRejected && (
+                <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-blue-50 rounded-full opacity-40 blur-2xl" />
+            )}
+
+            <div className="flex items-start gap-3 relative z-10">
+                <div className={`p-2 rounded-xl shadow-sm ${isCommitted ? 'bg-green-100 text-green-600' : isRejected ? 'bg-slate-100 text-slate-500' : 'bg-blue-600 text-white'}`}>
+                    <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className={`text-[11px] font-bold ${isCommitted ? 'text-green-800' : isRejected ? 'text-slate-600' : 'text-blue-800'}`}>
-                        {visualization.label}
-                    </p>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
-                        {isCommitted ? '✅ Action successfully committed to chart.' : isRejected ? 'Action declined.' : visualization.message}
+                    <div className="flex items-center justify-between">
+                        <p className={`text-[12px] font-black tracking-tight ${isCommitted ? 'text-green-800' : isRejected ? 'text-slate-600' : 'text-slate-900'}`}>
+                            {visualization.label}
+                        </p>
+                        {isCommitted && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+                    </div>
+                    <p className={`text-[11px] mt-0.5 leading-tight ${isCommitted ? 'text-green-600' : 'text-slate-500'}`}>
+                        {isCommitted ? 'Action successfully committed to patient chart.' : isRejected ? 'Action declined.' : visualization.message}
                     </p>
                 </div>
             </div>
 
             {/* DDI Warning */}
             {visualization.interactionWarning && !isCommitted && !isRejected && (
-                <div className={`mt-2 p-2 rounded-md border ${visualization.interactionWarning.severity === 'high'
-                    ? 'bg-red-50 border-red-200 text-red-800'
-                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                <div className={`mt-3 p-2.5 rounded-xl border ${visualization.interactionWarning.severity === 'high'
+                    ? 'bg-red-50/80 border-red-200 text-red-800'
+                    : 'bg-amber-50/80 border-amber-200 text-amber-800'
                     } animate-in fade-in slide-in-from-top-1`}>
-                    <div className="flex items-start gap-1.5">
-                        <AlertTriangle className={`w-3 h-3 mt-0.5 ${visualization.interactionWarning.severity === 'high' ? 'text-red-500 animate-pulse' : 'text-amber-500'}`} />
+                    <div className="flex items-start gap-2">
+                        <div className={`p-1 rounded-lg ${visualization.interactionWarning.severity === 'high' ? 'bg-red-200 text-red-600' : 'bg-amber-200 text-amber-600'}`}>
+                            <AlertTriangle className={`w-3 h-3 ${visualization.interactionWarning.severity === 'high' ? 'animate-pulse' : ''}`} />
+                        </div>
                         <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wider">
+                            <p className="text-[10px] font-black uppercase tracking-widest leading-none mt-0.5">
                                 {visualization.interactionWarning.risk} — {visualization.interactionWarning.severity.toUpperCase()} RISK
                             </p>
-                            <p className="text-[10px] mt-0.5 leading-snug">
+                            <p className="text-[10px] mt-1 font-medium leading-snug opacity-90">
                                 {visualization.interactionWarning.message} (Interacts with: {visualization.interactionWarning.interactsWith})
                             </p>
                         </div>
@@ -245,18 +264,18 @@ function StagedActionCard({ visualization, onApprove, onReject }) {
             )}
 
             {!isCommitted && !isRejected && (
-                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100/50">
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
                     <button
                         onClick={() => onApprove(visualization)}
-                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded-md shadow-sm transition-colors"
+                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-wider rounded-lg shadow-sm transition-all active:scale-[0.97]"
                     >
                         Approve
                     </button>
                     <button
                         onClick={() => onReject(visualization)}
-                        className="px-3 py-1.5 bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 text-[10px] font-medium rounded-md transition-colors"
+                        className="px-4 py-1.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 text-[10px] font-bold rounded-lg transition-all active:scale-[0.97]"
                     >
-                        Reject
+                        Decline
                     </button>
                 </div>
             )}
@@ -308,23 +327,32 @@ function LabResultsCard({ visualization }) {
                 </div>
             )}
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
                 {results.map((r, i) => (
-                    <div key={i} className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md border ${severityBg[r.severity] || severityBg.unknown
-                        }`}>
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                            <span className="text-[10px]">{severityIcon[r.severity] || '⚪'}</span>
-                            <span className="text-[11px] font-medium truncate">
-                                {r.testName || r.rawTestName}
-                            </span>
+                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white border border-slate-200/80 shadow-sm group hover:border-blue-200 transition-all">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className={`w-2 h-2 rounded-full ${r.severity === 'critical' ? 'bg-red-500 animate-pulse ring-4 ring-red-100' :
+                                r.severity === 'high' ? 'bg-red-400' :
+                                    r.severity === 'moderate' ? 'bg-amber-400' : 'bg-green-400'
+                                }`} />
+                            <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-slate-700 truncate">{r.testName || r.rawTestName}</p>
+                                <p className="text-[9px] text-slate-400 font-medium">Ref: {r.normalRange || 'N/A'}</p>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-[11px] font-bold">
-                                {r.value}{r.unit ? ` ${r.unit}` : ''}
+                        <div className="flex flex-col items-end flex-shrink-0">
+                            <span className={`text-[12px] font-black ${r.severity === 'critical' ? 'text-red-600' :
+                                r.severity === 'high' ? 'text-red-500' :
+                                    r.severity === 'moderate' ? 'text-amber-600' : 'text-slate-900'
+                                }`}>
+                                {r.value} <small className="text-[9px] font-bold opacity-60 uppercase">{r.unit}</small>
                             </span>
-                            <span className="text-[9px] opacity-70">
-                                {r.normalRange && r.normalRange !== 'N/A' ? `(${r.normalRange})` : ''}
-                            </span>
+                            {r.status !== 'normal' && (
+                                <span className={`text-[8px] font-black uppercase tracking-widest ${r.severity === 'critical' ? 'text-red-500' : 'text-amber-500'
+                                    }`}>
+                                    {r.status.replace('_', ' ')}
+                                </span>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -332,18 +360,24 @@ function LabResultsCard({ visualization }) {
 
             {/* Trends section */}
             {visualization.trends?.length > 0 && (
-                <div className="mt-2 pt-2 border-t border-blue-200/40">
-                    <span className="text-[9px] font-bold text-blue-600 uppercase">Trends</span>
-                    <div className="space-y-0.5 mt-1">
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5 mb-2">
+                        <Activity className="w-3 h-3 text-blue-500" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Longitudinal Trends</span>
+                    </div>
+                    <div className="space-y-1">
                         {visualization.trends.filter(t => t.direction !== 'stable').map((t, i) => (
-                            <div key={i} className="flex items-center gap-1 text-[10px]">
-                                {t.direction === 'rising'
-                                    ? <ArrowUpRight className="w-3 h-3 text-red-500" />
-                                    : <ArrowDownRight className="w-3 h-3 text-blue-500" />
-                                }
-                                <span className="text-blue-700">
-                                    {t.testName}: {t.direction} {Math.abs(t.percentChange)}% ({t.period})
-                                </span>
+                            <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
+                                <span className="text-[11px] font-bold text-slate-600">{t.testName}</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`text-[10px] font-black ${t.direction === 'rising' ? 'text-red-500' : 'text-blue-500'}`}>
+                                        {t.direction === 'rising' ? '+' : ''}{t.percentChange}%
+                                    </span>
+                                    {t.direction === 'rising'
+                                        ? <ArrowUpRight className="w-3 h-3 text-red-500" />
+                                        : <ArrowDownRight className="w-3 h-3 text-blue-500" />
+                                    }
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -406,20 +440,88 @@ function ClinicalGapsCard({ visualization }) {
     );
 }
 
+// ─── Risk Assessment Card (Phase 4) ─────────────────────────────────────────
+
+function RiskAssessmentCard({ visualization }) {
+    if (!visualization?.scores?.length) return null;
+
+    return (
+        <div className="mt-3 bg-white rounded-2xl p-4 border border-blue-100 shadow-sm relative overflow-hidden group">
+            {/* Background Atmosphere */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-blue-100/50 transition-colors" />
+
+            <div className="flex items-center gap-2 mb-4 relative z-10">
+                <div className="p-1.5 rounded-xl bg-blue-600 shadow-blue-200 shadow-lg">
+                    <Activity className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                    <span className="text-[12px] font-black text-slate-900 tracking-tight">Predictive Insight Engine</span>
+                    <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest leading-none mt-0.5">Clinical Prognosis</p>
+                </div>
+            </div>
+
+            <div className="space-y-3 relative z-10">
+                {visualization.scores.map((score, i) => (
+                    <div key={i} className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 hover:border-blue-200 transition-all">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{score.type === 'ascvd' ? 'ASCVD 10-Year Risk' : 'CHA2DS2-VASc'}</span>
+                            <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${score.level === 'high' || score.score >= 2 ? 'bg-red-100 text-red-600' :
+                                score.level === 'intermediate' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
+                                }`}>
+                                {score.level || (score.score >= 2 ? 'Actionable' : 'Monitor')}
+                            </div>
+                        </div>
+
+                        <div className="flex items-end gap-2 mb-2">
+                            <span className={`text-2xl font-black tracking-tight ${score.level === 'high' || score.score >= 2 ? 'text-red-500' : 'text-slate-900'
+                                }`}>
+                                {score.score}<small className="text-[10px] font-bold opacity-60 ml-0.5 uppercase">{score.unit}</small>
+                            </span>
+                            <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden mb-2 relative">
+                                <div
+                                    className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${(score.type === 'ascvd' && score.score > 20) || (score.type === 'chads' && score.score >= 4) ? 'bg-red-500' :
+                                        (score.type === 'ascvd' && score.score > 7.5) || (score.type === 'chads' && score.score >= 2) ? 'bg-amber-500' : 'bg-green-500'
+                                        }`}
+                                    style={{ width: `${Math.min(100, (score.score / (score.type === 'ascvd' ? 30 : 9)) * 100)}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <p className="text-[11px] font-medium text-slate-700 leading-snug">
+                            {score.interpretation}
+                        </p>
+                        <div className="mt-2.5 flex items-start gap-2 p-2 rounded-xl bg-white/60 border border-blue-50">
+                            <ShieldAlert className="w-3.5 h-3.5 text-blue-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-[10px] font-bold text-blue-700 leading-tight">
+                                {score.recommendation}
+                            </p>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Echo Panel ────────────────────────────────────────────────────────
 
 export default function EchoPanel({ patientId, patientName }) {
     const { user } = useAuth();
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [attachments, setAttachments] = useState([]);
+    const fileInputRef = useRef(null);
+    const [isGlobalLoading, setIsGlobalLoading] = useState(false);
     const [conversationId, setConversationId] = useState(null);
     const [usage, setUsage] = useState(null);
     const [error, setError] = useState(null);
     const [proactiveGaps, setProactiveGaps] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
+    const [suggestion, setSuggestion] = useState(null);
+
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
@@ -427,6 +529,20 @@ export default function EchoPanel({ patientId, patientName }) {
     const timerRef = useRef(null);
 
     const isPatientMode = !!patientId;
+
+    // Navigation Observer Logic
+    useEffect(() => {
+        const path = location.pathname.toLowerCase();
+        if (path.includes('labs') || path.includes('orders')) {
+            setSuggestion({ label: 'Analyze Labs', prompt: 'Interpret the latest lab results and check for trends.' });
+        } else if (path.includes('visit') || path.includes('notes')) {
+            setSuggestion({ label: 'Draft SOAP Note', prompt: 'Draft the HPI and Assessment for this visit.' });
+        } else if (path.includes('schedule')) {
+            setSuggestion({ label: 'Day Summary', prompt: 'Give me a summary of my priority patients for today.' });
+        } else {
+            setSuggestion(null);
+        }
+    }, [location.pathname]);
 
     // Auto-scroll
     useEffect(() => {
@@ -439,6 +555,32 @@ export default function EchoPanel({ patientId, patientName }) {
             setTimeout(() => inputRef.current?.focus(), 100);
         }
     }, [isOpen]);
+
+    // Hotkey listener for Alt key Push-to-Talk
+    useEffect(() => {
+        const handleGlobalKeyDown = (e) => {
+            if (e.key === 'Alt' && isOpen) {
+                e.preventDefault();
+                if (!isRecording) {
+                    handleStartRecording();
+                }
+            }
+        };
+
+        const handleGlobalKeyUp = (e) => {
+            if (e.key === 'Alt') {
+                handleStopRecording();
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        window.addEventListener('keyup', handleGlobalKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleGlobalKeyDown);
+            window.removeEventListener('keyup', handleGlobalKeyUp);
+        };
+    }, [isOpen, isRecording]);
 
     // Reset on patient change
     useEffect(() => {
@@ -461,20 +603,31 @@ export default function EchoPanel({ patientId, patientName }) {
 
     const sendMessage = useCallback(async (messageText) => {
         const text = messageText || input.trim();
-        if (!text || loading) return;
+        if ((!text && attachments.length === 0) || isGlobalLoading) return;
 
+        const currentAttachments = [...attachments];
         setInput('');
+        setAttachments([]);
         setError(null);
 
-        const userMessage = { role: 'user', content: text, timestamp: new Date() };
+        const userMessage = {
+            role: 'user',
+            content: text,
+            timestamp: new Date(),
+            attachments: currentAttachments.map(f => ({ name: f.name, type: f.type }))
+        };
         setMessages(prev => [...prev, userMessage]);
-        setLoading(true);
+        setIsGlobalLoading(true);
 
         try {
+            // In a real implementation, we would convert files to base64 or use FormData
+            // Here we'll simulate the payload for the multi-modal agent
             const { data } = await api.post('/echo/chat', {
                 message: text,
                 patientId,
-                conversationId
+                conversationId,
+                uiContext: window.location.pathname,
+                attachments: currentAttachments.map(f => f.name) // Placeholder
             });
 
             const assistantMessage = {
@@ -501,11 +654,11 @@ export default function EchoPanel({ patientId, patientName }) {
                 isError: true
             }]);
         } finally {
-            setLoading(false);
+            setIsGlobalLoading(false);
         }
-    }, [input, loading, patientId, conversationId]);
+    }, [input, isGlobalLoading, patientId, conversationId, attachments]);
 
-    const startRecording = async () => {
+    const handleStartRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mediaRecorder = new MediaRecorder(stream);
@@ -519,7 +672,15 @@ export default function EchoPanel({ patientId, patientName }) {
             };
 
             mediaRecorder.onstop = async () => {
+                if (audioChunksRef.current.length === 0) {
+                    setIsRecording(false);
+                    return;
+                }
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                if (audioBlob.size < 1000) { // Ignore blobs smaller than 1KB (likely silence or micro-tap)
+                    setIsRecording(false);
+                    return;
+                }
                 await handleAudioUpload(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
                 setRecordingTime(0);
@@ -538,20 +699,22 @@ export default function EchoPanel({ patientId, patientName }) {
         }
     };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
+    const handleStopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
-            setIsRecording(false);
         }
+        setIsRecording(false);
     };
 
     const handleAudioUpload = async (blob) => {
-        setLoading(true);
+        setIsGlobalLoading(true); // Changed 'setLoading' to 'setIsGlobalLoading'
         try {
             const formData = new FormData();
             formData.append('audio', blob, 'recording.webm');
 
-            const { data } = await api.post('/echo/transcribe', formData);
+            const { data } = await api.post('/echo/transcribe', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
 
             if (data.success && data.text) {
                 sendMessage(data.text);
@@ -560,7 +723,7 @@ export default function EchoPanel({ patientId, patientName }) {
             console.error('Transcription error:', err);
             setError('Failed to transcribe audio.');
         } finally {
-            setLoading(false);
+            setIsGlobalLoading(false); // Changed 'setLoading' to 'setIsGlobalLoading'
         }
     };
 
@@ -607,6 +770,18 @@ export default function EchoPanel({ patientId, patientName }) {
             e.preventDefault();
             sendMessage();
         }
+    };
+
+    const handleFileUpload = (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length > 0) {
+            setAttachments(prev => [...prev, ...files]);
+            // Logic to handle upload/processing would go here
+        }
+    };
+
+    const removeAttachment = (index) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
     };
 
     const clearConversation = () => {
@@ -663,17 +838,24 @@ export default function EchoPanel({ patientId, patientName }) {
                         overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
 
             {/* Header */}
-            <div className={`flex items-center justify-between px-4 py-3 text-white
+            <div className={`flex items-center justify-between px-4 py-3 text-white sticky top-0 z-20 backdrop-blur-xl border-b
                             ${isPatientMode
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
-                    : 'bg-gradient-to-r from-slate-700 to-slate-800'}`}>
-                <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10 overflow-hidden shadow-inner">
-                        <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
+                    ? 'bg-blue-600/90 border-blue-400/20'
+                    : 'bg-slate-800/95 border-slate-600/30'}`}>
+                <div className="flex items-center gap-2.5">
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-white/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <div className="relative w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden shadow-inner">
+                            <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-500" />
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 border-2 border-blue-600 rounded-full shadow-sm" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-extrabold tracking-tight uppercase">Eko</h3>
-                        <p className="text-[10px] opacity-80">
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="text-[13px] font-black tracking-tight uppercase">Eko</h3>
+                            <span className="text-[7px] font-black bg-white/20 px-1 rounded-[4px] tracking-widest h-3 flex items-center">PRO</span>
+                        </div>
+                        <p className="text-[10px] opacity-70 font-medium leading-none mt-0.5">
                             {patientName
                                 ? `Viewing ${patientName}`
                                 : isPatientMode
@@ -684,8 +866,10 @@ export default function EchoPanel({ patientId, patientName }) {
                 </div>
                 <div className="flex items-center gap-1">
                     {/* Mode indicator badge */}
-                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full mr-1 ${isPatientMode ? 'bg-blue-400/30 text-blue-100' : 'bg-slate-500/30 text-slate-300'
-                        }`}>
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full mr-1 tracking-wider border
+                                   ${isPatientMode
+                            ? 'bg-blue-400/20 text-blue-50 border-blue-300/30'
+                            : 'bg-slate-500/20 text-slate-100 border-slate-400/30'}`}>
                         {isPatientMode ? 'CHART' : 'GLOBAL'}
                     </span>
 
@@ -742,12 +926,15 @@ export default function EchoPanel({ patientId, patientName }) {
                             {quickActions.map((action, i) => (
                                 <button key={i}
                                     onClick={() => sendMessage(action.prompt)}
-                                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] 
-                                                   font-medium text-slate-500 bg-slate-50 border border-slate-100
-                                                   hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100
-                                                   transition-all duration-150">
-                                    <action.icon className="w-3.5 h-3.5" />
-                                    {action.label}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] 
+                                                   font-semibold text-slate-600 bg-white border border-slate-200
+                                                   hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200
+                                                   hover:shadow-md hover:shadow-blue-500/5
+                                                   transition-all duration-200 group active:scale-[0.98]">
+                                    <div className="p-1.5 rounded-lg bg-slate-50 group-hover:bg-blue-100 transition-colors">
+                                        <action.icon className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                                    </div>
+                                    <span className="truncate">{action.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -756,17 +943,17 @@ export default function EchoPanel({ patientId, patientName }) {
 
                 {/* Message list */}
                 {messages.map((msg, i) => (
-                    <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                    <div key={i} className={`flex gap-3 animate-in fade-in slide-in-from-bottom-3 duration-300 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                         {msg.role === 'assistant' && (
-                            <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 mt-0.5 border border-blue-100 shadow-sm bg-blue-50">
+                            <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 mt-0.5 border border-blue-100 shadow-sm bg-white ring-2 ring-blue-50/50">
                                 <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
                             </div>
                         )}
-                        <div className={`max-w-[85%] ${msg.role === 'user'
-                            ? 'bg-blue-500 text-white rounded-2xl rounded-br-md px-3 py-2'
+                        <div className={`max-w-[85%] group relative ${msg.role === 'user'
+                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-md px-4 py-2.5 shadow-lg shadow-blue-500/10'
                             : msg.isError
-                                ? 'bg-red-50 text-red-700 rounded-2xl rounded-bl-md px-3 py-2 border border-red-100'
-                                : 'bg-slate-50 text-slate-700 rounded-2xl rounded-bl-md px-3 py-2 border border-slate-100'
+                                ? 'bg-red-50 text-red-700 rounded-2xl rounded-tl-md px-4 py-2.5 border border-red-100 shadow-sm'
+                                : 'bg-white text-slate-700 rounded-2xl rounded-tl-md px-4 py-2.5 border border-slate-200/60 shadow-sm'
                             }`}>
                             <div className="text-[12px] leading-relaxed whitespace-pre-wrap">
                                 {msg.role === 'assistant' ? (
@@ -799,6 +986,9 @@ export default function EchoPanel({ patientId, patientName }) {
                                             onReject={(v) => handleRejectAction(v, i)}
                                         />
                                     )}
+                                    {viz.type === 'risk_assessment' && (
+                                        <RiskAssessmentCard visualization={viz} />
+                                    )}
                                     {viz.type === 'navigation' && (
                                         <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-100">
                                             <div className="flex items-center gap-1.5">
@@ -813,6 +1003,18 @@ export default function EchoPanel({ patientId, patientName }) {
                                 </div>
                             ))}
 
+                            {/* Batch Action Option */}
+                            {msg.visualizations?.filter(v => v.action_id && v.status !== 'committed' && v.status !== 'rejected').length > 1 && (
+                                <button
+                                    onClick={() => handleApproveAction(msg.visualizations.filter(v => v.action_id && v.status !== 'committed' && v.status !== 'rejected'), i)}
+                                    className="mt-4 w-full py-2.5 px-4 rounded-xl bg-blue-600 text-white text-[11px] font-black uppercase tracking-wider
+                                               flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 active:scale-[0.98] group"
+                                >
+                                    <Zap className="w-3.5 h-3.5 group-hover:animate-pulse" />
+                                    Approve All Staged Actions
+                                </button>
+                            )}
+
                             {/* Write Actions */}
                             {msg.writeActions?.map((wa, wi) => (
                                 <WriteActionCard key={wi} action={wa} />
@@ -820,14 +1022,14 @@ export default function EchoPanel({ patientId, patientName }) {
 
                             {/* Tool call indicators */}
                             {msg.toolCalls?.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                <div className="flex flex-wrap gap-1.5 mt-3">
                                     {msg.toolCalls.map((tc, ti) => (
-                                        <span key={ti} className="inline-flex items-center gap-0.5 px-1.5 py-0.5 
-                                                                    rounded-full bg-slate-100 text-[9px] text-slate-400">
-                                            {tc.name.includes('add_') || tc.name.includes('create_') ? (
+                                        <span key={ti} className="inline-flex items-center gap-1 px-2 py-1 
+                                                                    rounded-lg bg-slate-50 border border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                                            {tc.name.includes('add_') || tc.name.includes('create_') || tc.name.includes('draft_') ? (
                                                 <Zap className="w-2.5 h-2.5 text-amber-500" />
                                             ) : (
-                                                <BarChart3 className="w-2.5 h-2.5" />
+                                                <Search className="w-2.5 h-2.5 text-blue-400" />
                                             )}
                                             {tc.name.replace(/_/g, ' ')}
                                         </span>
@@ -854,25 +1056,31 @@ export default function EchoPanel({ patientId, patientName }) {
                                 return null;
                             })()}
                         </div>
-                        {msg.role === 'user' && (
-                            <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center 
+                        {
+                            msg.role === 'user' && (
+                                <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center 
                                             flex-shrink-0 mt-0.5">
-                                <User className="w-3.5 h-3.5 text-blue-600" />
-                            </div>
-                        )}
+                                    <User className="w-3.5 h-3.5 text-blue-600" />
+                                </div>
+                            )
+                        }
                     </div>
                 ))}
 
                 {/* Loading */}
-                {loading && (
-                    <div className="flex gap-2">
-                        <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 border border-blue-100 shadow-sm bg-blue-50">
-                            <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover animate-pulse scale-110" />
+                {isGlobalLoading && ( // Changed 'loading' to 'isGlobalLoading'
+                    <div className="flex gap-3 animate-pulse duration-1000">
+                        <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 border border-blue-200 shadow-sm bg-white ring-2 ring-blue-50 animate-bounce transition-all duration-1000">
+                            <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
                         </div>
-                        <div className="bg-slate-50 rounded-2xl rounded-bl-md px-3 py-2 border border-slate-100">
-                            <div className="flex items-center gap-1.5">
-                                <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
-                                <span className="text-[11px] text-slate-400">Eko is thinking...</span>
+                        <div className="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 border border-slate-200/60 shadow-sm">
+                            <div className="flex items-center gap-2">
+                                <div className="flex gap-1">
+                                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" />
+                                </div>
+                                <span className="text-[11px] font-bold text-slate-500 tracking-tight uppercase">Eko is working</span>
                             </div>
                         </div>
                     </div>
@@ -880,6 +1088,26 @@ export default function EchoPanel({ patientId, patientName }) {
 
                 <div ref={messagesEndRef} />
             </div>
+
+            {/* Proactive Suggestion Pill (Phase 3) */}
+            {suggestion && !isGlobalLoading && ( // Changed 'loading' to 'isGlobalLoading'
+                <div className="px-3 py-1.5 -mb-2 z-10 animate-in slide-in-from-bottom-2 fade-in duration-500">
+                    <button
+                        onClick={() => sendMessage(suggestion.prompt)}
+                        className="w-full flex items-center justify-between px-4 py-2 bg-white border border-amber-200/60 rounded-xl group 
+                                   hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/10 transition-all duration-300 relative overflow-hidden active:scale-[0.98]"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-amber-50 to-orange-50 opacity-50 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex items-center gap-2.5 relative z-10">
+                            <div className="p-1 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors">
+                                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                            </div>
+                            <span className="text-[11px] font-extrabold text-amber-900 tracking-tight">{suggestion.label}</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-1 group-hover:text-amber-600 transition-all relative z-10" />
+                    </button>
+                </div>
+            )}
 
             {/* Input */}
             <div className="px-3 pb-3 pt-1">
@@ -890,50 +1118,89 @@ export default function EchoPanel({ patientId, patientName }) {
                         </span>
                     </div>
                 )}
-                <div className="flex items-end gap-2 bg-slate-50 rounded-xl border border-slate-200/60 
+                <div className="flex flex-col gap-2 bg-slate-50 rounded-xl border border-slate-200/60 
                                 focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100
                                 transition-all duration-150 px-3 py-2">
-                    <button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0
-                                   ${isRecording
-                                ? 'bg-red-500 text-white animate-pulse'
-                                : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
-                        title={isRecording ? 'Stop Recording' : 'Start Dictation'}
-                    >
-                        {isRecording ? <Square className="w-3 h-3" /> : <Mic className="w-3.5 h-3.5" />}
-                    </button>
-                    {isRecording ? (
-                        <div className="flex-1 flex items-center px-2 py-1">
-                            <span className="text-[11px] font-bold text-red-500 animate-pulse">
-                                Recording... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
-                            </span>
+
+                    {/* Attachment Pills */}
+                    {attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3 animate-in fade-in slide-in-from-bottom-2">
+                            {attachments.map((file, idx) => (
+                                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100 group">
+                                    <FileText className="w-3.5 h-3.5 text-blue-600" />
+                                    <span className="text-[10px] font-bold text-blue-800 truncate max-w-[120px]">{file.name}</span>
+                                    <button
+                                        onClick={() => removeAttachment(idx)}
+                                        className="text-blue-300 hover:text-blue-600 transition-colors"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                    ) : (
+                    )}
+
+                    <div className="flex items-end gap-2">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            multiple
+                            accept=".pdf,.png,.jpg,.jpeg"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-2.5 rounded-2xl bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-95 group"
+                            title="Attach Clinical Document"
+                        >
+                            <Paperclip className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                        </button>
+                        <button
+                            onMouseDown={handleStartRecording}
+                            onMouseUp={handleStopRecording}
+                            onMouseLeave={handleStopRecording}
+                            className={`p-2.5 rounded-2xl transition-all active:scale-95 group ${isRecording
+                                ? 'bg-red-500 text-white animate-pulse'
+                                : 'bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50'
+                                }`}
+                            title="Hold to Record"
+                        >
+                            <Mic className={`w-5 h-5 ${isRecording ? 'animate-bounce' : ''}`} />
+                        </button>
+
                         <textarea
                             ref={inputRef}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={isPatientMode
-                                ? "Ask Eko about this patient..."
-                                : "Ask about schedule, inbox, or navigate..."}
-                            disabled={loading}
+                                ? "Ask Eko... (Hold Alt to talk)"
+                                : "Ask Eko or navigate... (Hold Alt to talk)"}
+                            disabled={isGlobalLoading}
                             rows={1}
                             className="flex-1 bg-transparent text-[12px] text-slate-700 placeholder-slate-300
                                    resize-none outline-none max-h-[80px]"
                             style={{ fieldSizing: 'content' }}
                         />
+
+                        <button
+                            onClick={() => sendMessage()}
+                            disabled={(!input.trim() && !isRecording) || isGlobalLoading}
+                            className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center 
+                                   text-white shadow-lg shadow-blue-500/20 disabled:opacity-30 disabled:bg-slate-300
+                                   hover:bg-blue-700 transition-all active:scale-95 flex-shrink-0"
+                        >
+                            <Send className="w-5 h-5 translate-x-0.5 -translate-y-0.5" />
+                        </button>
+                    </div>
+                    {!isRecording && (
+                        <div className="flex justify-center mt-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <span className="text-[10px] text-slate-400 font-medium tracking-tight">
+                                💡 Tip: Hold <kbd className="bg-slate-100 border border-slate-300 px-1 rounded text-[9px] font-sans">Alt</kbd> to talk
+                            </span>
+                        </div>
                     )}
-                    <button
-                        onClick={() => sendMessage()}
-                        disabled={(!input.trim() && !isRecording) || loading}
-                        className="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center 
-                                   text-white disabled:opacity-30 disabled:bg-slate-300
-                                   hover:bg-blue-600 transition-colors flex-shrink-0"
-                    >
-                        <Send className="w-3.5 h-3.5" />
-                    </button>
                 </div>
             </div>
         </div>

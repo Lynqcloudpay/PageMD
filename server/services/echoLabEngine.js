@@ -355,6 +355,53 @@ const LAB_GUIDELINES = {
             normal: 'Normal iron stores',
             high: 'Elevated ferritin — acute phase reactant or iron overload. Check iron saturation'
         }
+    },
+
+    // ── Screening & Specialty ───────────────────────────────────────────
+    psa: {
+        name: 'Prostate Specific Antigen', unit: 'ng/mL',
+        normal: { min: 0, max: 4.0 },
+        borderline: { min: 4.0, max: 10.0 },
+        critical: { low: null, high: 20.0 },
+        interpretation: {
+            normal: 'Normal PSA for age-appropriate screening',
+            borderline: 'Mildly elevated — consider urology referral, repeat in 6 months, or check free PSA',
+            high: 'Elevated PSA — urology referral recommended for further evaluation',
+            critical_high: '⚠️ CRITICAL: Markedly elevated — high suspicion for malignancy'
+        },
+        followUp: ['Free PSA', 'Urology referral', 'Repeat PSA in 3-6 months']
+    },
+    microalbumin_urine: {
+        name: 'Microalbumin/Creatinine Ratio', unit: 'mg/g',
+        normal: { min: 0, max: 30 },
+        borderline: { min: 30, max: 299 },
+        critical: { low: null, high: 300 },
+        interpretation: {
+            normal: 'Normal albumin excretion',
+            borderline: 'Microalbuminuria — early sign of diabetic nephropathy. Optmize BP and glucose',
+            high: 'Macroalbuminuria — significant renal protein loss. Consider ACEi/ARB if not already on'
+        },
+        followUp: ['Repeat in 3 months', 'BP optimization', 'HbA1c optimization']
+    },
+    ua_leukocytes: {
+        name: 'UA: Leukocyte Esterase', unit: '',
+        normal: { min: 0, max: 0 },
+        borderline: { min: 1, max: 1 }, // 1 = Trace
+        critical: { low: null, high: 3 }, // 3 = Large
+        interpretation: {
+            normal: 'Negative for leukocyte esterase',
+            borderline: 'Trace leukocytes — non-specific, correlate clinically',
+            high: 'Positive for leukocytes — suggests pyuria/UTI'
+        },
+        followUp: ['Urine culture if symptomatic', 'Microscopic UA']
+    },
+    ua_nitrite: {
+        name: 'UA: Nitrite', unit: '',
+        normal: { min: 0, max: 0 },
+        interpretation: {
+            normal: 'Negative for nitrites',
+            high: 'Positive for nitrites — strongly suggests Enterobacteriaceae (UTI)'
+        }
     }
 };
 
@@ -397,6 +444,11 @@ const LAB_ALIASES = {
     '25-oh vitamin d': 'vitamin_d', 'vit d': 'vitamin_d', '25-hydroxy': 'vitamin_d',
     'vitamin b12': 'b12', 'cobalamin': 'b12',
     'serum iron': 'iron', 'fe': 'iron',
+    // Specialty
+    'prostate antigen': 'psa', 'psa level': 'psa',
+    'microalbumin': 'microalbumin_urine', 'uacr': 'microalbumin_urine', 'urine albumin': 'microalbumin_urine',
+    'leukocyte esterase': 'ua_leukocytes', 'ua leukocytes': 'ua_leukocytes',
+    'nitrite': 'ua_nitrite', 'ua nitrite': 'ua_nitrite'
 };
 
 // ─── Core Functions ─────────────────────────────────────────────────────────

@@ -30,12 +30,12 @@ async function assemblePatientContext(patientId, tenantId) {
         getAllergies(patientId),
         getActiveMedications(patientId),
         getActiveProblems(patientId),
-        getRecentVisits(patientId, 5),
-        getVitalHistory(patientId, 20),
+        getRecentVisits(patientId, 3), // Lean baseline
+        getVitalHistory(patientId, 10), // Lean baseline
         getActiveOrders(patientId),
         getFamilyHistory(patientId),
         getSocialHistory(patientId),
-        getLabResults(patientId, 50)
+        getLabResults(patientId, 20) // Lean baseline
     ]);
 
     return {
@@ -62,83 +62,57 @@ function buildContextPrompt(context) {
     const d = context.demographics;
 
     if (d) {
-        const age = d.dob ? calculateAge(d.dob) : 'unknown age';
-        parts.push(`PATIENT: ${d.first_name} ${d.last_name}, ${age}, ${d.sex || 'sex unknown'}, MRN: ${d.mrn || 'N/A'}`);
+        const age = d.dob ? calculateAge(d.dob) : '?yo';
+        parts.push(`Px: ${d.first_name[0]}.${d.last_name}, ${age}, ${d.sex || '?'}, MRN:${d.mrn || 'N/A'}`);
     }
 
     if (context.allergies?.length > 0) {
-        const allergyList = context.allergies.map(a =>
-            `${a.allergen}${a.reaction ? ` (${a.reaction})` : ''}${a.severity ? ` [${a.severity}]` : ''}`
-        ).join('; ');
-        parts.push(`ALLERGIES: ${allergyList}`);
+        parts.push(`ALR: ${context.allergies.map(a => `${a.allergen}${a.reaction ? `(${a.reaction})` : ''}`).join('; ')}`);
     } else {
-        parts.push('ALLERGIES: NKDA');
+        parts.push('ALR: NKDA');
     }
 
     if (context.medications?.length > 0) {
-        const medList = context.medications.map(m =>
-            `${m.medication_name}${m.dosage ? ` ${m.dosage}` : ''}${m.frequency ? ` ${m.frequency}` : ''}`
-        ).join('; ');
-        parts.push(`MEDICATIONS: ${medList}`);
+        parts.push(`MEDS: ${context.medications.map(m => `${m.medication_name}${m.dosage ? ` ${m.dosage}` : ''}`).join('; ')}`);
     }
 
     if (context.problems?.length > 0) {
-        const problemList = context.problems.map(p =>
-            `${p.problem_name}${p.icd_code || p.icd10_code ? ` (${p.icd_code || p.icd10_code})` : ''}`
-        ).join('; ');
-        parts.push(`ACTIVE PROBLEMS: ${problemList}`);
+        parts.push(`PRB: ${context.problems.map(p => `${p.problem_name}${p.code ? `(${p.code})` : ''}`).join('; ')}`);
     }
 
     if (context.vitalHistory?.length > 0) {
         const latest = context.vitalHistory[context.vitalHistory.length - 1];
         if (latest?.vitals) {
-            const v = latest.vitals; // Already normalized by getVitalHistory
-            const vitalParts = [];
-            if (v.systolicBp && v.diastolicBp) vitalParts.push(`BP ${v.systolicBp}/${v.diastolicBp}`);
-            if (v.heartRate) vitalParts.push(`HR ${v.heartRate}`);
-            if (v.temperature) vitalParts.push(`Temp ${v.temperature}`);
-            if (v.oxygenSaturation) vitalParts.push(`SpO2 ${v.oxygenSaturation}%`);
-            if (v.weight) vitalParts.push(`Wt ${v.weight} ${v.weightUnit || 'lbs'}`);
-            if (v.respiratoryRate) vitalParts.push(`RR ${v.respiratoryRate}`);
-            if (vitalParts.length > 0) {
-                parts.push(`LATEST VITALS (${latest.visit_date}): ${vitalParts.join(', ')}`);
-            }
+            const v = latest.vitals;
+            const vs = [];
+            if (v.systolicBp) vs.push(`${v.systolicBp}/${v.diastolicBp}`);
+            if (v.heartRate) vs.push(`HR${v.heartRate}`);
+            if (v.temperature) vs.push(`T${v.temperature}`);
+            if (v.weight) vs.push(`${v.weight}lbs`);
+            parts.push(`VS(${latest.visit_date}): ${vs.join(',')}`);
         }
     }
 
     if (context.recentVisits?.length > 0) {
-        const visitSummaries = context.recentVisits.map(v => {
+        const visitLines = context.recentVisits.map(v => {
             const date = v.date || v.visit_date;
-            const draft = v.note_draft || '';
-            const cc = extractSection(draft, 'HPI') || extractSection(draft, 'Chief Complaint') || v.type || 'Visit';
-            const dx = extractSection(draft, 'Assessment') || extractSection(draft, 'Diagnosis');
-            const dxSnippet = dx ? ` — Dx: ${dx.substring(0, 80)}...` : '';
-            return `  • ${date}: ${cc}${dxSnippet}`;
+            const cc = extractSection(v.note_draft, 'HPI') || v.type || 'Visit';
+            const ccTrunc = cc.substring(0, 40).replace(/\n/g, ' ');
+            return ` •${date}: ${ccTrunc}...`;
         }).join('\n');
-        parts.push(`RECENT VISITS:\n${visitSummaries}`);
+        parts.push(`HX:\n${visitLines}`);
     }
 
     if (context.activeOrders?.length > 0) {
-        const orderList = context.activeOrders.map(o =>
-            `${o.order_name || o.order_type} [${o.status}]`
-        ).join('; ');
-        parts.push(`ACTIVE ORDERS: ${orderList}`);
+        parts.push(`ORD: ${context.activeOrders.map(o => `${o.order_name || o.order_type}(${o.status})`).join('; ')}`);
     }
 
-    if (context.socialHistory) {
-        const sh = context.socialHistory;
-        const shParts = [];
-        if (sh.smoking_status) shParts.push(`Smoking: ${sh.smoking_status}`);
-        if (sh.alcohol_use) shParts.push(`Alcohol: ${sh.alcohol_use}`);
-        if (sh.occupation) shParts.push(`Occupation: ${sh.occupation}`);
-        if (shParts.length > 0) parts.push(`SOCIAL HX: ${shParts.join(', ')}`);
-    }
-
-    if (context.familyHistory?.length > 0) {
-        const fhList = context.familyHistory.map(f =>
-            `${f.condition} (${f.relationship})`
-        ).join('; ');
-        parts.push(`FAMILY HX: ${fhList}`);
+    if (context.labResults?.length > 0) {
+        // Condensed lab view
+        const labSummary = context.labResults.slice(0, 30).map(l =>
+            `${l.test_name}:${l.value}${l.unit || ''}(${new Date(l.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })})`
+        ).join(', ');
+        parts.push(`LABS: ${labSummary}`);
     }
 
     return parts.join('\n');

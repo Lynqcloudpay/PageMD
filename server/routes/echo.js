@@ -29,7 +29,7 @@ router.use(authenticate);
  */
 router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
     try {
-        const { message, patientId, conversationId } = req.body;
+        const { message, patientId, conversationId, uiContext } = req.body;
 
         if (!message || message.trim().length === 0) {
             return res.status(400).json({ error: 'Message is required' });
@@ -39,7 +39,8 @@ router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
             message: message.trim(),
             patientId: patientId || null,
             conversationId: conversationId || null,
-            user: req.user
+            user: req.user,
+            uiContext: uiContext || null
         });
 
         res.json({
@@ -64,13 +65,19 @@ router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
 router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'), async (req, res) => {
     try {
         if (!req.file) {
+            console.warn('[Echo API] Transcribe called without audio file. Check multipart headers.');
             return res.status(400).json({ error: 'No audio file provided' });
         }
 
         const transcription = await echoService.transcribeAudio(req.file.buffer, req.file.originalname);
         res.json({ success: true, text: transcription });
     } catch (err) {
-        console.error('[Echo API] Transcribe error:', err);
+        console.error('[Echo API] Transcribe error details:', {
+            message: err.message,
+            stack: err.stack,
+            fileName: req.file?.originalname,
+            fileSize: req.file?.size
+        });
         res.status(500).json({ error: 'Failed to transcribe audio' });
     }
 });

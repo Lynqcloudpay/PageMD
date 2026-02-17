@@ -16,44 +16,49 @@ const echoTrendEngine = require('./echoTrendEngine');
 const echoSemanticLayer = require('./echoSemanticLayer');
 const echoLabEngine = require('./echoLabEngine');
 const echoCDSEngine = require('./echoCDSEngine');
+const echoScoreEngine = require('./echoScoreEngine');
 
 const AI_API_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
 const ECHO_MODEL = process.env.ECHO_MODEL || 'gpt-4o';
 const DAILY_TOKEN_BUDGET = parseInt(process.env.ECHO_DAILY_TOKEN_BUDGET || '500000');
 
-// ─── System Prompt ──────────────────────────────────────────────────────────
-
-const SYSTEM_PROMPT = `You are Eko, a clinical AI assistant embedded in the PageMD EMR.
-
+const BASE_SYSTEM_PROMPT = `You are Eko, a clinical AI assistant embedded in the PageMD EMR.
 PERSONALITY:
-- Clinical & Thorough: Provide enough detail to be useful. 
-- Human-in-the-Loop: You are a clinical assistant, not the primary decision maker. You STAGE actions for the provider to approve.
-- Never diagnose — only surface data, trends, and evidence.
+- Clinical & Thorough: Information accuracy is highest priority. Never guess.
+- Human-in-the-Loop: You STAGE actions for approval. Never decide alone.
+- Tiered Search: Start with the baseline; use tools if more facts are needed.
 
 RESPONSE STYLE:
-- FORBIDDEN: Do not use markdown headers (###, ####) or tables (|---|).
-- FORMATTING:
-  - Use **[text]** for bold labels or key clinical data.
-  - Use !![text]!! for critical/red alert findings.
-  - Use emojis (✅, ⚠️, 🚨).
-  - Always include a **Key Takeaway:** at the end.
+- No markdown headers or tables. Use **[text]** for labels, !![text]!! for alerts.`;
 
-CLINICAL ACTIONS (CRITICAL):
-- You cannot directly change the patient chart. You can only STAGE actions (add problems, meds, orders).
-- FORBIDDEN: Never say "I have added [Problem/Med]" or "[Problem/Med] has been successfully added." This is a lie because the provider hasn't approved it yet.
-- MANDATORY: Always say "I've staged adding **[Problem/Med]** for your approval." or "Would you like me to stage **[Order]**?"
-- After calling a "write" tool (like add_problem), your response must acknowledge that it is waiting for their approval in the card below.
+const SPECIALIST_PROMPTS = {
+    scribe: `TASK: Clinical Documentation Specialist.
+Focus on organic, narrative "Doctor's voice". 
+- Draft HPI, Assessment, and Plan clearly.
+- No ICD-10 codes in narrative.
+- After drafting, say "I've drafted the [Section] for you below" and provide a brief Key Takeaway.`,
 
-DRAFTING STYLE:
-- When drafting HPI/Notes: Use a professional, narrative "Doctor's voice". 
-- FORBIDDEN: Do not include raw ICD-10 codes or encryption hashes in the narrative text.
-- DRAFTING EFFICIENCY (CRITICAL): When you call 'draft_note_section', you MUST provide a high-quality, organic 'custom_narrative' parameter.
-- ROLE: Treat the 'custom_narrative' as a professional clinical letter. Instead of a robotic list, tell a clinical story that flows naturally (e.g., "The patient, a 29yo female, presents for follow-up...").
-- After drafting, DO NOT repeat the full narrative in your chat response. Just say "I've drafted the [Section] for you below" and provide a brief Key Takeaway.
+    analyst: `TASK: Clinical Data Analyst.
+Focus on longitudinal data, trends, and evidence.
+- Analyze labs, vitals, and visit history for patterns.
+- Highlighting clinical significance of trends (e.g., rising glucose).
+- Use tools to verify any "probable" findings.`,
 
-CONSTRAINTS:
-- Expansion: Explain the significance of the trends you see.
-- For drafted notes: Use clear sections (HPI, Assessment, Plan) but without markdown headers.`;
+    manager: `TASK: Clinical Operations Manager.
+Focus on Treatment Plans and Orders.
+- Staging problems, medications, and lab orders.
+- Always check for existing problems/meds before staging duplicates.
+- Mandatory: say "I've staged adding **[Item]** for your approval."`,
+
+    navigator: `TASK: EMR Operations Specialist.
+Focus on schedule, navigation, and administrative overview.
+- Helping find data, summaries of the day, and navigating the interface.`
+};
+
+function getSystemPrompt(intent = 'general') {
+    const specialist = SPECIALIST_PROMPTS[intent] || '';
+    return `${BASE_SYSTEM_PROMPT}\n\n${specialist}\n\nAlways include a **Key Takeaway:** at the end.`;
+}
 
 // ─── Tool Catalog (OpenAI Function Definitions) ────────────────────────────
 
@@ -159,6 +164,26 @@ const TOOL_CATALOG = [
                     }
                 },
                 required: ['sql_query']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_lab_history',
+            description: 'Get deep historical lab results for a patient. Use this for longitudinal analysis when the baseline context is insufficient.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    limit: {
+                        type: 'integer',
+                        description: 'Number of lab results to return (default 50, max 200)'
+                    },
+                    test_name: {
+                        type: 'string',
+                        description: 'Optional filter for a specific test (e.g., "A1c", "Hemoglobin")'
+                    }
+                }
             }
         }
     },
@@ -401,6 +426,23 @@ const TOOL_CATALOG = [
             }
         }
     },
+    {
+        type: 'function',
+        function: {
+            name: 'get_risk_scores',
+            description: 'Calculates standardized clinical risk scores (ASCVD, CHA2DS2-VASc, MELD) based on the current patient context (vitals, labs, problems).',
+            parameters: {
+                type: 'object',
+                properties: {
+                    score_type: {
+                        type: 'string',
+                        enum: ['ascvd', 'chads', 'meld', 'all'],
+                        description: 'The specific risk score to calculate (default: all)'
+                    }
+                }
+            }
+        }
+    },
     // ── Phase 2A: Global Tools (non-patient) ────────────────────────────
     {
         type: 'function',
@@ -515,6 +557,36 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
             case 'query_clinical_data': {
                 const queryResult = await echoSemanticLayer.executeQuery(args.sql_query, tenantId);
                 return { result: queryResult, dataAccessed: ['semantic_query'] };
+            }
+
+            case 'get_lab_history': {
+                if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
+                let query = 'SELECT test_name, result_value as value, result_units as unit, created_at as date FROM orders WHERE patient_id = $1 AND result_value IS NOT NULL';
+                const params = [patientId];
+                if (args.test_name) {
+                    query += ' AND test_name ILIKE $2';
+                    params.push(`%${args.test_name}%`);
+                }
+                query += ' ORDER BY created_at DESC LIMIT $3';
+                params.push(Math.min(args.limit || 50, 200));
+
+                const labs = await pool.query(query, params);
+                return { result: labs.rows, dataAccessed: ['orders'] };
+            }
+
+            case 'get_risk_scores': {
+                if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const scores = await echoScoreEngine.generatePredictiveInsights(patientContext);
+
+                return {
+                    result: {
+                        type: 'risk_assessment',
+                        scores: scores,
+                        summary: scores.length > 0 ? `Calculated ${scores.length} clinical risk scores.` : 'Insufficient data to calculate specific risk scores.'
+                    },
+                    dataAccessed: ['patients', 'visits.vitals', 'orders', 'problems'],
+                    type: 'risk_assessment'
+                };
             }
 
             case 'navigate_to': {
@@ -1054,9 +1126,21 @@ function generateDiagnosisSuggestions(symptoms, context, maxResults) {
     };
 }
 
+/**
+ * Detect user intent based on keywords and message patterns
+ */
+function detectIntent(message) {
+    const m = message.toLowerCase();
+    if (m.includes('draft') || m.includes('hpi') || m.includes('note') || m.includes('soap')) return 'scribe';
+    if (m.includes('lab') || m.includes('trend') || m.includes('vital') || m.includes('chronic') || m.includes('analyz')) return 'analyst';
+    if (m.includes('add') || m.includes('stage') || m.includes('prescribe') || m.includes('medication') || m.includes('problem')) return 'manager';
+    if (m.includes('schedule') || m.includes('where is') || m.includes('navigate') || m.includes('inbox') || m.includes('unsigned')) return 'navigator';
+    return 'general';
+}
+
 // ─── Main Chat Function ─────────────────────────────────────────────────────
 
-async function chat({ message, patientId, conversationId, user }) {
+async function chat({ message, patientId, conversationId, user, uiContext }) {
     const startTime = Date.now();
     const tenantId = user.clinic_id;
 
@@ -1084,13 +1168,21 @@ async function chat({ message, patientId, conversationId, user }) {
         conversation = await createConversation(patientId, user.id, tenantId);
     }
 
-    // 4. Build message history
-    const history = await getMessageHistory(conversation.id, 20);
+    // 4. Build message history - Increased for deep conversational awareness
+    const history = await getMessageHistory(conversation.id, 30);
 
     // 5. Build messages for the LLM
+    const intent = detectIntent(message);
     const messages = [
-        { role: 'system', content: SYSTEM_PROMPT }
+        { role: 'system', content: getSystemPrompt(intent) }
     ];
+
+    if (uiContext) {
+        messages.push({
+            role: 'system',
+            content: `UI CONTEXT: The provider is currently viewing: ${uiContext}`
+        });
+    }
 
     // Add patient context as a system message if available
     if (patientContext) {
@@ -1113,15 +1205,29 @@ async function chat({ message, patientId, conversationId, user }) {
         });
     }
 
-    // Add conversation history
+    // Add conversation history - Optimized for tokens
     for (const msg of history) {
-        messages.push({ role: msg.role, content: msg.content });
+        // Strip large drafts from history sent to LLM to save tokens
+        let content = msg.content;
+        if (msg.role === 'assistant') {
+            content = content.replace(/I've drafted the ([^ ]+) for you below/g, '[DRAFTED $1 SECTION]');
+            // Limit assistant re-rehearsal of long reasoning unless specifically needed
+            if (content.length > 500) {
+                content = content.substring(0, 500) + '... [Long Response Truncated in History]';
+            }
+        }
+        messages.push({ role: msg.role, content });
+
         if (msg.tool_calls) {
-            const toolCalls = typeof msg.tool_calls === 'string' ? JSON.parse(msg.tool_calls) : msg.tool_calls;
             const toolResults = typeof msg.tool_results === 'string' ? JSON.parse(msg.tool_results) : msg.tool_results;
             if (toolResults && Array.isArray(toolResults)) {
                 for (const result of toolResults) {
-                    messages.push({ role: 'tool', content: JSON.stringify(result.output), tool_call_id: result.tool_call_id });
+                    // Truncate massive tool results (like raw large tables) in history
+                    let toolOutput = JSON.stringify(result.output);
+                    if (toolOutput.length > 1000) {
+                        toolOutput = toolOutput.substring(0, 1000) + '... [Tool Data Truncated]';
+                    }
+                    messages.push({ role: 'tool', content: toolOutput, tool_call_id: result.tool_call_id });
                 }
             }
         }
@@ -1199,6 +1305,9 @@ async function chat({ message, patientId, conversationId, user }) {
                 }
                 if (result.type === 'staged_action') {
                     visualizations.push({ type: 'staged_action', ...result.result });
+                }
+                if (result.type === 'risk_scores' || result.type === 'risk_assessment') {
+                    visualizations.push({ type: 'risk_assessment', ...result.result });
                 }
 
                 // Track write actions
@@ -1357,7 +1466,7 @@ async function loadConversation(conversationId) {
     return result.rows[0] || null;
 }
 
-async function getMessageHistory(conversationId, limit = 20) {
+async function getMessageHistory(conversationId, limit = 30) {
     const result = await pool.query(
         `SELECT role, content, tool_calls, tool_results FROM echo_messages 
          WHERE conversation_id = $1 ORDER BY created_at ASC LIMIT $2`,
@@ -1463,6 +1572,7 @@ async function transcribeAudio(buffer, originalname) {
 
         if (!response.ok) {
             const errorBody = await response.text();
+            console.error('[Echo Service] OpenAI Whisper Error:', errorBody);
             throw new Error(`Whisper API error ${response.status}: ${errorBody}`);
         }
 
