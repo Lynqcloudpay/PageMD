@@ -127,7 +127,7 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                         const offset = total - 1 - idx;
 
                         // Limit visual offset so cards don't disappear off screen
-                        const visualOffset = Math.min(offset, 6);
+                        const visualOffset = Math.min(offset, 8);
 
                         return (
                             <motion.div
@@ -135,15 +135,16 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                 layout
                                 initial={{ opacity: 0, scale: 0.9, x: 100 }}
                                 animate={{
-                                    opacity: 1 - (visualOffset * 0.1),
-                                    x: isFront ? 0 : -(visualOffset * 85), // Stacks sideways (to the left)
-                                    y: 0,
-                                    scale: isFront ? 1 : 1 - (visualOffset * 0.04),
+                                    opacity: isFront ? 1 : 1 - (visualOffset * 0.05),
+                                    x: isFront ? 0 : -(visualOffset * 50),
+                                    y: isFront ? 0 : (visualOffset * 5),
+                                    rotate: isFront ? 0 : -(visualOffset * 3), // Fan out to the left
+                                    scale: isFront ? 1 : 1 - (visualOffset * 0.02),
                                     zIndex: 100 - offset,
                                 }}
                                 exit={{ opacity: 0, scale: 0.8, y: 100 }}
                                 transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[0_0_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden bg-[#F8FAFC] transform-gpu origin-left
+                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[0_0_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden bg-[#F8FAFC] transform-gpu origin-bottom-right
                                     ${isFront ? 'border-none cursor-default' : 'border border-slate-300 cursor-pointer'}
                                 `}
                                 onClick={() => {
