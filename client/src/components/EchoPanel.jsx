@@ -907,9 +907,13 @@ export default function EchoPanel({ patientId, patientName }) {
                 alert('Approval failed: ' + (data.error || 'Unknown database error occurred.'));
             }
         } catch (err) {
-            console.error('Approve error:', err);
-            const errorMsg = err.response?.data?.error || err.message;
-            alert('Could not approve action: ' + errorMsg);
+            console.error('[Echo] Approve error:', err);
+            // Extract the most meaningful error message
+            const backendError = err.response?.data?.error;
+            const axiosError = err.message;
+            const finalMsg = backendError || axiosError || 'Unknown connection error';
+
+            alert('Approval failed: ' + finalMsg);
         }
     }
 
