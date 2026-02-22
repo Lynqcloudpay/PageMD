@@ -7,11 +7,13 @@ import VisitChartView from './VisitChartView';
 
 const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
     const [openVisits, setOpenVisits] = useState([initialVisitId]);
+    const [tabSlots, setTabSlots] = useState({ [initialVisitId]: 0 });
 
     // Manage opening a new note or bringing a stowed one forward
     const handleOpenNewVisit = (visitId) => {
         if (!openVisits.includes(visitId)) {
             setOpenVisits(prev => [...prev, visitId]);
+            setTabSlots(prev => ({ ...prev, [visitId]: Object.keys(prev).length % 8 }));
         } else {
             // Move to end of array to make it active
             setOpenVisits(prev => [...prev.filter(id => id !== visitId), visitId]);
@@ -126,51 +128,74 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                         const isFront = idx === total - 1;
                         const offset = total - 1 - idx;
 
-                        // Limit visual offset so cards don't disappear off screen
-                        const visualOffset = Math.min(offset, 8);
+                        // Use a permanent slot memory for consistent visual tracking like physical file folders
+                        const slotIndex = tabSlots[vId] ?? (idx % 8);
+                        const tabTopPercent = 2 + (slotIndex * 12);
+
+                        const tabColors = [
+                            'bg-blue-500 border-blue-600 text-white',
+                            'bg-emerald-500 border-emerald-600 text-white',
+                            'bg-rose-500 border-rose-600 text-white',
+                            'bg-amber-500 border-amber-600 text-white',
+                            'bg-purple-500 border-purple-600 text-white',
+                            'bg-cyan-500 border-cyan-600 text-white',
+                            'bg-pink-500 border-pink-600 text-white',
+                            'bg-orange-500 border-orange-600 text-white',
+                        ];
+                        const colorClass = tabColors[slotIndex];
 
                         return (
                             <motion.div
                                 key={vId}
                                 layout
-                                initial={{ opacity: 0, scale: 0.9, x: 100 }}
+                                initial={{ opacity: 0, scale: 0.95, y: 50 }}
                                 animate={{
-                                    opacity: isFront ? 1 : 1 - (visualOffset * 0.1),
-                                    x: isFront ? 0 : -(visualOffset * 65),
-                                    y: isFront ? 0 : -(visualOffset * 12),
+                                    opacity: 1, // Keep solid like real paper
+                                    x: -(offset * 4), // Tiny left shift for 3D stack texture
+                                    y: -(offset * 4), // Tiny up shift
                                     rotate: 0,
-                                    scale: 1,
+                                    scale: 1, // Stay full size throughout
                                     zIndex: 100 - offset,
                                 }}
                                 exit={{ opacity: 0, scale: 0.95, y: -20, x: -20 }}
-                                transition={{ type: "tween", ease: "easeOut", duration: 0.35 }}
-                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[-15px_10px_35px_rgba(0,0,0,0.15)] overflow-hidden bg-[#F8FAFC] transform-gpu will-change-transform
-                                    ${isFront ? 'border-none cursor-default' : 'border border-slate-300 cursor-pointer'}
-                                `}
-                                onClick={() => {
-                                    if (!isFront) handleOpenNewVisit(vId);
-                                }}
+                                transition={{ type: "tween", ease: "easeOut", duration: 0.25 }}
+                                className="absolute w-[92%] max-w-[1150px] md:-ml-8 h-[calc(100vh-110px)] transform-gpu will-change-transform"
                             >
-                                {/* Invisible overlay to intercept clicks on background cards */}
-                                {!isFront && (
-                                    <>
-                                        <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/30 transition-colors" />
+                                {/* Right Edge Manila Folder Tab */}
+                                <div
+                                    className={`absolute -right-[43px] transition-all duration-200 z-[40] flex items-center justify-center border-y border-r border-slate-900/10 rounded-r-2xl cursor-pointer
+                                        ${colorClass} ${isFront ? 'opacity-100 shadow-[5px_0_15px_-5px_rgba(0,0,0,0.5)] pr-1 scale-x-105 origin-left' : 'opacity-[0.85] hover:opacity-100 shadow-[2px_0_5px_rgba(0,0,0,0.2)]'}
+                                    `}
+                                    style={{
+                                        top: `${tabTopPercent}%`,
+                                        height: '11.5%',
+                                        width: '44px'
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!isFront) handleOpenNewVisit(vId);
+                                    }}
+                                >
+                                    <div className="transform rotate-90 whitespace-nowrap font-bold text-[11px] uppercase tracking-widest flex items-center gap-2">
+                                        <span className="opacity-90">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MM/dd/yy') : 'Loading'}</span>
+                                        <span className="w-1 h-1 rounded-full bg-white/50"></span>
+                                        <span>{getChiefComplaint(visitsData[vId])}</span>
+                                    </div>
+                                </div>
 
-                                        {/* Vertical Left Edge Label Badge */}
-                                        <div className="absolute left-[10px] top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2 -rotate-90 pointer-events-none">
-                                            <div className="whitespace-nowrap bg-indigo-600/95 backdrop-blur-sm text-white rounded-full px-5 py-2 flex items-center gap-3 border border-indigo-400 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
-                                                <FileText className="w-4 h-4 text-indigo-200" />
-                                                <span className="text-[13px] font-black tracking-tight">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
-                                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
-                                                <span className="text-[11px] font-bold tracking-widest uppercase text-indigo-100">{getChiefComplaint(visitsData[vId])}</span>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
+                                {/* Main Card Body */}
+                                <div
+                                    className={`w-full h-full relative rounded-l-[1.5rem] rounded-r-[0.9rem] bg-[#F8FAFC] overflow-hidden shadow-[-8px_8px_30px_rgba(0,0,0,0.15)] ${isFront ? 'border-none' : 'border border-slate-300'}`}
+                                >
+                                    {/* Invisible overlay to intercept clicks on background cards cleanly */}
+                                    {!isFront && (
+                                        <div
+                                            className="absolute inset-0 z-50 bg-slate-900/5 hover:bg-slate-900/10 transition-colors cursor-pointer"
+                                            onClick={() => handleOpenNewVisit(vId)}
+                                        />
+                                    )}
 
-                                <div className={`w-full h-full relative group transition-opacity ${!isFront && 'opacity-60'}`}>
-                                    {/* Make sure the iframe components are rendered but visually distinct */}
-                                    <div className={`w-full h-full ${!isFront ? 'pointer-events-none' : ''}`}>
+                                    <div className={`w-full h-full relative group transition-opacity duration-300 ${!isFront ? 'opacity-50 pointer-events-none' : ''}`}>
                                         <VisitChartView
                                             visitId={vId}
                                             patientId={patientId}
