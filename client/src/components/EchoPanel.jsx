@@ -236,8 +236,16 @@ function StagedActionCard({ visualization, onApprove, onReject }) {
                         {isCommitted && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
                     </div>
                     <p className={`text-[11px] mt-0.5 leading-tight ${isCommitted ? 'text-green-600' : 'text-slate-500'}`}>
-                        {isCommitted ? 'Action successfully committed to patient chart.' : isRejected ? 'Action declined.' : visualization.message}
+                        {isCommitted ? 'Action successfully committed to patient chart.' : isRejected ? 'Action declined.' : visualization.message.split('\n\n**Preview:**')[0]}
                     </p>
+                    {!isCommitted && !isRejected && visualization.type === 'send_message' && (
+                        <div className="mt-2 bg-slate-50/50 rounded-lg p-2 border border-blue-50/50">
+                            <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Message Preview</span>
+                            <p className="text-[10px] text-slate-600 italic mt-1 leading-snug line-clamp-3">
+                                {visualization.payload?.body}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
 

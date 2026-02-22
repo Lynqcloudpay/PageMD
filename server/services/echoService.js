@@ -1208,12 +1208,16 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 const patientName = patientContext?.demographics
                     ? `${patientContext.demographics.first_name} ${patientContext.demographics.last_name}`
                     : 'patient';
+                const previewBody = args.message_body && args.message_body.length > 80
+                    ? args.message_body.substring(0, 80) + '...'
+                    : args.message_body;
+
                 return {
                     result: {
                         action_id: actionId,
                         type: 'send_message',
                         label: `Send Message to ${patientName}`,
-                        message: `Staged sending a **${args.message_type || 'portal'}** message to **${patientName}**.`,
+                        message: `Staged sending a **${args.message_type || 'portal'}** message to **${patientName}**.\n\n**Preview:** "${previewBody}"`,
                         payload: {
                             patient_id: patientId,
                             subject: args.subject || 'Message from your care team',

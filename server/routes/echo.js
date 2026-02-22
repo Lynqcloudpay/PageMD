@@ -145,12 +145,48 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
 
                     // ── Phase 5: Operational Actions ────────────────────────
                     case 'send_message':
-                        record = await client.query(
-                            `INSERT INTO messages (patient_id, from_user_id, subject, body, message_type, priority)
-                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                            [actPayload.patient_id, userId, actPayload.subject, actPayload.body,
-                                'message', 'normal']
-                        );
+                        if (actPayload.message_type === 'portal') {
+                            // 1. Find or create thread
+                            let threadId;
+                            const existingThread = await client.query(
+                                `SELECT id FROM portal_message_threads 
+                                 WHERE patient_id = $1 
+                                 ORDER BY last_message_at DESC LIMIT 1`,
+                                [actPayload.patient_id]
+                            );
+
+                            if (existingThread.rows.length > 0) {
+                                threadId = existingThread.rows[0].id;
+                                await client.query(
+                                    `UPDATE portal_message_threads 
+                                     SET last_message_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP, status = 'open'
+                                     WHERE id = $1`,
+                                    [threadId]
+                                );
+                            } else {
+                                const newThread = await client.query(
+                                    `INSERT INTO portal_message_threads (patient_id, subject, assigned_user_id)
+                                     VALUES ($1, $2, $3) RETURNING id`,
+                                    [actPayload.patient_id, actPayload.subject || 'Message from your care team', userId]
+                                );
+                                threadId = newThread.rows[0].id;
+                            }
+
+                            // 2. Insert message
+                            record = await client.query(
+                                `INSERT INTO portal_messages (thread_id, sender_user_id, sender_id, sender_type, body)
+                                 VALUES ($1, $2, $2, 'staff', $3) RETURNING *`,
+                                [threadId, userId, actPayload.body]
+                            );
+                        } else {
+                            // Internal message
+                            record = await client.query(
+                                `INSERT INTO messages (patient_id, from_user_id, subject, body, message_type, priority)
+                                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                                [actPayload.patient_id, userId, actPayload.subject, actPayload.body,
+                                    'message', 'normal']
+                            );
+                        }
                         break;
 
                     case 'schedule_appointment':
