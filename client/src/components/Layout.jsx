@@ -347,10 +347,10 @@ const Layout = ({ children }) => {
                             </button>
                         </div>
 
-                        {/* Navigation Area — Scrollable middle part */}
-                        <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar">
+                        {/* Navigation Area */}
+                        <div className="flex-1 flex flex-col min-h-0">
                             {/* Navigation */}
-                            <nav className="flex-shrink-0 overflow-y-auto overflow-x-hidden py-1 flex flex-col gap-0.5">
+                            <nav className="flex-shrink-0 py-1 flex flex-col gap-0.5">
                                 {/* Primary section */}
                                 <div>
                                     {!sidebarCollapsed && (
