@@ -172,21 +172,7 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
 
     // ── 1. ASCVD ────────────────────────────────────────────────────────
     if (wantASCVD) {
-        // Extract data with defaults
-        const sbpVital = vitals?.find(v => v.type === 'bp_systolic' || (v.vitals && typeof v.vitals === 'object'));
-        let sbp = 120;
-        if (sbpVital?.value) {
-            sbp = parseFloat(sbpVital.value);
-        } else if (sbpVital?.vitals?.systolicBp) {
-            sbp = parseFloat(sbpVital.vitals.systolicBp);
-        } else if (Array.isArray(vitals) && vitals.length > 0) {
-            // Try to extract from the latest vitals entry
-            for (const v of [...vitals].reverse()) {
-                const parsed = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
-                if (parsed?.systolicBp) { sbp = parseFloat(parsed.systolicBp); break; }
-            }
-        }
-
+        // Extract data
         const findLabValue = (keywords) => {
             if (!labs || !Array.isArray(labs)) return null;
             for (const l of labs) {
@@ -199,32 +185,85 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
             return null;
         };
 
+        const sbpVital = vitals?.find(v => v.type === 'bp_systolic' || (v.vitals && typeof v.vitals === 'object'));
+        let sbp = null;
+        if (sbpVital?.value) {
+            sbp = parseFloat(sbpVital.value);
+        } else if (sbpVital?.vitals?.systolicBp) {
+            sbp = parseFloat(sbpVital.vitals.systolicBp);
+        } else if (Array.isArray(vitals) && vitals.length > 0) {
+            for (const v of [...vitals].reverse()) {
+                const parsed = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
+                if (parsed?.systolicBp) { sbp = parseFloat(parsed.systolicBp); break; }
+            }
+        }
+
         let totalChol = findLabValue(['total cholesterol', 'total chol']);
         let hdl = findLabValue(['hdl']);
 
-        if (!totalChol) { totalChol = 200; assumptions.push('Total cholesterol assumed 200 mg/dL'); }
-        if (!hdl) { hdl = 50; assumptions.push('HDL assumed 50 mg/dL'); }
-        if (sbp === 120 && !sbpVital) { assumptions.push('SBP assumed 120 mmHg'); }
+        // Check if we have enough to even try
+        const missing = [];
+        if (!totalChol) missing.push('Total Cholesterol');
+        if (!hdl) missing.push('HDL');
+        if (!sbp) missing.push('Systolic BP');
 
-        const params = {
-            age,
-            totalChol,
-            hdl,
-            sbp,
-            isSmoker: (patientContext.socialHistory?.smoking_status || '').toLowerCase().includes('current'),
-            isDiabetic: hasProblem(['diabetes']),
-            isMale: sex === 'male',
-            isWhite: true,
-            treatsBP: hasProblem(['hypertension', 'htn'])
-        };
+        if (missing.length > 0) {
+            // If data is missing, we only calculate if we have at least one lipid value
+            // otherwise it's just a pure guess.
+            if (!totalChol && !hdl) {
+                insights.push({
+                    type: 'ascvd',
+                    score: null,
+                    interpretation: 'ASCVD 10-Year Risk: Cannot calculate — missing lipid panel (Total Cholesterol and HDL).',
+                    missing
+                });
+            } else {
+                // Calculate with defaults but heavily flag
+                const tcVal = totalChol || 200;
+                const hdlVal = hdl || 50;
+                const sbpVal = sbp || 120;
 
-        if (sex !== 'male') { assumptions.push('Race assumed White for coefficient selection'); }
+                if (!totalChol) assumptions.push('Total cholesterol omitted (using default 200 mg/dL for estimate)');
+                if (!hdl) assumptions.push('HDL omitted (using default 50 mg/dL for estimate)');
+                if (!sbp) assumptions.push('SBP omitted (using default 120 mmHg for estimate)');
 
-        const result = calculateASCVD(params);
-        if (age < 40 || age > 79) {
-            result.caveat = `ASCVD Pooled Cohort Equations validated for ages 40-79. Patient age is ${age}. Interpret with caution.`;
+                const params = {
+                    age: Math.max(age, 20), // PCE equations can blow up at very low ages
+                    totalChol: tcVal,
+                    hdl: hdlVal,
+                    sbp: sbpVal,
+                    isSmoker: (patientContext.socialHistory?.smoking_status || '').toLowerCase().includes('current'),
+                    isDiabetic: hasProblem(['diabetes']),
+                    isMale: sex === 'male',
+                    isWhite: (demographics?.race || '').toLowerCase().includes('white') || true,
+                    treatsBP: hasProblem(['hypertension', 'htn'])
+                };
+
+                const result = calculateASCVD(params);
+                if (age < 40 || age > 79) {
+                    result.caveat = `ACC/AHA Pooled Cohort Equations are officially validated for ages 40-79. At age ${age}, this result is an extrapolation and should not be used for clinical decision making without further review.`;
+                }
+                insights.push({ type: 'ascvd', ...result });
+            }
+        } else {
+            // Full data available
+            const params = {
+                age,
+                totalChol,
+                hdl,
+                sbp,
+                isSmoker: (patientContext.socialHistory?.smoking_status || '').toLowerCase().includes('current'),
+                isDiabetic: hasProblem(['diabetes']),
+                isMale: sex === 'male',
+                isWhite: (demographics?.race || '').toLowerCase().includes('white') || true,
+                treatsBP: hasProblem(['hypertension', 'htn'])
+            };
+            const result = calculateASCVD(params);
+            if (age < 40 || age > 79) {
+                result.caveat = `ASCVD Pooled Cohort Equations validated for ages 40-79. Patient age is ${age}. Interpret with caution.`;
+            }
+            insights.push({ type: 'ascvd', ...result });
         }
-        insights.push({ type: 'ascvd', ...result });
     }
 
     // ── 2. CHA2DS2-VASc ─────────────────────────────────────────────────

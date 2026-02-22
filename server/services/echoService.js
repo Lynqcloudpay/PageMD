@@ -1244,17 +1244,20 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                     appointmentDate = today.toISOString().split('T')[0];
                 }
 
+                let apptType = args.appointment_type || 'Follow-up';
+                if (apptType === 'Follow Up') apptType = 'Follow-up';
+
                 return {
                     result: {
                         action_id: actionId,
                         type: 'schedule_appointment',
-                        label: `Schedule ${args.appointment_type || 'Follow Up'} for ${patientName}`,
-                        message: `Staged scheduling a **${args.appointment_type || 'Follow Up'}** appointment for **${patientName}** on **${appointmentDate}** at **${args.appointment_time}**.`,
+                        label: `Schedule ${apptType} for ${patientName}`,
+                        message: `Staged scheduling a **${apptType}** appointment for **${patientName}** on **${appointmentDate}** at **${args.appointment_time}**.`,
                         payload: {
                             patient_id: patientId,
                             appointment_date: appointmentDate,
                             appointment_time: args.appointment_time,
-                            appointment_type: args.appointment_type || 'Follow Up',
+                            appointment_type: apptType,
                             duration: args.duration || 30,
                             reason: args.reason || null
                         }

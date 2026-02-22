@@ -149,12 +149,12 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                 case 'schedule_appointment':
                     record = await client.query(
                         `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time,
-                            appointment_type, duration, chief_complaint, status, patient_status)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+                            appointment_type, duration, notes, status, patient_status, created_by, clinic_id)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
                         [actPayload.patient_id, userId, actPayload.appointment_date,
                         actPayload.appointment_time, actPayload.appointment_type,
                         actPayload.duration || 30, actPayload.reason || null,
-                            'scheduled', 'not-arrived']
+                            'scheduled', 'scheduled', userId, tenantId]
                     );
                     break;
 
