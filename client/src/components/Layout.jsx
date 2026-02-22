@@ -546,6 +546,13 @@ const Layout = ({ children }) => {
                             <PatientTabs />
                         </div>
                         <div className="flex items-center gap-2 pl-4 flex-shrink-0 overflow-visible">
+                            <button
+                                onClick={() => setShowSupportModal(true)}
+                                className="w-9 h-9 rounded-full bg-white/80 border border-[#E4E4E4] text-[#10141A]/40 hover:bg-slate-100 hover:text-[#83A2DB] transition-all flex items-center justify-center"
+                                title="Report an Issue (Shift+?)"
+                            >
+                                <HelpCircle className="w-5 h-5" strokeWidth={1.5} />
+                            </button>
                             <AlertBell />
                         </div>
                     </div>
@@ -581,15 +588,6 @@ const Layout = ({ children }) => {
                         />
                     );
                 })()}
-
-                {/* Help button — frosted, no gradient */}
-                <button
-                    onClick={() => setShowSupportModal(true)}
-                    className="fixed bottom-[4.5rem] right-6 w-9 h-9 rounded-full bg-white/80 backdrop-blur-md border border-[#E4E4E4] text-[#10141A]/40 shadow-soft hover:shadow-medium hover:text-[#83A2DB] transition-all z-[9999] flex items-center justify-center"
-                    title="Report an Issue (Shift+?)"
-                >
-                    <HelpCircle className="w-4 h-4" strokeWidth={1.5} />
-                </button>
 
                 <SupportModal isOpen={showSupportModal} onClose={() => setShowSupportModal(false)} />
             </div>

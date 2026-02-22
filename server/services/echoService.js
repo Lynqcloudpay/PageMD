@@ -864,7 +864,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 );
 
                 const upcoming = await pool.query(
-                    `SELECT a.appointment_time, a.visit_type, a.patient_status,
+                    `SELECT a.appointment_time, a.appointment_type as visit_type, a.patient_status,
                             p.first_name as patient_first, p.last_name as patient_last,
                             u.first_name as provider_first, u.last_name as provider_last
                      FROM appointments a
