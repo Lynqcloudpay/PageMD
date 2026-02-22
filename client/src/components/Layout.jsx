@@ -310,7 +310,7 @@ const Layout = ({ children }) => {
 
                         {/* Logo Area */}
                         <div className={cn(
-                            "flex items-center h-20 border-b border-slate-800/50 pt-4",
+                            "flex items-center h-16 border-b border-slate-800/50 pt-2",
                             sidebarCollapsed ? "justify-center px-0" : "px-4 justify-start"
                         )}>
                             <button
@@ -350,11 +350,11 @@ const Layout = ({ children }) => {
                         {/* Navigation Area */}
                         <div className="flex-1 flex flex-col min-h-0 overflow-visible">
                             {/* Navigation */}
-                            <nav className="flex-shrink-0 overflow-y-auto overflow-x-hidden py-4 flex flex-col gap-0.5">
+                            <nav className="flex-shrink-0 overflow-y-auto overflow-x-hidden py-1 flex flex-col gap-0.5">
                                 {/* Primary section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-4 pb-1">
+                                        <div className="px-4 pt-2 pb-1">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Navigation
                                             </span>
@@ -377,14 +377,14 @@ const Layout = ({ children }) => {
                                 </div>
 
                                 {/* Divider */}
-                                <div className={cn("my-1.5", sidebarCollapsed ? "mx-2" : "mx-4")}>
+                                <div className={cn("my-1", sidebarCollapsed ? "mx-2" : "mx-4")}>
                                     <div className="h-px bg-slate-800/60" />
                                 </div>
 
                                 {/* Workflow section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-3 pb-1">
+                                        <div className="px-4 pt-1 pb-1">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Workflows
                                             </span>
