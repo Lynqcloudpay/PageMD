@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Layers, FileText } from 'lucide-react';
+import { X, Layers } from 'lucide-react';
 import VisitChartView from './VisitChartView';
 
 const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
@@ -16,7 +16,8 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
         }
     };
 
-    const handleCloseVisit = (visitId) => {
+    const handleCloseVisit = (visitId, e) => {
+        if (e) e.stopPropagation();
         setOpenVisits(prev => {
             const next = prev.filter(id => id !== visitId);
             if (next.length === 0) {
@@ -25,10 +26,6 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
             return next;
         });
     };
-
-    // Calculate which visits are shown on screen
-    const activeVisits = openVisits.slice(-2); // Display last 2 full size side-by-side
-    const stowedVisits = openVisits.slice(0, -2); // The rest in "folder tabs" at bottom left
 
     return (
         <div className="fixed inset-0 bg-slate-900/40 z-[200] flex flex-col p-4 backdrop-blur-md">
@@ -47,70 +44,63 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                 </button>
             </div>
 
-            {/* Main Note Stage - Fluid layout */}
-            <div className="flex-1 w-full h-full relative flex items-center justify-center gap-6 max-w-[2400px] mx-auto pb-4">
-                <AnimatePresence mode="popLayout">
+            {/* Deck of Cards Stage */}
+            <div className="flex-1 w-full relative flex items-center justify-center -mt-6">
+                <AnimatePresence>
                     {openVisits.map((vId, idx) => {
-                        const isActive = activeVisits.includes(vId);
-                        const activeCount = activeVisits.length;
-                        const stowedIndex = stowedVisits.indexOf(vId);
+                        const total = openVisits.length;
+                        const isFront = idx === total - 1;
+                        const offset = total - 1 - idx;
 
-                        // Positioning for stacked bottom folders
-                        const folderBottom = 0;
-                        const folderLeft = 20 + (stowedIndex * 15);
-                        const folderZ = stowedIndex;
+                        // Limit visual offset so cards don't disappear off screen
+                        const visualOffset = Math.min(offset, 5);
 
                         return (
                             <motion.div
                                 key={vId}
                                 layout
-                                initial={{ opacity: 0, scale: 0.9, y: 50 }}
+                                initial={{ opacity: 0, scale: 0.9, y: 100 }}
                                 animate={{
-                                    opacity: isActive ? 1 : 0.8,
-                                    scale: isActive ? 1 : 0.95,
-                                    x: isActive ? 0 : folderLeft,
-                                    y: isActive ? 0 : folderBottom,
-                                    width: isActive ? (activeCount === 1 ? '100%' : '50%') : '300px',
-                                    height: isActive ? '100%' : '50px',
-                                    zIndex: isActive ? 50 + idx : folderZ,
+                                    opacity: 1 - (visualOffset * 0.15),
+                                    y: isFront ? 0 : -(visualOffset * 55),
+                                    scale: isFront ? 1 : 1 - (visualOffset * 0.04),
+                                    zIndex: 100 - offset,
                                 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 50 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                className={`
-                                    absolute ${isActive ? 'relative flex items-center justify-center' : 'bottom-0 left-0 cursor-pointer shadow-2xl rounded-t-xl bg-slate-800 border border-slate-700 hover:bg-slate-700 hover:-translate-y-2 transition-all'}
+                                exit={{ opacity: 0, scale: 0.8, y: 100 }}
+                                transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                                className={`absolute w-full max-w-[1100px] h-[85vh] rounded-[2rem] shadow-2xl overflow-hidden bg-[#F8FAFC] origin-bottom
+                                    ${isFront ? 'border-2 border-slate-800/10 cursor-default' : 'border border-slate-300 cursor-pointer'}
                                 `}
-                                style={isActive ? { maxWidth: activeCount === 1 ? 1100 : '100%' } : {}}
                                 onClick={() => {
-                                    if (!isActive) handleOpenNewVisit(vId);
+                                    if (!isFront) handleOpenNewVisit(vId);
                                 }}
                             >
-                                {isActive ? (
-                                    <div className="w-full h-full relative group shadow-2xl rounded-2xl border-2 border-slate-800/10 overflow-hidden bg-[#F8FAFC]">
-                                        <div className="absolute top-4 right-4 z-[60] opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => handleCloseVisit(vId)}
-                                                className="p-1.5 bg-rose-500/90 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-colors hover:scale-105"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                        {/* MultiVisit mode hides the backdrop in VisitChartView natively */}
+                                {/* Invisible overlay to intercept clicks on background cards */}
+                                {!isFront && (
+                                    <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/40 transition-colors" />
+                                )}
+
+                                <div className={`w-full h-full relative group transition-opacity ${!isFront && 'opacity-70'}`}>
+                                    <div className={`absolute top-4 right-4 z-[60] transition-opacity ${isFront ? 'opacity-100' : 'opacity-0'}`}>
+                                        <button
+                                            onClick={(e) => handleCloseVisit(vId, e)}
+                                            className="p-1.5 bg-rose-500/90 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-colors hover:scale-105"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    {/* Make sure the iframe components are rendered but visually distinct */}
+                                    <div className={`w-full h-full ${!isFront ? 'pointer-events-none' : ''}`}>
                                         <VisitChartView
                                             visitId={vId}
                                             patientId={patientId}
                                             standalone={false}
                                             onOpenNewVisit={handleOpenNewVisit}
-                                            onClose={() => handleCloseVisit(vId)}
+                                            onClose={(e) => handleCloseVisit(vId, e)}
                                         />
                                     </div>
-                                ) : (
-                                    <div className="w-full h-full px-4 flex items-center justify-between pointer-events-none">
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="w-4 h-4 text-blue-400" />
-                                            <div className="text-slate-200 text-xs font-bold uppercase tracking-widest truncate">Review Note</div>
-                                        </div>
-                                    </div>
-                                )}
+                                </div>
                             </motion.div>
                         );
                     })}
