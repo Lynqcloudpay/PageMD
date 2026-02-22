@@ -19,7 +19,7 @@ router.get('/stats', requirePermission('schedule:view'), async (req, res) => {
         COUNT(*) FILTER(WHERE status NOT IN ('cancelled', 'no-show')) as total_today,
         COUNT(*) FILTER(WHERE 1=1 
           AND status NOT IN ('cancelled', 'no-show', 'completed')
-          AND patient_status IN ('scheduled', 'arrived', 'checked_in', 'checked-in', 'in_room', 'in-room', 'confirmed')
+          AND (patient_status IS NULL OR patient_status NOT IN ('cancelled', 'no_show', 'no-show', 'checked_out', 'checked-out', 'completed', 'discharged'))
         ) as active_today
       FROM appointments 
       WHERE appointment_date = $1
