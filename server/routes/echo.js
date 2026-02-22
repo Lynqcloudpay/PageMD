@@ -135,6 +135,39 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                         [actPayload.patient_id, actPayload.order_type, userId, actPayload.test_name, actPayload.order_payload]
                     );
                     break;
+
+                // ── Phase 5: Operational Actions ────────────────────────
+                case 'send_message':
+                    record = await client.query(
+                        `INSERT INTO messages (patient_id, from_user_id, subject, body, message_type, priority)
+                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                        [actPayload.patient_id, userId, actPayload.subject, actPayload.body,
+                        actPayload.message_type || 'portal', 'normal']
+                    );
+                    break;
+
+                case 'schedule_appointment':
+                    record = await client.query(
+                        `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time,
+                            appointment_type, duration, chief_complaint, status, patient_status)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+                        [actPayload.patient_id, userId, actPayload.appointment_date,
+                        actPayload.appointment_time, actPayload.appointment_type,
+                        actPayload.duration || 30, actPayload.reason || null,
+                            'scheduled', 'not-arrived']
+                    );
+                    break;
+
+                case 'create_reminder':
+                    record = await client.query(
+                        `INSERT INTO messages (patient_id, from_user_id, to_user_id, subject, body, message_type, priority, task_status)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                        [actPayload.patient_id, userId, userId,
+                        `Reminder: ${(actPayload.reminder_text || '').substring(0, 100)}`,
+                        actPayload.reminder_text,
+                            'task', actPayload.priority || 'normal', 'pending']
+                    );
+                    break;
             }
             if (record) results.push({ type: actType, record: record.rows[0] });
         }

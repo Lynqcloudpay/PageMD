@@ -34,6 +34,7 @@ const BASE_SYSTEM_PROMPT = `You are Eko, a clinical AI assistant embedded in the
 PERSONALITY:
 - Clinical & Thorough: Information accuracy is highest priority. Never guess.
 - Human-in-the-Loop: You STAGE actions for approval. Never decide alone.
+- Always calculate what is asked: When asked for risk scores (CHADS-VASc, ASCVD, MELD), ALWAYS call get_risk_scores with the appropriate score_type. Use defaults when data is missing and flag assumptions. Never refuse to calculate.
 - Tiered Search: Start with the baseline; use tools if more facts are needed.
 
 RESPONSE STYLE:
@@ -59,8 +60,10 @@ Focus on Treatment Plans and Orders.
 - Mandatory: say "I've staged adding **[Item]** for your approval."`,
 
     navigator: `TASK: EMR Operations Specialist.
-Focus on schedule, navigation, and administrative overview.
-- Helping find data, summaries of the day, and navigating the interface.`
+Focus on schedule, navigation, administrative overview, and operational tasks.
+- Helping find data, summaries of the day, and navigating the interface.
+- Scheduling appointments, sending messages to patients, and creating reminders/tasks.
+- When asked to message a patient, schedule an appointment, or create a reminder, use the appropriate tool to stage the action for provider approval.`
 };
 
 function getSystemPrompt(intent = 'general') {
@@ -518,6 +521,93 @@ const TOOL_CATALOG = [
             }
         }
     },
+    // ── Phase 5: Operational Action Tools ─────────────────────────────────
+    {
+        type: 'function',
+        function: {
+            name: 'send_message',
+            description: 'Send a message to the patient (via portal) or to another provider (internal). Stages the message for provider approval before sending.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    message_body: {
+                        type: 'string',
+                        description: 'The body/content of the message'
+                    },
+                    subject: {
+                        type: 'string',
+                        description: 'Subject line for the message'
+                    },
+                    message_type: {
+                        type: 'string',
+                        enum: ['portal', 'internal'],
+                        description: 'portal = message to patient, internal = message to another provider (default: portal)'
+                    }
+                },
+                required: ['message_body']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'schedule_appointment',
+            description: 'Schedule an appointment for the current patient. Stages the appointment for provider approval before booking.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    appointment_date: {
+                        type: 'string',
+                        description: 'Date for the appointment (YYYY-MM-DD format, or natural language like "tomorrow", "next Monday")'
+                    },
+                    appointment_time: {
+                        type: 'string',
+                        description: 'Time for the appointment (e.g., "1:00 PM", "13:00")'
+                    },
+                    appointment_type: {
+                        type: 'string',
+                        description: 'Type of visit (e.g., "Follow Up", "New Patient", "Telehealth", "Physical")'
+                    },
+                    duration: {
+                        type: 'integer',
+                        description: 'Duration in minutes (default: 30)'
+                    },
+                    reason: {
+                        type: 'string',
+                        description: 'Reason for the appointment / chief complaint'
+                    }
+                },
+                required: ['appointment_date', 'appointment_time']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'create_reminder',
+            description: 'Create a clinical reminder or task for the provider. Use when the provider says "remind me to...", "follow up on...", "don\'t forget to...". Stages for approval.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    reminder_text: {
+                        type: 'string',
+                        description: 'The reminder/task description (e.g., "Ask about diabetes management", "Follow up on lab results")'
+                    },
+                    due_date: {
+                        type: 'string',
+                        description: 'When this reminder is due (YYYY-MM-DD, or "next encounter", "next week")'
+                    },
+                    priority: {
+                        type: 'string',
+                        enum: ['low', 'normal', 'high', 'urgent'],
+                        description: 'Priority level (default: normal)'
+                    }
+                },
+                required: ['reminder_text']
+            }
+        }
+    },
+
     // ── Phase 2A: Global Tools (non-patient) ────────────────────────────
     {
         type: 'function',
@@ -651,13 +741,14 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
 
             case 'get_risk_scores': {
                 if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
-                const scores = await echoScoreEngine.generatePredictiveInsights(patientContext);
+                const scoreResult = await echoScoreEngine.generatePredictiveInsights(patientContext, args.score_type || 'all');
 
                 return {
                     result: {
                         type: 'risk_assessment',
-                        scores: scores,
-                        summary: scores.length > 0 ? `Calculated ${scores.length} clinical risk scores.` : 'Insufficient data to calculate specific risk scores.'
+                        scores: scoreResult.scores,
+                        assumptions: scoreResult.assumptions,
+                        summary: scoreResult.summary
                     },
                     dataAccessed: ['patients', 'visits.vitals', 'orders', 'problems'],
                     type: 'risk_assessment'
@@ -937,6 +1028,89 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                     type: 'clinical_gaps',
                     result: gaps,
                     dataAccessed: ['patients', 'problems', 'orders', 'labs', 'social_history']
+                };
+            }
+
+            // ── Phase 5: Operational Action Tools ────────────────────────
+            case 'send_message': {
+                if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
+                const actionId = `act_${Math.random().toString(36).substring(2, 9)}`;
+                const patientName = patientContext?.demographics
+                    ? `${patientContext.demographics.first_name} ${patientContext.demographics.last_name}`
+                    : 'patient';
+                return {
+                    result: {
+                        action_id: actionId,
+                        type: 'send_message',
+                        label: `Send Message to ${patientName}`,
+                        message: `Staged sending a **${args.message_type || 'portal'}** message to **${patientName}**.`,
+                        payload: {
+                            patient_id: patientId,
+                            subject: args.subject || 'Message from your care team',
+                            body: args.message_body,
+                            message_type: args.message_type || 'portal'
+                        }
+                    },
+                    dataAccessed: [],
+                    type: 'staged_action'
+                };
+            }
+
+            case 'schedule_appointment': {
+                if (!patientId) return { result: 'No patient selected.', dataAccessed: [] };
+                const actionId = `act_${Math.random().toString(36).substring(2, 9)}`;
+                const patientName = patientContext?.demographics
+                    ? `${patientContext.demographics.first_name} ${patientContext.demographics.last_name}`
+                    : 'patient';
+
+                // Parse natural language dates
+                let appointmentDate = args.appointment_date;
+                const today = new Date();
+                if (appointmentDate === 'tomorrow') {
+                    const tmrw = new Date(today);
+                    tmrw.setDate(tmrw.getDate() + 1);
+                    appointmentDate = tmrw.toISOString().split('T')[0];
+                } else if (appointmentDate === 'today') {
+                    appointmentDate = today.toISOString().split('T')[0];
+                }
+
+                return {
+                    result: {
+                        action_id: actionId,
+                        type: 'schedule_appointment',
+                        label: `Schedule ${args.appointment_type || 'Follow Up'} for ${patientName}`,
+                        message: `Staged scheduling a **${args.appointment_type || 'Follow Up'}** appointment for **${patientName}** on **${appointmentDate}** at **${args.appointment_time}**.`,
+                        payload: {
+                            patient_id: patientId,
+                            appointment_date: appointmentDate,
+                            appointment_time: args.appointment_time,
+                            appointment_type: args.appointment_type || 'Follow Up',
+                            duration: args.duration || 30,
+                            reason: args.reason || null
+                        }
+                    },
+                    dataAccessed: [],
+                    type: 'staged_action'
+                };
+            }
+
+            case 'create_reminder': {
+                const actionId = `act_${Math.random().toString(36).substring(2, 9)}`;
+                return {
+                    result: {
+                        action_id: actionId,
+                        type: 'create_reminder',
+                        label: `Reminder: ${args.reminder_text.substring(0, 50)}${args.reminder_text.length > 50 ? '...' : ''}`,
+                        message: `Staged creating a reminder: **${args.reminder_text}**${args.due_date ? ` (due: ${args.due_date})` : ''}.`,
+                        payload: {
+                            patient_id: patientId || null,
+                            reminder_text: args.reminder_text,
+                            due_date: args.due_date || null,
+                            priority: args.priority || 'normal'
+                        }
+                    },
+                    dataAccessed: [],
+                    type: 'staged_action'
                 };
             }
 
@@ -1238,8 +1412,10 @@ function detectIntent(message) {
     const m = message.toLowerCase();
     if (m.includes('draft') || m.includes('hpi') || m.includes('note') || m.includes('soap')) return 'scribe';
     if (m.includes('lab') || m.includes('trend') || m.includes('vital') || m.includes('chronic') || m.includes('analyz')) return 'analyst';
+    if (m.includes('score') || m.includes('chads') || m.includes('ascvd') || m.includes('meld') || m.includes('risk') || m.includes('calculate')) return 'analyst';
     if (m.includes('add') || m.includes('stage') || m.includes('prescribe') || m.includes('medication') || m.includes('problem')) return 'manager';
     if (m.includes('schedule') || m.includes('where is') || m.includes('navigate') || m.includes('inbox') || m.includes('unsigned')) return 'navigator';
+    if (m.includes('message') || m.includes('send') || m.includes('remind') || m.includes('appointment') || m.includes('book')) return 'navigator';
     return 'general';
 }
 
