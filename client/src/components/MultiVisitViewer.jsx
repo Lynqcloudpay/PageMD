@@ -179,12 +179,11 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                     }}
                                 >
                                     <div
-                                        className="transform rotate-90 whitespace-nowrap font-bold text-[10.5px] uppercase tracking-wider flex items-center justify-center gap-2 absolute pointer-events-none"
-                                        style={{ width: '130px' }} // Fixed width matches min-height to strictly bound text
+                                        className="transform rotate-90 whitespace-nowrap font-bold uppercase tracking-wider flex flex-col items-center justify-center absolute pointer-events-none leading-tight"
+                                        style={{ width: '125px' }} // Fixed width matches bounds perfectly
                                     >
-                                        <span className="opacity-90 shrink-0">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MM/dd') : 'Load'}</span>
-                                        <span className="w-[3px] h-[3px] rounded-full bg-white/50 shrink-0"></span>
-                                        <span className="truncate inline-block max-w-[70px]">{getChiefComplaint(visitsData[vId])}</span>
+                                        <span className="text-[10px] opacity-100">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
+                                        <span className="text-[8.5px] opacity-80 truncate w-full text-center mt-0.5">{getChiefComplaint(visitsData[vId])}</span>
                                     </div>
                                 </div>
 
