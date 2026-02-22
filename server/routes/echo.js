@@ -436,17 +436,47 @@ router.get('/usage', requirePermission('ai.echo'), async (req, res) => {
 });
 
 /**
- * GET /api/echo/health
- * Health check
+ * GET /api/echo/preferences
+ * Get current user's learned preferences
  */
-router.get('/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        service: 'echo',
-        model: process.env.ECHO_MODEL || 'gpt-4o',
-        configured: !!(process.env.AI_API_KEY || process.env.OPENAI_API_KEY),
-        version: '1.0.0'
-    });
+router.get('/preferences', requirePermission('ai.echo'), async (req, res) => {
+    try {
+        const prefs = await echoService.getUserPreferences(req.user.id);
+        res.json({ preferences: prefs });
+    } catch (err) {
+        console.error('[Echo API] Preferences fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch preferences' });
+    }
+});
+
+/**
+ * PUT /api/echo/preferences/:id
+ * Update a preference (value or active status)
+ */
+router.put('/preferences/:id', requirePermission('ai.echo'), async (req, res) => {
+    try {
+        const { preference_value, active } = req.body;
+        const updated = await echoService.updateUserPreference(req.params.id, req.user.id, { preference_value, active });
+        if (!updated) return res.status(404).json({ error: 'Preference not found' });
+        res.json({ preference: updated });
+    } catch (err) {
+        console.error('[Echo API] Preference update error:', err);
+        res.status(500).json({ error: 'Failed to update preference' });
+    }
+});
+
+/**
+ * DELETE /api/echo/preferences/:id
+ * Soft-delete a preference
+ */
+router.delete('/preferences/:id', requirePermission('ai.echo'), async (req, res) => {
+    try {
+        await echoService.deleteUserPreference(req.params.id, req.user.id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Echo API] Preference delete error:', err);
+        res.status(500).json({ error: 'Failed to delete preference' });
+    }
 });
 
 module.exports = router;

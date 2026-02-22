@@ -37,6 +37,7 @@ PERSONALITY:
 - Always calculate what is asked: When asked for risk scores (CHADS-VASc, ASCVD, MELD), ALWAYS call get_risk_scores with the appropriate score_type. Use defaults when data is missing and flag assumptions. Never refuse to calculate.
 - Tiered Search: Start with the baseline; use tools if more facts are needed.
 - Full-Spectrum Agent: You can generate referral letters, clinical letters (work excuses, disability, FMLA), suggest billing codes, prepare pre-visit briefs, create after-visit summaries, generate clinical handoffs, reconcile medications, and suggest evidence-based follow-up plans. Always use the appropriate tool when asked.
+- Adaptive: When the user says "always", "I prefer", "from now on", "don't ever", "remember that", or similar preference language, use save_user_preference to remember it. Briefly acknowledge what you learned.
 
 RESPONSE STYLE:
 - No markdown headers or tables. Use **[text]** for labels, !![text]!! for alerts.`;
@@ -819,6 +820,34 @@ const TOOL_CATALOG = [
             parameters: {
                 type: 'object',
                 properties: {}
+            }
+        }
+    },
+
+    // ── Adaptive Learning: User Preferences ──────────────────────────
+    {
+        type: 'function',
+        function: {
+            name: 'save_user_preference',
+            description: 'Save a user preference when they express how they want Eko to behave. Use when user says "always", "I prefer", "from now on", "remember that", "don\'t ever", etc. This persists across all future conversations.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    category: {
+                        type: 'string',
+                        enum: ['general', 'documentation', 'clinical', 'communication', 'workflow'],
+                        description: 'Category of preference'
+                    },
+                    preference_key: {
+                        type: 'string',
+                        description: 'Short snake_case identifier (e.g. "note_format", "greeting_style", "default_units")'
+                    },
+                    preference_value: {
+                        type: 'string',
+                        description: 'The full preference text describing what the user wants'
+                    }
+                },
+                required: ['preference_key', 'preference_value']
             }
         }
     }
@@ -1772,6 +1801,18 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 };
             }
 
+            // ── Adaptive Learning ────────────────────────────────────────
+            case 'save_user_preference': {
+                const category = args.category || 'general';
+                const key = args.preference_key;
+                const value = args.preference_value;
+                await saveUserPreference(userId, tenantId, category, key, value, 'explicit');
+                return {
+                    result: `Preference saved: [${category}] ${key} = "${value}". I'll remember this for all future conversations.`,
+                    dataAccessed: ['echo_user_preferences']
+                };
+            }
+
             default:
                 return { result: `Unknown tool: ${toolName}`, dataAccessed: [] };
         }
@@ -2089,6 +2130,20 @@ async function chat({ message, patientId, conversationId, user, uiContext, attac
     const messages = [
         { role: 'system', content: getSystemPrompt(intent) }
     ];
+
+    // 5a. Inject user preferences (adaptive learning)
+    try {
+        const prefs = await loadUserPreferences(user.id);
+        if (prefs.length > 0) {
+            const prefLines = prefs.map(p => `- [${p.category}] ${p.preference_value}`).join('\n');
+            messages.push({
+                role: 'system',
+                content: `USER PREFERENCES (adapt your behavior accordingly — these are standing instructions from this physician):\n${prefLines}`
+            });
+        }
+    } catch (prefErr) {
+        console.warn('[Echo] Failed to load user preferences:', prefErr.message);
+    }
 
     if (uiContext) {
         messages.push({
@@ -2434,6 +2489,90 @@ async function getMessageHistory(conversationId, limit = 30) {
     return result.rows;
 }
 
+// ─── User Preferences (Adaptive Learning) ───────────────────────────────────
+
+async function ensurePreferencesTable() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS echo_user_preferences (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL,
+                tenant_id UUID,
+                category VARCHAR(50) NOT NULL DEFAULT 'general',
+                preference_key VARCHAR(100) NOT NULL,
+                preference_value TEXT NOT NULL,
+                source VARCHAR(20) DEFAULT 'explicit',
+                active BOOLEAN DEFAULT true,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, preference_key)
+            )
+        `);
+    } catch (e) {
+        // Table likely already exists
+    }
+}
+
+// Run on module load
+ensurePreferencesTable();
+
+async function loadUserPreferences(userId) {
+    try {
+        const result = await pool.query(
+            `SELECT category, preference_key, preference_value, source, created_at 
+             FROM echo_user_preferences 
+             WHERE user_id = $1 AND active = true 
+             ORDER BY category, created_at`,
+            [userId]
+        );
+        return result.rows;
+    } catch (err) {
+        console.warn('[Echo] loadUserPreferences failed:', err.message);
+        return [];
+    }
+}
+
+async function saveUserPreference(userId, tenantId, category, key, value, source = 'explicit') {
+    await ensurePreferencesTable();
+    await pool.query(
+        `INSERT INTO echo_user_preferences (user_id, tenant_id, category, preference_key, preference_value, source)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (user_id, preference_key) 
+         DO UPDATE SET 
+             preference_value = $5,
+             category = $3,
+             source = $6,
+             active = true,
+             updated_at = CURRENT_TIMESTAMP`,
+        [userId, tenantId, category, key, value, source]
+    );
+}
+
+async function getUserPreferences(userId) {
+    return loadUserPreferences(userId);
+}
+
+async function updateUserPreference(preferenceId, userId, updates) {
+    const { preference_value, active } = updates;
+    const result = await pool.query(
+        `UPDATE echo_user_preferences 
+         SET preference_value = COALESCE($3, preference_value),
+             active = COALESCE($4, active),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND user_id = $2
+         RETURNING *`,
+        [preferenceId, userId, preference_value, active]
+    );
+    return result.rows[0];
+}
+
+async function deleteUserPreference(preferenceId, userId) {
+    await pool.query(
+        `UPDATE echo_user_preferences SET active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2`,
+        [preferenceId, userId]
+    );
+}
+
 async function saveMessage(conversationId, role, content, toolCalls, toolResults, tokensUsed, model) {
     await pool.query(
         `INSERT INTO echo_messages (conversation_id, role, content, tool_calls, tool_results, tokens_used, model)
@@ -2552,5 +2691,8 @@ module.exports = {
     loadConversation,
     getMessageHistory,
     checkTokenBudget,
-    transcribeAudio
+    transcribeAudio,
+    getUserPreferences,
+    updateUserPreference,
+    deleteUserPreference
 };
