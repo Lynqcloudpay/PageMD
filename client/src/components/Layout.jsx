@@ -83,7 +83,7 @@ const Layout = ({ children }) => {
         const fetchInboxCount = async () => {
             try {
                 const response = await inboxAPI.getStats();
-                setInboxCount(response.data?.my_count || 0);
+                setInboxCount(response.data?.my_unread_count || 0);
             } catch (error) {
                 console.error('Error fetching inbox count', error);
                 setInboxCount(0);
@@ -121,7 +121,7 @@ const Layout = ({ children }) => {
 
         const fetchAppointmentRequestsCount = async () => {
             try {
-                const response = await inboxAPI.getAll({ status: 'active', type: 'portal_appointment' });
+                const response = await inboxAPI.getAll({ status: 'new', type: 'portal_appointment' });
                 setAppointmentRequestsCount(response.data?.length || 0);
             } catch (error) {
                 console.error('Error fetching appointment requests count:', error);

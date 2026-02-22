@@ -582,14 +582,15 @@ router.get('/stats', async (req, res) => {
       SELECT
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type != 'portal_appointment') as all_count,
         COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND assigned_user_id = $1 AND type != 'portal_appointment') as my_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'lab') as labs_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'imaging') as imaging_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'document') as docs_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'message') as msgs_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'task') as tasks_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'refill') as refills_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'portal_message') as portal_count,
-        COUNT(*) FILTER(WHERE status NOT IN ('completed', 'archived') AND type = 'portal_appointment') as portal_appt_count
+        COUNT(*) FILTER(WHERE status = 'new' AND assigned_user_id = $1 AND type != 'portal_appointment') as my_unread_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'lab') as labs_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'imaging') as imaging_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'document') as docs_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'message') as msgs_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'task') as tasks_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'refill') as refills_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'portal_message') as portal_count,
+        COUNT(*) FILTER(WHERE status = 'new' AND type = 'portal_appointment') as portal_appt_count
       FROM inbox_items
     `, [req.user.id]);
 
