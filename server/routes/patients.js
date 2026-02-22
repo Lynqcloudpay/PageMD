@@ -1073,8 +1073,23 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
 
     // Update encryption_metadata if PHI fields changed
     if (encryptedChanges.encryption_metadata) {
+      // Merge with existing metadata to prevent overwriting keys for untouched PHI fields
+      let existingMetadata = {};
+      try {
+        const meta = existingResult.rows[0].encryption_metadata;
+        if (typeof meta === 'string') existingMetadata = JSON.parse(meta);
+        else if (meta && typeof meta === 'object') existingMetadata = meta;
+      } catch (e) {
+        console.warn('Failed to parse existing encryption_metadata:', e);
+      }
+
+      const newMetadata = {
+        ...existingMetadata,
+        ...encryptedChanges.encryption_metadata
+      };
+
       setClause.push(`encryption_metadata = $${paramIndex}`);
-      values.push(JSON.stringify(encryptedChanges.encryption_metadata));
+      values.push(JSON.stringify(newMetadata));
       paramIndex++;
     }
 
