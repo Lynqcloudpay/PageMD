@@ -156,7 +156,7 @@ function calculateMELD(params) {
 async function generatePredictiveInsights(patientContext, scoreType = 'all') {
     const insights = [];
     const assumptions = [];
-    const { demographics, vitals, labs, problems = [] } = patientContext;
+    const { demographics, vitalHistory, labs, problems = [] } = patientContext;
     const age = calculateAge(demographics?.dob);
     const sex = (demographics?.sex || '').toLowerCase();
 
@@ -164,15 +164,32 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
     const wantCHADS = scoreType === 'all' || scoreType === 'chads';
     const wantMELD = scoreType === 'all' || scoreType === 'meld';
 
-    // Helper: search problems list
+    // Helper: search problems list with negative-match prevention
     const hasProblem = (keywords) => problems.some(p => {
         const name = (p.problem_name || p.name || '').toLowerCase();
+        // Skip if it looks like a negative mention
+        if (name.includes('denies') || name.includes('negative for') || name.includes('no history of') || name.includes('no ') || name.includes('hx of')) {
+            // "hx of" is tricky. For CHADS-VASc, "hx of stroke" SHOULD count.
+            // But if the user says it's a false positive, maybe it's "Family hx of".
+            if (name.includes('family')) return false;
+        }
         return keywords.some(kw => name.includes(kw));
     });
 
     // ── 1. ASCVD ────────────────────────────────────────────────────────
     if (wantASCVD) {
-        // Extract data
+        // Extract SBP from vitalHistory (normalized by echoContextEngine)
+        let sbp = null;
+        if (Array.isArray(vitalHistory) && vitalHistory.length > 0) {
+            for (let i = vitalHistory.length - 1; i >= 0; i--) {
+                const vs = vitalHistory[i].vitals;
+                if (vs && vs.systolicBp) {
+                    sbp = parseFloat(vs.systolicBp);
+                    break;
+                }
+            }
+        }
+
         const findLabValue = (keywords) => {
             if (!labs || !Array.isArray(labs)) return null;
             for (const l of labs) {
@@ -185,19 +202,6 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
             return null;
         };
 
-        const sbpVital = vitals?.find(v => v.type === 'bp_systolic' || (v.vitals && typeof v.vitals === 'object'));
-        let sbp = null;
-        if (sbpVital?.value) {
-            sbp = parseFloat(sbpVital.value);
-        } else if (sbpVital?.vitals?.systolicBp) {
-            sbp = parseFloat(sbpVital.vitals.systolicBp);
-        } else if (Array.isArray(vitals) && vitals.length > 0) {
-            for (const v of [...vitals].reverse()) {
-                const parsed = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
-                if (parsed?.systolicBp) { sbp = parseFloat(parsed.systolicBp); break; }
-            }
-        }
-
         let totalChol = findLabValue(['total cholesterol', 'total chol']);
         let hdl = findLabValue(['hdl']);
 
@@ -208,9 +212,14 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
         if (!sbp) missing.push('Systolic BP');
 
         if (missing.length > 0) {
-            // If data is missing, we only calculate if we have at least one lipid value
-            // otherwise it's just a pure guess.
-            if (!totalChol && !hdl) {
+            if (!totalChol && !hdl && !sbp) {
+                insights.push({
+                    type: 'ascvd',
+                    score: null,
+                    interpretation: 'ASCVD 10-Year Risk: Cannot calculate — missing lipid panel and blood pressure data.',
+                    missing
+                });
+            } else if (!totalChol && !hdl) {
                 insights.push({
                     type: 'ascvd',
                     score: null,
@@ -218,7 +227,7 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
                     missing
                 });
             } else {
-                // Calculate with defaults but heavily flag
+                // Partial data - calculate with defaults but flag
                 const tcVal = totalChol || 200;
                 const hdlVal = hdl || 50;
                 const sbpVal = sbp || 120;
@@ -228,25 +237,24 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
                 if (!sbp) assumptions.push('SBP omitted (using default 120 mmHg for estimate)');
 
                 const params = {
-                    age: Math.max(age, 20), // PCE equations can blow up at very low ages
+                    age: Math.max(age, 20),
                     totalChol: tcVal,
                     hdl: hdlVal,
                     sbp: sbpVal,
                     isSmoker: (patientContext.socialHistory?.smoking_status || '').toLowerCase().includes('current'),
                     isDiabetic: hasProblem(['diabetes']),
                     isMale: sex === 'male',
-                    isWhite: (demographics?.race || '').toLowerCase().includes('white') || true,
+                    isWhite: demographics?.race ? demographics.race.toLowerCase().includes('white') : true,
                     treatsBP: hasProblem(['hypertension', 'htn'])
                 };
 
                 const result = calculateASCVD(params);
                 if (age < 40 || age > 79) {
-                    result.caveat = `ACC/AHA Pooled Cohort Equations are officially validated for ages 40-79. At age ${age}, this result is an extrapolation and should not be used for clinical decision making without further review.`;
+                    result.caveat = `ACC/AHA Pooled Cohort Equations are officially validated for ages 40-79. At age ${age}, this result is an extrapolation.`;
                 }
                 insights.push({ type: 'ascvd', ...result });
             }
         } else {
-            // Full data available
             const params = {
                 age,
                 totalChol,
@@ -255,7 +263,7 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
                 isSmoker: (patientContext.socialHistory?.smoking_status || '').toLowerCase().includes('current'),
                 isDiabetic: hasProblem(['diabetes']),
                 isMale: sex === 'male',
-                isWhite: (demographics?.race || '').toLowerCase().includes('white') || true,
+                isWhite: demographics?.race ? demographics.race.toLowerCase().includes('white') : true,
                 treatsBP: hasProblem(['hypertension', 'htn'])
             };
             const result = calculateASCVD(params);
@@ -282,7 +290,7 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
 
         const result = calculateCHADS(params);
         if (!hasAfib) {
-            result.caveat = 'CHA₂DS₂-VASc is validated for patients with atrial fibrillation. This patient does not have documented afib. Score is informational only.';
+            result.caveat = 'CHA₂DS₂-VASc is validated for patients with atrial fibrillation. Clinical afib not found in active problems.';
         }
         insights.push({ type: 'chads', ...result });
     }
