@@ -110,66 +110,78 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
             const { type: actType, payload: actPayload } = action;
             let record;
 
-            switch (actType) {
-                case 'add_problem':
-                    record = await client.query(
-                        `INSERT INTO problems (patient_id, problem_name, icd10_code, status)
-                         VALUES ($1, $2, $3, $4) RETURNING *`,
-                        [actPayload.patient_id, actPayload.problem_name, actPayload.icd10_code, actPayload.status]
-                    );
-                    break;
+            console.log(`[Echo Commit] Executing ${actType}:`, JSON.stringify(actPayload));
 
-                case 'add_medication':
-                    record = await client.query(
-                        `INSERT INTO medications (patient_id, medication_name, dosage, frequency, route, prescriber_id, active, status)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-                        [actPayload.patient_id, actPayload.medication_name, actPayload.dosage, actPayload.frequency,
-                        actPayload.route, userId, true, 'active']
-                    );
-                    break;
+            try {
+                switch (actType) {
+                    case 'add_problem':
+                        record = await client.query(
+                            `INSERT INTO problems (patient_id, problem_name, icd10_code, status)
+                             VALUES ($1, $2, $3, $4) RETURNING *`,
+                            [actPayload.patient_id, actPayload.problem_name, actPayload.icd10_code, actPayload.status]
+                        );
+                        break;
 
-                case 'create_order':
-                    record = await client.query(
-                        `INSERT INTO orders (patient_id, order_type, ordered_by, test_name, order_payload)
-                         VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-                        [actPayload.patient_id, actPayload.order_type, userId, actPayload.test_name, actPayload.order_payload]
-                    );
-                    break;
+                    case 'add_medication':
+                        record = await client.query(
+                            `INSERT INTO medications (patient_id, medication_name, dosage, frequency, route, prescriber_id, active, status)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                            [actPayload.patient_id, actPayload.medication_name, actPayload.dosage, actPayload.frequency,
+                            actPayload.route, userId, true, 'active']
+                        );
+                        break;
 
-                // ── Phase 5: Operational Actions ────────────────────────
-                case 'send_message':
-                    record = await client.query(
-                        `INSERT INTO messages (patient_id, from_user_id, subject, body, message_type, priority)
-                         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                        [actPayload.patient_id, userId, actPayload.subject, actPayload.body,
-                            'message', 'normal']
-                    );
-                    break;
+                    case 'create_order':
+                        record = await client.query(
+                            `INSERT INTO orders (patient_id, order_type, ordered_by, test_name, order_payload)
+                             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+                            [actPayload.patient_id, actPayload.order_type, userId, actPayload.test_name, actPayload.order_payload]
+                        );
+                        break;
 
-                case 'schedule_appointment':
-                    record = await client.query(
-                        `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time,
-                            appointment_type, duration, notes, status, patient_status, created_by, clinic_id)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-                        [actPayload.patient_id, userId, actPayload.appointment_date,
-                        actPayload.appointment_time, actPayload.appointment_type,
-                        actPayload.duration || 30, actPayload.reason || null,
-                            'scheduled', 'scheduled', userId, tenantId]
-                    );
-                    break;
+                    // ── Phase 5: Operational Actions ────────────────────────
+                    case 'send_message':
+                        record = await client.query(
+                            `INSERT INTO messages (patient_id, from_user_id, subject, body, message_type, priority)
+                             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                            [actPayload.patient_id, userId, actPayload.subject, actPayload.body,
+                                'message', 'normal']
+                        );
+                        break;
 
-                case 'create_reminder':
-                    record = await client.query(
-                        `INSERT INTO messages (patient_id, from_user_id, to_user_id, subject, body, message_type, priority, task_status)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-                        [actPayload.patient_id, userId, userId,
-                        `Reminder: ${(actPayload.reminder_text || '').substring(0, 100)}`,
-                        actPayload.reminder_text,
-                            'task', actPayload.priority || 'normal', 'open']
-                    );
-                    break;
+                    case 'schedule_appointment':
+                        record = await client.query(
+                            `INSERT INTO appointments (patient_id, provider_id, appointment_date, appointment_time,
+                                appointment_type, duration, notes, status, patient_status, created_by, clinic_id)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+                            [actPayload.patient_id, userId, actPayload.appointment_date,
+                            actPayload.appointment_time, actPayload.appointment_type,
+                            actPayload.duration || 30, actPayload.reason || null,
+                                'scheduled', 'scheduled', userId, tenantId]
+                        );
+                        break;
+
+                    case 'create_reminder':
+                        record = await client.query(
+                            `INSERT INTO messages (patient_id, from_user_id, to_user_id, subject, body, message_type, priority, task_status)
+                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+                            [actPayload.patient_id, userId, userId,
+                            `Reminder: ${(actPayload.reminder_text || '').substring(0, 100)}`,
+                            actPayload.reminder_text,
+                                'task', actPayload.priority || 'normal', 'open']
+                        );
+                        break;
+                }
+
+                if (record && record.rows && record.rows[0]) {
+                    results.push({ type: actType, record: record.rows[0] });
+                } else {
+                    console.warn(`[Echo Commit] No record created for ${actType}`);
+                }
+            } catch (dbErr) {
+                console.error(`[Echo Commit DB Error] for ${actType}:`, dbErr.message);
+                throw dbErr; // Re-throw to trigger catch block with ROLLBACK
             }
-            if (record) results.push({ type: actType, record: record.rows[0] });
         }
 
         // Audit for the commit(s)
