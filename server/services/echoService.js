@@ -1,5 +1,5 @@
 /**
- * Echo Service — Multi-Agent Orchestrator (Phase 2A + 2B)
+ * Echo Service — Multi-Agent Orchestrator (Phase 1-4)
  * 
  * Central brain of Project Echo. Routes user intent to sub-agents via
  * OpenAI function-calling. Manages conversation state, tool execution,
@@ -8,6 +8,10 @@
  * Phase 1: Read-only clinical queries, vital trends, semantic SQL
  * Phase 2A: Visit note drafting, write actions, global availability
  * Phase 2B: Lab result intelligence, auto-interpretation, trend analysis
+ * Phase 2C: Clinical decision support, gaps, DDI
+ * Phase 2D: Voice dictation (Whisper)
+ * Phase 3: Staged actions, batch commit, navigation observer
+ * Phase 4: Document analysis (Vision), guideline citations, risk alerts
  */
 
 const pool = require('../db');
@@ -17,6 +21,7 @@ const echoSemanticLayer = require('./echoSemanticLayer');
 const echoLabEngine = require('./echoLabEngine');
 const echoCDSEngine = require('./echoCDSEngine');
 const echoScoreEngine = require('./echoScoreEngine');
+const echoGuidelineEngine = require('./echoGuidelineEngine');
 
 const AI_API_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
 if (!AI_API_KEY) {
@@ -446,6 +451,73 @@ const TOOL_CATALOG = [
             }
         }
     },
+    // ── Phase 4: Document Analysis & Evidence ────────────────────────────
+    {
+        type: 'function',
+        function: {
+            name: 'analyze_document',
+            description: 'Analyze an uploaded clinical document image (lab report, referral letter, prior records). Structures the key findings into a card. Only call this when the user has uploaded a document/image attachment.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    document_type: {
+                        type: 'string',
+                        enum: ['lab_report', 'referral', 'imaging', 'prescription', 'insurance', 'other'],
+                        description: 'The type of clinical document being analyzed'
+                    },
+                    summary: {
+                        type: 'string',
+                        description: 'A brief 1-2 sentence summary of the document contents'
+                    },
+                    key_findings: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                label: { type: 'string', description: 'Name of the finding (e.g., "A1c", "Diagnosis")' },
+                                value: { type: 'string', description: 'The extracted value or text' },
+                                flag: { type: 'string', enum: ['normal', 'abnormal', 'critical', 'info'], description: 'Clinical significance' }
+                            },
+                            required: ['label', 'value', 'flag']
+                        },
+                        description: 'Key data points extracted from the document'
+                    },
+                    source_date: {
+                        type: 'string',
+                        description: 'Date from the document if identifiable (YYYY-MM-DD)'
+                    },
+                    recommendations: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Clinical recommendations based on the document findings'
+                    }
+                },
+                required: ['document_type', 'summary', 'key_findings']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'search_guidelines',
+            description: 'Search evidence-based clinical guidelines (ADA, AHA/ACC, USPSTF, KDIGO). Use when the provider asks about best practices, screening recommendations, treatment targets, or evidence-based approaches.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    query: {
+                        type: 'string',
+                        description: 'The clinical topic or question to search guidelines for'
+                    },
+                    category: {
+                        type: 'string',
+                        enum: ['preventive', 'chronic', 'all'],
+                        description: 'Filter by guideline category (default: all)'
+                    }
+                },
+                required: ['query']
+            }
+        }
+    },
     // ── Phase 2A: Global Tools (non-patient) ────────────────────────────
     {
         type: 'function',
@@ -868,6 +940,36 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 };
             }
 
+            // Phase 4 - Document Analysis (structured output from Vision)
+            case 'analyze_document': {
+                return {
+                    type: 'document_analysis',
+                    result: {
+                        type: 'document_analysis',
+                        document_type: args.document_type,
+                        summary: args.summary,
+                        key_findings: args.key_findings || [],
+                        source_date: args.source_date || null,
+                        recommendations: args.recommendations || []
+                    },
+                    dataAccessed: ['uploaded_document']
+                };
+            }
+
+            // Phase 4 - Clinical Guideline Search
+            case 'search_guidelines': {
+                const guidelineResults = echoGuidelineEngine.searchGuidelines(
+                    args.query,
+                    args.category || 'all',
+                    5
+                );
+                return {
+                    type: 'guideline_evidence',
+                    result: guidelineResults,
+                    dataAccessed: ['clinical_guidelines']
+                };
+            }
+
             default:
                 return { result: `Unknown tool: ${toolName}`, dataAccessed: [] };
         }
@@ -1143,7 +1245,7 @@ function detectIntent(message) {
 
 // ─── Main Chat Function ─────────────────────────────────────────────────────
 
-async function chat({ message, patientId, conversationId, user, uiContext }) {
+async function chat({ message, patientId, conversationId, user, uiContext, attachments }) {
     const startTime = Date.now();
     const tenantId = user.clinic_id;
 
@@ -1236,8 +1338,27 @@ async function chat({ message, patientId, conversationId, user, uiContext }) {
         }
     }
 
-    // Add current user message
-    messages.push({ role: 'user', content: message });
+    // Add current user message (with optional Vision attachments)
+    if (attachments && attachments.length > 0) {
+        // GPT-4o Vision: build multi-part content with text + images
+        const contentParts = [
+            { type: 'text', text: message }
+        ];
+        for (const att of attachments) {
+            if (att.base64 && att.mimeType) {
+                contentParts.push({
+                    type: 'image_url',
+                    image_url: {
+                        url: `data:${att.mimeType};base64,${att.base64}`,
+                        detail: 'auto'
+                    }
+                });
+            }
+        }
+        messages.push({ role: 'user', content: contentParts });
+    } else {
+        messages.push({ role: 'user', content: message });
+    }
 
     // 6. Determine which tools are available based on context
     const availableTools = patientId
@@ -1246,7 +1367,7 @@ async function chat({ message, patientId, conversationId, user, uiContext }) {
             const name = t.function.name;
             // Only global tools when no patient
             return ['get_schedule_summary', 'get_pending_notes', 'get_inbox_summary',
-                'navigate_to', 'query_clinical_data'].includes(name);
+                'navigate_to', 'query_clinical_data', 'search_guidelines'].includes(name);
         });
 
     // 7. Call LLM with function-calling
@@ -1311,6 +1432,13 @@ async function chat({ message, patientId, conversationId, user, uiContext }) {
                 }
                 if (result.type === 'risk_scores' || result.type === 'risk_assessment') {
                     visualizations.push({ type: 'risk_assessment', ...result.result });
+                }
+                // Phase 4: Document analysis & guideline evidence
+                if (result.type === 'document_analysis') {
+                    visualizations.push({ type: 'document_analysis', ...result.result });
+                }
+                if (result.type === 'guideline_evidence') {
+                    visualizations.push({ type: 'guideline_evidence', ...result.result });
                 }
 
                 // Track write actions

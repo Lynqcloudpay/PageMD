@@ -29,7 +29,7 @@ router.use(authenticate);
  */
 router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
     try {
-        const { message, patientId, conversationId, uiContext } = req.body;
+        const { message, patientId, conversationId, uiContext, attachments } = req.body;
 
         if (!message || message.trim().length === 0) {
             return res.status(400).json({ error: 'Message is required' });
@@ -40,7 +40,8 @@ router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
             patientId: patientId || null,
             conversationId: conversationId || null,
             user: req.user,
-            uiContext: uiContext || null
+            uiContext: uiContext || null,
+            attachments: attachments || null
         });
 
         res.json({
@@ -277,6 +278,45 @@ router.get('/gaps/:patientId', requirePermission('ai.echo'), async (req, res) =>
     } catch (err) {
         console.error('[Echo API] Gaps analysis error:', err);
         res.status(500).json({ error: 'Failed to analyze clinical gaps' });
+    }
+});
+
+// ─── Risk Summary (Phase 4C) ────────────────────────────────────────────────
+
+/**
+ * GET /api/echo/risk-summary/:patientId
+ * Lightweight risk score summary for chart badge rendering
+ */
+router.get('/risk-summary/:patientId', requirePermission('ai.echo'), async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const tenantId = req.user.clinic_id;
+
+        const context = await echoContextEngine.assemblePatientContext(patientId, tenantId);
+        const echoScoreEngine = require('../services/echoScoreEngine');
+        const insights = await echoScoreEngine.generatePredictiveInsights(context);
+
+        // Return a slim summary for badge rendering
+        const scores = insights.scores || [];
+        const elevated = scores.filter(s =>
+            (s.type === 'ascvd' && s.score > 7.5) ||
+            (s.type === 'chads' && s.score >= 2) ||
+            (s.type === 'meld' && s.score >= 15)
+        );
+
+        res.json({
+            hasElevated: elevated.length > 0,
+            elevatedCount: elevated.length,
+            scores: scores.map(s => ({
+                type: s.type,
+                score: s.score,
+                level: s.level,
+                unit: s.unit
+            }))
+        });
+    } catch (err) {
+        console.error('[Echo API] Risk summary error:', err);
+        res.status(500).json({ error: 'Failed to calculate risk summary' });
     }
 });
 

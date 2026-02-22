@@ -60,15 +60,24 @@
 
 ---
 
-## ⏸️ Phase 3: Operational Autonomy (In Progress)
+## ✅ Phase 3: Operational Autonomy (Completed)
 - [x] **Staged Action Queue**: Convert immediate writes to provider-approved staging
 - [x] **Commit API**: Backend endpoint for executing agreed clinical changes
 - [x] **StagedActionCard**: Interactive UI for Approval/Rejection workflow
-- [ ] **Batch Processing**: One-click approval for multiple treatment suggestions
-- [ ] **Real-time Notifications**: Triggering Echo alerts based on EMR navigation
+- [x] **Batch Processing**: "Approve All" one-click batch commit for multiple staged actions
+- [x] **Navigation Observer**: Context-aware suggestions based on current EMR route
 
 ---
 
 ## ✅ Phase 2D: Smart Dictation & Voice (Completed)
 - [x] Voice-to-Text integration (Whisper)
 - [x] "Dictate Note" / Voice Interaction mode
+
+---
+
+## ✅ Phase 4: Predictive Intelligence & Document Analysis (Completed)
+- [x] **Document Analysis**: GPT-4o Vision with file upload → base64 encoding → structured findings
+- [x] **Guideline Engine**: 20+ clinical guidelines (ADA, AHA/ACC, USPSTF, KDIGO) with keyword search
+- [x] **Evidence Cards**: Visualization with source, year, grade badges
+- [x] **Risk Badge**: Proactive `EkoRiskBadge` in patient chart header for elevated scores
+- [x] **Risk Summary API**: Lightweight `/api/echo/risk-summary/:patientId` endpoint

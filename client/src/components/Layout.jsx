@@ -571,10 +571,16 @@ const Layout = ({ children }) => {
                 <MobileMenu />
 
                 {/* Echo AI — Global Availability (Phase 2A) */}
-                <EchoPanel
-                    patientId={location.pathname.includes('/patient/') ? location.pathname.split('/patient/')[1]?.split('/')[0] : null}
-                    patientName={null}
-                />
+                {(() => {
+                    const echoPatientId = location.pathname.includes('/patient/') ? location.pathname.split('/patient/')[1]?.split('/')[0] : null;
+                    const activeTab = echoPatientId ? tabs.find(t => t.id === echoPatientId) : null;
+                    return (
+                        <EchoPanel
+                            patientId={echoPatientId}
+                            patientName={activeTab?.name || null}
+                        />
+                    );
+                })()}
 
                 {/* Help button — frosted, no gradient */}
                 <button

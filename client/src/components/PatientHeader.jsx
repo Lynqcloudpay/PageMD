@@ -16,6 +16,7 @@ import FlagAcknowledgmentModal from './FlagAcknowledgmentModal';
 import { patientFlagsAPI, patientsAPI } from '../services/api';
 import { format } from 'date-fns';
 import PatientPhotoModal from './PatientPhotoModal';
+import EkoRiskBadge from './EkoRiskBadge';
 
 // Robust date formatter that ignores timezones completely
 const formatDate = (dateString) => {
@@ -525,6 +526,9 @@ const PatientHeader = ({ patient: propPatient, onUpdate, onOpenChart, onOpenToda
                                         ? `${activeFlags.length} ${activeFlags.length === 1 ? 'Clinical Alert' : 'Clinical Alerts'}`
                                         : 'Clinical Alerts'}
                                 </button>
+
+                                {/* Eko Risk Badge (Phase 4C) */}
+                                <EkoRiskBadge patientId={patient.id || id} />
 
                                 {patient.is_restricted && (
                                     <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/90 backdrop-blur-sm text-white rounded-xl text-[10px] font-medium tracking-wide shadow-lg">

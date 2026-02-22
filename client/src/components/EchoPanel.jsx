@@ -5,7 +5,7 @@ import {
     Pill, FileText, Bot, User, Navigation, BarChart3, Trash2, History,
     Stethoscope, ClipboardList, Plus, CheckCircle2, AlertTriangle, Calendar,
     Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe, FlaskConical, ArrowUpRight, ArrowDownRight,
-    Mic, Square, Paperclip, ShieldAlert
+    Mic, Square, Paperclip, ShieldAlert, BookOpen, FileImage
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -503,6 +503,139 @@ function RiskAssessmentCard({ visualization }) {
     );
 }
 
+// ─── Document Analysis Card (Phase 4) ───────────────────────────────────────
+
+function DocumentAnalysisCard({ visualization }) {
+    if (!visualization) return null;
+
+    const docTypeLabels = {
+        lab_report: 'Lab Report', referral: 'Referral Letter', imaging: 'Imaging Report',
+        prescription: 'Prescription', insurance: 'Insurance Doc', other: 'Clinical Document'
+    };
+
+    const flagColors = {
+        normal: 'bg-green-100 text-green-700 border-green-200',
+        abnormal: 'bg-amber-100 text-amber-700 border-amber-200',
+        critical: 'bg-red-100 text-red-700 border-red-200',
+        info: 'bg-blue-100 text-blue-700 border-blue-200'
+    };
+
+    const flagDots = {
+        normal: 'bg-green-400', abnormal: 'bg-amber-400', critical: 'bg-red-500 animate-pulse', info: 'bg-blue-400'
+    };
+
+    return (
+        <div className="mt-3 bg-white rounded-2xl p-4 border border-indigo-100 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-indigo-100/50 transition-colors" />
+
+            <div className="flex items-center gap-2 mb-3 relative z-10">
+                <div className="p-1.5 rounded-xl bg-indigo-600 shadow-indigo-200 shadow-lg">
+                    <FileImage className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                    <span className="text-[12px] font-black text-slate-900 tracking-tight">
+                        {docTypeLabels[visualization.document_type] || 'Document Analysis'}
+                    </span>
+                    <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest leading-none mt-0.5">
+                        Vision AI • {visualization.source_date || 'Date unknown'}
+                    </p>
+                </div>
+            </div>
+
+            {visualization.summary && (
+                <p className="text-[11px] text-slate-600 mb-3 leading-relaxed relative z-10">
+                    {visualization.summary}
+                </p>
+            )}
+
+            {visualization.key_findings?.length > 0 && (
+                <div className="space-y-1.5 relative z-10">
+                    {visualization.key_findings.map((f, i) => (
+                        <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-100 hover:border-indigo-200 transition-all">
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-2 h-2 rounded-full ${flagDots[f.flag] || flagDots.info}`} />
+                                <span className="text-[11px] font-bold text-slate-600">{f.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-black text-slate-800">{f.value}</span>
+                                <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full border ${flagColors[f.flag] || flagColors.info}`}>
+                                    {f.flag}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {visualization.recommendations?.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-100 relative z-10">
+                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Recommendations</span>
+                    <ul className="mt-1.5 space-y-1">
+                        {visualization.recommendations.map((r, i) => (
+                            <li key={i} className="flex items-start gap-1.5 text-[10px] text-slate-600">
+                                <ChevronRight className="w-2.5 h-2.5 mt-0.5 text-indigo-400 flex-shrink-0" />
+                                {r}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Evidence Card (Phase 4) ────────────────────────────────────────────────
+
+function EvidenceCard({ visualization }) {
+    if (!visualization?.results?.length) return null;
+
+    const categoryColors = {
+        preventive: 'bg-teal-100 text-teal-700',
+        chronic: 'bg-blue-100 text-blue-700'
+    };
+
+    return (
+        <div className="mt-3 bg-white rounded-2xl p-4 border border-teal-100 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50/50 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-teal-100/50 transition-colors" />
+
+            <div className="flex items-center gap-2 mb-3 relative z-10">
+                <div className="p-1.5 rounded-xl bg-teal-600 shadow-teal-200 shadow-lg">
+                    <BookOpen className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                    <span className="text-[12px] font-black text-slate-900 tracking-tight">Clinical Evidence</span>
+                    <p className="text-[9px] font-bold text-teal-500 uppercase tracking-widest leading-none mt-0.5">
+                        {visualization.count} Guideline{visualization.count !== 1 ? 's' : ''} Found
+                    </p>
+                </div>
+            </div>
+
+            <div className="space-y-2.5 relative z-10">
+                {visualization.results.map((g, i) => (
+                    <div key={i} className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 hover:border-teal-200 transition-all">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{g.source}</span>
+                                <span className="text-[8px] font-bold text-slate-300">({g.year})</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${categoryColors[g.category] || 'bg-slate-100 text-slate-500'}`}>
+                                    {g.category}
+                                </span>
+                                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                    {g.grade}
+                                </span>
+                            </div>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-700 leading-none mb-1">{g.topic}</p>
+                        <p className="text-[10px] text-slate-600 leading-relaxed">{g.recommendation}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Echo Panel ────────────────────────────────────────────────────────
 
 export default function EchoPanel({ patientId, patientName }) {
@@ -620,14 +753,31 @@ export default function EchoPanel({ patientId, patientName }) {
         setIsGlobalLoading(true);
 
         try {
-            // In a real implementation, we would convert files to base64 or use FormData
-            // Here we'll simulate the payload for the multi-modal agent
+            // Convert file attachments to base64 for Vision API
+            let base64Attachments = null;
+            if (currentAttachments.length > 0) {
+                base64Attachments = await Promise.all(
+                    currentAttachments
+                        .filter(f => f.type.startsWith('image/') || f.type === 'application/pdf')
+                        .slice(0, 3) // Max 3 images
+                        .map(file => new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                const base64 = reader.result.split(',')[1];
+                                resolve({ base64, mimeType: file.type, name: file.name });
+                            };
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        }))
+                );
+            }
+
             const { data } = await api.post('/echo/chat', {
                 message: text,
                 patientId,
                 conversationId,
                 uiContext: window.location.pathname,
-                attachments: currentAttachments.map(f => f.name) // Placeholder
+                attachments: base64Attachments
             });
 
             const assistantMessage = {
@@ -989,6 +1139,12 @@ export default function EchoPanel({ patientId, patientName }) {
                                     {viz.type === 'risk_assessment' && (
                                         <RiskAssessmentCard visualization={viz} />
                                     )}
+                                    {viz.type === 'document_analysis' && (
+                                        <DocumentAnalysisCard visualization={viz} />
+                                    )}
+                                    {viz.type === 'guideline_evidence' && (
+                                        <EvidenceCard visualization={viz} />
+                                    )}
                                     {viz.type === 'navigation' && (
                                         <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-100">
                                             <div className="flex items-center gap-1.5">
@@ -1003,22 +1159,7 @@ export default function EchoPanel({ patientId, patientName }) {
                                 </div>
                             ))}
 
-                            {/* Batch Action Option */}
-                            {msg.visualizations?.filter(v => v.action_id && v.status !== 'committed' && v.status !== 'rejected').length > 1 && (
-                                <button
-                                    onClick={() => handleApproveAction(msg.visualizations.filter(v => v.action_id && v.status !== 'committed' && v.status !== 'rejected'), i)}
-                                    className="mt-4 w-full py-2.5 px-4 rounded-xl bg-blue-600 text-white text-[11px] font-black uppercase tracking-wider
-                                               flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 active:scale-[0.98] group"
-                                >
-                                    <Zap className="w-3.5 h-3.5 group-hover:animate-pulse" />
-                                    Approve All Staged Actions
-                                </button>
-                            )}
 
-                            {/* Write Actions */}
-                            {msg.writeActions?.map((wa, wi) => (
-                                <WriteActionCard key={wi} action={wa} />
-                            ))}
 
                             {/* Tool call indicators */}
                             {msg.toolCalls?.length > 0 && (
