@@ -682,12 +682,13 @@ export default function EchoPanel({ patientId, patientName }) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    // Focus input
+    // Focus input when opening or after loading finishes
     useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 100);
+        if (isOpen && !isGlobalLoading) {
+            const timer = setTimeout(() => inputRef.current?.focus(), 50);
+            return () => clearTimeout(timer);
         }
-    }, [isOpen]);
+    }, [isOpen, isGlobalLoading]);
 
     // Hotkey listener for Alt key Push-to-Talk
     useEffect(() => {
@@ -882,27 +883,33 @@ export default function EchoPanel({ patientId, patientName }) {
         const actionsToCommit = Array.isArray(action) ? action : [action];
 
         try {
+            console.log('[Echo] Committing actions:', actionsToCommit);
             const { data } = await api.post('/echo/commit', {
                 actions: actionsToCommit.map(a => ({ type: a.type, payload: a.payload })),
                 conversationId
             });
 
             if (data.success) {
+                console.log('[Echo] Commit successful:', data);
                 const newMessages = [...messages];
                 actionsToCommit.forEach(a => {
-                    const vizIndex = newMessages[messageIndex].visualizations.findIndex(v => v.action_id === a.action_id);
+                    const vizList = newMessages[messageIndex].visualizations;
+                    const vizIndex = vizList.findIndex(v => v.action_id === a.action_id);
                     if (vizIndex !== -1) {
-                        newMessages[messageIndex].visualizations[vizIndex].status = 'committed';
+                        vizList[vizIndex].status = 'committed';
                     }
                 });
                 setMessages(newMessages);
 
                 if (window.refreshChartData) window.refreshChartData();
             } else {
-                alert('Approval failed: ' + data.error);
+                console.error('[Echo] Commit failed:', data.error);
+                alert('Approval failed: ' + (data.error || 'Unknown database error occurred.'));
             }
         } catch (err) {
             console.error('Approve error:', err);
+            const errorMsg = err.response?.data?.error || err.message;
+            alert('Could not approve action: ' + errorMsg);
         }
     }
 

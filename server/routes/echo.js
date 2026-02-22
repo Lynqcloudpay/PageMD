@@ -142,7 +142,7 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                         `INSERT INTO messages (patient_id, from_user_id, subject, body, message_type, priority)
                          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
                         [actPayload.patient_id, userId, actPayload.subject, actPayload.body,
-                        actPayload.message_type || 'portal', 'normal']
+                            'message', 'normal']
                     );
                     break;
 
@@ -165,7 +165,7 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                         [actPayload.patient_id, userId, userId,
                         `Reminder: ${(actPayload.reminder_text || '').substring(0, 100)}`,
                         actPayload.reminder_text,
-                            'task', actPayload.priority || 'normal', 'pending']
+                            'task', actPayload.priority || 'normal', 'open']
                     );
                     break;
             }
