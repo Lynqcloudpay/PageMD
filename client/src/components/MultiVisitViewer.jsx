@@ -156,8 +156,8 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                         <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/30 transition-colors" />
 
                                         {/* Vertical Left Edge Label Badge */}
-                                        <div className="absolute left-6 top-0 bottom-0 flex flex-col justify-center items-center z-[60] pointer-events-none">
-                                            <div className="transform -rotate-90 whitespace-nowrap bg-indigo-600 text-white rounded-full px-6 py-3 flex items-center gap-3 shadow-[0_0_30px_rgba(0,0,0,0.3)] border border-indigo-400/50">
+                                        <div className="absolute left-10 top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2 -rotate-90 pointer-events-none">
+                                            <div className="whitespace-nowrap bg-indigo-600 text-white rounded-full px-6 py-3 flex items-center gap-3 shadow-[0_0_30px_rgba(0,0,0,0.3)] border border-indigo-400/50">
                                                 <FileText className="w-4 h-4 text-indigo-200" />
                                                 <span className="text-[13px] font-black tracking-tight">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
                                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
