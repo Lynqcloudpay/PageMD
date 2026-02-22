@@ -194,6 +194,14 @@ const InbasketRedesign = () => {
             setStats(statsRes.data || {});
             setTaskStats(taskStatsRes.data || {});
 
+            // Keep selected item status in sync with refreshed list
+            if (isPoll && selectedItem) {
+                const refreshed = (itemsRes.data || []).find(i => i.id === selectedItem.id);
+                if (refreshed && refreshed.status !== selectedItem.status) {
+                    setSelectedItem(prev => ({ ...prev, status: refreshed.status }));
+                }
+            }
+
             if (users.length === 0) {
                 const usersRes = await usersAPI.getDirectory();
                 setUsers(usersRes.data || []);
@@ -206,7 +214,7 @@ const InbasketRedesign = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [filterStatus, assignedFilter, users.length]);
+    }, [filterStatus, assignedFilter, users.length, selectedItem]);
 
     // Fetch tasks separately
     const fetchTasks = useCallback(async () => {
@@ -261,7 +269,7 @@ const InbasketRedesign = () => {
                 item.id === selectedItem.id ? { ...item, status: 'read' } : item
             ));
         }
-    }, [selectedItem?.id]);
+    }, [selectedItem?.id, selectedItem?.status]);
 
     useEffect(() => {
         if (details?.notes) {

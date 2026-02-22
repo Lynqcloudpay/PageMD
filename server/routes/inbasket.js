@@ -728,17 +728,28 @@ router.put('/:id', async (req, res) => {
 
     const result = await client.query(query, params);
 
-    // Propagate completion to original orders/docs if applicable
-    if (status === 'completed' && result.rows[0].reference_id) {
+    // Propagate completion/read status to original records if applicable
+    if (result.rows[0].reference_id) {
       const item = result.rows[0];
-      if (item.reference_table === 'orders') {
-        await client.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
-      } else if (item.reference_table === 'documents') {
-        await client.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
-      } else if (item.reference_table === 'portal_messages') {
-        await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1", [item.reference_id]);
-      } else if (item.reference_table === 'portal_message_threads') {
-        await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE thread_id = $1 AND sender_portal_account_id IS NOT NULL AND read_at IS NULL", [item.reference_id]);
+
+      // Completion propagation (Legal/Medical status)
+      if (status === 'completed') {
+        if (item.reference_table === 'orders') {
+          await client.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+        } else if (item.reference_table === 'documents') {
+          await client.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+        }
+      }
+
+      // Read status propagation (UI/Sync status)
+      // Portal message sync depends on read_at, so we must propagate 'read' status 
+      // to prevent the background sync from flipping it back to 'new'.
+      if (status === 'read' || status === 'completed') {
+        if (item.reference_table === 'portal_messages') {
+          await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE id = $1 AND read_at IS NULL", [item.reference_id]);
+        } else if (item.reference_table === 'portal_message_threads' || item.reference_table === 'portal_message') { // Support both thread and single message refs
+          await client.query("UPDATE portal_messages SET read_at = CURRENT_TIMESTAMP WHERE thread_id = $1 AND sender_portal_account_id IS NOT NULL AND read_at IS NULL", [item.reference_id]);
+        }
       }
     }
 
