@@ -45,6 +45,7 @@ const Layout = ({ children }) => {
     const [inboxCount, setInboxCount] = useState(0);
     const [privacyAlertsCount, setPrivacyAlertsCount] = useState(0);
     const [appointmentRequestsCount, setAppointmentRequestsCount] = useState(0);
+    const [todayApptsCount, setTodayApptsCount] = useState(0);
 
     const isActive = (path) => {
         return location.pathname.startsWith(path);
@@ -128,6 +129,15 @@ const Layout = ({ children }) => {
             }
         };
 
+        const fetchTodayApptsCount = async () => {
+            try {
+                const response = await appointmentsAPI.getStats();
+                setTodayApptsCount(response.data?.active_today || 0);
+            } catch (error) {
+                console.error('Error fetching today appts count:', error);
+            }
+        };
+
         fetchPendingNotesCount();
         fetchPendingCancellationsCount();
         fetchInboxCount();
@@ -135,6 +145,7 @@ const Layout = ({ children }) => {
         fetchPendingTelehealthCount();
         fetchPrivacyAlertsCount();
         fetchAppointmentRequestsCount();
+        fetchTodayApptsCount();
 
         const interval = setInterval(() => {
             fetchPendingNotesCount();
@@ -144,7 +155,8 @@ const Layout = ({ children }) => {
             fetchPendingTelehealthCount();
             fetchPrivacyAlertsCount();
             fetchAppointmentRequestsCount();
-        }, 2000);
+            fetchTodayApptsCount();
+        }, 30000);
 
         return () => clearInterval(interval);
     }, []);
@@ -162,9 +174,9 @@ const Layout = ({ children }) => {
     const navigationSection = [
         { path: '/dashboard', icon: BarChart3, label: 'Dashboard', badge: null },
         ...(canViewSchedule ? [
-            { path: '/schedule', icon: Calendar, label: 'Schedule', badge: null },
+            { path: '/schedule', icon: Calendar, label: 'Schedule', badge: todayApptsCount > 0 ? todayApptsCount : null, badgeColor: 'blue' },
             ...(showMySchedule ? [
-                { path: '/my-schedule', icon: User, label: 'My Schedule', badge: null }
+                { path: '/my-schedule', icon: User, label: 'My Schedule', badge: todayApptsCount > 0 ? todayApptsCount : null, badgeColor: 'blue' }
             ] : [])
         ] : []),
         { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
@@ -289,7 +301,7 @@ const Layout = ({ children }) => {
                 {/* ═══════════════════════════════════════════════ */}
                 <aside
                     className={cn(
-                        "fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-300 ease-out",
+                        "h-screen sticky top-0 left-0 bottom-0 z-30 flex flex-col flex-shrink-0 transition-all duration-300 ease-out",
                         sidebarCollapsed ? 'w-[4.5rem]' : 'w-[14.5rem]'
                     )}
                 >
@@ -540,8 +552,7 @@ const Layout = ({ children }) => {
                 {/* ═══════════════════════════════════════════════ */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 ease-out relative flex flex-col h-screen overflow-hidden",
-                        sidebarCollapsed ? "ml-[4.5rem]" : "ml-[14.5rem]"
+                        "flex-1 transition-all duration-300 ease-out flex flex-col h-screen overflow-hidden relative"
                     )}
                 >
                     {/* Header strip */}

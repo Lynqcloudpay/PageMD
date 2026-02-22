@@ -39,7 +39,9 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
                         ? "bg-blue-500 text-white"
                         : badgeColor === 'amber'
                             ? "bg-amber-500 text-white"
-                            : "bg-slate-700 text-slate-300"
+                            : badgeColor === 'blue'
+                                ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                                : "bg-slate-700 text-slate-300"
                 )}>
                     {badge}
                 </span>

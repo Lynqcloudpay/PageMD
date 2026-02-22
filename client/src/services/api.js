@@ -232,6 +232,7 @@ export const tasksAPI = {
 // Appointments
 export const appointmentsAPI = {
   get: (params) => api.get('/appointments', { params }),
+  getStats: () => api.get('/appointments/stats'),
   getById: (id) => api.get(`/appointments/${id}`),
   create: (data) => api.post('/appointments', data),
   update: (id, data) => api.put(`/appointments/${id}`, data),

@@ -8,6 +8,33 @@ const { idempotency } = require('../middleware/idempotency');
 const router = express.Router();
 router.use(authenticate);
 
+// Get stats for badges
+router.get('/stats', requirePermission('schedule:view'), async (req, res) => {
+  try {
+    // Use the CLINIC'S current date (approximated by server date for now, ideally TZ-aware)
+    const today = new Date().toISOString().split('T')[0];
+    const params = [today];
+    let query = `
+      SELECT 
+        COUNT(*) FILTER(WHERE status NOT IN ('cancelled', 'no-show')) as total_today,
+        COUNT(*) FILTER(WHERE patient_status IN ('scheduled', 'arrived', 'checked_in', 'in_room')) as active_today
+      FROM appointments 
+      WHERE appointment_date = $1
+    `;
+
+    if (req.user.scope?.scheduleScope === 'SELF' && req.user.role === 'CLINICIAN') {
+      query += ` AND provider_id = $2`;
+      params.push(req.user.id);
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching appointment stats:', error);
+    res.status(500).json({ error: 'Failed to fetch appointment stats' });
+  }
+});
+
 // Get appointments - filter by date range or specific date
 router.get('/', requirePermission('schedule:view'), async (req, res) => {
   try {
