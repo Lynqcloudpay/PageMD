@@ -23,27 +23,26 @@ const SidebarItem = ({ to, icon: Icon, label, badge, badgeColor, active, collaps
             </div>
 
             {!collapsed && (
-                <>
-                    <span className={cn(
-                        "text-[13px] transition-colors duration-200 flex-1 ml-3 tracking-tight",
-                        active ? "text-white font-bold" : "text-slate-300 font-medium"
-                    )}>
-                        {label}
-                    </span>
+                <span className={cn(
+                    "text-[13px] transition-colors duration-200 flex-1 ml-3 tracking-tight",
+                    active ? "text-white font-bold" : "text-slate-300 font-medium"
+                )}>
+                    {label}
+                </span>
+            )}
 
-                    {badge && (
-                        <span className={cn(
-                            "min-w-[18px] h-[18px] px-1.5 text-[10px] font-black rounded-full flex items-center justify-center transition-all",
-                            active
-                                ? "bg-blue-500 text-white"
-                                : badgeColor === 'amber'
-                                    ? "bg-amber-500 text-white"
-                                    : "bg-slate-700 text-slate-300"
-                        )}>
-                            {badge}
-                        </span>
-                    )}
-                </>
+            {badge && (
+                <span className={cn(
+                    "min-w-[18px] h-[18px] px-1.5 text-[10px] font-black rounded-full flex items-center justify-center transition-all",
+                    collapsed ? "absolute top-1.5 right-1.5 border-[2px] border-[#111827] shadow-lg scale-90" : "ml-2",
+                    active
+                        ? "bg-blue-500 text-white"
+                        : badgeColor === 'amber'
+                            ? "bg-amber-500 text-white"
+                            : "bg-slate-700 text-slate-300"
+                )}>
+                    {badge}
+                </span>
             )}
 
             {/* Active Indicator Bar - Matches Reference Image Style but in Vivid Blue */}

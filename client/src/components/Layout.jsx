@@ -397,52 +397,56 @@ const Layout = ({ children }) => {
                         {/* User profile — bottom */}
                         <div className="border-t border-white/5 p-3 bg-black/5">
                             {user && (
-                                <div className="flex items-center gap-2">
-                                    <div className="flex flex-col gap-2 w-full">
-                                        <button
-                                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                            className={cn(
-                                                "flex items-center gap-3 p-2 rounded-xl transition-all w-full group mb-2 border border-transparent",
-                                                sidebarCollapsed ? "justify-center hover:bg-slate-800" : "hover:bg-white/5 hover:border-white/10"
-                                            )}
-                                            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                                        >
-                                            <Menu className={cn("w-4 h-4 transition-colors", sidebarCollapsed ? "text-slate-400 group-hover:text-white" : "text-slate-500 group-hover:text-blue-400")} />
-                                            {!sidebarCollapsed && <span className="text-[11px] font-bold text-slate-400 group-hover:text-white uppercase tracking-widest">Collapse Menu</span>}
-                                        </button>
+                                <div className={cn("flex flex-col gap-2", sidebarCollapsed ? "items-center" : "")}>
+                                    {/* 3 Lines Toggle */}
+                                    <button
+                                        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                        className={cn(
+                                            "flex items-center gap-3 p-2 rounded-xl transition-all w-full group border border-transparent",
+                                            sidebarCollapsed ? "justify-center hover:bg-slate-800" : "hover:bg-white/5 hover:border-white/10"
+                                        )}
+                                        title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                                    >
+                                        <Menu className={cn("w-4 h-4 transition-colors", sidebarCollapsed ? "text-slate-400 group-hover:text-white" : "text-slate-500 group-hover:text-blue-400")} />
+                                        {!sidebarCollapsed && <span className="text-[11px] font-bold text-slate-400 group-hover:text-white uppercase tracking-widest">Collapse Menu</span>}
+                                    </button>
 
-                                        <button
-                                            onClick={() => navigate('/profile')}
-                                            className={cn(
-                                                "flex items-center gap-3 p-1 rounded-xl transition-all flex-1 group",
-                                                sidebarCollapsed ? "justify-center" : "hover:bg-white/5"
-                                            )}
-                                        >
-                                            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-[12px] font-black shadow-lg shadow-blue-500/40 flex-shrink-0">
-                                                {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
+                                    {/* Logout Button */}
+                                    <button
+                                        onClick={() => {
+                                            if (window.confirm('Are you sure you want to sign out?')) {
+                                                logout();
+                                                navigate('/login');
+                                            }
+                                        }}
+                                        className={cn(
+                                            "flex items-center gap-3 p-2 rounded-xl transition-all w-full group border border-transparent",
+                                            sidebarCollapsed ? "justify-center hover:bg-rose-500/10 text-white/20 hover:text-rose-400" : "text-white/20 hover:text-rose-400 hover:bg-rose-500/10"
+                                        )}
+                                        title="Sign Out"
+                                    >
+                                        <LogOut className="w-4 h-4" strokeWidth={2} />
+                                        {!sidebarCollapsed && <span className="text-[11px] font-bold uppercase tracking-widest">Sign Out</span>}
+                                    </button>
+
+                                    {/* Profile Avatar */}
+                                    <button
+                                        onClick={() => navigate('/profile')}
+                                        className={cn(
+                                            "flex items-center gap-3 p-1 rounded-xl transition-all group w-full",
+                                            sidebarCollapsed ? "justify-center" : "hover:bg-white/5"
+                                        )}
+                                    >
+                                        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-[12px] font-black shadow-lg shadow-blue-500/40 flex-shrink-0">
+                                            {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
+                                        </div>
+                                        {!sidebarCollapsed && (
+                                            <div className="text-left flex-1 min-w-0">
+                                                <div className="text-[13px] font-bold text-white leading-tight truncate">{user.firstName} {user.lastName}</div>
+                                                <div className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest">{user.role_name || user.role || 'User'}</div>
                                             </div>
-                                            {!sidebarCollapsed && (
-                                                <div className="text-left flex-1 min-w-0">
-                                                    <div className="text-[13px] font-bold text-white leading-tight truncate">{user.firstName} {user.lastName}</div>
-                                                    <div className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest">{user.role_name || user.role || 'User'}</div>
-                                                </div>
-                                            )}
-                                        </button>
-                                    </div>
-                                    {!sidebarCollapsed && (
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm('Are you sure you want to sign out?')) {
-                                                    logout();
-                                                    navigate('/login');
-                                                }
-                                            }}
-                                            className="p-1.5 rounded-lg text-white/20 hover:text-rose-400 hover:bg-rose-500/10 transition-all self-center"
-                                            title="Sign Out"
-                                        >
-                                            <LogOut className="w-4 h-4" strokeWidth={2} />
-                                        </button>
-                                    )}
+                                        )}
+                                    </button>
                                 </div>
                             )}
                         </div>
