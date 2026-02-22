@@ -420,8 +420,8 @@ const Layout = ({ children }) => {
                                             }
                                         }}
                                         className={cn(
-                                            "flex items-center gap-3 p-2 rounded-xl transition-all w-full group border border-transparent",
-                                            sidebarCollapsed ? "justify-center hover:bg-rose-500/10 text-white/20 hover:text-rose-400" : "text-white/20 hover:text-rose-400 hover:bg-rose-500/10"
+                                            "flex items-center gap-3 p-2 rounded-xl transition-all w-full group border border-transparent text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/10",
+                                            sidebarCollapsed ? "justify-center" : ""
                                         )}
                                         title="Sign Out"
                                     >
