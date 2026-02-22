@@ -130,18 +130,17 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
 
                         // Use a permanent slot memory for consistent visual tracking like physical file folders
                         const slotIndex = tabSlots[vId] ?? (idx % 8);
-                        const tabTopPercent = 2 + (slotIndex * 11.8);
 
-                        // Nostalgic, muted physical paper divider colors
+                        // Vibrant, crisp interface colors (Trust & Authority palette)
                         const tabColors = [
-                            'bg-[#5C849C] border-[#4A6D82] text-white', // Muted Blue
-                            'bg-[#7D9D7F] border-[#658367] text-white', // Muted Sage Green
-                            'bg-[#B65F5F] border-[#9B4E4E] text-white', // Muted Brick Red
-                            'bg-[#D4A373] border-[#B9895A] text-white', // Muted Tan
-                            'bg-[#8E7CC3] border-[#7464A4] text-white', // Muted Purple
-                            'bg-[#6B9E9A] border-[#55827E] text-white', // Muted Teal
-                            'bg-[#C27BA0] border-[#A66486] text-white', // Dusty Pink
-                            'bg-[#CC8B65] border-[#B07350] text-white', // Clay Orange
+                            'bg-blue-600 border-blue-700 text-white',
+                            'bg-emerald-600 border-emerald-700 text-white',
+                            'bg-violet-600 border-violet-700 text-white',
+                            'bg-amber-500 border-amber-600 text-white',
+                            'bg-rose-600 border-rose-700 text-white',
+                            'bg-cyan-600 border-cyan-700 text-white',
+                            'bg-fuchsia-600 border-fuchsia-700 text-white',
+                            'bg-teal-600 border-teal-700 text-white',
                         ];
                         const colorClass = tabColors[slotIndex];
 
@@ -164,28 +163,28 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                             >
                                 {/* Right Edge Manila Folder Tab */}
                                 <div
-                                    className={`absolute -right-[40px] transition-all duration-200 border-y border-r border-slate-900/20 rounded-r-[12px] cursor-pointer
-                                        ${colorClass} ${isFront ? 'opacity-100 shadow-[6px_0_15px_-5px_rgba(0,0,0,0.4)] z-[50]' : 'opacity-90 hover:opacity-100 shadow-[2px_0_5px_rgba(0,0,0,0.1)] hover:-translate-x-1 z-[40]'}
+                                    className={`absolute transition-all duration-300 border-y border-r border-black/10 rounded-r-xl cursor-pointer flex items-center justify-center shadow-md
+                                        ${colorClass} ${isFront ? 'z-[50] shadow-[8px_0_15px_-3px_rgba(0,0,0,0.3)]' : 'opacity-[0.95] hover:opacity-100 z-[40] hover:-translate-x-1'}
                                     `}
                                     style={{
-                                        top: `${tabTopPercent}%`,
+                                        top: `calc(1% + ${slotIndex * 12}%)`,
                                         height: '11.5%',
-                                        width: '40px'
+                                        minHeight: '130px',
+                                        width: isFront ? '46px' : '40px',
+                                        right: isFront ? '-46px' : '-40px'
                                     }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (!isFront) handleOpenNewVisit(vId);
                                     }}
                                 >
-                                    <div className="w-full h-full p-2 flex items-center justify-center overflow-hidden">
-                                        <div
-                                            className="font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 overflow-hidden whitespace-nowrap text-ellipsis"
-                                            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
-                                        >
-                                            <span className="opacity-90 shrink-0">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MM/dd') : 'Load'}</span>
-                                            <span className="w-[3px] h-[3px] rounded-full bg-white/50 shrink-0 mx-0.5"></span>
-                                            <span className="truncate overflow-hidden text-ellipsis">{getChiefComplaint(visitsData[vId])}</span>
-                                        </div>
+                                    <div
+                                        className="transform rotate-90 whitespace-nowrap font-bold text-[10.5px] uppercase tracking-wider flex items-center justify-center gap-2 absolute pointer-events-none"
+                                        style={{ width: '130px' }} // Fixed width matches min-height to strictly bound text
+                                    >
+                                        <span className="opacity-90 shrink-0">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MM/dd') : 'Load'}</span>
+                                        <span className="w-[3px] h-[3px] rounded-full bg-white/50 shrink-0"></span>
+                                        <span className="truncate inline-block max-w-[70px]">{getChiefComplaint(visitsData[vId])}</span>
                                     </div>
                                 </div>
 
