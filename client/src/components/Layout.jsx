@@ -347,14 +347,14 @@ const Layout = ({ children }) => {
                             </button>
                         </div>
 
-                        {/* Vertical Centering Wrapper for Nav */}
-                        <div className={cn("flex-1 flex flex-col min-h-0", sidebarCollapsed && "justify-center")}>
+                        {/* Navigation Area */}
+                        <div className="flex-1 flex flex-col min-h-0 overflow-visible">
                             {/* Navigation */}
                             <nav className="flex-shrink-0 overflow-y-auto overflow-x-hidden py-4 flex flex-col gap-0.5">
                                 {/* Primary section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-6 pb-2">
+                                        <div className="px-4 pt-4 pb-1">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Navigation
                                             </span>
@@ -377,14 +377,14 @@ const Layout = ({ children }) => {
                                 </div>
 
                                 {/* Divider */}
-                                <div className={cn("my-2", sidebarCollapsed ? "mx-2" : "mx-3")}>
-                                    <div className="h-px bg-gray-100" />
+                                <div className={cn("my-1.5", sidebarCollapsed ? "mx-2" : "mx-4")}>
+                                    <div className="h-px bg-slate-800/60" />
                                 </div>
 
                                 {/* Workflow section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-6 pb-2">
+                                        <div className="px-4 pt-3 pb-1">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Workflows
                                             </span>
