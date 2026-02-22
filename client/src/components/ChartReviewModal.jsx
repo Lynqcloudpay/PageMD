@@ -401,7 +401,7 @@ const ChartReviewModal = ({
                             </div>
                             <div style={{ width: '100%', height: 160, minWidth: 0, minHeight: 160 }}>
                                 {vitalsTrendData && vitalsTrendData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                                    <ResponsiveContainer width="100%" height="100%" debounce={100} minWidth={100} minHeight={150}>
                                         <AreaChart data={vitalsTrendData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="hrG" x1="0" y1="0" x2="0" y2="1">
