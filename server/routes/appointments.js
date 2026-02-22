@@ -25,9 +25,12 @@ router.get('/stats', requirePermission('schedule:view'), async (req, res) => {
       WHERE appointment_date = $1
     `;
 
-    if (req.user.scope?.scheduleScope === 'SELF' && req.user.role === 'CLINICIAN') {
+    if (req.user.scope?.scheduleScope === 'SELF') {
       query += ` AND provider_id = $2`;
       params.push(req.user.id);
+    } else if (req.query.providerId) {
+      query += ` AND provider_id = $2`;
+      params.push(req.query.providerId);
     }
 
     const result = await pool.query(query, params);
