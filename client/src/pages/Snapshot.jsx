@@ -769,26 +769,37 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                         const rawType = (visit.visit_type || "").toLowerCase();
                         const rawMethod = (visit.visit_method || "").toLowerCase();
+                        const rawNoteType = (visit.note_type || "").toLowerCase();
                         const cc = (chiefComplaint || "").toLowerCase();
 
                         let displayType = "Office Visit";
 
-                        // Priority based detection
-                        if (rawType.includes('tele') || rawMethod.includes('tele') || rawType.includes('virtual') || rawMethod.includes('virtual') || cc.includes('telehealth') || noteText.toLowerCase().includes('telehealth') || noteText.toLowerCase().includes('virtual visit')) {
-                            displayType = "Telehealth";
-                        } else if (rawType.includes('consult') || cc.includes('consult')) {
-                            displayType = "Consultation";
-                        } else if (rawType.includes('physical') || cc.includes('physical') || rawType.includes('annual')) {
-                            displayType = "Physical";
-                        } else if (rawType.includes('new') || cc.includes('new patient') || cc.includes('initial')) {
-                            displayType = "New Patient";
-                        } else if (rawType.includes('sick') || cc.includes('sick visit') || cc.includes('urgent')) {
-                            displayType = "Sick Visit";
-                        } else if (rawType.includes('follow') || cc.includes('follow up') || cc.includes('follow-up') || cc.includes('f/u') || rawType.includes('routine')) {
-                            displayType = "Follow Up";
-                        } else if (visit.visit_type && visit.visit_type.length > 2) {
-                            // Normalize the case of existing visit_type if it doesn't match our specific keywords
-                            displayType = visit.visit_type;
+                        // Map note_type exactly if present
+                        if (rawNoteType === 'telehealth' || rawNoteType === 'telephone') displayType = 'Telehealth';
+                        else if (rawNoteType === 'new_patient' || rawNoteType === 'new patient') displayType = 'New Patient';
+                        else if (rawNoteType === 'sick_visit' || rawNoteType === 'sick visit') displayType = 'Sick Visit';
+                        else if (rawNoteType === 'consultation' || rawNoteType === 'consult') displayType = 'Consultation';
+                        else if (rawNoteType === 'physical' || rawNoteType === 'annual_wellness') displayType = 'Physical';
+                        else if (rawNoteType === 'follow_up' || rawNoteType === 'follow up' || rawNoteType === 'office_visit') displayType = 'Follow Up';
+                        else {
+                            // Priority based detection fallback
+                            if (rawType.includes('tele') || rawMethod.includes('tele') || rawType.includes('virtual') || rawMethod.includes('virtual') || cc.includes('telehealth') || noteText.toLowerCase().includes('telehealth') || noteText.toLowerCase().includes('virtual visit')) {
+                                displayType = "Telehealth";
+                            } else if (rawType.includes('consult') || cc.includes('consult')) {
+                                displayType = "Consultation";
+                            } else if (rawType.includes('physical') || cc.includes('physical') || rawType.includes('annual')) {
+                                displayType = "Physical";
+                            } else if (rawType.includes('new') || cc.includes('new patient') || cc.includes('initial')) {
+                                displayType = "New Patient";
+                            } else if (rawType.includes('sick') || cc.includes('sick visit') || cc.includes('urgent')) {
+                                displayType = "Sick Visit";
+                            } else if (rawType.includes('follow') || cc.includes('follow up') || cc.includes('follow-up') || cc.includes('f/u') || rawType.includes('routine')) {
+                                displayType = "Follow Up";
+                            } else if (visit.visit_type && visit.visit_type.length > 2) {
+                                // Normalize the case of existing visit_type if it doesn't match our specific keywords
+                                // Title start case
+                                displayType = visit.visit_type.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+                            }
                         }
 
                         return {
