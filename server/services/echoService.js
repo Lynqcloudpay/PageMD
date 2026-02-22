@@ -1176,10 +1176,10 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                     `SELECT 
                         COUNT(*) as total,
                         COUNT(CASE WHEN status = 'unread' OR status = 'new' THEN 1 END) as unread,
-                        COUNT(CASE WHEN category = 'result' THEN 1 END) as results,
-                        COUNT(CASE WHEN category = 'message' THEN 1 END) as messages,
-                        COUNT(CASE WHEN category = 'task' THEN 1 END) as tasks,
-                        COUNT(CASE WHEN category = 'refill' THEN 1 END) as refills
+                        COUNT(CASE WHEN type = 'result' THEN 1 END) as results,
+                        COUNT(CASE WHEN type = 'message' THEN 1 END) as messages,
+                        COUNT(CASE WHEN type = 'task' THEN 1 END) as tasks,
+                        COUNT(CASE WHEN type = 'refill' THEN 1 END) as refills
                      FROM inbox_items
                      WHERE status != 'archived'`
                 );
@@ -1557,7 +1557,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 const targetDate = args.date || new Date().toISOString().split('T')[0];
                 // Get today's seen patients with active issues
                 const seenToday = await pool.query(
-                    `SELECT v.id, v.visit_date, v.chief_complaint, v.status,
+                    `SELECT v.id, v.visit_date, v.visit_type, v.status,
                             p.first_name, p.last_name,
                             v.note_draft
                      FROM visits v
@@ -1579,7 +1579,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
 
                 // Get unsigned notes
                 const unsignedNotes = await pool.query(
-                    `SELECT v.id, p.first_name, p.last_name, v.chief_complaint
+                    `SELECT v.id, p.first_name, p.last_name, v.visit_type
                      FROM visits v
                      JOIN patients p ON v.patient_id = p.id
                      WHERE v.status IN ('in-progress', 'draft', 'open')
@@ -1596,7 +1596,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                         patientsSeen: seenToday.rows.length,
                         patients: seenToday.rows.map(v => ({
                             name: `${v.first_name} ${v.last_name}`,
-                            chiefComplaint: v.chief_complaint || 'Not documented',
+                            visitType: v.visit_type || 'Not documented',
                             status: v.status
                         })),
                         pendingResults: pendingResults.rows.map(o => ({
@@ -1606,7 +1606,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                         })),
                         unsignedNotes: unsignedNotes.rows.map(v => ({
                             patient: `${v.first_name} ${v.last_name}`,
-                            chiefComplaint: v.chief_complaint
+                            visitType: v.visit_type
                         }))
                     },
                     dataAccessed: ['visits', 'patients', 'orders'],
@@ -2499,6 +2499,7 @@ async function transcribeAudio(buffer, originalname) {
 
 module.exports = {
     chat,
+    executeTool,
     TOOL_CATALOG,
     loadConversation,
     getMessageHistory,
