@@ -310,7 +310,7 @@ const Layout = ({ children }) => {
 
                         {/* Logo Area */}
                         <div className={cn(
-                            "flex items-center h-16 border-b border-slate-800/50 pt-2",
+                            "flex items-center h-20 border-b border-slate-800/50 pt-4",
                             sidebarCollapsed ? "justify-center px-0" : "px-4 justify-start"
                         )}>
                             <button
@@ -347,20 +347,20 @@ const Layout = ({ children }) => {
                             </button>
                         </div>
 
-                        {/* Navigation Area */}
-                        <div className="flex-1 flex flex-col min-h-0 overflow-visible">
+                        {/* Navigation Area — Scrollable middle part */}
+                        <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar">
                             {/* Navigation */}
                             <nav className="flex-shrink-0 overflow-y-auto overflow-x-hidden py-1 flex flex-col gap-0.5">
                                 {/* Primary section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-1 pb-0">
+                                        <div className="px-4 pt-6 pb-2">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Navigation
                                             </span>
                                         </div>
                                     )}
-                                    <div className="space-y-0">
+                                    <div className="space-y-0.5">
                                         {navigationSection.map((item) => (
                                             <SidebarItem
                                                 key={item.path}
@@ -377,14 +377,14 @@ const Layout = ({ children }) => {
                                 </div>
 
                                 {/* Divider */}
-                                <div className={cn("mt-0.5 mb-0", sidebarCollapsed ? "mx-2" : "mx-4")}>
+                                <div className={cn("mt-4 mb-1", sidebarCollapsed ? "mx-2" : "mx-4")}>
                                     <div className="h-px bg-white/10" />
                                 </div>
 
                                 {/* Workflow section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-0.5 pb-0">
+                                        <div className="px-4 pt-0.5 pb-2">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Workflows
                                             </span>
