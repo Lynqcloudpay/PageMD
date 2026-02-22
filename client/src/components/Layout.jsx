@@ -354,13 +354,13 @@ const Layout = ({ children }) => {
                                 {/* Primary section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-2 pb-1">
+                                        <div className="px-4 pt-1 pb-0">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Navigation
                                             </span>
                                         </div>
                                     )}
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-0">
                                         {navigationSection.map((item) => (
                                             <SidebarItem
                                                 key={item.path}
@@ -377,14 +377,14 @@ const Layout = ({ children }) => {
                                 </div>
 
                                 {/* Divider */}
-                                <div className={cn("my-1", sidebarCollapsed ? "mx-2" : "mx-4")}>
-                                    <div className="h-px bg-slate-800/60" />
+                                <div className={cn("mt-0.5 mb-0", sidebarCollapsed ? "mx-2" : "mx-4")}>
+                                    <div className="h-px bg-white/10" />
                                 </div>
 
                                 {/* Workflow section */}
                                 <div>
                                     {!sidebarCollapsed && (
-                                        <div className="px-4 pt-1 pb-1">
+                                        <div className="px-4 pt-0.5 pb-0">
                                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                                                 Workflows
                                             </span>
