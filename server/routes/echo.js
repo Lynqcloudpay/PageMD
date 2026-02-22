@@ -104,6 +104,7 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
         }
 
         await client.query('BEGIN');
+        const results = [];
 
         // Log the active search path for diagnostics
         const schemaRes = await client.query('SHOW search_path');
