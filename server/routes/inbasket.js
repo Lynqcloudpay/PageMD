@@ -347,7 +347,9 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
         AND a.created_at < b.created_at
     `);
 
-    // UPDATE existing active items with latest message across ALL patient threads
+    // UPDATE existing active items with latest activity across ALL patient threads
+    // We set status to 'new' ONLY if the latest message across all threads is from a patient and unread.
+    // Otherwise, we keep it as 'read' so it doesn't clutter the pending view but remains in the list.
     await client.query(`
       UPDATE inbox_items
       SET 
@@ -355,7 +357,10 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
         subject = sub.latest_subject,
         updated_at = sub.latest_at,
         reference_id = sub.latest_thread_id,
-        status = 'new'
+        status = CASE 
+            WHEN sub.latest_message_from_patient = true AND sub.latest_read_at IS NULL THEN 'new'
+            ELSE 'read'
+        END
       FROM (
         SELECT 
           t.patient_id,
@@ -367,11 +372,10 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
             ORDER BY t4.updated_at DESC LIMIT 1
           ) as latest_subject,
           (
-            SELECT m.body 
+            SELECT CASE WHEN m.sender_type = 'staff' THEN 'You: ' || m.body ELSE m.body END
             FROM portal_messages m 
             JOIN portal_message_threads t2 ON m.thread_id = t2.id 
             WHERE t2.patient_id = t.patient_id 
-              AND m.sender_portal_account_id IS NOT NULL 
             ORDER BY m.created_at DESC LIMIT 1
           ) as latest_body,
           (
@@ -379,14 +383,22 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
             FROM portal_message_threads t3 
             WHERE t3.patient_id = t.patient_id 
             ORDER BY t3.updated_at DESC LIMIT 1
-          ) as latest_thread_id
+          ) as latest_thread_id,
+          (
+            SELECT (m4.sender_portal_account_id IS NOT NULL)
+            FROM portal_messages m4
+            JOIN portal_message_threads t5 ON m4.thread_id = t5.id
+            WHERE t5.patient_id = t.patient_id
+            ORDER BY m4.created_at DESC LIMIT 1
+          ) as latest_message_from_patient,
+          (
+            SELECT m5.read_at
+            FROM portal_messages m5
+            JOIN portal_message_threads t6 ON m5.thread_id = t6.id
+            WHERE t6.patient_id = t.patient_id
+            ORDER BY m5.created_at DESC LIMIT 1
+          ) as latest_read_at
         FROM portal_message_threads t
-        WHERE EXISTS (
-            SELECT 1 FROM portal_messages m 
-            WHERE m.thread_id = t.id 
-              AND m.sender_portal_account_id IS NOT NULL 
-              AND m.read_at IS NULL
-        )
         GROUP BY t.patient_id
       ) sub
       WHERE inbox_items.patient_id = sub.patient_id 
@@ -400,25 +412,24 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
     INSERT INTO inbox_items(
       tenant_id, patient_id, type, priority, status,
       subject, body, reference_id, reference_table,
-      assigned_user_id, created_at, updated_at
+      assigned_user_id, created_at, updated_at, clinic_id
     )
     SELECT DISTINCT ON (t.patient_id)
       $1, t.patient_id, 
       'portal_message',
-      'normal', 'new',
+      'normal', 
+      CASE 
+        WHEN (SELECT m.sender_type FROM portal_messages m WHERE m.thread_id = t.id ORDER BY m.created_at DESC LIMIT 1) = 'patient' 
+             AND (SELECT m2.read_at FROM portal_messages m2 WHERE m2.thread_id = t.id ORDER BY m2.created_at DESC LIMIT 1) IS NULL THEN 'new'
+        ELSE 'read'
+      END,
       (SELECT subject FROM portal_message_threads t4 WHERE t4.patient_id = t.patient_id ORDER BY t4.updated_at DESC LIMIT 1),
-      (SELECT body FROM portal_messages m2 JOIN portal_message_threads t2 ON m2.thread_id = t2.id WHERE t2.patient_id = t.patient_id AND m2.sender_portal_account_id IS NOT NULL ORDER BY m2.created_at DESC LIMIT 1),
+      (SELECT CASE WHEN m3.sender_type = 'staff' THEN 'You: ' || m3.body ELSE m3.body END FROM portal_messages m3 JOIN portal_message_threads t2 ON m3.thread_id = t2.id WHERE t2.patient_id = t.patient_id ORDER BY m3.created_at DESC LIMIT 1),
       t.id, 'portal_message_threads',
-      COALESCE(t.assigned_user_id, p.primary_care_provider), t.updated_at, t.updated_at
+      COALESCE(t.assigned_user_id, p.primary_care_provider), t.updated_at, t.updated_at, $1
     FROM portal_message_threads t
     JOIN patients p ON t.patient_id = p.id
-    WHERE EXISTS (
-        SELECT 1 FROM portal_messages m 
-        WHERE m.thread_id = t.id 
-          AND m.sender_portal_account_id IS NOT NULL 
-          AND m.read_at IS NULL
-    )
-    AND NOT EXISTS (
+    WHERE NOT EXISTS (
         SELECT 1 FROM inbox_items i2 
         WHERE i2.patient_id = t.patient_id 
           AND i2.type = 'portal_message'

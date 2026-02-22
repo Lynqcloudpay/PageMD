@@ -13,6 +13,7 @@ const echoService = require('../services/echoService');
 const echoTrendEngine = require('../services/echoTrendEngine');
 const echoContextEngine = require('../services/echoContextEngine');
 const echoCDSEngine = require('../services/echoCDSEngine');
+const { syncInboxItems } = require('./inbasket');
 const multer = require('multer');
 
 const router = express.Router();
@@ -178,6 +179,14 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                                  VALUES ($1, $2, $2, 'staff', $3) RETURNING *`,
                                 [threadId, userId, actPayload.body]
                             );
+
+                            // Trigger inbasket sync so it shows up in Clinical Inbox
+                            try {
+                                const schemaName = req.clinic?.schema_name || 'public';
+                                await syncInboxItems(tenantId, schemaName, client);
+                            } catch (syncErr) {
+                                console.warn('[Echo Commit] Inbasket sync failed (non-blocking):', syncErr.message);
+                            }
                         } else {
                             // Internal message
                             record = await client.query(
