@@ -165,19 +165,31 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
     const wantMELD = scoreType === 'all' || scoreType === 'meld';
 
     // Helper: search problems list with strict word boundary matching to avoid partial matches (e.g., 'mi' in 'migraine')
-    const hasProblem = (keywords) => problems.some(p => {
-        const name = (p.problem_name || p.name || '').toLowerCase();
+    const hasProblem = (keywords) => {
+        const found = problems.some(p => {
+            const name = (p.problem_name || p.name || '').toLowerCase();
 
-        // Skip if it looks like a family history or negative mention
-        if (name.includes('denies') || name.includes('negative for') || name.includes('no history of') || name.includes('no ') || name.includes('hx of')) {
-            if (name.includes('family')) return false;
-        }
+            // Skip if it looks like a family history or negative mention
+            if (name.includes('denies') || name.includes('negative for') || name.includes('no history of') || name.includes('no ') || name.includes('hx of')) {
+                if (name.includes('family')) return false;
+            }
 
-        return keywords.some(kw => {
-            const regex = new RegExp(`\\b${kw.toLowerCase()}\\b`, 'i');
-            return regex.test(name);
+            return keywords.some(kw => {
+                const regex = new RegExp(`\\b${kw.toLowerCase()}\\b`, 'i');
+                const isMatch = regex.test(name);
+                if (isMatch) {
+                    console.log(`[Echo Score Engine Diagnostic] MATCH: "${kw}" found in "${name}"`);
+                }
+                return isMatch;
+            });
         });
-    });
+        return found;
+    };
+
+    console.log(`[Echo Score Engine Diagnostic] Calculating for ${age}y ${sex} with ${problems.length} problems.`);
+    if (problems.length > 0) {
+        console.log(`[Echo Score Engine Diagnostic] Problem set:`, problems.map(p => p.problem_name || p.name).join(', '));
+    }
 
     // ── 1. ASCVD ────────────────────────────────────────────────────────
     if (wantASCVD) {

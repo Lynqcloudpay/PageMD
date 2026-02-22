@@ -1247,6 +1247,20 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 let apptType = args.appointment_type || 'Follow-up';
                 if (apptType === 'Follow Up') apptType = 'Follow-up';
 
+                // Normalize time for DB (ensure it's not "1:00 PM" but "13:00")
+                let appointmentTime = args.appointment_time;
+                if (appointmentTime && (appointmentTime.includes('AM') || appointmentTime.includes('PM'))) {
+                    try {
+                        const [time, modifier] = appointmentTime.split(' ');
+                        let [hours, minutes] = time.split(':');
+                        if (hours === '12') hours = '00';
+                        if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+                        appointmentTime = `${hours}:${minutes}:00`;
+                    } catch (e) {
+                        console.warn('[Echo Service] Failed to normalize time:', appointmentTime);
+                    }
+                }
+
                 return {
                     result: {
                         action_id: actionId,
@@ -1256,7 +1270,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                         payload: {
                             patient_id: patientId,
                             appointment_date: appointmentDate,
-                            appointment_time: args.appointment_time,
+                            appointment_time: appointmentTime,
                             appointment_type: apptType,
                             duration: args.duration || 30,
                             reason: args.reason || null
@@ -1343,6 +1357,36 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 const problems = patientContext?.problems || [];
                 const meds = patientContext?.medications || [];
                 const labs = patientContext?.labs || [];
+                // Helper: search problems list with strict word boundary matching to avoid partial matches (e.g., 'mi' in 'migraine')
+                const hasProblem = (keywords) => {
+                    const found = problems.some(p => {
+                        const name = (p.problem_name || p.name || '').toLowerCase();
+
+                        // Skip if it looks like a family history or negative mention
+                        if (name.includes('denies') || name.includes('negative for') || name.includes('no history of') || name.includes('no ') || name.includes('hx of')) {
+                            if (name.includes('family')) return false;
+                        }
+
+                        return keywords.some(kw => {
+                            const regex = new RegExp(`\\b${kw.toLowerCase()}\\b`, 'i');
+                            const isMatch = regex.test(name);
+                            if (isMatch) {
+                                console.log(`[Echo Score Engine] MATCH: "${kw}" found in "${name}"`);
+                            }
+                            return isMatch;
+                        });
+                    });
+                    return found;
+                };
+
+                const d = patientContext.demographics || {};
+                const age = d.dob ? calculateAge(d.dob) : 'unknown age';
+                const sex = d.sex || 'unknown sex';
+
+                console.log(`[Echo Score Engine] Calculating for ${age}y ${sex} with ${problems.length} problems.`);
+                if (problems.length > 0) {
+                    console.log(`[Echo Score Engine] Problem set:`, problems.map(p => p.problem_name || p.name).join(', '));
+                }
                 const numProblems = problems.length;
                 const numMeds = meds.length;
                 const hasChronicConditions = problems.some(p => {
