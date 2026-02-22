@@ -164,16 +164,19 @@ async function generatePredictiveInsights(patientContext, scoreType = 'all') {
     const wantCHADS = scoreType === 'all' || scoreType === 'chads';
     const wantMELD = scoreType === 'all' || scoreType === 'meld';
 
-    // Helper: search problems list with negative-match prevention
+    // Helper: search problems list with strict word boundary matching to avoid partial matches (e.g., 'mi' in 'migraine')
     const hasProblem = (keywords) => problems.some(p => {
         const name = (p.problem_name || p.name || '').toLowerCase();
-        // Skip if it looks like a negative mention
+
+        // Skip if it looks like a family history or negative mention
         if (name.includes('denies') || name.includes('negative for') || name.includes('no history of') || name.includes('no ') || name.includes('hx of')) {
-            // "hx of" is tricky. For CHADS-VASc, "hx of stroke" SHOULD count.
-            // But if the user says it's a false positive, maybe it's "Family hx of".
             if (name.includes('family')) return false;
         }
-        return keywords.some(kw => name.includes(kw));
+
+        return keywords.some(kw => {
+            const regex = new RegExp(`\\b${kw.toLowerCase()}\\b`, 'i');
+            return regex.test(name);
+        });
     });
 
     // ── 1. ASCVD ────────────────────────────────────────────────────────
