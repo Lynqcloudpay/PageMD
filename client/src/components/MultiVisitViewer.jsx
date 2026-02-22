@@ -130,17 +130,18 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
 
                         // Use a permanent slot memory for consistent visual tracking like physical file folders
                         const slotIndex = tabSlots[vId] ?? (idx % 8);
-                        const tabTopPercent = 2 + (slotIndex * 12);
+                        const tabTopPercent = 2 + (slotIndex * 11.8);
 
+                        // Nostalgic, muted physical paper divider colors
                         const tabColors = [
-                            'bg-blue-500 border-blue-600 text-white',
-                            'bg-emerald-500 border-emerald-600 text-white',
-                            'bg-rose-500 border-rose-600 text-white',
-                            'bg-amber-500 border-amber-600 text-white',
-                            'bg-purple-500 border-purple-600 text-white',
-                            'bg-cyan-500 border-cyan-600 text-white',
-                            'bg-pink-500 border-pink-600 text-white',
-                            'bg-orange-500 border-orange-600 text-white',
+                            'bg-[#5C849C] border-[#4A6D82] text-white', // Muted Blue
+                            'bg-[#7D9D7F] border-[#658367] text-white', // Muted Sage Green
+                            'bg-[#B65F5F] border-[#9B4E4E] text-white', // Muted Brick Red
+                            'bg-[#D4A373] border-[#B9895A] text-white', // Muted Tan
+                            'bg-[#8E7CC3] border-[#7464A4] text-white', // Muted Purple
+                            'bg-[#6B9E9A] border-[#55827E] text-white', // Muted Teal
+                            'bg-[#C27BA0] border-[#A66486] text-white', // Dusty Pink
+                            'bg-[#CC8B65] border-[#B07350] text-white', // Clay Orange
                         ];
                         const colorClass = tabColors[slotIndex];
 
@@ -151,8 +152,8 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                 initial={{ opacity: 0, scale: 0.95, y: 50 }}
                                 animate={{
                                     opacity: 1, // Keep solid like real paper
-                                    x: -(offset * 4), // Tiny left shift for 3D stack texture
-                                    y: -(offset * 4), // Tiny up shift
+                                    x: 0, // Perfectly flush right edges like a binder
+                                    y: -(offset * 2), // Very subtle vertical depth
                                     rotate: 0,
                                     scale: 1, // Stay full size throughout
                                     zIndex: 100 - offset,
@@ -163,23 +164,28 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                             >
                                 {/* Right Edge Manila Folder Tab */}
                                 <div
-                                    className={`absolute -right-[43px] transition-all duration-200 z-[40] flex items-center justify-center border-y border-r border-slate-900/10 rounded-r-2xl cursor-pointer
-                                        ${colorClass} ${isFront ? 'opacity-100 shadow-[5px_0_15px_-5px_rgba(0,0,0,0.5)] pr-1 scale-x-105 origin-left' : 'opacity-[0.85] hover:opacity-100 shadow-[2px_0_5px_rgba(0,0,0,0.2)]'}
+                                    className={`absolute -right-[40px] transition-all duration-200 border-y border-r border-slate-900/20 rounded-r-[12px] cursor-pointer
+                                        ${colorClass} ${isFront ? 'opacity-100 shadow-[6px_0_15px_-5px_rgba(0,0,0,0.4)] z-[50]' : 'opacity-90 hover:opacity-100 shadow-[2px_0_5px_rgba(0,0,0,0.1)] hover:-translate-x-1 z-[40]'}
                                     `}
                                     style={{
                                         top: `${tabTopPercent}%`,
                                         height: '11.5%',
-                                        width: '44px'
+                                        width: '40px'
                                     }}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         if (!isFront) handleOpenNewVisit(vId);
                                     }}
                                 >
-                                    <div className="transform rotate-90 whitespace-nowrap font-bold text-[11px] uppercase tracking-widest flex items-center gap-2">
-                                        <span className="opacity-90">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MM/dd/yy') : 'Loading'}</span>
-                                        <span className="w-1 h-1 rounded-full bg-white/50"></span>
-                                        <span>{getChiefComplaint(visitsData[vId])}</span>
+                                    <div className="w-full h-full p-2 flex items-center justify-center overflow-hidden">
+                                        <div
+                                            className="font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 overflow-hidden whitespace-nowrap text-ellipsis"
+                                            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                                        >
+                                            <span className="opacity-90 shrink-0">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MM/dd') : 'Load'}</span>
+                                            <span className="w-[3px] h-[3px] rounded-full bg-white/50 shrink-0 mx-0.5"></span>
+                                            <span className="truncate overflow-hidden text-ellipsis">{getChiefComplaint(visitsData[vId])}</span>
+                                        </div>
                                     </div>
                                 </div>
 
