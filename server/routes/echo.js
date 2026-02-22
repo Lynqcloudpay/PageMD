@@ -41,6 +41,7 @@ router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
             patientId: patientId || null,
             conversationId: conversationId || null,
             user: req.user,
+            clinicName: req.clinic?.name || null,
             uiContext: uiContext || null,
             attachments: attachments || null
         });
@@ -184,17 +185,31 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                             try {
                                 const schemaName = req.clinic?.schema_name || 'public';
                                 await syncInboxItems(tenantId, schemaName, client);
+
+                                // FORCE the AI-sent message to show up as 'new' in the inbox so provider can review it
+                                await client.query(
+                                    `UPDATE inbox_items SET status = 'new' WHERE reference_id = $1 AND reference_table = 'portal_message_threads'`,
+                                    [threadId]
+                                );
                             } catch (syncErr) {
                                 console.warn('[Echo Commit] Inbasket sync failed (non-blocking):', syncErr.message);
                             }
                         } else {
                             // Internal message
                             record = await client.query(
-                                `INSERT INTO messages (patient_id, from_user_id, subject, body, message_type, priority)
-                                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-                                [actPayload.patient_id, userId, actPayload.subject, actPayload.body,
+                                `INSERT INTO messages (patient_id, from_user_id, to_user_id, subject, body, message_type, priority)
+                                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+                                [actPayload.patient_id, userId, actPayload.to_user_id || userId, actPayload.subject, actPayload.body,
                                     'message', 'normal']
                             );
+
+                            // Also sync internal messages so they surface
+                            try {
+                                const schemaName = req.clinic?.schema_name || 'public';
+                                await syncInboxItems(tenantId, schemaName, client);
+                            } catch (syncErr) {
+                                console.warn('[Echo Commit] Internal Inbasket sync failed (non-blocking):', syncErr.message);
+                            }
                         }
                         break;
 

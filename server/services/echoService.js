@@ -2094,7 +2094,7 @@ function detectIntent(message) {
 
 // ─── Main Chat Function ─────────────────────────────────────────────────────
 
-async function chat({ message, patientId, conversationId, user, uiContext, attachments }) {
+async function chat({ message, patientId, conversationId, user, clinicName, uiContext, attachments }) {
     const startTime = Date.now();
     const tenantId = user.clinic_id;
 
@@ -2149,6 +2149,13 @@ async function chat({ message, patientId, conversationId, user, uiContext, attac
         messages.push({
             role: 'system',
             content: `UI CONTEXT: The provider is currently viewing: ${uiContext}`
+        });
+    }
+
+    if (clinicName) {
+        messages.push({
+            role: 'system',
+            content: `CLINIC CONTEXT: You are working at ${clinicName}. Always use this specific name instead of "[Your Clinic Name]" when drafting patient correspondence.`
         });
     }
 
