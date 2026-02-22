@@ -135,16 +135,16 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                 layout
                                 initial={{ opacity: 0, scale: 0.9, x: 100 }}
                                 animate={{
-                                    opacity: isFront ? 1 : 1 - (visualOffset * 0.05),
-                                    x: isFront ? 0 : -(visualOffset * 50),
-                                    y: isFront ? 0 : (visualOffset * 5),
-                                    rotate: isFront ? 0 : -(visualOffset * 3), // Fan out to the left
-                                    scale: isFront ? 1 : 1 - (visualOffset * 0.02),
+                                    opacity: isFront ? 1 : 1 - (visualOffset * 0.1),
+                                    x: isFront ? 0 : -(visualOffset * 65),
+                                    y: isFront ? 0 : -(visualOffset * 12),
+                                    rotate: 0,
+                                    scale: 1,
                                     zIndex: 100 - offset,
                                 }}
-                                exit={{ opacity: 0, scale: 0.8, y: 100 }}
-                                transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[0_0_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden bg-[#F8FAFC] transform-gpu origin-bottom-right
+                                exit={{ opacity: 0, scale: 0.95, y: -20, x: -20 }}
+                                transition={{ type: "tween", ease: "easeOut", duration: 0.35 }}
+                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[-15px_10px_35px_rgba(0,0,0,0.15)] overflow-hidden bg-[#F8FAFC] transform-gpu will-change-transform
                                     ${isFront ? 'border-none cursor-default' : 'border border-slate-300 cursor-pointer'}
                                 `}
                                 onClick={() => {
@@ -157,8 +157,8 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                         <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/30 transition-colors" />
 
                                         {/* Vertical Left Edge Label Badge */}
-                                        <div className="absolute left-10 top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2 -rotate-90 pointer-events-none">
-                                            <div className="whitespace-nowrap bg-indigo-600 text-white rounded-full px-6 py-3 flex items-center gap-3 shadow-[0_0_30px_rgba(0,0,0,0.3)] border border-indigo-400/50">
+                                        <div className="absolute left-[10px] top-1/2 z-[60] -translate-x-1/2 -translate-y-1/2 -rotate-90 pointer-events-none">
+                                            <div className="whitespace-nowrap bg-indigo-600/95 backdrop-blur-sm text-white rounded-full px-5 py-2 flex items-center gap-3 border border-indigo-400 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
                                                 <FileText className="w-4 h-4 text-indigo-200" />
                                                 <span className="text-[13px] font-black tracking-tight">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
                                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
