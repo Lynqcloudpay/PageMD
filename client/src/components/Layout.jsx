@@ -132,7 +132,8 @@ const Layout = ({ children }) => {
         const fetchTodayApptsCount = async () => {
             try {
                 const response = await appointmentsAPI.getStats();
-                setTodayApptsCount(response.data?.active_today || 0);
+                const count = parseInt(response.data?.active_today || 0);
+                setTodayApptsCount(count);
             } catch (error) {
                 console.error('Error fetching today appts count:', error);
             }
@@ -156,7 +157,7 @@ const Layout = ({ children }) => {
             fetchPrivacyAlertsCount();
             fetchAppointmentRequestsCount();
             fetchTodayApptsCount();
-        }, 30000);
+        }, 8000);
 
         return () => clearInterval(interval);
     }, []);
@@ -301,7 +302,7 @@ const Layout = ({ children }) => {
                 {/* ═══════════════════════════════════════════════ */}
                 <aside
                     className={cn(
-                        "h-screen sticky top-0 left-0 bottom-0 z-30 flex flex-col flex-shrink-0 transition-all duration-300 ease-out",
+                        "fixed left-0 top-0 bottom-0 z-30 flex flex-col transition-all duration-300 ease-in-out",
                         sidebarCollapsed ? 'w-[4.5rem]' : 'w-[14.5rem]'
                     )}
                 >
@@ -552,7 +553,8 @@ const Layout = ({ children }) => {
                 {/* ═══════════════════════════════════════════════ */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 ease-out flex flex-col h-screen overflow-hidden relative"
+                        "flex-1 transition-all duration-300 ease-in-out flex flex-col h-screen overflow-hidden relative",
+                        sidebarCollapsed ? "ml-[4.5rem]" : "ml-[14.5rem]"
                     )}
                 >
                     {/* Header strip */}
