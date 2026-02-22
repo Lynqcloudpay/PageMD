@@ -36,6 +36,7 @@ PERSONALITY:
 - Human-in-the-Loop: You STAGE actions for approval. Never decide alone.
 - Always calculate what is asked: When asked for risk scores (CHADS-VASc, ASCVD, MELD), ALWAYS call get_risk_scores with the appropriate score_type. Use defaults when data is missing and flag assumptions. Never refuse to calculate.
 - Tiered Search: Start with the baseline; use tools if more facts are needed.
+- Full-Spectrum Agent: You can generate referral letters, clinical letters (work excuses, disability, FMLA), suggest billing codes, prepare pre-visit briefs, create after-visit summaries, generate clinical handoffs, reconcile medications, and suggest evidence-based follow-up plans. Always use the appropriate tool when asked.
 
 RESPONSE STYLE:
 - No markdown headers or tables. Use **[text]** for labels, !![text]!! for alerts.`;
@@ -608,6 +609,175 @@ const TOOL_CATALOG = [
         }
     },
 
+    // ── Phase 5B: Agentic Workflow Tools ──────────────────────────────────
+    {
+        type: 'function',
+        function: {
+            name: 'generate_referral_letter',
+            description: 'Generate a specialist referral letter with full clinical context. Includes patient demographics, relevant history, medications, labs, and reason for referral.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    specialty: {
+                        type: 'string',
+                        description: 'Specialty to refer to (e.g., "Cardiology", "Orthopedics", "Endocrinology")'
+                    },
+                    reason: {
+                        type: 'string',
+                        description: 'Clinical reason for the referral'
+                    },
+                    urgency: {
+                        type: 'string',
+                        enum: ['routine', 'urgent', 'emergent'],
+                        description: 'Urgency level (default: routine)'
+                    },
+                    specific_questions: {
+                        type: 'string',
+                        description: 'Specific questions for the specialist'
+                    }
+                },
+                required: ['specialty', 'reason']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'suggest_billing_codes',
+            description: 'Suggest E&M level and CPT codes based on the current visit note complexity, time spent, and medical decision-making. Provides coding justification.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    visit_type: {
+                        type: 'string',
+                        enum: ['new_patient', 'established', 'telehealth', 'preventive', 'consultation'],
+                        description: 'Type of visit for code selection'
+                    },
+                    time_spent: {
+                        type: 'integer',
+                        description: 'Total time spent in minutes (for time-based billing)'
+                    },
+                    mdm_complexity: {
+                        type: 'string',
+                        enum: ['straightforward', 'low', 'moderate', 'high'],
+                        description: 'Medical decision-making complexity'
+                    }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'generate_clinical_letter',
+            description: 'Generate a clinical letter such as a work excuse, disability form, school physical clearance, FMLA certification, or return-to-work note.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    letter_type: {
+                        type: 'string',
+                        enum: ['work_excuse', 'return_to_work', 'disability', 'fmla', 'school_physical', 'sports_clearance', 'jury_duty', 'custom'],
+                        description: 'Type of clinical letter'
+                    },
+                    details: {
+                        type: 'string',
+                        description: 'Additional details (e.g., dates, restrictions, accommodations needed)'
+                    },
+                    recipient: {
+                        type: 'string',
+                        description: 'Who the letter is addressed to (e.g., employer name, school)'
+                    }
+                },
+                required: ['letter_type']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'prep_visit',
+            description: 'Generate a pre-visit intelligence brief for the current patient. Includes outstanding labs, care gaps, medication refills due, last visit context, and action items. Use when provider says "prep me" or "what do I need to know about this patient".',
+            parameters: {
+                type: 'object',
+                properties: {
+                    focus: {
+                        type: 'string',
+                        enum: ['comprehensive', 'chronic_care', 'preventive', 'medication_review'],
+                        description: 'Focus area for the prep (default: comprehensive)'
+                    }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'suggest_followup_plan',
+            description: 'Suggest an evidence-based follow-up plan including interval, labs to order, and screenings due based on the patient\'s active conditions.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    conditions: {
+                        type: 'string',
+                        description: 'Specific conditions to focus on (leave empty for all active problems)'
+                    }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'generate_avs',
+            description: 'Generate a patient-friendly After Visit Summary (AVS). Includes diagnosis in plain language, medication changes, follow-up instructions, and when to seek emergency care.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    chief_complaint: {
+                        type: 'string',
+                        description: 'The chief complaint or reason for today\'s visit'
+                    },
+                    instructions: {
+                        type: 'string',
+                        description: 'Any additional instructions to include'
+                    }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'handoff_summary',
+            description: 'Generate an end-of-day clinical handoff summary for the covering provider. Includes active patients, pending results, critical follow-ups, and outstanding tasks.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    date: {
+                        type: 'string',
+                        description: 'Date to generate handoff for (default: today)'
+                    }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'reconcile_medications',
+            description: 'Perform medication reconciliation for the current patient. Identifies duplicates, therapeutic overlaps, missing doses, high-risk combinations, and medications that may no longer be needed.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    include_otc: {
+                        type: 'boolean',
+                        description: 'Whether to consider OTC medications (default: true)'
+                    }
+                }
+            }
+        }
+    },
+
     // ── Phase 2A: Global Tools (non-patient) ────────────────────────────
     {
         type: 'function',
@@ -1114,6 +1284,413 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                 };
             }
 
+            // ── Phase 5B: Agentic Workflow Tools ────────────────────────
+            case 'generate_referral_letter': {
+                if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const d = patientContext.demographics || {};
+                const age = d.dob ? calculateAge(d.dob) : 'unknown age';
+                const patientDesc = `${d.first_name || ''} ${d.last_name || ''}, ${age}, ${d.sex || 'sex unknown'}`;
+                const problems = (patientContext.problems || []).map(p => cleanProblemName(p.name || p.problem_name || '')).filter(Boolean);
+                const meds = (patientContext.medications || []).map(m => {
+                    const name = m.medication_name || '';
+                    const dose = m.dosage ? ` ${m.dosage}` : '';
+                    const freq = m.frequency ? ` ${m.frequency}` : '';
+                    return `${name}${dose}${freq}`;
+                }).filter(Boolean);
+                const allergies = (patientContext.allergies || []).map(a => a.allergen || a.allergy_name || '').filter(Boolean);
+                const recentLabs = (patientContext.labs || []).slice(0, 10).map(l => `${l.test_name}: ${l.result_value} ${l.result_units || ''}`.trim()).filter(Boolean);
+                const vitals = buildVitalsSummary(patientContext.vitalHistory);
+
+                const letter = [
+                    `**REFERRAL TO ${(args.specialty || '').toUpperCase()}**`,
+                    `**Urgency:** ${args.urgency || 'Routine'}`,
+                    '',
+                    `Dear ${args.specialty} Colleague,`,
+                    '',
+                    `I am referring ${patientDesc} to your care for evaluation and management of: **${args.reason}**.`,
+                    '',
+                    `**Active Medical History:**`,
+                    problems.length > 0 ? problems.map(p => `• ${p}`).join('\n') : '• No active problems documented',
+                    '',
+                    `**Current Medications:**`,
+                    meds.length > 0 ? meds.map(m => `• ${m}`).join('\n') : '• No active medications',
+                    '',
+                    `**Allergies:** ${allergies.length > 0 ? allergies.join(', ') : 'NKDA'}`,
+                    '',
+                    vitals ? `**Recent Vitals:** ${vitals}` : '',
+                    '',
+                    recentLabs.length > 0 ? `**Relevant Labs:**\n${recentLabs.map(l => `• ${l}`).join('\n')}` : '',
+                    '',
+                    args.specific_questions ? `**Specific Questions:**\n${args.specific_questions}` : '',
+                    '',
+                    `Thank you for your evaluation. Please send findings and recommendations back to our office.`,
+                    '',
+                    `Sincerely,`,
+                    `[Provider Signature]`
+                ].filter(l => l !== undefined).join('\n');
+
+                return {
+                    result: { type: 'clinical_document', document_type: 'referral_letter', content: letter, specialty: args.specialty },
+                    dataAccessed: ['patients', 'problems', 'medications', 'allergies', 'orders', 'visits.vitals'],
+                    type: 'clinical_document'
+                };
+            }
+
+            case 'suggest_billing_codes': {
+                const problems = patientContext?.problems || [];
+                const meds = patientContext?.medications || [];
+                const labs = patientContext?.labs || [];
+                const numProblems = problems.length;
+                const numMeds = meds.length;
+                const hasChronicConditions = problems.some(p => {
+                    const n = (p.problem_name || p.name || '').toLowerCase();
+                    return n.includes('diabetes') || n.includes('hypertension') || n.includes('heart failure') ||
+                        n.includes('copd') || n.includes('ckd') || n.includes('asthma');
+                });
+
+                let suggestedLevel, cptCode, justification;
+                const vt = args.visit_type || 'established';
+
+                if (args.time_spent && args.time_spent >= 40) {
+                    // Time-based billing
+                    if (vt === 'new_patient') {
+                        if (args.time_spent >= 74) { cptCode = '99205'; suggestedLevel = 'Level 5'; }
+                        else if (args.time_spent >= 59) { cptCode = '99204'; suggestedLevel = 'Level 4'; }
+                        else if (args.time_spent >= 44) { cptCode = '99203'; suggestedLevel = 'Level 3'; }
+                        else { cptCode = '99202'; suggestedLevel = 'Level 2'; }
+                    } else {
+                        if (args.time_spent >= 55) { cptCode = '99215'; suggestedLevel = 'Level 5'; }
+                        else if (args.time_spent >= 40) { cptCode = '99214'; suggestedLevel = 'Level 4'; }
+                        else if (args.time_spent >= 30) { cptCode = '99213'; suggestedLevel = 'Level 3'; }
+                        else { cptCode = '99212'; suggestedLevel = 'Level 2'; }
+                    }
+                    justification = `Time-based billing: ${args.time_spent} minutes total time on date of encounter.`;
+                } else {
+                    // MDM-based
+                    const mdm = args.mdm_complexity || (numProblems >= 4 || hasChronicConditions ? 'moderate' : numProblems >= 2 ? 'low' : 'straightforward');
+                    if (vt === 'new_patient') {
+                        const mdmMap = { straightforward: ['99202', 'Level 2'], low: ['99203', 'Level 3'], moderate: ['99204', 'Level 4'], high: ['99205', 'Level 5'] };
+                        [cptCode, suggestedLevel] = mdmMap[mdm] || ['99203', 'Level 3'];
+                    } else {
+                        const mdmMap = { straightforward: ['99212', 'Level 2'], low: ['99213', 'Level 3'], moderate: ['99214', 'Level 4'], high: ['99215', 'Level 5'] };
+                        [cptCode, suggestedLevel] = mdmMap[mdm] || ['99213', 'Level 3'];
+                    }
+                    justification = `MDM-based: ${mdm} complexity. ${numProblems} active problem(s), ${numMeds} medication(s)${hasChronicConditions ? ', chronic condition management' : ''}.`;
+                }
+
+                const additionalCodes = [];
+                if (vt === 'preventive') additionalCodes.push({ code: '99395', description: 'Preventive visit, 18-39y' }, { code: '99396', description: 'Preventive visit, 40-64y' });
+                if (vt === 'telehealth') additionalCodes.push({ code: '95', modifier: 'Synchronous telehealth modifier' });
+
+                return {
+                    result: {
+                        type: 'billing_suggestion',
+                        primary: { cptCode, level: suggestedLevel, justification },
+                        visitType: vt,
+                        additionalCodes,
+                        disclaimer: 'Coding suggestions are advisory only. Final code selection is the responsibility of the billing provider.',
+                        mdmFactors: { problems: numProblems, medications: numMeds, labsOrdered: labs.length, chronicConditions: hasChronicConditions }
+                    },
+                    dataAccessed: ['problems', 'medications', 'orders'],
+                    type: 'billing_suggestion'
+                };
+            }
+
+            case 'generate_clinical_letter': {
+                if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const d = patientContext.demographics || {};
+                const patientName = `${d.first_name || ''} ${d.last_name || ''}`;
+                const dob = d.dob ? new Date(d.dob).toLocaleDateString('en-US') : 'N/A';
+                const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+                const templates = {
+                    work_excuse: `To Whom It May Concern:\n\nThis letter confirms that ${patientName} (DOB: ${dob}) was seen in our office on ${today} and is excused from work${args.details ? `. ${args.details}` : ' for medical reasons'}.\n\nPlease contact our office with any questions.\n\nSincerely,\n[Provider Signature]`,
+
+                    return_to_work: `To Whom It May Concern:\n\nThis letter certifies that ${patientName} (DOB: ${dob}) was evaluated on ${today} and is medically cleared to return to work${args.details ? ` with the following considerations: ${args.details}` : ' without restrictions'}.\n\nSincerely,\n[Provider Signature]`,
+
+                    disability: `To Whom It May Concern:\n\nI am the treating physician for ${patientName} (DOB: ${dob}). This patient has been under my care and is being evaluated for disability. ${args.details || 'Please see attached medical records for clinical details.'}\n\nDiagnoses:\n${(patientContext.problems || []).map(p => `• ${cleanProblemName(p.name || p.problem_name || '')}`).join('\n') || '• See chart'}\n\nCurrent Medications:\n${(patientContext.medications || []).map(m => `• ${m.medication_name || ''}`).join('\n') || '• See chart'}\n\nSincerely,\n[Provider Signature]`,
+
+                    fmla: `FMLA CERTIFICATION\n\nPatient: ${patientName} (DOB: ${dob})\nDate: ${today}\n\nI certify that the above-named patient has a serious health condition that${args.details ? `: ${args.details}` : ' requires ongoing treatment and/or renders the patient unable to perform job functions'}.\n\nEstimated duration: [Provider to complete]\nSchedule of treatments: [Provider to complete]\n\nProvider Signature: _______________`,
+
+                    school_physical: `SCHOOL PHYSICAL EXAMINATION\n\nStudent: ${patientName} (DOB: ${dob})\nDate of Exam: ${today}\n\nThis student has been examined and is found to be in satisfactory health for school attendance${args.details ? `. Notes: ${args.details}` : ''}.\n\nVitals: ${buildVitalsSummary(patientContext.vitalHistory) || 'See chart'}\nAllergies: ${(patientContext.allergies || []).map(a => a.allergen || a.allergy_name).filter(Boolean).join(', ') || 'NKDA'}\n\nProvider Signature: _______________`,
+
+                    sports_clearance: `SPORTS PHYSICAL CLEARANCE\n\nAthlete: ${patientName} (DOB: ${dob})\nDate: ${today}\n\nThis patient has been examined and is${args.details ? `: ${args.details}` : ' medically cleared for sports participation without restrictions'}.\n\nProvider Signature: _______________`,
+
+                    jury_duty: `To the Court:\n\nThis letter confirms that ${patientName} (DOB: ${dob}) is a patient of this practice. ${args.details || 'Due to their medical condition, participation in jury duty would pose a hardship at this time.'}\n\nSincerely,\n[Provider Signature]`,
+
+                    custom: `Date: ${today}\n${args.recipient ? `To: ${args.recipient}\n` : ''}\nRe: ${patientName} (DOB: ${dob})\n\n${args.details || '[Provider to complete letter content]'}\n\nSincerely,\n[Provider Signature]`
+                };
+
+                const content = templates[args.letter_type] || templates.custom;
+
+                return {
+                    result: { type: 'clinical_document', document_type: args.letter_type, content },
+                    dataAccessed: ['patients', 'problems', 'medications', 'allergies', 'visits.vitals'],
+                    type: 'clinical_document'
+                };
+            }
+
+            case 'prep_visit': {
+                if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const d = patientContext.demographics || {};
+                const age = d.dob ? calculateAge(d.dob) : 'unknown age';
+                const problems = (patientContext.problems || []).map(p => cleanProblemName(p.name || p.problem_name || '')).filter(Boolean);
+                const meds = (patientContext.medications || []).map(m => m.medication_name || '').filter(Boolean);
+                const allergies = (patientContext.allergies || []).map(a => a.allergen || a.allergy_name || '').filter(Boolean);
+                const recentVisits = patientContext.recentVisits || [];
+                const vitals = buildVitalsSummary(patientContext.vitalHistory);
+
+                const lastVisit = recentVisits[0];
+                const lastVisitDate = lastVisit ? formatClinicalDate(lastVisit.date || lastVisit.visit_date) : 'No prior visits';
+                const lastCC = lastVisit ? (lastVisit.chief_complaint || lastVisit.type || 'Office visit') : 'N/A';
+
+                const brief = {
+                    type: 'visit_prep',
+                    patient: `${d.first_name} ${d.last_name}, ${age}, ${d.sex || ''}`,
+                    lastVisit: { date: lastVisitDate, chiefComplaint: lastCC },
+                    activeProblems: problems,
+                    medications: meds,
+                    allergies: allergies.length > 0 ? allergies : ['NKDA'],
+                    recentVitals: vitals || 'No recent vitals',
+                    actionItems: [],
+                    alerts: []
+                };
+
+                // Flag overdue items
+                if (!lastVisit) brief.alerts.push('⚠️ No prior visits on file — new patient');
+                if (meds.length > 10) brief.alerts.push(`⚠️ Polypharmacy: ${meds.length} active medications`);
+                if (problems.some(p => p.toLowerCase().includes('diabetes'))) brief.actionItems.push('Check A1c (last result and date)');
+                if (problems.some(p => p.toLowerCase().includes('hypertension'))) brief.actionItems.push('Review BP trend and medication adherence');
+                if (problems.some(p => p.toLowerCase().includes('depression') || p.toLowerCase().includes('anxiety'))) brief.actionItems.push('Screen with PHQ-9/GAD-7');
+
+                return {
+                    result: brief,
+                    dataAccessed: ['patients', 'problems', 'medications', 'allergies', 'visits', 'visits.vitals'],
+                    type: 'visit_prep'
+                };
+            }
+
+            case 'suggest_followup_plan': {
+                if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const problems = (patientContext.problems || []).map(p => (p.name || p.problem_name || '').toLowerCase()).filter(Boolean);
+                const suggestions = [];
+
+                const conditionPlans = {
+                    'diabetes': { interval: '3 months', labs: ['HbA1c', 'BMP', 'Lipid Panel', 'Urine Albumin/Creatinine'], screenings: ['Diabetic eye exam (annual)', 'Foot exam', 'Monofilament testing'] },
+                    'hypertension': { interval: '3-6 months', labs: ['BMP (potassium, creatinine)', 'Lipid Panel'], screenings: ['Home BP log review', 'ASCVD risk reassessment'] },
+                    'heart failure': { interval: '1-3 months', labs: ['BMP', 'BNP/NT-proBNP', 'CBC'], screenings: ['Daily weight monitoring', 'Fluid restriction compliance'] },
+                    'copd': { interval: '3-6 months', labs: ['CBC', 'ABG if indicated'], screenings: ['Pulmonary function tests (annual)', 'Flu/pneumonia vaccines'] },
+                    'ckd': { interval: '3-6 months', labs: ['BMP', 'CBC', 'Phosphorus', 'PTH', 'Urine Albumin/Creatinine'], screenings: ['Nephrology referral if Stage 4+', 'Renal diet counseling'] },
+                    'hypothyroid': { interval: '6-12 months', labs: ['TSH', 'Free T4'], screenings: ['Dose adjustment review'] },
+                    'depression': { interval: '4-8 weeks (acute), 3-6 months (stable)', labs: ['PHQ-9 scoring'], screenings: ['Suicide risk assessment', 'Medication side effects'] },
+                    'anxiety': { interval: '4-8 weeks', labs: ['GAD-7 scoring', 'TSH (rule out thyroid)'], screenings: ['Sleep assessment', 'Substance use screening'] },
+                    'asthma': { interval: '3-6 months', labs: ['Spirometry (annual)'], screenings: ['Asthma control test (ACT)', 'Inhaler technique review'] },
+                    'hyperlipidemia': { interval: '6-12 months', labs: ['Lipid Panel', 'Liver function (if on statin)'], screenings: ['ASCVD risk calculation', 'Statin benefit discussion'] },
+                    'obesity': { interval: '3 months', labs: ['HbA1c', 'Lipid Panel', 'Liver function'], screenings: ['BMI trend', 'Nutrition counseling', 'Exercise prescription'] }
+                };
+
+                for (const [condition, plan] of Object.entries(conditionPlans)) {
+                    if (problems.some(p => p.includes(condition))) {
+                        suggestions.push({ condition: condition.charAt(0).toUpperCase() + condition.slice(1), ...plan });
+                    }
+                }
+
+                if (suggestions.length === 0) {
+                    suggestions.push({ condition: 'General', interval: '12 months', labs: ['CBC', 'BMP', 'Lipid Panel'], screenings: ['Age-appropriate cancer screenings', 'Immunizations'] });
+                }
+
+                return {
+                    result: { type: 'followup_plan', plans: suggestions },
+                    dataAccessed: ['problems', 'medications'],
+                    type: 'followup_plan'
+                };
+            }
+
+            case 'generate_avs': {
+                if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const d = patientContext.demographics || {};
+                const problems = (patientContext.problems || []).map(p => cleanProblemName(p.name || p.problem_name || '')).filter(Boolean);
+                const meds = (patientContext.medications || []).map(m => {
+                    const name = m.medication_name || '';
+                    const dose = m.dosage ? ` ${m.dosage}` : '';
+                    const freq = m.frequency ? ` ${m.frequency}` : '';
+                    return `${name}${dose}${freq}`;
+                }).filter(Boolean);
+
+                const avs = [
+                    `**AFTER VISIT SUMMARY**`,
+                    `Patient: ${d.first_name} ${d.last_name}`,
+                    `Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+                    '',
+                    `**Why You Were Seen Today:**`,
+                    args.chief_complaint || 'Follow-up visit',
+                    '',
+                    `**Your Conditions:**`,
+                    problems.length > 0 ? problems.map(p => `• ${p}`).join('\n') : '• Discussed during visit',
+                    '',
+                    `**Your Medications:**`,
+                    meds.length > 0 ? meds.map(m => `• ${m}`).join('\n') : '• No changes',
+                    '',
+                    `**What To Do Next:**`,
+                    args.instructions || '• Follow up as directed by your provider\n• Take all medications as prescribed\n• Contact our office if symptoms worsen',
+                    '',
+                    `**When To Seek Emergency Care:**`,
+                    `• Chest pain or difficulty breathing`,
+                    `• Sudden severe headache or vision changes`,
+                    `• Signs of allergic reaction (swelling, hives, difficulty breathing)`,
+                    `• Any symptoms that concern you — trust your instincts`,
+                    '',
+                    `**Contact Us:** Call our office at [clinic phone] with any questions.`
+                ].join('\n');
+
+                return {
+                    result: { type: 'clinical_document', document_type: 'avs', content: avs },
+                    dataAccessed: ['patients', 'problems', 'medications'],
+                    type: 'clinical_document'
+                };
+            }
+
+            case 'handoff_summary': {
+                const targetDate = args.date || new Date().toISOString().split('T')[0];
+                // Get today's seen patients with active issues
+                const seenToday = await pool.query(
+                    `SELECT v.id, v.visit_date, v.chief_complaint, v.status,
+                            p.first_name, p.last_name,
+                            v.note_draft
+                     FROM visits v
+                     JOIN patients p ON v.patient_id = p.id
+                     WHERE v.visit_date::date = $1::date
+                     ORDER BY v.visit_date DESC LIMIT 30`,
+                    [targetDate]
+                );
+
+                // Get pending results
+                const pendingResults = await pool.query(
+                    `SELECT o.test_name, o.order_type, p.first_name, p.last_name
+                     FROM orders o
+                     JOIN patients p ON o.patient_id = p.id
+                     WHERE o.status = 'pending' AND o.created_at::date = $1::date
+                     LIMIT 20`,
+                    [targetDate]
+                );
+
+                // Get unsigned notes
+                const unsignedNotes = await pool.query(
+                    `SELECT v.id, p.first_name, p.last_name, v.chief_complaint
+                     FROM visits v
+                     JOIN patients p ON v.patient_id = p.id
+                     WHERE v.status IN ('in-progress', 'draft', 'open')
+                       AND v.note_signed_at IS NULL
+                       AND v.visit_date::date = $1::date
+                     LIMIT 20`,
+                    [targetDate]
+                );
+
+                return {
+                    result: {
+                        type: 'handoff_summary',
+                        date: targetDate,
+                        patientsSeen: seenToday.rows.length,
+                        patients: seenToday.rows.map(v => ({
+                            name: `${v.first_name} ${v.last_name}`,
+                            chiefComplaint: v.chief_complaint || 'Not documented',
+                            status: v.status
+                        })),
+                        pendingResults: pendingResults.rows.map(o => ({
+                            patient: `${o.first_name} ${o.last_name}`,
+                            test: o.test_name,
+                            type: o.order_type
+                        })),
+                        unsignedNotes: unsignedNotes.rows.map(v => ({
+                            patient: `${v.first_name} ${v.last_name}`,
+                            chiefComplaint: v.chief_complaint
+                        }))
+                    },
+                    dataAccessed: ['visits', 'patients', 'orders'],
+                    type: 'handoff_summary'
+                };
+            }
+
+            case 'reconcile_medications': {
+                if (!patientContext) return { result: 'No patient selected.', dataAccessed: [] };
+                const meds = (patientContext.medications || []).filter(m => m.active !== false);
+                const problems = (patientContext.problems || []).map(p => (p.name || p.problem_name || '').toLowerCase());
+
+                const findings = {
+                    type: 'med_reconciliation',
+                    totalMedications: meds.length,
+                    duplicates: [],
+                    highRisk: [],
+                    noIndication: [],
+                    suggestions: []
+                };
+
+                // Check for duplicates (same drug class)
+                const drugClasses = {};
+                const classMap = {
+                    'ace inhibitor': ['lisinopril', 'enalapril', 'ramipril', 'benazepril', 'captopril', 'fosinopril', 'quinapril'],
+                    'arb': ['losartan', 'valsartan', 'irbesartan', 'olmesartan', 'telmisartan', 'candesartan'],
+                    'statin': ['atorvastatin', 'rosuvastatin', 'simvastatin', 'pravastatin', 'lovastatin', 'pitavastatin'],
+                    'ssri': ['sertraline', 'fluoxetine', 'escitalopram', 'citalopram', 'paroxetine', 'fluvoxamine'],
+                    'ppi': ['omeprazole', 'pantoprazole', 'esomeprazole', 'lansoprazole', 'rabeprazole', 'dexlansoprazole'],
+                    'beta blocker': ['metoprolol', 'atenolol', 'propranolol', 'carvedilol', 'bisoprolol', 'nebivolol'],
+                    'ccb': ['amlodipine', 'nifedipine', 'diltiazem', 'verapamil', 'felodipine'],
+                    'diuretic': ['hydrochlorothiazide', 'furosemide', 'chlorthalidone', 'spironolactone', 'bumetanide'],
+                    'anticoagulant': ['warfarin', 'apixaban', 'rivaroxaban', 'dabigatran', 'edoxaban', 'eliquis', 'xarelto'],
+                    'antiplatelet': ['aspirin', 'clopidogrel', 'plavix', 'ticagrelor', 'prasugrel'],
+                    'nsaid': ['ibuprofen', 'naproxen', 'meloxicam', 'diclofenac', 'celecoxib', 'indomethacin'],
+                    'benzodiazepine': ['alprazolam', 'lorazepam', 'clonazepam', 'diazepam', 'temazepam']
+                };
+
+                for (const med of meds) {
+                    const medName = (med.medication_name || '').toLowerCase();
+                    for (const [drugClass, drugs] of Object.entries(classMap)) {
+                        if (drugs.some(d => medName.includes(d))) {
+                            if (!drugClasses[drugClass]) drugClasses[drugClass] = [];
+                            drugClasses[drugClass].push(med.medication_name);
+                        }
+                    }
+                }
+
+                // Flag duplicates
+                for (const [cls, drugs] of Object.entries(drugClasses)) {
+                    if (drugs.length > 1) {
+                        findings.duplicates.push({ class: cls, medications: drugs, warning: `Multiple ${cls}s detected: ${drugs.join(', ')}` });
+                    }
+                }
+
+                // High-risk combos
+                if (drugClasses['anticoagulant'] && drugClasses['antiplatelet']) {
+                    findings.highRisk.push({ combo: 'Anticoagulant + Antiplatelet', risk: 'Increased bleeding risk', medications: [...(drugClasses['anticoagulant'] || []), ...(drugClasses['antiplatelet'] || [])] });
+                }
+                if (drugClasses['anticoagulant'] && drugClasses['nsaid']) {
+                    findings.highRisk.push({ combo: 'Anticoagulant + NSAID', risk: 'Significantly increased GI bleeding risk', medications: [...(drugClasses['anticoagulant'] || []), ...(drugClasses['nsaid'] || [])] });
+                }
+                if (drugClasses['ace inhibitor'] && drugClasses['arb']) {
+                    findings.highRisk.push({ combo: 'ACE Inhibitor + ARB', risk: 'Dual RAAS blockade — hyperkalemia and renal risk', medications: [...(drugClasses['ace inhibitor'] || []), ...(drugClasses['arb'] || [])] });
+                }
+                if (drugClasses['ssri'] && drugClasses['nsaid']) {
+                    findings.highRisk.push({ combo: 'SSRI + NSAID', risk: 'Increased GI bleeding risk', medications: [...(drugClasses['ssri'] || []), ...(drugClasses['nsaid'] || [])] });
+                }
+
+                // Polypharmacy check
+                if (meds.length > 10) {
+                    findings.suggestions.push(`⚠️ Polypharmacy: ${meds.length} active medications. Consider deprescribing review.`);
+                }
+                if (drugClasses['benzodiazepine'] && problems.some(p => p.includes('fall') || p.includes('elderly'))) {
+                    findings.suggestions.push('⚠️ Benzodiazepine in elderly patient — fall risk. Consider taper.');
+                }
+                if (drugClasses['ppi']) {
+                    findings.suggestions.push('📋 PPI on chronic use — consider step-down or reassess indication (fracture/C.diff/B12 deficiency risk).');
+                }
+
+                return {
+                    result: findings,
+                    dataAccessed: ['medications', 'problems'],
+                    type: 'med_reconciliation'
+                };
+            }
+
             // Phase 4 - Document Analysis (structured output from Vision)
             case 'analyze_document': {
                 return {
@@ -1410,9 +1987,13 @@ function generateDiagnosisSuggestions(symptoms, context, maxResults) {
  */
 function detectIntent(message) {
     const m = message.toLowerCase();
-    if (m.includes('draft') || m.includes('hpi') || m.includes('note') || m.includes('soap')) return 'scribe';
-    if (m.includes('lab') || m.includes('trend') || m.includes('vital') || m.includes('chronic') || m.includes('analyz')) return 'analyst';
+    if (m.includes('draft') || m.includes('hpi') || m.includes('note') || m.includes('soap') || m.includes('avs') || m.includes('after visit')) return 'scribe';
+    if (m.includes('lab') || m.includes('trend') || m.includes('vital') || m.includes('chronic') || m.includes('analyz') || m.includes('reconcil')) return 'analyst';
     if (m.includes('score') || m.includes('chads') || m.includes('ascvd') || m.includes('meld') || m.includes('risk') || m.includes('calculate')) return 'analyst';
+    if (m.includes('referral') || m.includes('refer') || m.includes('letter') || m.includes('excuse') || m.includes('disability') || m.includes('fmla') || m.includes('clearance')) return 'scribe';
+    if (m.includes('bill') || m.includes('cpt') || m.includes('e&m') || m.includes('code') || m.includes('coding')) return 'analyst';
+    if (m.includes('prep') || m.includes('brief') || m.includes('what do i need') || m.includes('follow up') || m.includes('follow-up') || m.includes('followup')) return 'analyst';
+    if (m.includes('handoff') || m.includes('hand off') || m.includes('hand-off') || m.includes('end of day') || m.includes('sign out')) return 'navigator';
     if (m.includes('add') || m.includes('stage') || m.includes('prescribe') || m.includes('medication') || m.includes('problem')) return 'manager';
     if (m.includes('schedule') || m.includes('where is') || m.includes('navigate') || m.includes('inbox') || m.includes('unsigned')) return 'navigator';
     if (m.includes('message') || m.includes('send') || m.includes('remind') || m.includes('appointment') || m.includes('book')) return 'navigator';
@@ -1543,7 +2124,8 @@ async function chat({ message, patientId, conversationId, user, uiContext, attac
             const name = t.function.name;
             // Only global tools when no patient
             return ['get_schedule_summary', 'get_pending_notes', 'get_inbox_summary',
-                'navigate_to', 'query_clinical_data', 'search_guidelines'].includes(name);
+                'navigate_to', 'query_clinical_data', 'search_guidelines',
+                'handoff_summary', 'create_reminder'].includes(name);
         });
 
     // 7. Call LLM with function-calling
@@ -1615,6 +2197,25 @@ async function chat({ message, patientId, conversationId, user, uiContext, attac
                 }
                 if (result.type === 'guideline_evidence') {
                     visualizations.push({ type: 'guideline_evidence', ...result.result });
+                }
+                // Phase 5B: Agentic workflow tool visualizations
+                if (result.type === 'clinical_document') {
+                    visualizations.push({ type: 'clinical_document', ...result.result });
+                }
+                if (result.type === 'billing_suggestion') {
+                    visualizations.push({ type: 'billing_suggestion', ...result.result });
+                }
+                if (result.type === 'visit_prep') {
+                    visualizations.push({ type: 'visit_prep', ...result.result });
+                }
+                if (result.type === 'followup_plan') {
+                    visualizations.push({ type: 'followup_plan', ...result.result });
+                }
+                if (result.type === 'handoff_summary') {
+                    visualizations.push({ type: 'handoff_summary', ...result.result });
+                }
+                if (result.type === 'med_reconciliation') {
+                    visualizations.push({ type: 'med_reconciliation', ...result.result });
                 }
 
                 // Track write actions
