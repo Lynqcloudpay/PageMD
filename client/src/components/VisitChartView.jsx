@@ -7,7 +7,7 @@ import PatientChartPanel from './PatientChartPanel';
 import { useAuth } from '../context/AuthContext';
 import CosignModal from './CosignModal';
 
-const VisitChartView = ({ visitId, patientId, onClose }) => {
+const VisitChartView = ({ visitId, patientId, onClose, standalone = true, onOpenNewVisit }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [activeVisitId, setActiveVisitId] = useState(visitId);
@@ -602,786 +602,803 @@ const VisitChartView = ({ visitId, patientId, onClose }) => {
                 display: block;
             }
         `}</style>
-            <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in print:bg-white print:p-0 print:static">
-                <div className="bg-[#F8FAFC] shadow-2xl w-full max-w-[1100px] h-[90vh] rounded-2xl overflow-hidden flex border border-slate-200 animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white print:rounded-none">
+            {standalone ? (
+                <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-fade-in print:bg-white print:p-0 print:static">
+                    <div className="bg-[#F8FAFC] shadow-2xl w-full max-w-[1100px] h-[90vh] rounded-2xl overflow-hidden flex border border-slate-200 animate-slide-up print:block print:h-auto print:max-w-none print:border-none print:bg-white print:rounded-none">
+                        <VisitChartInner />
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-[#F8FAFC] shadow-2xl w-full h-full rounded-2xl overflow-hidden flex border-2 border-slate-800/10 print:block print:h-auto print:max-w-none print:border-none print:bg-white print:rounded-none relative">
+                    <VisitChartInner />
+                </div>
+            )}
+        </>
+    );
 
-                    {/* EPIC STORYBOARD (Left Sidebar - High Density) */}
-                    <div className="w-[300px] shrink-0 border-r border-slate-200 flex flex-col bg-white overflow-y-auto overflow-x-hidden no-print">
-                        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                            <div className="flex justify-between items-start">
-                                <h2 className="text-[18px] font-bold text-slate-900 leading-tight">
-                                    {patient.last_name}, {patient.first_name}
-                                </h2>
-                                <button
-                                    onClick={() => setShowPatientChart(true)}
-                                    className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                                    title="Open Full Chart Panel"
-                                >
-                                    <ClipboardList className="w-4 h-4" />
-                                </button>
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-x-2 text-[12px] font-bold text-slate-500 uppercase tracking-tight">
-                                <span>{patientAge}Y / {patient.sex || 'U'}</span>
-                                <span className="text-slate-300">|</span>
-                                <span>MRN: {patient.mrn}</span>
-                            </div>
+    function VisitChartInner() {
+        return (
+            <>
+                {/* EPIC STORYBOARD (Left Sidebar - High Density) */}
+                <div className="w-[300px] shrink-0 border-r border-slate-200 flex flex-col bg-white overflow-y-auto overflow-x-hidden no-print">
+                    <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                        <div className="flex justify-between items-start">
+                            <h2 className="text-[18px] font-bold text-slate-900 leading-tight">
+                                {patient.last_name}, {patient.first_name}
+                            </h2>
+                            <button
+                                onClick={() => setShowPatientChart(true)}
+                                className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                                title="Open Full Chart Panel"
+                            >
+                                <ClipboardList className="w-4 h-4" />
+                            </button>
                         </div>
-
-                        <div className="flex-1 p-6 space-y-8">
-                            {/* ALLERGIES */}
-                            <div>
-                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
-                                    Allergies <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                                </div>
-                                <div className="space-y-1.5">
-                                    {allergies.length > 0 ? allergies.map((a, i) => (
-                                        <div key={i} className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[12px] font-bold rounded-sm border border-rose-100">{a.allergen}</div>
-                                    )) : <div className="text-[12px] font-semibold text-emerald-600">NKDA</div>}
-                                </div>
-                            </div>
-
-                            {/* VITALS SNAPSHOT */}
-                            <div>
-                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {[
-                                        { l: 'BP', v: decodeHtmlEntities(vitals?.bp) },
-                                        { l: 'Pulse', v: decodeHtmlEntities(vitals?.pulse) },
-                                        { l: 'Temp', v: decodeHtmlEntities(vitals?.temp) },
-                                        { l: 'O2', v: decodeHtmlEntities(vitals?.o2sat) }
-                                    ].map((v, i) => (
-                                        <div key={i} className="p-2 bg-slate-50 border border-slate-100 rounded text-center">
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase">{v.l}</div>
-                                            <div className="text-[13px] font-bold text-slate-800 tabular-nums">{v.v || '--'}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* PROBLEMS */}
-                            <div>
-                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Problem List</div>
-                                <div className="space-y-1.5">
-                                    {problems.slice(0, 5).map((p, i) => (
-                                        <div key={i} className="text-[12px] font-medium text-slate-600 line-clamp-1 flex items-start gap-1">
-                                            <span className="text-slate-300 mt-1">•</span> {p.problem_name}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* MEDICATIONS */}
-                            <div>
-                                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
-                                    Medications <Pill className="w-3.5 h-3.5 text-slate-400" />
-                                </div>
-                                <div className="space-y-2">
-                                    {medications.length > 0 ? medications.map((m, i) => (
-                                        <div key={i} className="text-[12px] font-medium text-slate-600 line-clamp-1 flex flex-col">
-                                            <div className="flex items-start gap-1">
-                                                <span className="text-slate-300 mt-1">•</span> {decodeHtmlEntities(m.medication_name)}
-                                            </div>
-                                            <div className="pl-4 text-[10px] text-slate-400 italic uppercase">{m.dosage}</div>
-                                        </div>
-                                    )) : <div className="text-[12px] italic text-slate-400">None listed</div>}
-                                </div>
-                            </div>
-
-                            {/* CONTACT */}
-                            <div className="pt-6 border-t border-slate-50 space-y-3">
-                                <div className="flex items-center gap-2.5 text-[12px] font-medium text-slate-500">
-                                    <Phone className="w-3.5 h-3.5 text-slate-300" /> {patient.phone || 'N/A'}
-                                </div>
-                                <div className="flex items-center gap-2.5 text-[12px] font-medium text-slate-500">
-                                    <Mail className="w-3.5 h-3.5 text-slate-300" /> {patient.email || 'N/A'}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-6 border-t border-slate-100">
-                            <button onClick={onClose} className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-500 text-[12px] font-bold uppercase tracking-wider rounded border border-slate-200 transition-colors">Close View</button>
+                        <div className="mt-2 flex flex-wrap gap-x-2 text-[12px] font-bold text-slate-500 uppercase tracking-tight">
+                            <span>{patientAge}Y / {patient.sex || 'U'}</span>
+                            <span className="text-slate-300">|</span>
+                            <span>MRN: {patient.mrn}</span>
                         </div>
                     </div>
 
-                    {/* CLINICAL DOCUMENT LANE */}
-                    <div className="flex-1 flex flex-col bg-slate-100 relative">
-                        {/* Compact Utility Header */}
-                        <div className="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 no-print sticky top-0">
-                            <div className="flex items-center gap-6">
-                                <div className="flex items-center gap-3 text-[13px] font-semibold text-slate-600">
-                                    <span className="uppercase text-[11px] text-slate-400 tracking-widest">Provider:</span>
-                                    <span>{providerName}</span>
-                                </div>
-                                <span className="text-slate-200">|</span>
-
-                                {/* VISIT NAVIGATOR DROPDOWN */}
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                                        className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition-colors"
-                                    >
-                                        {visitDate} <ChevronDown className={`w-3 h-3 transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {isHistoryOpen && (
-                                        <>
-                                            <div className="fixed inset-0 z-30" onClick={() => setIsHistoryOpen(false)} />
-                                            <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl z-40 overflow-hidden animate-slide-up">
-                                                <div className="p-2 bg-slate-50 border-b border-slate-200 text-[9px] font-bold uppercase text-slate-400 tracking-widest">
-                                                    Visit Timeline ({allVisits.length})
-                                                </div>
-                                                <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
-                                                    {allVisits.map((v) => (
-                                                        <button
-                                                            key={v.id}
-                                                            onClick={() => {
-                                                                setActiveVisitId(v.id);
-                                                                setIsHistoryOpen(false);
-                                                            }}
-                                                            className={`w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${activeVisitId === v.id ? 'bg-blue-50/50' : ''}`}
-                                                        >
-                                                            <div className="flex justify-between items-center">
-                                                                <span className={`text-[11px] font-bold ${activeVisitId === v.id ? 'text-blue-600' : 'text-slate-800'}`}>
-                                                                    {format(new Date(v.visit_date), 'MMM d, yyyy')}
-                                                                </span>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    {(v.status || '').toLowerCase().trim() === 'retracted' && (
-                                                                        <span className="text-[8px] font-black text-white bg-red-500 px-1 rounded uppercase tracking-tighter">Retracted</span>
-                                                                    )}
-                                                                    {(v.locked || v.signed) && <Lock className="w-3 h-3 text-slate-300" />}
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-500 truncate">
-                                                                {getChiefComplaint(v)}
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                    <div className="flex-1 p-6 space-y-8">
+                        {/* ALLERGIES */}
+                        <div>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+                                Allergies <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
                             </div>
-
-                            <div className="flex items-center gap-2">
-                                {isSigned && (visit.status || '').toLowerCase() === 'signed' && (
-                                    <>
-                                        <button
-                                            onClick={() => setShowAddendumModal(true)}
-                                            className="px-3 py-1 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full border border-amber-200 transition-all flex items-center gap-1"
-                                        >
-                                            <FilePlus className="w-3 h-3" /> Addendum
-                                        </button>
-                                        <button
-                                            onClick={() => setShowRetractModal(true)}
-                                            className="px-3 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full border border-rose-200 transition-all flex items-center gap-1"
-                                            title="Retract / Void Note (Entered in Error)"
-                                        >
-                                            <RotateCcw className="w-3 h-3" /> Retract
-                                        </button>
-                                    </>
-                                )}
-
-
-                                {(visit.status || '').toLowerCase() === 'preliminary' && user?.id === visit.assigned_attending_id && (
-                                    <>
-                                        <button
-                                            onClick={handleReject}
-                                            className="px-3 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full border border-rose-200 transition-all flex items-center gap-1"
-                                        >
-                                            <RotateCcw className="w-3 h-3" /> Return to Draft
-                                        </button>
-                                        <button
-                                            onClick={() => setShowCosignModal(true)}
-                                            className="px-3 py-1 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full border border-blue-600 transition-all flex items-center gap-1 shadow-sm"
-                                        >
-                                            <CheckCircle2 className="w-3 h-3" /> Cosign & Finalize
-                                        </button>
-                                    </>
-                                )}
-
-                                <button
-                                    onClick={() => setShowAuditModal(true)}
-                                    className="px-3 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-all flex items-center gap-1"
-                                >
-                                    <Shield className="w-3 h-3" /> History
-                                </button>
-                                <button onClick={handlePrint} className="px-3 py-1 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full border border-slate-200 transition-all flex items-center gap-1">
-                                    <Printer className="w-3 h-3" /> Print
-                                </button>
-                                <button
-                                    onClick={onClose}
-                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all"
-                                    title="Close"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
+                            <div className="space-y-1.5">
+                                {allergies.length > 0 ? allergies.map((a, i) => (
+                                    <div key={i} className="px-3 py-1.5 bg-rose-50 text-rose-700 text-[12px] font-bold rounded-sm border border-rose-100">{a.allergen}</div>
+                                )) : <div className="text-[12px] font-semibold text-emerald-600">NKDA</div>}
                             </div>
                         </div>
 
-                        {/* PRELIMINARY BANNER - HIGH VISIBILITY POSITION */}
-                        {(visit.status || '').toLowerCase() === 'preliminary' && (
-                            <div className="bg-amber-500 text-white px-8 py-2 flex items-center justify-between shadow-md z-10 animate-fade-in no-print">
-                                <div className="flex items-center gap-3">
-                                    <AlertCircle className="w-5 h-5" />
-                                    <div className="flex flex-col">
-                                        <span className="text-[12px] font-black uppercase tracking-widest">Preliminary Report - Cosignature Required</span>
-                                        <span className="text-[10px] font-bold opacity-90">Authored by {providerName}. Content is not finalized until attending physician approval.</span>
+                        {/* VITALS SNAPSHOT */}
+                        <div>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Vitals</div>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { l: 'BP', v: decodeHtmlEntities(vitals?.bp) },
+                                    { l: 'Pulse', v: decodeHtmlEntities(vitals?.pulse) },
+                                    { l: 'Temp', v: decodeHtmlEntities(vitals?.temp) },
+                                    { l: 'O2', v: decodeHtmlEntities(vitals?.o2sat) }
+                                ].map((v, i) => (
+                                    <div key={i} className="p-2 bg-slate-50 border border-slate-100 rounded text-center">
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase">{v.l}</div>
+                                        <div className="text-[13px] font-bold text-slate-800 tabular-nums">{v.v || '--'}</div>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <AlertTriangle className="w-5 h-5 opacity-40" />
-                                </div>
+                                ))}
                             </div>
-                        )}
+                        </div>
 
-                        {/* The Professional Clinical Note (Compact) */}
-                        <div id="visit-chart-view" className="flex-1 overflow-y-auto p-6 print:p-0">
-                            <div className="max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-6 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
+                        {/* PROBLEMS */}
+                        <div>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Problem List</div>
+                            <div className="space-y-1.5">
+                                {problems.slice(0, 5).map((p, i) => (
+                                    <div key={i} className="text-[12px] font-medium text-slate-600 line-clamp-1 flex items-start gap-1">
+                                        <span className="text-slate-300 mt-1">•</span> {p.problem_name}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
 
-                                {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
-                                {(visit.status || '').toLowerCase().trim() === 'retracted' && (
-                                    <>
-                                        {/* Screen Watermark (Absolute to container) */}
-                                        <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden no-print">
-                                            <div className="opacity-[0.15] transform -rotate-45 text-rose-500 font-black text-[150px] whitespace-nowrap select-none border-8 border-rose-500 p-10 rounded-3xl">
-                                                RETRACTED
-                                            </div>
+                        {/* MEDICATIONS */}
+                        <div>
+                            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center justify-between">
+                                Medications <Pill className="w-3.5 h-3.5 text-slate-400" />
+                            </div>
+                            <div className="space-y-2">
+                                {medications.length > 0 ? medications.map((m, i) => (
+                                    <div key={i} className="text-[12px] font-medium text-slate-600 line-clamp-1 flex flex-col">
+                                        <div className="flex items-start gap-1">
+                                            <span className="text-slate-300 mt-1">•</span> {decodeHtmlEntities(m.medication_name)}
                                         </div>
-                                        {/* Print Watermark (Fixed to page) */}
-                                        <div className="print-watermark-fixed hidden print:flex">
-                                            <div className="print-watermark-text">
-                                                RETRACTED
+                                        <div className="pl-4 text-[10px] text-slate-400 italic uppercase">{m.dosage}</div>
+                                    </div>
+                                )) : <div className="text-[12px] italic text-slate-400">None listed</div>}
+                            </div>
+                        </div>
+
+                        {/* CONTACT */}
+                        <div className="pt-6 border-t border-slate-50 space-y-3">
+                            <div className="flex items-center gap-2.5 text-[12px] font-medium text-slate-500">
+                                <Phone className="w-3.5 h-3.5 text-slate-300" /> {patient.phone || 'N/A'}
+                            </div>
+                            <div className="flex items-center gap-2.5 text-[12px] font-medium text-slate-500">
+                                <Mail className="w-3.5 h-3.5 text-slate-300" /> {patient.email || 'N/A'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 border-t border-slate-100">
+                        <button onClick={onClose} className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-500 text-[12px] font-bold uppercase tracking-wider rounded border border-slate-200 transition-colors">Close View</button>
+                    </div>
+                </div>
+
+                {/* CLINICAL DOCUMENT LANE */}
+                <div className="flex-1 flex flex-col bg-slate-100 relative">
+                    {/* Compact Utility Header */}
+                    <div className="h-14 bg-white border-b border-slate-200 px-8 flex items-center justify-between z-20 no-print sticky top-0">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3 text-[13px] font-semibold text-slate-600">
+                                <span className="uppercase text-[11px] text-slate-400 tracking-widest">Provider:</span>
+                                <span>{providerName}</span>
+                            </div>
+                            <span className="text-slate-200">|</span>
+
+                            {/* VISIT NAVIGATOR DROPDOWN */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                                    className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                                >
+                                    {visitDate} <ChevronDown className={`w-3 h-3 transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {isHistoryOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-30" onClick={() => setIsHistoryOpen(false)} />
+                                        <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-2xl z-40 overflow-hidden animate-slide-up">
+                                            <div className="p-2 bg-slate-50 border-b border-slate-200 text-[9px] font-bold uppercase text-slate-400 tracking-widest">
+                                                Visit Timeline ({allVisits.length})
+                                            </div>
+                                            <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
+                                                {allVisits.map((v) => (
+                                                    <button
+                                                        key={v.id}
+                                                        onClick={() => {
+                                                            if (onOpenNewVisit && activeVisitId !== v.id) {
+                                                                onOpenNewVisit(v.id);
+                                                            } else {
+                                                                setActiveVisitId(v.id);
+                                                            }
+                                                            setIsHistoryOpen(false);
+                                                        }}
+                                                        className={`w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 ${activeVisitId === v.id ? 'bg-blue-50/50' : ''}`}
+                                                    >
+                                                        <div className="flex justify-between items-center">
+                                                            <span className={`text-[11px] font-bold ${activeVisitId === v.id ? 'text-blue-600' : 'text-slate-800'}`}>
+                                                                {format(new Date(v.visit_date), 'MMM d, yyyy')}
+                                                            </span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                {(v.status || '').toLowerCase().trim() === 'retracted' && (
+                                                                    <span className="text-[8px] font-black text-white bg-red-500 px-1 rounded uppercase tracking-tighter">Retracted</span>
+                                                                )}
+                                                                {(v.locked || v.signed) && <Lock className="w-3 h-3 text-slate-300" />}
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-[10px] text-slate-500 truncate">
+                                                            {getChiefComplaint(v)}
+                                                        </div>
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
                                     </>
                                 )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            {isSigned && (visit.status || '').toLowerCase() === 'signed' && (
+                                <>
+                                    <button
+                                        onClick={() => setShowAddendumModal(true)}
+                                        className="px-3 py-1 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-full border border-amber-200 transition-all flex items-center gap-1"
+                                    >
+                                        <FilePlus className="w-3 h-3" /> Addendum
+                                    </button>
+                                    <button
+                                        onClick={() => setShowRetractModal(true)}
+                                        className="px-3 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full border border-rose-200 transition-all flex items-center gap-1"
+                                        title="Retract / Void Note (Entered in Error)"
+                                    >
+                                        <RotateCcw className="w-3 h-3" /> Retract
+                                    </button>
+                                </>
+                            )}
 
 
-                                {/* Preliminary Banner Removed from here and moved to top for visibility */}
+                            {(visit.status || '').toLowerCase() === 'preliminary' && user?.id === visit.assigned_attending_id && (
+                                <>
+                                    <button
+                                        onClick={handleReject}
+                                        className="px-3 py-1 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-full border border-rose-200 transition-all flex items-center gap-1"
+                                    >
+                                        <RotateCcw className="w-3 h-3" /> Return to Draft
+                                    </button>
+                                    <button
+                                        onClick={() => setShowCosignModal(true)}
+                                        className="px-3 py-1 text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full border border-blue-600 transition-all flex items-center gap-1 shadow-sm"
+                                    >
+                                        <CheckCircle2 className="w-3 h-3" /> Cosign & Finalize
+                                    </button>
+                                </>
+                            )}
 
-                                {isPreliminary && (
-                                    <div className="bg-amber-500 text-white p-4 rounded-lg mb-6 flex items-center justify-between shadow-md no-print">
-                                        <div className="flex items-center gap-3">
-                                            <ClipboardList className="w-6 h-6" />
-                                            <div>
-                                                <h3 className="text-sm font-bold uppercase tracking-widest">Preliminary Report - Cosignature Required</h3>
-                                                <p className="text-[11px] text-amber-50 font-medium">
-                                                    This clinical note requires review and cosignature by an attending physician.
-                                                </p>
-                                            </div>
+                            <button
+                                onClick={() => setShowAuditModal(true)}
+                                className="px-3 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full border border-indigo-200 transition-all flex items-center gap-1"
+                            >
+                                <Shield className="w-3 h-3" /> History
+                            </button>
+                            <button onClick={handlePrint} className="px-3 py-1 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full border border-slate-200 transition-all flex items-center gap-1">
+                                <Printer className="w-3 h-3" /> Print
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all"
+                                title="Close"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* PRELIMINARY BANNER - HIGH VISIBILITY POSITION */}
+                    {(visit.status || '').toLowerCase() === 'preliminary' && (
+                        <div className="bg-amber-500 text-white px-8 py-2 flex items-center justify-between shadow-md z-10 animate-fade-in no-print">
+                            <div className="flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5" />
+                                <div className="flex flex-col">
+                                    <span className="text-[12px] font-black uppercase tracking-widest">Preliminary Report - Cosignature Required</span>
+                                    <span className="text-[10px] font-bold opacity-90">Authored by {providerName}. Content is not finalized until attending physician approval.</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 opacity-40" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* The Professional Clinical Note (Compact) */}
+                    <div id="visit-chart-view" className="flex-1 overflow-y-auto p-6 print:p-0">
+                        <div className="max-w-4xl mx-auto bg-white shadow-sm border border-slate-200 min-h-full p-10 space-y-6 print-document-sheet print:border-0 print:shadow-none print:max-w-none">
+
+                            {/* 1. REFINED CLINIC HEADER (Azure Theme) */}
+                            {(visit.status || '').toLowerCase().trim() === 'retracted' && (
+                                <>
+                                    {/* Screen Watermark (Absolute to container) */}
+                                    <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden no-print">
+                                        <div className="opacity-[0.15] transform -rotate-45 text-rose-500 font-black text-[150px] whitespace-nowrap select-none border-8 border-rose-500 p-10 rounded-3xl">
+                                            RETRACTED
                                         </div>
                                     </div>
-                                )}
-                                {isRetracted && (
-                                    <div className="avoid-cut mb-8 p-4 bg-rose-100 border-l-8 border-rose-600 rounded-r-lg shadow-sm">
-                                        <div className="flex items-start gap-3">
-                                            <AlertCircle className="w-6 h-6 text-rose-700 mt-0.5 shrink-0" />
-                                            <div>
-                                                <h3 className="text-[16px] font-black text-rose-900 uppercase tracking-tight">Entered in Error</h3>
-                                                <p className="text-[12px] font-bold text-rose-800 mt-1">
-                                                    This clinical record has been retracted and voided. The content below is retained for legal auditing purposes only and should not be used for clinical decision making.
-                                                </p>
-                                                {/* If we had retraction details, we would show them here */}
-                                            </div>
+                                    {/* Print Watermark (Fixed to page) */}
+                                    <div className="print-watermark-fixed hidden print:flex">
+                                        <div className="print-watermark-text">
+                                            RETRACTED
                                         </div>
                                     </div>
-                                )}
-                                <div className="flex justify-between items-center pb-6 border-b border-blue-100 avoid-cut">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-40 h-24 flex items-center justify-center shrink-0 bg-white rounded-lg border border-blue-50 p-1">
-                                            <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain" />
-                                        </div>
+                                </>
+                            )}
+
+
+                            {/* Preliminary Banner Removed from here and moved to top for visibility */}
+
+                            {isPreliminary && (
+                                <div className="bg-amber-500 text-white p-4 rounded-lg mb-6 flex items-center justify-between shadow-md no-print">
+                                    <div className="flex items-center gap-3">
+                                        <ClipboardList className="w-6 h-6" />
                                         <div>
-                                            <h1 className="text-2xl font-bold text-blue-900 tracking-tight mb-1">{clinicInfo.name}</h1>
-                                            <div className="text-[11px] text-slate-500 font-medium flex flex-col gap-0.5">
-                                                <span>{clinicInfo.address.replace(/\n/g, ', ')}</span>
-                                                <span className="text-blue-600 font-semibold">PH: {clinicInfo.phone}</span>
-                                            </div>
+                                            <h3 className="text-sm font-bold uppercase tracking-widest">Preliminary Report - Cosignature Required</h3>
+                                            <p className="text-[11px] text-amber-50 font-medium">
+                                                This clinical note requires review and cosignature by an attending physician.
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end gap-2">
-                                        <div className="bg-blue-50/50 text-blue-700 px-3 py-1 rounded-md border border-blue-100/50 flex flex-col items-end">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider">
-                                                {visit?.note_type === 'telehealth' ? 'Telehealth Visit' : 'Clinical Record'}
+                                </div>
+                            )}
+                            {isRetracted && (
+                                <div className="avoid-cut mb-8 p-4 bg-rose-100 border-l-8 border-rose-600 rounded-r-lg shadow-sm">
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="w-6 h-6 text-rose-700 mt-0.5 shrink-0" />
+                                        <div>
+                                            <h3 className="text-[16px] font-black text-rose-900 uppercase tracking-tight">Entered in Error</h3>
+                                            <p className="text-[12px] font-bold text-rose-800 mt-1">
+                                                This clinical record has been retracted and voided. The content below is retained for legal auditing purposes only and should not be used for clinical decision making.
+                                            </p>
+                                            {/* If we had retraction details, we would show them here */}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center pb-6 border-b border-blue-100 avoid-cut">
+                                <div className="flex items-center gap-6">
+                                    <div className="w-40 h-24 flex items-center justify-center shrink-0 bg-white rounded-lg border border-blue-50 p-1">
+                                        <img src={clinicInfo.logo || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f8fafc' rx='8'/%3E%3Crect x='60' y='45' width='80' height='90' fill='none' stroke='%23cbd5e1' stroke-width='3' rx='4'/%3E%3Crect x='75' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='60' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='75' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='105' y='85' width='20' height='15' fill='%23cbd5e1' rx='2'/%3E%3Crect x='88' y='110' width='24' height='25' fill='%23cbd5e1' rx='2'/%3E%3Ctext x='100' y='165' text-anchor='middle' font-family='Arial,sans-serif' font-size='14' font-weight='600' fill='%2394a3b8'%3ENO LOGO%3C/text%3E%3C/svg%3E"} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-blue-900 tracking-tight mb-1">{clinicInfo.name}</h1>
+                                        <div className="text-[11px] text-slate-500 font-medium flex flex-col gap-0.5">
+                                            <span>{clinicInfo.address.replace(/\n/g, ', ')}</span>
+                                            <span className="text-blue-600 font-semibold">PH: {clinicInfo.phone}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right flex flex-col items-end gap-2">
+                                    <div className="bg-blue-50/50 text-blue-700 px-3 py-1 rounded-md border border-blue-100/50 flex flex-col items-end">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">
+                                            {visit?.note_type === 'telehealth' ? 'Telehealth Visit' : 'Clinical Record'}
+                                        </span>
+                                        {isSigned && (
+                                            <span className="text-[9px] font-medium text-blue-500">
+                                                {snapshot ? `Snapshot: ${format(new Date(visit.note_signed_at), 'MM/dd/yy')}` : '⚠️ Live Data (Snapshot Missing)'}
                                             </span>
-                                            {isSigned && (
-                                                <span className="text-[9px] font-medium text-blue-500">
-                                                    {snapshot ? `Snapshot: ${format(new Date(visit.note_signed_at), 'MM/dd/yy')}` : '⚠️ Live Data (Snapshot Missing)'}
-                                                </span>
-                                            )}
-                                        </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="text-[15px] font-bold text-slate-700 tracking-tight">{visitDate}</div>
+                                        <div className="text-[9px] text-slate-400 uppercase tracking-wider">Examination Date</div>
+                                    </div>
+                                    <div className="text-[9px] text-slate-300 font-mono tracking-tight mt-1">REF: {activeVisitId?.substring(0, 14).toUpperCase()}</div>
+                                </div>
+                            </div>
+
+                            {/* 2. COMPACT PATIENT DEMOGRAPHICS */}
+                            <div className="relative avoid-cut py-4 px-6 my-4 bg-blue-50/20 rounded-lg border border-blue-100/50 flex gap-8 overflow-hidden">
+                                <div className="flex-1 grid grid-cols-3 gap-x-8 relative z-10 text-[11px]">
+                                    <div className="space-y-2">
                                         <div>
-                                            <div className="text-[15px] font-bold text-slate-700 tracking-tight">{visitDate}</div>
-                                            <div className="text-[9px] text-slate-400 uppercase tracking-wider">Examination Date</div>
+                                            <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Patient</div>
+                                            <div className="font-bold text-blue-950 text-[14px] leading-tight tracking-tight">{patient.last_name}, {patient.first_name}</div>
+                                            <div className="text-[11px] text-slate-500 font-medium">MRN: {patient.mrn}</div>
                                         </div>
-                                        <div className="text-[9px] text-slate-300 font-mono tracking-tight mt-1">REF: {activeVisitId?.substring(0, 14).toUpperCase()}</div>
+                                        <div className="font-semibold text-slate-600 text-[12px]">{patientDOB} <span className="text-slate-300 mx-1">/</span> {patientAge}Y <span className="text-slate-300 mx-1">/</span> {patient.sex}</div>
                                     </div>
-                                </div>
 
-                                {/* 2. COMPACT PATIENT DEMOGRAPHICS */}
-                                <div className="relative avoid-cut py-4 px-6 my-4 bg-blue-50/20 rounded-lg border border-blue-100/50 flex gap-8 overflow-hidden">
-                                    <div className="flex-1 grid grid-cols-3 gap-x-8 relative z-10 text-[11px]">
-                                        <div className="space-y-2">
-                                            <div>
-                                                <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Patient</div>
-                                                <div className="font-bold text-blue-950 text-[14px] leading-tight tracking-tight">{patient.last_name}, {patient.first_name}</div>
-                                                <div className="text-[11px] text-slate-500 font-medium">MRN: {patient.mrn}</div>
-                                            </div>
-                                            <div className="font-semibold text-slate-600 text-[12px]">{patientDOB} <span className="text-slate-300 mx-1">/</span> {patientAge}Y <span className="text-slate-300 mx-1">/</span> {patient.sex}</div>
-                                        </div>
-
-                                        <div className="space-y-2 border-l border-blue-100/60 pl-6">
-                                            <div>
-                                                <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Billing & Payer</div>
-                                                <div className="font-semibold text-slate-700 uppercase text-[11px] mb-0.5">{patient.insurance_name || 'Self-Pay'}</div>
-                                                <div className="font-medium text-blue-600 text-[11px]">PR: {providerName}</div>
-                                            </div>
-                                            <div className="flex flex-col gap-0.5 text-slate-500 font-medium text-[10px]">
-                                                <span>{patient.phone}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1 pl-6 border-l border-blue-100/60">
-                                            <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Address</div>
-                                            <div className="text-slate-600 font-medium text-[10px] leading-snug">
-                                                {patient.address_line1}<br />
-                                                {[patient.city, patient.state, patient.zip].filter(Boolean).join(', ')}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* META HEADER (CHIEF COMPLAINT) */}
-                                <div className="avoid-cut mb-4 pt-2 pb-2 border-b border-blue-50 flex justify-between items-center px-2">
-                                    <div className="flex gap-2 items-center shrink-0">
-                                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Reason for Visit:</span>
-                                        <div className="text-[12px] font-bold text-slate-700 uppercase tracking-wide">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
-                                    </div>
-                                    {visit?.note_type === 'telehealth' && (
-                                        <div className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100 flex items-center gap-1.5">
-                                            <Globe className="w-3 h-3" /> Telehealth Video Visit
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* ADDENDUM NOTICE BANNER */}
-                                {addendums.length > 0 && (
-                                    <div className="avoid-cut mb-4 py-3 px-4 bg-amber-50 rounded-xl border-2 border-amber-300 flex items-center gap-3 shadow-sm">
-                                        <div className="p-1.5 bg-amber-400 rounded-full">
-                                            <AlertCircle className="w-4 h-4 text-white" />
-                                        </div>
+                                    <div className="space-y-2 border-l border-blue-100/60 pl-6">
                                         <div>
-                                            <div className="text-[11px] font-black text-amber-800 uppercase tracking-wider">
-                                                ⚠️ This Note Contains {addendums.length} Addendum{addendums.length > 1 ? 's' : ''}
-                                            </div>
-                                            <div className="text-[10px] text-amber-600 font-medium">
-                                                Please scroll to the end of this document to view all clinical addendums.
-                                            </div>
+                                            <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Billing & Payer</div>
+                                            <div className="font-semibold text-slate-700 uppercase text-[11px] mb-0.5">{patient.insurance_name || 'Self-Pay'}</div>
+                                            <div className="font-medium text-blue-600 text-[11px]">PR: {providerName}</div>
                                         </div>
+                                        <div className="flex flex-col gap-0.5 text-slate-500 font-medium text-[10px]">
+                                            <span>{patient.phone}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1 pl-6 border-l border-blue-100/60">
+                                        <div className="text-blue-400 font-bold uppercase text-[9px] tracking-wide mb-0.5">Address</div>
+                                        <div className="text-slate-600 font-medium text-[10px] leading-snug">
+                                            {patient.address_line1}<br />
+                                            {[patient.city, patient.state, patient.zip].filter(Boolean).join(', ')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* META HEADER (CHIEF COMPLAINT) */}
+                            <div className="avoid-cut mb-4 pt-2 pb-2 border-b border-blue-50 flex justify-between items-center px-2">
+                                <div className="flex gap-2 items-center shrink-0">
+                                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Reason for Visit:</span>
+                                    <div className="text-[12px] font-bold text-slate-700 uppercase tracking-wide">{noteData.chiefComplaint || visit?.reason || 'Routine follow-up'}</div>
+                                </div>
+                                {visit?.note_type === 'telehealth' && (
+                                    <div className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-blue-100 flex items-center gap-1.5">
+                                        <Globe className="w-3 h-3" /> Telehealth Video Visit
                                     </div>
                                 )}
-                                {/* 3. CLINICAL NARRATIVE */}
-                                <div className="space-y-12 pb-16">
-                                    {/* HPI */}
-                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
-                                        <span className="section-label">History of Present Illness</span>
-                                        <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap">{noteData.hpi || 'No HPI recorded.'}</div>
-                                    </div>
+                            </div>
 
-                                    {/* ROS */}
-                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
-                                        <span className="section-label">Review of Systems</span>
-                                        <div className="text-[13px] leading-relaxed text-slate-700" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />
+                            {/* ADDENDUM NOTICE BANNER */}
+                            {addendums.length > 0 && (
+                                <div className="avoid-cut mb-4 py-3 px-4 bg-amber-50 rounded-xl border-2 border-amber-300 flex items-center gap-3 shadow-sm">
+                                    <div className="p-1.5 bg-amber-400 rounded-full">
+                                        <AlertCircle className="w-4 h-4 text-white" />
                                     </div>
-
-                                    {/* ALLERGIES BAR (Post-ROS) */}
-                                    <div className="avoid-cut mt-6 py-2.5 px-4 bg-rose-50/30 rounded-xl border border-rose-100/50 flex gap-4 items-center">
-                                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest shrink-0">Allergies</span>
-                                        <div className="flex flex-wrap gap-2 text-[11px]">
-                                            {allergies.length > 0 ? (
-                                                allergies.map((a, i) => <span key={i} className="font-black text-rose-700">! {a.allergen}</span>)
-                                            ) : (
-                                                <span className="font-black text-emerald-600 uppercase tracking-tighter italic">Negative / NKDA</span>
-                                            )}
+                                    <div>
+                                        <div className="text-[11px] font-black text-amber-800 uppercase tracking-wider">
+                                            ⚠️ This Note Contains {addendums.length} Addendum{addendums.length > 1 ? 's' : ''}
+                                        </div>
+                                        <div className="text-[10px] text-amber-600 font-medium">
+                                            Please scroll to the end of this document to view all clinical addendums.
                                         </div>
                                     </div>
+                                </div>
+                            )}
+                            {/* 3. CLINICAL NARRATIVE */}
+                            <div className="space-y-12 pb-16">
+                                {/* HPI */}
+                                <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
+                                    <span className="section-label">History of Present Illness</span>
+                                    <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap">{noteData.hpi || 'No HPI recorded.'}</div>
+                                </div>
 
-                                    {/* COMPACT 3-COLUMN CLINICAL HISTORY (PMHx, Meds, Social) */}
-                                    <div className="grid grid-cols-3 gap-8 mt-4 pt-4 border-t border-blue-50 avoid-cut">
-                                        <div className="space-y-2">
-                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Observation & History</span>
-                                            <ul className="text-[11px] font-medium text-slate-600 space-y-0.5">
-                                                {problems.length > 0 ? problems.map((p, i) => <li key={i} className="flex items-center gap-1.5"> • {p.problem_name}</li>) : <li className="italic text-slate-400">Non-contributory.</li>}
-                                            </ul>
-                                        </div>
-                                        <div className="space-y-2 border-l border-r border-blue-50 px-6">
-                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Home Medications</span>
-                                            <ul className="text-[11px] font-semibold text-slate-700 space-y-1">
-                                                {medications.length > 0 ? medications.map((m, i) => <li key={i} className="flex flex-col border-b border-blue-50/50 pb-0.5"><span>{decodeHtmlEntities(m.medication_name)}</span> <span className="text-[9px] text-slate-400 font-medium uppercase">{m.dosage}</span></li>) : <li className="italic text-slate-400">No active medications.</li>}
-                                            </ul>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Social & Family</span>
-                                            <div className="text-[11px] font-medium text-slate-600 space-y-2">
-                                                <div className="bg-blue-50/30 p-2 rounded border border-blue-50">
-                                                    <div>Tobacco: <span className="text-slate-800">{socialHistory?.smoking_status || 'Never'}</span> / EtOh: <span className="text-slate-800">{socialHistory?.alcohol_use || 'None'}</span></div>
-                                                </div>
-                                                <div className="text-[10px] leading-tight">
-                                                    <span className="text-blue-500 font-bold uppercase text-[8px] mr-1">Family History:</span>
-                                                    {familyHistory.length > 0 ? familyHistory.map(f => f.condition).join(', ') : 'Non-contributory.'}
-                                                </div>
+                                {/* ROS */}
+                                <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
+                                    <span className="section-label">Review of Systems</span>
+                                    <div className="text-[13px] leading-relaxed text-slate-700" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.rosNotes) }} />
+                                </div>
+
+                                {/* ALLERGIES BAR (Post-ROS) */}
+                                <div className="avoid-cut mt-6 py-2.5 px-4 bg-rose-50/30 rounded-xl border border-rose-100/50 flex gap-4 items-center">
+                                    <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest shrink-0">Allergies</span>
+                                    <div className="flex flex-wrap gap-2 text-[11px]">
+                                        {allergies.length > 0 ? (
+                                            allergies.map((a, i) => <span key={i} className="font-black text-rose-700">! {a.allergen}</span>)
+                                        ) : (
+                                            <span className="font-black text-emerald-600 uppercase tracking-tighter italic">Negative / NKDA</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* COMPACT 3-COLUMN CLINICAL HISTORY (PMHx, Meds, Social) */}
+                                <div className="grid grid-cols-3 gap-8 mt-4 pt-4 border-t border-blue-50 avoid-cut">
+                                    <div className="space-y-2">
+                                        <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Observation & History</span>
+                                        <ul className="text-[11px] font-medium text-slate-600 space-y-0.5">
+                                            {problems.length > 0 ? problems.map((p, i) => <li key={i} className="flex items-center gap-1.5"> • {p.problem_name}</li>) : <li className="italic text-slate-400">Non-contributory.</li>}
+                                        </ul>
+                                    </div>
+                                    <div className="space-y-2 border-l border-r border-blue-50 px-6">
+                                        <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Home Medications</span>
+                                        <ul className="text-[11px] font-semibold text-slate-700 space-y-1">
+                                            {medications.length > 0 ? medications.map((m, i) => <li key={i} className="flex flex-col border-b border-blue-50/50 pb-0.5"><span>{decodeHtmlEntities(m.medication_name)}</span> <span className="text-[9px] text-slate-400 font-medium uppercase">{m.dosage}</span></li>) : <li className="italic text-slate-400">No active medications.</li>}
+                                        </ul>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Social & Family</span>
+                                        <div className="text-[11px] font-medium text-slate-600 space-y-2">
+                                            <div className="bg-blue-50/30 p-2 rounded border border-blue-50">
+                                                <div>Tobacco: <span className="text-slate-800">{socialHistory?.smoking_status || 'Never'}</span> / EtOh: <span className="text-slate-800">{socialHistory?.alcohol_use || 'None'}</span></div>
+                                            </div>
+                                            <div className="text-[10px] leading-tight">
+                                                <span className="text-blue-500 font-bold uppercase text-[8px] mr-1">Family History:</span>
+                                                {familyHistory.length > 0 ? familyHistory.map(f => f.condition).join(', ') : 'Non-contributory.'}
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    {/* VITALS */}
+                                {/* VITALS */}
+                                <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
+                                    <span className="section-label text-blue-400 text-[10px] mb-2">Physical Observations (Vitals)</span>
+                                    <div className="grid grid-cols-5 gap-4 mt-2">
+                                        {[
+                                            { label: 'B/P', value: decodeHtmlEntities(vitals?.bp), unit: 'mmHg' },
+                                            { label: 'Pulse', value: decodeHtmlEntities(vitals?.pulse), unit: 'bpm' },
+                                            { label: 'Temp', value: decodeHtmlEntities(vitals?.temp), unit: '°F' },
+                                            { label: 'O2 Sat', value: decodeHtmlEntities(vitals?.o2sat), unit: '%' },
+                                            { label: 'BMI', value: decodeHtmlEntities(vitals?.bmi), unit: '' }
+                                        ].map((v, i) => (
+                                            <div key={i} className="bg-blue-50/30 border border-blue-50 rounded px-3 py-2 text-center">
+                                                <div className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">{v.label}</div>
+                                                <div className="text-[14px] font-bold text-slate-700 tabular-nums">{v.value || '--'} <span className="text-[10px] font-medium text-slate-400">{v.unit}</span></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* PE */}
+                                <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
+                                    <span className="section-label">Physical Examination</span>
+                                    <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />
+                                </div>
+
+                                {/* RESULTS / DATA */}
+                                {(noteData.results || visitDocuments.length > 0) && (
                                     <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
-                                        <span className="section-label text-blue-400 text-[10px] mb-2">Physical Observations (Vitals)</span>
-                                        <div className="grid grid-cols-5 gap-4 mt-2">
-                                            {[
-                                                { label: 'B/P', value: decodeHtmlEntities(vitals?.bp), unit: 'mmHg' },
-                                                { label: 'Pulse', value: decodeHtmlEntities(vitals?.pulse), unit: 'bpm' },
-                                                { label: 'Temp', value: decodeHtmlEntities(vitals?.temp), unit: '°F' },
-                                                { label: 'O2 Sat', value: decodeHtmlEntities(vitals?.o2sat), unit: '%' },
-                                                { label: 'BMI', value: decodeHtmlEntities(vitals?.bmi), unit: '' }
-                                            ].map((v, i) => (
-                                                <div key={i} className="bg-blue-50/30 border border-blue-50 rounded px-3 py-2 text-center">
-                                                    <div className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">{v.label}</div>
-                                                    <div className="text-[14px] font-bold text-slate-700 tabular-nums">{v.value || '--'} <span className="text-[10px] font-medium text-slate-400">{v.unit}</span></div>
+                                        <span className="section-label">Results & Data</span>
+                                        {noteData.results && !noteData.results.includes('Imported results will appear here') && (
+                                            <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>
+                                        )}
+                                        {visitDocuments.length > 0 && (
+                                            <div className="grid grid-cols-2 gap-8 mt-4">
+                                                {visitDocuments.map(doc => (
+                                                    <ResultImageView key={doc.id} doc={doc} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* ASSESSMENT */}
+                                <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
+                                    <span className="section-label text-slate-900 border-none">Assessment & Diagnoses</span>
+                                    <div className="space-y-1.5 font-bold text-[13px] text-slate-700">
+                                        {noteData.assessment ? noteData.assessment.split('\n').filter(line => line.trim()).map((line, i) => (
+                                            <div key={i} className="flex gap-2.5">
+                                                <span className="text-slate-400 font-medium">{i + 1}.</span>
+                                                {line}
+                                            </div>
+                                        )) : <div className="text-slate-400 italic">No diagnostic data.</div>}
+                                    </div>
+                                </div>
+
+                                {/* PLAN */}
+                                <div className="space-y-6 pt-8 mt-8 border-t border-blue-50 avoid-cut">
+                                    <span className="section-label">Medical Plan & Interventions</span>
+                                    <div className="space-y-8 pl-3">
+                                        {noteData.planStructured?.length > 0 ? noteData.planStructured.map((p, i) => (
+                                            <div key={i} className="space-y-3">
+                                                <div className="text-[13px] font-bold text-slate-800 border-b border-blue-50 pb-1.5">{p.diagnosis}</div>
+                                                <ul className="pl-8 space-y-1.5">
+                                                    {p.orders.map((o, j) => (
+                                                        <li key={j} className="text-[13px] text-slate-700 font-medium flex items-center gap-2.5"><div className="w-1.5 h-1.5 bg-blue-300 rounded-full"></div> {o}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )) : <div className="text-[13px] text-slate-700 whitespace-pre-wrap">{noteData.plan || 'No specific clinical orders recorded.'}</div>}
+                                    </div>
+                                </div>
+
+                                {/* PLAN OF CARE */}
+                                {noteData.carePlan && (
+                                    <div className="space-y-6 pt-8 mt-8 border-t border-blue-50 avoid-cut">
+                                        <span className="section-label">Plan of Care</span>
+                                        <div className="text-[13px] leading-relaxed text-slate-700 pl-3 whitespace-pre-wrap">{noteData.carePlan}</div>
+                                    </div>
+                                )}
+
+                                {/* FOLLOW UP */}
+                                <div className="pt-6 border-t border-slate-100 avoid-cut">
+                                    <div className="inline-block bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
+                                        <span className="text-[9px] font-medium text-slate-400 block mb-0.5">Follow Up Instruction</span>
+                                        <span className="text-[12px] font-bold text-slate-700 italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
+                                    </div>
+                                </div>
+
+                                {/* ADDENDUMS SECTION */}
+                                {addendums.length > 0 && (
+                                    <div className="mt-8 pt-6 border-t-2 border-amber-200 avoid-cut space-y-4">
+                                        <span className="section-label text-amber-600">Clinical Addendums ({addendums.length})</span>
+                                        <div className="space-y-3">
+                                            {addendums.map((addendum, idx) => (
+                                                <div key={idx} className="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Addendum #{idx + 1}</span>
+                                                        <span className="text-[9px] text-amber-600 font-medium">
+                                                            {addendum.date ? format(new Date(addendum.date), 'MM/dd/yyyy HH:mm') : ''}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-[12px] text-slate-700 leading-relaxed whitespace-pre-wrap">{addendum.text || addendum}</div>
+                                                    {addendum.author && (
+                                                        <div className="mt-2 text-[10px] font-semibold text-amber-700 italic">/s/ {addendum.author}</div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
+                                )}
 
-                                    {/* PE */}
-                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
-                                        <span className="section-label">Physical Examination</span>
-                                        <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdownBold(noteData.peNotes) }} />
-                                    </div>
-
-                                    {/* RESULTS / DATA */}
-                                    {(noteData.results || visitDocuments.length > 0) && (
-                                        <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
-                                            <span className="section-label">Results & Data</span>
-                                            {noteData.results && !noteData.results.includes('Imported results will appear here') && (
-                                                <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap mb-8">{noteData.results}</div>
-                                            )}
-                                            {visitDocuments.length > 0 && (
-                                                <div className="grid grid-cols-2 gap-8 mt-4">
-                                                    {visitDocuments.map(doc => (
-                                                        <ResultImageView key={doc.id} doc={doc} />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* ASSESSMENT */}
-                                    <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
-                                        <span className="section-label text-slate-900 border-none">Assessment & Diagnoses</span>
-                                        <div className="space-y-1.5 font-bold text-[13px] text-slate-700">
-                                            {noteData.assessment ? noteData.assessment.split('\n').filter(line => line.trim()).map((line, i) => (
-                                                <div key={i} className="flex gap-2.5">
-                                                    <span className="text-slate-400 font-medium">{i + 1}.</span>
-                                                    {line}
-                                                </div>
-                                            )) : <div className="text-slate-400 italic">No diagnostic data.</div>}
-                                        </div>
-                                    </div>
-
-                                    {/* PLAN */}
-                                    <div className="space-y-6 pt-8 mt-8 border-t border-blue-50 avoid-cut">
-                                        <span className="section-label">Medical Plan & Interventions</span>
-                                        <div className="space-y-8 pl-3">
-                                            {noteData.planStructured?.length > 0 ? noteData.planStructured.map((p, i) => (
-                                                <div key={i} className="space-y-3">
-                                                    <div className="text-[13px] font-bold text-slate-800 border-b border-blue-50 pb-1.5">{p.diagnosis}</div>
-                                                    <ul className="pl-8 space-y-1.5">
-                                                        {p.orders.map((o, j) => (
-                                                            <li key={j} className="text-[13px] text-slate-700 font-medium flex items-center gap-2.5"><div className="w-1.5 h-1.5 bg-blue-300 rounded-full"></div> {o}</li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )) : <div className="text-[13px] text-slate-700 whitespace-pre-wrap">{noteData.plan || 'No specific clinical orders recorded.'}</div>}
-                                        </div>
-                                    </div>
-
-                                    {/* PLAN OF CARE */}
-                                    {noteData.carePlan && (
-                                        <div className="space-y-6 pt-8 mt-8 border-t border-blue-50 avoid-cut">
-                                            <span className="section-label">Plan of Care</span>
-                                            <div className="text-[13px] leading-relaxed text-slate-700 pl-3 whitespace-pre-wrap">{noteData.carePlan}</div>
-                                        </div>
-                                    )}
-
-                                    {/* FOLLOW UP */}
-                                    <div className="pt-6 border-t border-slate-100 avoid-cut">
-                                        <div className="inline-block bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
-                                            <span className="text-[9px] font-medium text-slate-400 block mb-0.5">Follow Up Instruction</span>
-                                            <span className="text-[12px] font-bold text-slate-700 italic">{noteData.followUp || visit.follow_up_instructions || 'PRN / AS NEEDED'}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* ADDENDUMS SECTION */}
-                                    {addendums.length > 0 && (
-                                        <div className="mt-8 pt-6 border-t-2 border-amber-200 avoid-cut space-y-4">
-                                            <span className="section-label text-amber-600">Clinical Addendums ({addendums.length})</span>
-                                            <div className="space-y-3">
-                                                {addendums.map((addendum, idx) => (
-                                                    <div key={idx} className="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Addendum #{idx + 1}</span>
-                                                            <span className="text-[9px] text-amber-600 font-medium">
-                                                                {addendum.date ? format(new Date(addendum.date), 'MM/dd/yyyy HH:mm') : ''}
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-[12px] text-slate-700 leading-relaxed whitespace-pre-wrap">{addendum.text || addendum}</div>
-                                                        {addendum.author && (
-                                                            <div className="mt-2 text-[10px] font-semibold text-amber-700 italic">/s/ {addendum.author}</div>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                {/* AUTHENTICATION FOOTER */}
+                                <div className="mt-8 pt-4 border-t border-blue-100 avoid-cut">
+                                    <div className="flex justify-between items-end">
+                                        <div className="space-y-1">
+                                            <div className="text-[16px] font-bold italic text-blue-900 tracking-tight">/s/ {providerName}</div>
+                                            <div className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border ${(visit.status || '').toLowerCase() === 'preliminary' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                {(visit.status || '').toLowerCase() === 'preliminary' ? 'Preliminary Electronic Signature' : 'Electronic Signature Verified'}
+                                                {visit.note_signed_at && ` • ${format(new Date(visit.note_signed_at), 'MM/dd/yyyy HH:mm')}`}
                                             </div>
-                                        </div>
-                                    )}
 
-                                    {/* AUTHENTICATION FOOTER */}
-                                    <div className="mt-8 pt-4 border-t border-blue-100 avoid-cut">
-                                        <div className="flex justify-between items-end">
-                                            <div className="space-y-1">
-                                                <div className="text-[16px] font-bold italic text-blue-900 tracking-tight">/s/ {providerName}</div>
-                                                <div className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border ${(visit.status || '').toLowerCase() === 'preliminary' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                                                    <CheckCircle2 className="w-3 h-3" />
-                                                    {(visit.status || '').toLowerCase() === 'preliminary' ? 'Preliminary Electronic Signature' : 'Electronic Signature Verified'}
-                                                    {visit.note_signed_at && ` • ${format(new Date(visit.note_signed_at), 'MM/dd/yyyy HH:mm')}`}
-                                                </div>
-
-                                                {visit.cosigned_at && (
-                                                    <div className="mt-4 pt-4 border-t border-blue-100/50 space-y-3">
-                                                        <div className="text-[14px] font-bold italic text-slate-700 leading-relaxed pl-3 border-l-2 border-blue-200">
-                                                            "{visit.attestation_text || 'I have reviewed the documentation and concur with the assessment and plan.'}"
+                                            {visit.cosigned_at && (
+                                                <div className="mt-4 pt-4 border-t border-blue-100/50 space-y-3">
+                                                    <div className="text-[14px] font-bold italic text-slate-700 leading-relaxed pl-3 border-l-2 border-blue-200">
+                                                        "{visit.attestation_text || 'I have reviewed the documentation and concur with the assessment and plan.'}"
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="text-[16px] font-bold italic text-blue-950 tracking-tight">/s/ {visit.cosigned_by_first_name} {visit.cosigned_by_last_name}, {visit.cosigner_role || 'Attending'}</div>
+                                                        <div className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100 w-fit">
+                                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                            Cosignature Verified • {format(new Date(visit.cosigned_at), 'MM/dd/yyyy HH:mm')}
+                                                            <span className="text-emerald-300 ml-1">[{visit.authorship_model || 'Addendum'}]</span>
                                                         </div>
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="text-[16px] font-bold italic text-blue-950 tracking-tight">/s/ {visit.cosigned_by_first_name} {visit.cosigned_by_last_name}, {visit.cosigner_role || 'Attending'}</div>
-                                                            <div className="text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100 w-fit">
-                                                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                                                Cosignature Verified • {format(new Date(visit.cosigned_at), 'MM/dd/yyyy HH:mm')}
-                                                                <span className="text-emerald-300 ml-1">[{visit.authorship_model || 'Addendum'}]</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            <div className="text-[8px] font-medium text-slate-400 uppercase tracking-tight pl-1 mt-2">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}</div>
+                                        </div>
+                                        <div className="text-right flex flex-col items-end opacity-40">
+                                            <span className="text-lg font-bold italic text-blue-900 tracking-tighter">PageMD</span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 text-center text-[8px] font-bold text-slate-300 uppercase tracking-widest border-t border-slate-50 pt-2">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {/* Redesigned Modal Containers */}
+                {
+                    showAddendumModal && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={() => setShowAddendumModal(false)}>
+                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl p-10 border border-slate-100" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-50">
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Add Record Amendment</h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Clinical Context Supplement</p>
+                                    </div>
+                                    <button onClick={() => setShowAddendumModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
+                                </div>
+                                <textarea value={addendumText} onChange={e => setAddendumText(e.target.value)} className="w-full h-48 bg-slate-50 border border-slate-200 rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300" placeholder="Enter clinical supplement..." />
+                                <div className="flex justify-end gap-3 mt-8">
+                                    <button onClick={() => setShowAddendumModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
+                                    <button onClick={handleAddAddendum} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">Authenticate Addendum</button>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+
+                {/* RETRACT MODAL */}
+                {
+                    showRetractModal && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowRetractModal(false)}>
+                            <div className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h3 className="text-[20px] font-black text-slate-900 tracking-tight">Retract Clinical Note</h3>
+                                        <p className="text-slate-500 text-[13px] font-medium mt-1 uppercase tracking-wider">Legal Void Process (Entered in Error)</p>
+                                    </div>
+                                    <button onClick={() => setShowRetractModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
+                                </div>
+
+                                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 mb-6 flex gap-3">
+                                    <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                                    <div className="text-[12px] text-rose-700 font-medium leading-relaxed">
+                                        <strong>Warning:</strong> Retracting a signed note will mark it as "Entered in Error" across the system. This action is immutable and logged for clinical auditing.
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Retraction Reason</label>
+                                        <select
+                                            value={retractReason}
+                                            onChange={e => setRetractReason(e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all"
+                                        >
+                                            <option value="ENTERED_IN_ERROR">Entered in Error</option>
+                                            <option value="WRONG_PATIENT">Wrong Patient</option>
+                                            <option value="INCORRECT_DATE">Incorrect Date</option>
+                                            <option value="DUPLICATE_NOTE">Duplicate Note</option>
+                                            <option value="REVISED_EXTENSIVELY">Extensive Revisions Required</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Explanation (Required for Audit Log)</label>
+                                        <textarea
+                                            value={retractExplanation}
+                                            onChange={e => setRetractExplanation(e.target.value)}
+                                            className="w-full h-32 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300"
+                                            placeholder="Briefly describe why this note is being voided..."
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end gap-3 mt-8">
+                                    <button onClick={() => setShowRetractModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                                    <button
+                                        onClick={handleRetract}
+                                        disabled={!retractExplanation.trim() || isRetracting}
+                                        className={`px-8 py-3 bg-rose-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${(!retractExplanation.trim() || isRetracting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        {isRetracting ? 'Voiding...' : 'Confirm Retraction'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
+
+                {
+                    showAuditModal && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowAuditModal(false)}>
+                            <div className="bg-[#f8fafc] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200" onClick={e => e.stopPropagation()}>
+                                <div className="bg-white p-8 border-b border-slate-200 flex justify-between items-center">
+                                    <div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+                                                <Shield className="text-white w-5 h-5" />
+                                            </div>
+                                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Note History Audit</h3>
+                                        </div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-1">Lifecycle Activity & Signatures</p>
+                                    </div>
+                                    <button onClick={() => setShowAuditModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
+                                </div>
+
+                                <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4 bg-slate-50/30">
+                                    {loadingHistory ? (
+                                        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                                            <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                                            <p className="font-bold">Retrieving history...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {noteHistory.map((event, i) => (
+                                                <div key={event.id} className="relative flex gap-6">
+                                                    {/* Vertical Line */}
+                                                    {i < noteHistory.length - 1 && (
+                                                        <div className="absolute left-[19px] top-10 bottom-[-16px] w-0.5 bg-slate-200" />
+                                                    )}
+
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-[#f8fafc] ${event.action.includes('SIGNED') ? 'bg-emerald-500 shadow-lg shadow-emerald-200' :
+                                                        event.action.includes('RETRACTED') ? 'bg-rose-500 shadow-lg shadow-rose-200' :
+                                                            'bg-white border-slate-200 text-slate-400 shadow-sm'
+                                                        }`}>
+                                                        {event.action.includes('SIGNED') ? <CheckCircle2 className="w-5 h-5 text-white" /> :
+                                                            event.action.includes('RETRACTED') ? <AlertCircle className="w-5 h-5 text-white" /> :
+                                                                <Clock className="w-4 h-4" />}
+                                                    </div>
+
+                                                    <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div>
+                                                                <div className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{event.action.replace(/_/g, ' ')}</div>
+                                                                <div className="text-sm font-black text-slate-900 mt-0.5">{event.actor_name || 'System'}</div>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="text-[10px] font-bold text-slate-400 uppercase">{format(new Date(event.occurred_at), 'MM/dd/yy')}</div>
+                                                                <div className="text-[11px] font-black text-slate-800 tabular-nums">{format(new Date(event.occurred_at), 'h:mm a')}</div>
                                                             </div>
                                                         </div>
+
+                                                        {Object.keys(event.details || {}).length > 0 && (
+                                                            <div className="mt-3 p-3 bg-slate-50/50 rounded-lg border border-slate-100 italic text-[12px] text-slate-500 leading-relaxed font-medium">
+                                                                {event.details.reason && <span>Reason: {event.details.reason} </span>}
+                                                                {event.details.reason_code && <span>Reason: {event.details.reason_code} </span>}
+                                                                {event.details.reason_text && <span className="block mt-1 text-slate-600">"{event.details.reason_text}"</span>}
+                                                                {event.details.method && <span>via {event.details.method} </span>}
+                                                                {event.details.status && <span>({event.details.status})</span>}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                                <div className="text-[8px] font-medium text-slate-400 uppercase tracking-tight pl-1 mt-2">Hash: {patientId?.substring(0, 8)}-{activeVisitId?.substring(0, 8)}</div>
-                                            </div>
-                                            <div className="text-right flex flex-col items-end opacity-40">
-                                                <span className="text-lg font-bold italic text-blue-900 tracking-tighter">PageMD</span>
-                                            </div>
-                                        </div>
-                                        <div className="mt-4 text-center text-[8px] font-bold text-slate-300 uppercase tracking-widest border-t border-slate-50 pt-2">
-                                            Confidential Patient Record • HIPAA Compliant
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div >
-                </div >
-            </div >
-
-            {/* Redesigned Modal Containers */}
-            {
-                showAddendumModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={() => setShowAddendumModal(false)}>
-                        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl p-10 border border-slate-100" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-50">
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-900 tracking-tight">Add Record Amendment</h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Clinical Context Supplement</p>
-                                </div>
-                                <button onClick={() => setShowAddendumModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
-                            </div>
-                            <textarea value={addendumText} onChange={e => setAddendumText(e.target.value)} className="w-full h-48 bg-slate-50 border border-slate-200 rounded-2xl p-6 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300" placeholder="Enter clinical supplement..." />
-                            <div className="flex justify-end gap-3 mt-8">
-                                <button onClick={() => setShowAddendumModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
-                                <button onClick={handleAddAddendum} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all">Authenticate Addendum</button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* RETRACT MODAL */}
-            {
-                showRetractModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowRetractModal(false)}>
-                        <div className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-scale-in" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-start mb-6">
-                                <div>
-                                    <h3 className="text-[20px] font-black text-slate-900 tracking-tight">Retract Clinical Note</h3>
-                                    <p className="text-slate-500 text-[13px] font-medium mt-1 uppercase tracking-wider">Legal Void Process (Entered in Error)</p>
-                                </div>
-                                <button onClick={() => setShowRetractModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
-                            </div>
-
-                            <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 mb-6 flex gap-3">
-                                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                                <div className="text-[12px] text-rose-700 font-medium leading-relaxed">
-                                    <strong>Warning:</strong> Retracting a signed note will mark it as "Entered in Error" across the system. This action is immutable and logged for clinical auditing.
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Retraction Reason</label>
-                                    <select
-                                        value={retractReason}
-                                        onChange={e => setRetractReason(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all"
-                                    >
-                                        <option value="ENTERED_IN_ERROR">Entered in Error</option>
-                                        <option value="WRONG_PATIENT">Wrong Patient</option>
-                                        <option value="INCORRECT_DATE">Incorrect Date</option>
-                                        <option value="DUPLICATE_NOTE">Duplicate Note</option>
-                                        <option value="REVISED_EXTENSIVELY">Extensive Revisions Required</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Explanation (Required for Audit Log)</label>
-                                    <textarea
-                                        value={retractExplanation}
-                                        onChange={e => setRetractExplanation(e.target.value)}
-                                        className="w-full h-32 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 outline-none transition-all placeholder:text-slate-300"
-                                        placeholder="Briefly describe why this note is being voided..."
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-3 mt-8">
-                                <button onClick={() => setShowRetractModal(false)} className="px-6 py-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
-                                <button
-                                    onClick={handleRetract}
-                                    disabled={!retractExplanation.trim() || isRetracting}
-                                    className={`px-8 py-3 bg-rose-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-rose-600/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${(!retractExplanation.trim() || isRetracting) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {isRetracting ? 'Voiding...' : 'Confirm Retraction'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            {
-                showAuditModal && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowAuditModal(false)}>
-                        <div className="bg-[#f8fafc] rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200" onClick={e => e.stopPropagation()}>
-                            <div className="bg-white p-8 border-b border-slate-200 flex justify-between items-center">
-                                <div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                                            <Shield className="text-white w-5 h-5" />
-                                        </div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Note History Audit</h3>
-                                    </div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 ml-1">Lifecycle Activity & Signatures</p>
-                                </div>
-                                <button onClick={() => setShowAuditModal(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all"><X className="w-6 h-6 text-slate-300" /></button>
-                            </div>
-
-                            <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4 bg-slate-50/30">
-                                {loadingHistory ? (
-                                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                                        <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-                                        <p className="font-bold">Retrieving history...</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {noteHistory.map((event, i) => (
-                                            <div key={event.id} className="relative flex gap-6">
-                                                {/* Vertical Line */}
-                                                {i < noteHistory.length - 1 && (
-                                                    <div className="absolute left-[19px] top-10 bottom-[-16px] w-0.5 bg-slate-200" />
-                                                )}
-
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 z-10 border-4 border-[#f8fafc] ${event.action.includes('SIGNED') ? 'bg-emerald-500 shadow-lg shadow-emerald-200' :
-                                                    event.action.includes('RETRACTED') ? 'bg-rose-500 shadow-lg shadow-rose-200' :
-                                                        'bg-white border-slate-200 text-slate-400 shadow-sm'
-                                                    }`}>
-                                                    {event.action.includes('SIGNED') ? <CheckCircle2 className="w-5 h-5 text-white" /> :
-                                                        event.action.includes('RETRACTED') ? <AlertCircle className="w-5 h-5 text-white" /> :
-                                                            <Clock className="w-4 h-4" />}
                                                 </div>
-
-                                                <div className="flex-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div>
-                                                            <div className="text-[11px] font-black text-indigo-600 uppercase tracking-widest">{event.action.replace(/_/g, ' ')}</div>
-                                                            <div className="text-sm font-black text-slate-900 mt-0.5">{event.actor_name || 'System'}</div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <div className="text-[10px] font-bold text-slate-400 uppercase">{format(new Date(event.occurred_at), 'MM/dd/yy')}</div>
-                                                            <div className="text-[11px] font-black text-slate-800 tabular-nums">{format(new Date(event.occurred_at), 'h:mm a')}</div>
-                                                        </div>
-                                                    </div>
-
-                                                    {Object.keys(event.details || {}).length > 0 && (
-                                                        <div className="mt-3 p-3 bg-slate-50/50 rounded-lg border border-slate-100 italic text-[12px] text-slate-500 leading-relaxed font-medium">
-                                                            {event.details.reason && <span>Reason: {event.details.reason} </span>}
-                                                            {event.details.reason_code && <span>Reason: {event.details.reason_code} </span>}
-                                                            {event.details.reason_text && <span className="block mt-1 text-slate-600">"{event.details.reason_text}"</span>}
-                                                            {event.details.method && <span>via {event.details.method} </span>}
-                                                            {event.details.status && <span>({event.details.status})</span>}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {noteHistory.length === 0 && (
-                                            <div className="text-center py-20 text-slate-300 font-bold uppercase tracking-widest text-[10px] italic">Historical migration data pending</div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="p-8 bg-white border-t border-slate-100 flex justify-between items-center">
-                                <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                                    <Lock className="w-3 h-3" /> Immutable Audit Trail
+                                            ))}
+                                            {noteHistory.length === 0 && (
+                                                <div className="text-center py-20 text-slate-300 font-bold uppercase tracking-widest text-[10px] italic">Historical migration data pending</div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-                                <button onClick={() => setShowAuditModal(false)} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/10 active:scale-95 transition-all">Close History</button>
+
+                                <div className="p-8 bg-white border-t border-slate-100 flex justify-between items-center">
+                                    <div className="text-[9px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                                        <Lock className="w-3 h-3" /> Immutable Audit Trail
+                                    </div>
+                                    <button onClick={() => setShowAuditModal(false)} className="px-8 py-3 bg-slate-900 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-xl shadow-slate-900/10 active:scale-95 transition-all">Close History</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )
-            }
+                    )
+                }
 
-            {showBillingModal && <BillingModal patientId={patientId} isOpen={showBillingModal} onClose={() => setShowBillingModal(false)} />}
+                {showBillingModal && <BillingModal patientId={patientId} isOpen={showBillingModal} onClose={() => setShowBillingModal(false)} />}
 
-            {showCosignModal && (
-                <CosignModal
-                    isOpen={showCosignModal}
-                    onClose={() => setShowCosignModal(false)}
-                    visitData={visit}
-                    authorshipModel={authorshipModel}
-                    setAuthorshipModel={setAuthorshipModel}
-                    attestationText={attestationText}
-                    setAttestationText={setAttestationText}
-                    macros={attestationMacros}
-                    onConfirm={handleCosign}
-                    isSaving={loading}
+                {
+                    showCosignModal && (
+                        <CosignModal
+                            isOpen={showCosignModal}
+                            onClose={() => setShowCosignModal(false)}
+                            visitData={visit}
+                            authorshipModel={authorshipModel}
+                            setAuthorshipModel={setAuthorshipModel}
+                            attestationText={attestationText}
+                            setAttestationText={setAttestationText}
+                            macros={attestationMacros}
+                            onConfirm={handleCosign}
+                            isSaving={loading}
+                        />
+                    )
+                }
+
+                {/* Unified Patient Chart Panel */}
+                <PatientChartPanel
+                    isOpen={showPatientChart}
+                    onClose={() => setShowPatientChart(false)}
+                    patientId={patientId}
+                    initialTab="summary"
                 />
-            )}
-
-            {/* Unified Patient Chart Panel */}
-            <PatientChartPanel
-                isOpen={showPatientChart}
-                onClose={() => setShowPatientChart(false)}
-                patientId={patientId}
-                initialTab="summary"
-            />
-        </>
-    );
+            </>
+        );
+    }
 };
 
 const BillingModal = ({ patientId, isOpen, onClose }) => {

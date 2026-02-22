@@ -27,6 +27,7 @@ import PatientChartPanel from '../components/PatientChartPanel';
 import ChartReviewModal from '../components/ChartReviewModal';
 import VisitFoldersModal from '../components/VisitFoldersModal';
 import VisitChartView from '../components/VisitChartView';
+import MultiVisitViewer from '../components/MultiVisitViewer';
 import EPrescribeEnhanced from '../components/EPrescribeEnhanced';
 import Modal from '../components/ui/Modal';
 import { usePrivileges } from '../hooks/usePrivileges';
@@ -2591,11 +2592,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 }}
             />
 
-            {/* Visit Chart View Modal */}
+            {/* Multi-Visit Chart View Modal */}
             {
                 selectedVisitForView && (
-                    <VisitChartView
-                        visitId={selectedVisitForView.visitId}
+                    <MultiVisitViewer
+                        initialVisitId={selectedVisitForView.visitId}
                         patientId={selectedVisitForView.patientId}
                         onClose={() => setSelectedVisitForView(null)}
                     />
