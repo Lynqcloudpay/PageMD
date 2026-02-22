@@ -53,23 +53,24 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                         const offset = total - 1 - idx;
 
                         // Limit visual offset so cards don't disappear off screen
-                        const visualOffset = Math.min(offset, 5);
+                        const visualOffset = Math.min(offset, 6);
 
                         return (
                             <motion.div
                                 key={vId}
                                 layout
-                                initial={{ opacity: 0, scale: 0.9, y: 100 }}
+                                initial={{ opacity: 0, scale: 0.9, x: 100 }}
                                 animate={{
-                                    opacity: 1 - (visualOffset * 0.15),
-                                    y: isFront ? 0 : -(visualOffset * 55),
-                                    scale: isFront ? 1 : 1 - (visualOffset * 0.04),
+                                    opacity: 1 - (visualOffset * 0.1),
+                                    x: isFront ? 0 : -(visualOffset * 65), // Stacks sideways (to the left)
+                                    y: 0,
+                                    scale: isFront ? 1 : 1 - (visualOffset * 0.05),
                                     zIndex: 100 - offset,
                                 }}
                                 exit={{ opacity: 0, scale: 0.8, y: 100 }}
                                 transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                                className={`absolute w-full max-w-[1100px] h-[85vh] rounded-[2rem] shadow-2xl overflow-hidden bg-[#F8FAFC] origin-bottom
-                                    ${isFront ? 'border-2 border-slate-800/10 cursor-default' : 'border border-slate-300 cursor-pointer'}
+                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[0_0_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden bg-[#F8FAFC] transform-gpu
+                                    ${isFront ? 'border-none cursor-default' : 'border border-slate-300 cursor-pointer'}
                                 `}
                                 onClick={() => {
                                     if (!isFront) handleOpenNewVisit(vId);
@@ -77,19 +78,10 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                             >
                                 {/* Invisible overlay to intercept clicks on background cards */}
                                 {!isFront && (
-                                    <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/40 transition-colors" />
+                                    <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/30 transition-colors" />
                                 )}
 
-                                <div className={`w-full h-full relative group transition-opacity ${!isFront && 'opacity-70'}`}>
-                                    <div className={`absolute top-4 right-4 z-[60] transition-opacity ${isFront ? 'opacity-100' : 'opacity-0'}`}>
-                                        <button
-                                            onClick={(e) => handleCloseVisit(vId, e)}
-                                            className="p-1.5 bg-rose-500/90 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-colors hover:scale-105"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
+                                <div className={`w-full h-full relative group transition-opacity ${!isFront && 'opacity-60'}`}>
                                     {/* Make sure the iframe components are rendered but visually distinct */}
                                     <div className={`w-full h-full ${!isFront ? 'pointer-events-none' : ''}`}>
                                         <VisitChartView
