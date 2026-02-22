@@ -57,7 +57,7 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
     return (
         <div className="fixed inset-0 bg-slate-900/40 z-[200] flex flex-col p-4 backdrop-blur-md">
             {/* Top Workspace Toolbar */}
-            <div className="flex justify-between items-center mb-6 pl-2 pr-2">
+            <div className="flex justify-between items-center mb-6 pl-2 pr-2 relative z-[250]">
                 <div className="flex items-center gap-3 text-white font-black tracking-tight bg-slate-900/70 border border-white/10 px-4 py-2 rounded-full shadow-xl backdrop-blur-xl">
                     <Layers className="w-4 h-4 text-blue-400" />
                     <span>Chart Review Workspace</span>
@@ -155,13 +155,13 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                     <>
                                         <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/30 transition-colors" />
 
-                                        {/* Vertical Left Edge Label */}
-                                        <div className="absolute left-0 top-0 bottom-0 w-[65px] border-r border-slate-300/50 bg-slate-100/95 backdrop-blur-md flex flex-col items-center justify-center z-[60] overflow-hidden shadow-[4px_0_15px_-5px_rgba(0,0,0,0.1)]">
-                                            <div className="transform -rotate-90 whitespace-nowrap text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-4 py-8">
-                                                <FileText className="w-3.5 h-3.5 text-slate-400" />
-                                                <span className="text-slate-800">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
-                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                                <span className="opacity-70">{getChiefComplaint(visitsData[vId])}</span>
+                                        {/* Vertical Left Edge Label Badge */}
+                                        <div className="absolute left-2 top-0 bottom-0 w-[40px] flex flex-col justify-center items-center z-[60] pointer-events-none">
+                                            <div className="transform -rotate-90 whitespace-nowrap bg-slate-800 text-white rounded-full px-5 py-2.5 flex items-center gap-3 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] border border-slate-700">
+                                                <FileText className="w-3.5 h-3.5 text-blue-400" />
+                                                <span className="text-[12px] font-black tracking-tight">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                                                <span className="text-[10px] font-bold tracking-widest uppercase text-slate-300">{getChiefComplaint(visitsData[vId])}</span>
                                             </div>
                                         </div>
                                     </>
