@@ -172,9 +172,9 @@ const InbasketRedesign = () => {
     const chatEndRef = useRef(null);
 
     // Fetch inbox items
-    const fetchData = useCallback(async (isRefresh = false) => {
-        if (isRefresh) setRefreshing(true);
-        else setLoading(true);
+    const fetchData = useCallback(async (isRefresh = false, isPoll = false) => {
+        if (isRefresh && !isPoll) setRefreshing(true);
+        else if (!isRefresh) setLoading(true);
 
         try {
             const params = {
@@ -234,7 +234,7 @@ const InbasketRedesign = () => {
         fetchData();
         fetchTasks();
         const poll = setInterval(() => {
-            fetchData(true);
+            fetchData(true, true);
             if (activeSection === 'tasks') fetchTasks();
         }, 30000); // 30 seconds to prevent flickering
         return () => clearInterval(poll);
