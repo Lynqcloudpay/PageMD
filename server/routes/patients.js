@@ -1038,7 +1038,8 @@ router.put('/:id', requirePermission('patients:edit_demographics'), async (req, 
       'pharmacy_name', 'pharmacy_address', 'pharmacy_phone', 'pharmacy_npi', 'pharmacy_fax',
       'pharmacy_preferred',
       // Additional
-      'allergies_known', 'photo_url', 'photo_document_id', 'notes', 'deceased', 'deceased_date'
+      'allergies_known', 'photo_url', 'photo_document_id', 'notes', 'deceased', 'deceased_date',
+      'is_restricted', 'restriction_reason', 'reminder_note'
     ];
 
     // Only collect fields that are actually being updated
