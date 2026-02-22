@@ -5,7 +5,7 @@ import {
   Monitor, MessageSquare, Users, Settings, Maximize2,
   Clock, User, Calendar, FileText, Camera, ChevronRight,
   Shield, Signal, Wifi, Battery, X, MoreVertical, Layout, Loader2,
-  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, Mail, UserCheck
+  ClipboardList, Activity, Pill, AlertCircle, RefreshCcw, Save, Search, FlaskConical, ChevronDown, Trash2, Plus, Zap, Mail, UserCheck, ExternalLink
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { appointmentsAPI, patientsAPI, visitsAPI } from '../services/api';
@@ -1050,7 +1050,16 @@ const Telehealth = () => {
                   </div>
 
                   <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl shadow-sm">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Patient</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Patient</p>
+                      <button
+                        onClick={() => window.open(`/patient/${activeCall?.patient_id || activeCall?.patientId || activeCall?.pid}/snapshot`, '_blank')}
+                        className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors flex items-center gap-1"
+                        title="Open Patient Snapshot"
+                      >
+                        Chart Snapshot <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </div>
                     <p className="text-slate-900 font-bold text-lg leading-tight">{activeCall.patientName || activeCall.name}</p>
                     <div className="mt-3 flex items-center gap-2">
                       <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-600 shadow-sm">

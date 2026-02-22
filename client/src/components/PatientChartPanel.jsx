@@ -557,7 +557,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     if (!isOpen) return null;
 
     return (
-        <div className={`fixed inset-0 z-[100] flex ${side === 'left' ? 'justify-start' : 'justify-end'} ${backdrop ? '' : 'pointer-events-none'}`}>
+        <div className={`fixed inset-0 z-[2000] flex ${side === 'left' ? 'justify-start' : 'justify-end'} ${backdrop ? '' : 'pointer-events-none'}`}>
             {backdrop && (
                 <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={onClose} />
             )}
