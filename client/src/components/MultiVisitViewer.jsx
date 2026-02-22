@@ -136,14 +136,14 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                 initial={{ opacity: 0, scale: 0.9, x: 100 }}
                                 animate={{
                                     opacity: 1 - (visualOffset * 0.1),
-                                    x: isFront ? 0 : -(visualOffset * 65), // Stacks sideways (to the left)
+                                    x: isFront ? 0 : -(visualOffset * 85), // Stacks sideways (to the left)
                                     y: 0,
-                                    scale: isFront ? 1 : 1 - (visualOffset * 0.05),
+                                    scale: isFront ? 1 : 1 - (visualOffset * 0.04),
                                     zIndex: 100 - offset,
                                 }}
                                 exit={{ opacity: 0, scale: 0.8, y: 100 }}
                                 transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[0_0_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden bg-[#F8FAFC] transform-gpu
+                                className={`absolute w-full max-w-[1250px] h-[calc(100vh-110px)] rounded-[2rem] shadow-[0_0_40px_-15px_rgba(0,0,0,0.5)] overflow-hidden bg-[#F8FAFC] transform-gpu origin-left
                                     ${isFront ? 'border-none cursor-default' : 'border border-slate-300 cursor-pointer'}
                                 `}
                                 onClick={() => {
@@ -156,12 +156,12 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                         <div className="absolute inset-0 z-50 bg-slate-100/10 hover:bg-slate-100/30 transition-colors" />
 
                                         {/* Vertical Left Edge Label Badge */}
-                                        <div className="absolute left-2 top-0 bottom-0 w-[40px] flex flex-col justify-center items-center z-[60] pointer-events-none">
-                                            <div className="transform -rotate-90 whitespace-nowrap bg-slate-800 text-white rounded-full px-5 py-2.5 flex items-center gap-3 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.8)] border border-slate-700">
-                                                <FileText className="w-3.5 h-3.5 text-blue-400" />
-                                                <span className="text-[12px] font-black tracking-tight">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
-                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
-                                                <span className="text-[10px] font-bold tracking-widest uppercase text-slate-300">{getChiefComplaint(visitsData[vId])}</span>
+                                        <div className="absolute left-6 top-0 bottom-0 flex flex-col justify-center items-center z-[60] pointer-events-none">
+                                            <div className="transform -rotate-90 whitespace-nowrap bg-indigo-600 text-white rounded-full px-6 py-3 flex items-center gap-3 shadow-[0_0_30px_rgba(0,0,0,0.3)] border border-indigo-400/50">
+                                                <FileText className="w-4 h-4 text-indigo-200" />
+                                                <span className="text-[13px] font-black tracking-tight">{visitsData[vId]?.visit_date ? format(new Date(visitsData[vId].visit_date), 'MMM d, yyyy') : 'Loading'}</span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-300"></span>
+                                                <span className="text-[11px] font-bold tracking-widest uppercase text-indigo-100">{getChiefComplaint(visitsData[vId])}</span>
                                             </div>
                                         </div>
                                     </>
