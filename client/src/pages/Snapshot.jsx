@@ -1412,14 +1412,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     >
                                                         <div className="flex items-center space-x-2 mb-1">
                                                             <h3 className="font-bold text-ink-900">{note.type}</h3>
-                                                            {note.signed ? (
-                                                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Signed</span>
+                                                            {note.retracted ? (
+                                                                <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Retracted</span>
                                                             ) : note.preliminary ? (
                                                                 <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded flex items-center gap-1">
                                                                     <FileSignature className="w-3 h-3" /> Preliminary
                                                                 </span>
-                                                            ) : note.retracted ? (
-                                                                <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">Retracted</span>
+                                                            ) : note.signed ? (
+                                                                <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">Signed</span>
                                                             ) : (
                                                                 <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded">Draft</span>
                                                             )}
@@ -1817,12 +1817,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-[10px] font-medium text-slate-700">{note.type}</span>
-                                                                    {note.preliminary ? (
+                                                                    {note.retracted ? (
+                                                                        <span className="text-[8px] font-medium text-red-500 bg-red-50/80 px-1.5 py-0.5 rounded-lg border border-red-100">Retracted</span>
+                                                                    ) : note.preliminary ? (
                                                                         <span className="text-[8px] font-medium text-white bg-amber-400 px-1.5 py-0.5 rounded-lg shadow-sm">Preliminary</span>
                                                                     ) : note.signed ? (
                                                                         <span className="text-[8px] font-medium text-emerald-600 bg-emerald-50/80 px-1.5 py-0.5 rounded-lg border border-emerald-100">Signed</span>
-                                                                    ) : note.retracted ? (
-                                                                        <span className="text-[8px] font-medium text-red-500 bg-red-50/80 px-1.5 py-0.5 rounded-lg border border-red-100">Retracted</span>
                                                                     ) : (
                                                                         <span className="text-[8px] font-medium text-slate-500 bg-slate-50/80 px-1.5 py-0.5 rounded-lg border border-slate-100">Draft</span>
                                                                     )}
