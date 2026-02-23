@@ -12,6 +12,26 @@ const { preparePatientForResponse } = require('../services/patientEncryptionServ
 // All routes require authentication
 router.use(authenticate);
 
+// Presence map to track users working on notes
+// Structure: { [visitId]: { [userId]: { name: string, lastSeen: timestamp } } }
+const notePresence = {};
+
+// Clean up presence map every 30 seconds
+setInterval(() => {
+  const now = Date.now();
+  Object.keys(notePresence).forEach(visitId => {
+    if (!notePresence[visitId]) return;
+    Object.keys(notePresence[visitId]).forEach(userId => {
+      if (now - notePresence[visitId][userId].lastSeen > 30000) {
+        delete notePresence[visitId][userId];
+      }
+    });
+    if (Object.keys(notePresence[visitId]).length === 0) {
+      delete notePresence[visitId];
+    }
+  });
+}, 30000);
+
 // Get all visits (with filters)
 router.get('/', requirePermission('notes:view'), async (req, res) => {
   try {
@@ -86,6 +106,38 @@ router.get('/', requirePermission('notes:view'), async (req, res) => {
       error: 'Failed to fetch visits',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// Heartbeat endpoint for active users on a note
+router.post('/:id/heartbeat', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const userName = `${req.user?.first_name || ''} ${req.user?.last_name || ''}`.trim() || 'Someone';
+
+    if (!id || !userId) {
+      return res.json({ others: [] });
+    }
+
+    // Update presence
+    if (!notePresence[id]) {
+      notePresence[id] = {};
+    }
+    notePresence[id][userId] = {
+      name: userName,
+      lastSeen: Date.now()
+    };
+
+    // Get other users on this note
+    const others = Object.keys(notePresence[id])
+      .filter(uid => uid !== userId)
+      .map(uid => notePresence[id][uid].name);
+
+    res.json({ others });
+  } catch (error) {
+    console.error('Presence heartbeat error:', error);
+    res.json({ others: [] });
   }
 });
 

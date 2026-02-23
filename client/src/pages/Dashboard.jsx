@@ -388,23 +388,6 @@ const Dashboard = () => {
                             </div>
                         </div>
 
-                        {/* Help / Updates */}
-                        <div className="bg-white rounded-xl border border-[#E4E4E4] p-4">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Bell className="w-4 h-4 text-[#CE6969]" />
-                                <h4 className="text-xs font-medium text-[#10141A] border-b border-[#E4E4E4] flex-1 uppercase tracking-widest">Platform Updates</h4>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="p-2 hover:bg-gray-50 rounded cursor-pointer border-l-2 border-blue-500 pl-3">
-                                    <p className="text-xs font-medium text-[#10141A]">E-Prescribing is LIVE</p>
-                                    <p className="text-[10px] text-[#10141A]/50">You can now send prescriptions directly to pharmacies.</p>
-                                </div>
-                                <div className="p-2 hover:bg-gray-50 rounded cursor-pointer border-l-2 border-green-500 pl-3">
-                                    <p className="text-xs font-medium text-[#10141A]">Integrated Lab Results</p>
-                                    <p className="text-[10px] text-[#10141A]/50">LabCorp and Quest integrations are now available.</p>
-                                </div>
-                            </div>
-                        </div>
 
                     </div>
                 </div>

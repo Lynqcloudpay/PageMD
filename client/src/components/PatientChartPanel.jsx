@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     X, FileText, Image, FlaskConical, Pill, ExternalLink,
-    Database, CreditCard, Clock, CheckCircle2,
+    Database, CreditCard, Clock, CheckCircle2, User,
     XCircle, UserCircle, FileImage, Trash2, Plus, Activity, Printer,
     LayoutDashboard, ChevronRight, Search, FilePlus, ChevronDown, HeartPulse, ActivitySquare, Zap, Waves,
     Edit2, RotateCcw, Calendar, AlertCircle, Users, Receipt, PieChart, ArrowRight, Shield

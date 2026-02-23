@@ -5,7 +5,7 @@ import {
     Save, Lock, FileText, ChevronDown, ChevronUp, Plus, ClipboardList,
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
     Activity, ActivitySquare, CheckCircle2, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
-    DollarSign, Eye, Calendar, AlertCircle, Stethoscope, ScrollText, Copy, RotateCcw,
+    DollarSign, Eye, Calendar, AlertCircle, AlertTriangle, Stethoscope, ScrollText, Copy, RotateCcw,
     PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves, FilePlus, Share2
 } from 'lucide-react';
 import Toast from '../components/ui/Toast';
@@ -660,6 +660,32 @@ const VisitNote = () => {
     // AI Summary
     const [aiSummary, setAiSummary] = useState('');
     const [generatingSummary, setGeneratingSummary] = useState(false);
+
+    // Multi-user Presence Detection
+    const [othersOnNote, setOthersOnNote] = useState([]);
+
+    // Presence Heartbeat Effect
+    useEffect(() => {
+        if (!id || isSigned) return;
+
+        const performHeartbeat = async () => {
+            try {
+                const res = await visitsAPI.heartbeat(id);
+                if (res.data && Array.isArray(res.data.others)) {
+                    setOthersOnNote(res.data.others);
+                }
+            } catch (error) {
+                console.error('Presence heartbeat failed:', error);
+            }
+        };
+
+        // Run immediately
+        performHeartbeat();
+
+        // Then every 5 seconds
+        const interval = setInterval(performHeartbeat, 5000);
+        return () => clearInterval(interval);
+    }, [id, isSigned]);
 
     // Refs for textareas
     const hpiRef = useRef(null);
@@ -2822,6 +2848,21 @@ const VisitNote = () => {
                     id={id}
                     providerName={providerName}
                 />
+
+                {/* Multi-user Collision Warning */}
+                {othersOnNote.length > 0 && (
+                    <div className="bg-amber-500/10 backdrop-blur-sm border border-amber-200 p-4 rounded-3xl mb-8 flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 shadow-sm">
+                        <div className="p-3 bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-200 shrink-0">
+                            <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-[11px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Concurrent Session Alert</h3>
+                            <p className="text-xs text-amber-800 font-medium tracking-tight">
+                                <span className="font-black underline">{othersOnNote.join(', ')}</span> {othersOnNote.length === 1 ? 'is' : 'are'} currently working on this note. Your data may be compromised if you save simultaneously.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <div className="vn-quick-bar-container">
                     <QuickNav

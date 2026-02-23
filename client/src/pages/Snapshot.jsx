@@ -5,7 +5,7 @@ import {
     AlertCircle, Activity, Pill, FileText, Clock, Eye, ChevronDown, ChevronUp, ChevronRight, Plus,
     Phone, Mail, MapPin, CreditCard, Building2, Users, Heart, Printer, Scissors,
     CheckCircle2, Edit, ArrowRight, ExternalLink, UserCircle, Camera, User, X, FileImage, Save, FlaskConical, Database, Trash2, Upload, Layout, RotateCcw, Waves,
-    Shield, ShieldPlus, AlertTriangle, ShieldCheck, Check, Pin, Settings2, Calendar, Edit3, Trash
+    Shield, ShieldPlus, AlertTriangle, ShieldCheck, Check, Pin, Settings2, Calendar, Edit3, Trash, FileSignature
 } from 'lucide-react';
 import {
     visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api
@@ -1746,7 +1746,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         {!layoutEditMode ? (
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                                 {/* Left Column: Compact Reference Cards + Visit History */}
-                                <div className="lg:col-span-1 space-y-4">
+                                <div className="lg:col-span-1 flex flex-col gap-4">
                                     {/* Sticky Note / Quick Reminder */}
                                     <div className="bg-[#FFFBEB] rounded-xl border border-amber-200 p-4 relative group/sticky shadow-[0_2px_4px_rgba(180,83,9,0.05)] h-[120px] flex flex-col">
                                         <div className="flex items-center justify-between mb-2 shrink-0">
@@ -1783,7 +1783,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Visit History Section */}
-                                    <div className="bg-white rounded-xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)] overflow-hidden">
+                                    <div className="bg-white rounded-xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)] overflow-hidden flex flex-col flex-1">
                                         <div
                                             className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors group/header"
                                             onClick={() => setShowVisitFoldersModal(true)}
@@ -1798,10 +1798,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             </div>
                                             <ChevronRight className="w-3 h-3 text-slate-300 group-hover/header:text-slate-500 group-hover/header:translate-x-0.5 transition-all" />
                                         </div>
-                                        <div className="p-3 overflow-y-auto scrollbar-hide h-[400px]">
+                                        <div className="p-3 overflow-y-auto scrollbar-hide flex-1 min-h-[400px]">
                                             {filteredNotes.length > 0 ? (
                                                 <div className="space-y-2">
-                                                    {filteredNotes.slice(0, 5).map(note => (
+                                                    {filteredNotes.map(note => (
                                                         <div
                                                             key={note.id}
                                                             className="px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group relative pl-3"
@@ -3135,20 +3135,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     setShowPatientChart(true);
                 }}
             />
-        </div >
-    );
-};
 
-/**
- * PatientHeaderPhoto - Displays the patient profile picture with retry logic
- * Defined outside Snapshot component to avoid unnecessary remounts
- */
-const PatientHeaderPhoto = ({ firstName, lastName }) => {
-    return (
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-primary-300 shadow-md ring-4 ring-white shrink-0 select-none border border-white/50 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-white/40 backdrop-blur-sm z-0"></div>
-            <div className="w-full h-full absolute top-0 left-0 bg-gradient-to-tr from-white/0 to-white/40 opacity-50 z-10"></div>
-            <User className="w-10 h-10 relative z-20 text-primary-300 opacity-80" strokeWidth={1.5} />
             {/* Health Maintenance Edit Modal */}
             {showHMEditModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
@@ -3265,8 +3252,7 @@ const PatientHeaderPhoto = ({ firstName, lastName }) => {
                     </div>
                 </div>
             )}
-            {/* Echo logic moved to Layout.jsx */}
-        </div>
+        </div >
     );
 };
 

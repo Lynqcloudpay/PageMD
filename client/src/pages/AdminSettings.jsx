@@ -717,7 +717,7 @@ const PracticeSettingsTab = ({
 
       {showLogoCropper && (
         <ImageCropper
-          image={logoCropSrc}
+          imageSrc={logoCropSrc}
           onCropComplete={handleCroppedLogoUpload}
           onCancel={() => {
             setShowLogoCropper(false);

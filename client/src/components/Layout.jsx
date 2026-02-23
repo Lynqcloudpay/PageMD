@@ -34,7 +34,15 @@ const Layout = ({ children }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [showSearch, setShowSearch] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+        const saved = localStorage.getItem('sidebar_collapsed');
+        return saved !== null ? JSON.parse(saved) : true;
+    });
+
+    // Handle sidebar persistence
+    useEffect(() => {
+        localStorage.setItem('sidebar_collapsed', JSON.stringify(sidebarCollapsed));
+    }, [sidebarCollapsed]);
     const [showSupportModal, setShowSupportModal] = useState(false);
     const { unreadCount: tasksCount } = useTasks();
 
@@ -310,41 +318,41 @@ const Layout = ({ children }) => {
 
                         {/* Logo Area */}
                         <div className={cn(
-                            "flex items-center h-20 border-b border-slate-800/50 pt-4",
+                            "flex items-center h-20 border-b border-slate-800/50 pt-1",
                             sidebarCollapsed ? "justify-center px-0" : "px-4 justify-start"
                         )}>
-                            <button
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                            <Link
+                                to="/dashboard"
                                 className={cn(
                                     "flex items-center group transition-transform active:scale-95",
                                     !sidebarCollapsed && "w-full"
                                 )}
-                                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                                title="Go to Dashboard"
                             >
                                 {sidebarCollapsed ? (
                                     <div className="relative">
                                         <img
                                             src="/logo-icon.png"
                                             alt="PMD"
-                                            className="w-9 h-9 object-contain transition-opacity"
+                                            className="w-10 h-10 object-contain transition-opacity"
                                             style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
                                                 if (e.target.nextSibling) e.target.nextSibling.classList.remove('hidden');
                                             }}
                                         />
-                                        <div className="hidden w-6 h-6 rounded-md bg-slate-800 flex items-center justify-center text-slate-300 text-[10px] font-semibold">P</div>
+                                        <div className="hidden w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center text-slate-300 text-[10px] font-semibold">P</div>
                                     </div>
                                 ) : (
                                     <img
                                         src="/logo.png"
                                         alt="PageMD Logo"
-                                        className="h-9 w-auto object-contain max-w-[130px] transition-opacity"
+                                        className="h-10 w-auto object-contain max-w-[160px] transition-opacity"
                                         style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
                                         onError={(e) => { e.target.style.display = 'none'; }}
                                     />
                                 )}
-                            </button>
+                            </Link>
                         </div>
 
                         {/* Navigation Area */}
