@@ -8,7 +8,8 @@ import {
     Shield, ShieldPlus, AlertTriangle, ShieldCheck, Check, Pin, Settings2, Calendar, Edit3, Trash, FileSignature
 } from 'lucide-react';
 import {
-    visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api
+    visitsAPI, patientsAPI, ordersAPI, referralsAPI, documentsAPI, patientFlagsAPI, api,
+    authAPI, settingsAPI, appointmentsAPI
 } from '../services/api';
 import tokenManager from '../services/tokenManager';
 import { format, differenceInDays } from 'date-fns';
@@ -38,6 +39,7 @@ import { usePatientTabs } from '../context/PatientTabsContext';
 import SpecialtyTracker from '../components/SpecialtyTracker';
 import MessagingModal from '../components/MessagingModal';
 import { useAuth } from '../context/AuthContext';
+import ScheduleAppointmentModal from '../components/ScheduleAppointmentModal';
 
 const Snapshot = ({ showNotesOnly = false }) => {
     const { id } = useParams();
@@ -107,6 +109,32 @@ const Snapshot = ({ showNotesOnly = false }) => {
         emergency_contact_phone: '',
         emergency_contact_relationship: ''
     });
+
+    // Scheduling Modal States
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [providers, setProviders] = useState([]);
+    const [practiceSettings, setPracticeSettings] = useState(null);
+    const [clinicalSettings, setClinicalSettings] = useState(null);
+
+    // Fetch scheduling dependency data
+    useEffect(() => {
+        const fetchSchedulingData = async () => {
+            try {
+                const [providersRes, practiceRes, clinicalRes] = await Promise.all([
+                    authAPI.getProviders(),
+                    settingsAPI.getPractice(),
+                    settingsAPI.getClinical()
+                ]);
+                setProviders(providersRes.data || []);
+                setPracticeSettings(practiceRes.data);
+                setClinicalSettings(clinicalRes.data);
+            } catch (err) {
+                console.warn('Snapshot: Failed to fetch scheduling data:', err);
+            }
+        };
+        fetchSchedulingData();
+    }, []);
+
     const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
     const [documentUploadFile, setDocumentUploadFile] = useState(null);
     const [documentUploadType, setDocumentUploadType] = useState('other');
@@ -1687,6 +1715,14 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </button>
                         </div>
                         <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowScheduleModal(true)}
+                                className="flex items-center gap-2 px-5 py-2.5 text-[12px] font-black text-blue-600 bg-blue-50 border border-blue-200 rounded-xl transition-all hover:bg-blue-100 hover:shadow-md active:scale-95 whitespace-nowrap"
+                            >
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>Schedule Patient</span>
+                            </button>
+
                             <div className="relative group/visit">
                                 <button
                                     onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
@@ -1748,7 +1784,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 {/* Left Column: Compact Reference Cards + Visit History */}
                                 <div className="lg:col-span-1 flex flex-col gap-4">
                                     {/* Sticky Note / Quick Reminder */}
-                                    <div className="bg-[#FFFBEB] rounded-xl border border-amber-200 p-4 relative group/sticky shadow-[0_2px_4px_rgba(180,83,9,0.05)] h-[120px] flex flex-col">
+                                    <div className="bg-[#FFFBEB] rounded-xl border border-amber-200 p-4 relative group/sticky shadow-[0_4px_20px_rgba(180,83,9,0.05)] h-[120px] flex flex-col">
                                         <div className="flex items-center justify-between mb-2 shrink-0">
                                             <div className="flex items-center gap-2">
                                                 <Pin className="w-3.5 h-3.5 text-yellow-600 -rotate-12" />
@@ -3252,8 +3288,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     </div>
                 </div>
             )}
+            {/* Reusable Scheduling Modal */}
+            <ScheduleAppointmentModal
+                isOpen={showScheduleModal}
+                initialPatient={patient ? { id: patient.id, name: `${patient.first_name || ''} ${patient.last_name || ''}`.trim() } : null}
+                providers={providers}
+                practiceSettings={practiceSettings}
+                clinicalSettings={clinicalSettings}
+                onClose={() => setShowScheduleModal(false)}
+                onSuccess={() => {
+                    setShowScheduleModal(false);
+                    showSuccess('Appointment scheduled successfully');
+                }}
+            />
         </div >
     );
 };
-
 export default Snapshot;
