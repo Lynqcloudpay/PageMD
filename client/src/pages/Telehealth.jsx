@@ -935,7 +935,7 @@ const Telehealth = () => {
   // --- ACTIVE CALL VIEW ---
   if (activeCall) {
     return (
-      <div className="flex h-[calc(100vh-64px)] bg-slate-50 overflow-hidden relative">
+      <div className="flex h-full bg-slate-50 overflow-hidden relative">
         {/* Main Video Stage OR Placeholder */}
         <div className={`flex-1 flex flex-col relative transition-all duration-300`}>
 

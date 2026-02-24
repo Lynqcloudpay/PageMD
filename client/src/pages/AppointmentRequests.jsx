@@ -313,7 +313,7 @@ const AppointmentRequests = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-64px)] flex bg-white overflow-hidden">
+        <div className="h-full flex bg-white overflow-hidden">
             {/* List Sidebar (Left) */}
             <div className="w-[380px] flex flex-col border-r border-gray-200">
                 <div className="p-4 bg-gray-50 border-b border-gray-200">

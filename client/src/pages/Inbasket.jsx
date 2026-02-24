@@ -508,7 +508,7 @@ const Inbasket = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-64px)] flex bg-gray-50 overflow-hidden">
+        <div className="h-full flex bg-gray-50 overflow-hidden">
             {/* Sidebar */}
             <div className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-10">
                 <div className="p-4 border-b border-gray-100">

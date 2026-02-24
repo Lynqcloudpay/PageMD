@@ -301,7 +301,7 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex flex-col min-h-screen bg-[#F8FAFC] transition-colors">
+        <div className="flex flex-col bg-[#F8FAFC] transition-colors" style={{ minHeight: '100vh', minHeight: '100dvh' }}>
             {user?.isSandbox && <DemoBanner />}
             <div className="flex flex-1">
 
@@ -561,9 +561,10 @@ const Layout = ({ children }) => {
                 {/* ═══════════════════════════════════════════════ */}
                 <main
                     className={cn(
-                        "flex-1 transition-all duration-300 ease-in-out flex flex-col h-screen overflow-hidden relative",
+                        "flex-1 transition-all duration-300 ease-in-out flex flex-col overflow-hidden relative",
                         sidebarCollapsed ? "ml-[4.5rem]" : "ml-[14.5rem]"
                     )}
+                    style={{ height: '100vh', height: '100dvh' }}
                 >
                     {/* Header strip */}
                     <div className="h-12 bg-white border-b border-gray-200/60 px-6 flex items-center justify-between flex-shrink-0 relative z-40">
