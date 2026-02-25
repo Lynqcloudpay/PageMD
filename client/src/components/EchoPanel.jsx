@@ -1002,38 +1002,33 @@ export default function EchoPanel({ patientId, patientName }) {
     }
 
     return (
-        <div className="fixed bottom-8 right-8 z-[9999] w-[420px] max-h-[700px] flex flex-col
-                        bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] 
-                        border border-slate-200/50 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-300">
+        <div className="fixed bottom-8 right-8 z-[9999] w-[380px] max-h-[680px] flex flex-col
+                        bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] 
+                        border border-slate-200/60 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-300">
 
-            {/* Premium Header */}
-            <div className={`p-5 sticky top-0 z-20 border-b transition-colors duration-500
-                            ${isPatientMode
-                    ? 'bg-indigo-600 border-indigo-400/20'
-                    : 'bg-slate-900 border-slate-700/50'}`}>
+            {/* Premium Minimalist Header */}
+            <div className={`p-4 sticky top-0 z-20 border-b transition-colors duration-500 bg-white/80 backdrop-blur-md
+                            ${isPatientMode ? 'border-cyan-100' : 'border-slate-100'}`}>
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3.5">
+                    <div className="flex items-center gap-3">
                         <div className="relative">
-                            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 p-0.5 overflow-hidden shadow-2xl">
-                                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover rounded-xl" />
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 p-0.5 overflow-hidden">
+                                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover rounded-lg" />
                             </div>
-                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] shadow-sm
-                                          ${isPatientMode ? 'bg-indigo-400 border-indigo-600' : 'bg-green-400 border-slate-900'}`} />
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 shadow-sm
+                                          ${isPatientMode ? 'bg-cyan-400 border-white' : 'bg-green-400 border-white'}`} />
                         </div>
 
                         <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-[15px] font-black text-white tracking-tight uppercase leading-none">Eko</h3>
-                                <div className="px-1.5 py-0.5 rounded-md bg-white/20 backdrop-blur-sm self-center">
-                                    <span className="text-[8px] font-black text-white tracking-[0.1em] leading-none block">PRO</span>
+                            <div className="flex items-center gap-1.5">
+                                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">Eko</h3>
+                                <div className="px-1.5 py-0.5 rounded bg-cyan-50 border border-cyan-100">
+                                    <span className="text-[7px] font-bold text-cyan-600 tracking-wider">PRO</span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1.5">
-                                <div className={`w-1.5 h-1.5 rounded-full ${isPatientMode ? 'bg-indigo-300' : 'bg-slate-400'}`} />
-                                <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest leading-none">
-                                    {patientName ? patientName : isPatientMode ? 'Chart Mode' : 'Practice AI'}
-                                </p>
-                            </div>
+                            <p className="text-[10px] text-slate-400 font-medium">
+                                {patientName ? patientName : isPatientMode ? 'Clinical Assistant' : 'Practice Support'}
+                            </p>
                         </div>
                     </div>
 
@@ -1041,25 +1036,25 @@ export default function EchoPanel({ patientId, patientName }) {
                         {isPatientMode && proactiveGaps && (
                             <button
                                 onClick={() => sendMessage('Check for any clinical gaps or missing preventive care for this patient.')}
-                                className="h-8 px-3 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl transition-all duration-200 
-                                           flex items-center gap-1.5 shadow-lg shadow-amber-900/20 active:scale-95"
+                                className="h-7 px-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-all duration-200 
+                                           flex items-center gap-1 shadow-sm active:scale-95"
                             >
-                                <Zap className="w-3.5 h-3.5 fill-current" />
-                                <span className="text-[10px] font-black uppercase tracking-wider">Insight</span>
+                                <Zap className="w-3 h-3 fill-current" />
+                                <span className="text-[9px] font-bold uppercase tracking-wider">Insight</span>
                             </button>
                         )}
 
-                        <div className="flex gap-1 bg-black/10 p-1 rounded-xl backdrop-blur-sm border border-white/5">
+                        <div className="flex gap-0.5 bg-slate-100 p-1 rounded-lg">
                             {conversationId && (
                                 <button onClick={clearConversation}
-                                    className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-white shadow-sm shadow-transparent hover:shadow-slate-200 transition-all"
                                     title="New conversation">
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                             )}
                             <button onClick={() => setIsOpen(false)}
-                                className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
-                                <X className="w-4 h-4" />
+                                className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-white shadow-sm shadow-transparent hover:shadow-slate-200 transition-all">
+                                <X className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     </div>
@@ -1070,39 +1065,39 @@ export default function EchoPanel({ patientId, patientName }) {
             <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 min-h-[300px] max-h-[480px]
                             scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300 transition-all">
 
-                {/* Welcome State - Redesigned */}
+                {/* Welcome State - Minimalist */}
                 {messages.length === 0 && (
-                    <div className="flex flex-col h-full py-4">
-                        <div className="text-center mb-8">
-                            <div className="relative inline-block mb-4">
-                                <div className="absolute -inset-4 bg-indigo-500/10 rounded-full blur-2xl animate-pulse" />
-                                <div className="relative w-28 h-28 overflow-hidden rounded-[2rem] border-4 border-white shadow-2xl">
+                    <div className="flex flex-col h-full py-2">
+                        <div className="text-center mb-6">
+                            <div className="relative inline-block mb-3">
+                                <div className="absolute -inset-2 bg-cyan-100 rounded-full blur-xl opacity-50" />
+                                <div className="relative w-20 h-20 overflow-hidden rounded-2xl border-2 border-white shadow-lg">
                                     <img src="/echo-mascot.png?v=1" alt="Eko Mascot"
-                                        className="w-full h-full object-cover scale-[1.12]" />
+                                        className="w-full h-full object-cover" />
                                 </div>
                             </div>
-                            <p className="text-xl font-black text-slate-800 tracking-tighter mb-2">
-                                {isPatientMode ? `Analyzing ${patientName}...` : "Welcome back, Provider."}
-                            </p>
-                            <p className="text-[12px] text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
+                            <h2 className="text-lg font-bold text-slate-800 tracking-tight mb-1.5">
+                                {isPatientMode ? `Analyzing Patient Record` : "Clinical Intelligence"}
+                            </h2>
+                            <p className="text-[12px] text-slate-400 font-medium max-w-[240px] mx-auto leading-normal">
                                 {isPatientMode
-                                    ? 'I have full access to this patient chart. How can I assist with clinical decision support today?'
-                                    : 'I am ready to help you navigate PageMD, manage your schedule, and optimize clinical workflows.'}
+                                    ? 'In-chart decision support and longitudinal trend analysis active.'
+                                    : 'Assistant ready for scheduling, navigation, and practice tasks.'}
                             </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2 px-2">
                             {quickActions.slice(0, 4).map((action, i) => (
                                 <button key={i}
                                     onClick={() => sendMessage(action.prompt)}
-                                    className="flex flex-col items-start gap-3 p-4 rounded-3xl text-left 
-                                                   bg-slate-50/50 border border-slate-100 hover:bg-white
-                                                   hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5
-                                                   transition-all duration-300 group active:scale-[0.97]">
-                                    <div className="p-2.5 rounded-2xl bg-white shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
-                                        <action.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                    className="w-full flex items-center gap-3 p-3 rounded-2xl text-left 
+                                                   bg-slate-50 border border-slate-100 hover:bg-white
+                                                   hover:border-cyan-200 hover:shadow-md hover:shadow-cyan-500/5
+                                                   transition-all duration-200 group active:scale-[0.98]">
+                                    <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-white border border-slate-100 text-slate-400 group-hover:text-cyan-600 group-hover:bg-cyan-50 transition-colors">
+                                        <action.icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                     </div>
-                                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{action.label}</span>
+                                    <span className="text-[11px] font-semibold text-slate-600 group-hover:text-slate-900 transition-colors">{action.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -1111,33 +1106,33 @@ export default function EchoPanel({ patientId, patientName }) {
 
                 {/* Message list */}
                 {messages.map((msg, i) => (
-                    <div key={i} className={`flex gap-3.5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                    <div key={i} className={`flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-400 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                         {msg.role === 'assistant' && (
-                            <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 mt-0.5 border-2 border-slate-100 shadow-sm bg-white ring-4 ring-slate-100/50">
-                                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
+                            <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 mt-0.5 border border-slate-100 bg-white">
+                                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover" />
                             </div>
                         )}
-                        <div className={`max-w-[85%] group relative ${msg.role === 'user'
-                            ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-3xl rounded-tr-lg px-5 py-3.5 shadow-xl shadow-indigo-600/20 shadow-blue-600/10'
+                        <div className={`max-w-[82%] group relative ${msg.role === 'user'
+                            ? 'bg-cyan-600 text-white rounded-2xl rounded-tr-sm px-4 py-2.5 shadow-md shadow-cyan-900/10'
                             : msg.isError
-                                ? 'bg-rose-50 text-rose-700 rounded-3xl rounded-tl-lg px-5 py-3.5 border border-rose-100'
-                                : 'bg-white text-slate-700 rounded-3xl rounded-tl-lg px-5 py-3.5 border border-slate-100 shadow-sm'
+                                ? 'bg-rose-50 text-rose-700 rounded-2xl rounded-tl-sm px-4 py-2.5 border border-rose-100'
+                                : 'bg-white text-slate-700 rounded-2xl rounded-tl-sm px-4 py-2.5 border border-slate-100 shadow-sm'
                             }`}>
 
                             {msg.role === 'assistant' && !msg.isError && (
-                                <div className="absolute -top-6 left-0 text-[10px] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                                    Eko AI Assistant
+                                <div className="absolute -top-5 left-0 text-[9px] font-bold text-slate-300 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Eko Assistant
                                 </div>
                             )}
 
-                            <div className="text-[13px] leading-relaxed whitespace-pre-wrap font-medium">
+                            <div className="text-[13px] leading-relaxed whitespace-pre-wrap font-regular">
                                 {msg.role === 'assistant' ? (
                                     (msg.content || '').split(/(\*\*.*?\*\*|!!.*?!!)/g).map((part, index) => {
                                         if (part.startsWith('**') && part.endsWith('**')) {
-                                            return <strong key={index} className="font-extrabold text-slate-900">{part.slice(2, -2)}</strong>;
+                                            return <strong key={index} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
                                         }
                                         if (part.startsWith('!!') && part.endsWith('!!')) {
-                                            return <span key={index} className="font-black text-rose-500">{part.slice(2, -2)}</span>;
+                                            return <span key={index} className="font-bold text-rose-500">{part.slice(2, -2)}</span>;
                                         }
                                         return part;
                                     })
@@ -1166,19 +1161,19 @@ export default function EchoPanel({ patientId, patientName }) {
                                         {viz.type === 'document_analysis' && <DocumentAnalysisCard visualization={viz} />}
                                         {viz.type === 'guideline_evidence' && <EvidenceCard visualization={viz} />}
                                         {viz.type === 'navigation' && (
-                                            <div className="mt-3 bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between group/nav cursor-pointer hover:bg-indigo-100/50 transition-colors">
+                                            <div className="mt-3 bg-cyan-50 rounded-xl p-3 border border-cyan-100 flex items-center justify-between group/nav cursor-pointer hover:bg-cyan-100/50 transition-colors">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
-                                                        <Navigation className="w-4 h-4" />
+                                                    <div className="p-2 rounded-lg bg-cyan-600 text-white shadow shadow-cyan-200">
+                                                        <Navigation className="w-3.5 h-3.5" />
                                                     </div>
                                                     <div>
-                                                        <span className="text-[12px] font-black text-indigo-900 uppercase tracking-tight">
+                                                        <span className="text-[11px] font-bold text-cyan-900 tracking-tight">
                                                             Navigate: {viz.label}
                                                         </span>
-                                                        <p className="text-[10px] text-indigo-500 font-bold mt-0.5">{viz.instructions}</p>
+                                                        <p className="text-[9px] text-cyan-600 font-medium mt-0.5">{viz.instructions}</p>
                                                     </div>
                                                 </div>
-                                                <ChevronRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                                                <ChevronRight className="w-3.5 h-3.5 text-cyan-400 group-hover:translate-x-1 transition-transform" />
                                             </div>
                                         )}
                                     </div>
@@ -1187,15 +1182,11 @@ export default function EchoPanel({ patientId, patientName }) {
 
                             {/* System Status Indicators */}
                             {msg.role === 'assistant' && msg.toolCalls?.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-50">
+                                <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-50">
                                     {msg.toolCalls.map((tc, ti) => (
-                                        <div key={ti} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 
-                                                                    rounded-xl bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 bg-white/50 uppercase tracking-widest shadow-sm">
-                                            {tc.name.includes('add_') || tc.name.includes('create_') ? (
-                                                <Zap className="w-3 h-3 text-amber-500 fill-amber-500/20" />
-                                            ) : (
-                                                <Search className="w-3 h-3 text-indigo-400" />
-                                            )}
+                                        <div key={ti} className="inline-flex items-center gap-1.5 px-2 py-1 
+                                                                    rounded-lg bg-slate-50 border border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                            <div className="w-1 h-1 rounded-full bg-cyan-400 animate-pulse" />
                                             {tc.name.replace(/_/g, ' ')}
                                         </div>
                                     ))}
@@ -1226,19 +1217,17 @@ export default function EchoPanel({ patientId, patientName }) {
 
                 {/* Eko is Working State */}
                 {isGlobalLoading && (
-                    <div className="flex gap-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 mt-0.5 border-2 border-slate-100 shadow-sm bg-white ring-4 ring-slate-50/50">
-                            <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
+                    <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 mt-0.5 border border-slate-100 bg-white">
+                            <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover" />
                         </div>
-                        <div className="bg-slate-900 text-white rounded-3xl rounded-tl-lg px-5 py-3.5 shadow-2xl">
-                            <div className="flex items-center gap-3">
-                                <div className="flex gap-1.5">
-                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                                    <span className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" />
-                                </div>
-                                <span className="text-[11px] font-black tracking-[0.1em] uppercase">Eko is processing...</span>
+                        <div className="bg-slate-100 text-slate-600 rounded-2xl rounded-tl-sm px-4 py-2 flex items-center gap-2 border border-slate-200">
+                            <div className="flex gap-1">
+                                <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <span className="w-1 h-1 bg-slate-400 rounded-full animate-bounce" />
                             </div>
+                            <span className="text-[10px] font-semibold tracking-tight uppercase">Processing</span>
                         </div>
                     </div>
                 )}
@@ -1266,57 +1255,48 @@ export default function EchoPanel({ patientId, patientName }) {
                 </div>
             )}
 
-            {/* Redesigned Compact Input Area */}
-            <div className="p-5">
-                <div className="bg-white rounded-[2rem] border border-slate-200 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all duration-300 shadow-inner group/input">
+            {/* Compact Minimalist Input Area */}
+            <div className="p-4 pt-0">
+                <div className="bg-slate-50 rounded-xl border border-slate-200 focus-within:border-cyan-500 focus-within:bg-white transition-all duration-200 group/input">
 
                     {/* Attachments Display */}
                     {attachments.length > 0 && (
-                        <div className="flex flex-wrap gap-2 px-4 pt-4 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="flex flex-wrap gap-1.5 px-3 pt-3 animate-in fade-in slide-in-from-bottom-2">
                             {attachments.map((file, idx) => (
-                                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 shadow-sm transition-all hover:bg-indigo-100">
-                                    <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span className="text-[10px] font-black text-indigo-900 truncate max-w-[120px]">{file.name}</span>
-                                    <button
-                                        onClick={() => removeAttachment(idx)}
-                                        className="text-indigo-300 hover:text-indigo-600 transition-colors ml-1"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
+                                <div key={idx} className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white border border-slate-100 shadow-sm">
+                                    <FileText className="w-3 h-3 text-cyan-600" />
+                                    <span className="text-[9px] font-bold text-slate-600 truncate max-w-[100px]">{file.name}</span>
+                                    <button onClick={() => removeAttachment(idx)} className="text-slate-300 hover:text-rose-500 transition-colors">
+                                        <X className="w-3 h-3" />
                                     </button>
                                 </div>
                             ))}
                         </div>
                     )}
 
-                    <div className="flex items-center p-2">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                            className="hidden"
-                            multiple
-                            accept=".pdf,.png,.jpg,.jpeg"
-                        />
+                    <div className="flex items-center px-2 py-1">
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" multiple accept=".pdf,.png,.jpg,.jpeg" />
+
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="p-3 rounded-2xl text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm transition-all active:scale-90 group/btn"
-                            title="Attach Document"
+                            className="p-2.5 rounded-xl text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-all active:scale-90 group/btn"
+                            title="Attach"
                         >
-                            <Paperclip className="w-5 h-5 group-hover/btn:rotate-12 transition-transform" />
+                            <Paperclip className="w-4 h-4 transition-transform" />
                         </button>
 
-                        <div className="flex-1 px-2 relative">
+                        <div className="flex-1 px-1">
                             <textarea
                                 ref={inputRef}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder={isPatientMode ? "Ask Eko..." : "Navigate PageMD..."}
+                                placeholder={isPatientMode ? "Ask clinical question..." : "Search PageMD..."}
                                 disabled={isGlobalLoading}
                                 rows={1}
-                                className="w-full bg-transparent text-[14px] text-slate-700 placeholder-slate-400
-                                       resize-none outline-none py-3 font-semibold h-[46px] flex items-center"
-                                style={{ maxHeight: '120px' }}
+                                className="w-full bg-transparent text-[13px] text-slate-700 placeholder-slate-400
+                                       resize-none outline-none py-2.5 font-medium h-[40px] flex items-center"
+                                style={{ maxHeight: '100px' }}
                             />
                         </div>
 
@@ -1325,34 +1305,30 @@ export default function EchoPanel({ patientId, patientName }) {
                                 onMouseDown={handleStartRecording}
                                 onMouseUp={handleStopRecording}
                                 onMouseLeave={handleStopRecording}
-                                className={`p-3 rounded-2xl transition-all active:scale-75 ${isRecording
-                                    ? 'bg-rose-500 text-white shadow-xl shadow-rose-200 animate-pulse scale-110'
-                                    : 'text-slate-400 hover:text-rose-500 hover:bg-rose-50/50'
+                                className={`p-2.5 rounded-xl transition-all active:scale-75 ${isRecording
+                                    ? 'bg-rose-500 text-white shadow-lg shadow-rose-200 animate-pulse'
+                                    : 'text-slate-400 hover:text-rose-500 hover:bg-rose-50'
                                     }`}
-                                title="Hold to Voice Speak"
                             >
-                                <Mic className={`w-5 h-5 ${isRecording ? 'animate-bounce' : ''}`} />
+                                <Mic className="w-4 h-4" />
                             </button>
 
                             <button
                                 onClick={() => sendMessage()}
                                 disabled={(!input.trim() && !isRecording) || isGlobalLoading}
-                                className="w-11 h-11 rounded-[1.25rem] bg-indigo-600 flex items-center justify-center 
-                                       text-white shadow-xl shadow-indigo-200 disabled:opacity-20 disabled:scale-95 disabled:shadow-none
-                                       hover:bg-indigo-700 hover:shadow-indigo-300 hover:-translate-y-0.5 transition-all active:scale-[0.85] active:translate-y-0 flex-shrink-0"
+                                className="w-9 h-9 rounded-xl bg-cyan-600 flex items-center justify-center 
+                                       text-white shadow-sm disabled:opacity-30 disabled:grayscale transition-all hover:bg-cyan-700 active:scale-90 flex-shrink-0"
                             >
-                                <Send className="w-5 h-5 translate-x-0.5 -translate-y-0.5" />
+                                <Send className="w-4 h-4" />
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex justify-center mt-3 opacity-0 group-hover-within/input:opacity-100 transition-opacity">
-                    <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full">
-                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                            Hold <kbd className="bg-white border-b-2 border-slate-300 px-1.5 py-0.5 rounded text-[9px] font-sans text-slate-800">Alt</kbd> to record
-                        </span>
-                    </div>
+                <div className="flex justify-center mt-2.5 opacity-0 group-hover-within/input:opacity-100 transition-opacity">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">
+                        Alt + Click to record
+                    </span>
                 </div>
             </div>
         </div>
