@@ -3771,7 +3771,7 @@ const VisitNote = () => {
                                                 setOrderModalTab('labs');
                                                 setShowOrderModal(true);
                                             }}
-                                            className="px-4 py-2.5 bg-gray-50 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2"
+                                            className="px-4 py-2.5 bg-slate-800 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-slate-200 flex items-center gap-2"
                                         >
                                             <FlaskConical className="w-4 h-4" />
                                             Order Labs

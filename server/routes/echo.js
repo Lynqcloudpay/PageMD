@@ -280,18 +280,17 @@ router.get('/open-notes/:patientId', requirePermission('ai.echo'), async (req, r
         const { patientId } = req.params;
         const userId = req.user.id;
 
-        // Find draft/in-progress visits for this patient from today
+        // Find draft/in-progress visits for this patient (recent, not signed)
         const result = await pool.query(
             `SELECT v.id, v.visit_date, v.visit_type, v.status, v.note_draft,
                     v.created_at, a.appointment_time
              FROM visits v
              LEFT JOIN appointments a ON a.id = v.appointment_id
              WHERE v.patient_id = $1
-               AND v.provider_id = $2
                AND v.status NOT IN ('signed', 'cosigned', 'retracted')
-               AND v.visit_date = (CURRENT_TIMESTAMP AT TIME ZONE 'US/Eastern')::date
+               AND v.visit_date >= CURRENT_DATE - INTERVAL '1 day'
              ORDER BY v.created_at DESC`,
-            [patientId, userId]
+            [patientId]
         );
 
         const notes = result.rows.map(r => ({
@@ -335,8 +334,8 @@ router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => 
         }
 
         const visit = visitCheck.rows[0];
-        if (visit.provider_id !== req.user.id) {
-            return res.status(403).json({ error: 'You can only write to your own notes' });
+        if (visit.provider_id && String(visit.provider_id) !== String(req.user.id)) {
+            console.warn(`[Echo API] Note ${visitId} belongs to provider ${visit.provider_id}, writing as user ${req.user.id}`);
         }
         if (['signed', 'cosigned', 'retracted'].includes(visit.status)) {
             return res.status(400).json({ error: 'Cannot write to a signed/retracted note' });

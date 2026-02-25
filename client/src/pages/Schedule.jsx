@@ -999,15 +999,15 @@ const Schedule = () => {
                                             >
                                                 {appt.patientName}
                                             </span>
-                                            <div className="w-[100px] flex items-center gap-1.5">
+                                            <div className="w-[120px] flex items-center gap-2">
                                                 <VisitTypeDropdown
                                                     appt={appt}
                                                     onUpdate={refreshAppointments}
                                                     onOpenChange={(open) => setActiveDropdownApptId(open ? appt.id : null)}
                                                 />
-                                                <span className="text-[8px] font-bold text-gray-400">{appt.duration}m</span>
+                                                <span className="text-[8px] font-bold text-gray-400 mr-1">{appt.duration}m</span>
                                             </div>
-                                            <div className="w-[100px]">
+                                            <div className="w-[100px] pl-1">
                                                 <ProviderSelector
                                                     appointment={appt}
                                                     providers={providers}

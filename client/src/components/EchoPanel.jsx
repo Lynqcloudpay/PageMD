@@ -136,26 +136,29 @@ function NoteDraftCard({ visualization, patientId }) {
         setInsertError(null);
 
         try {
-            // If no target visit specified, find open notes first
+            // If no target visit specified, try URL first
             if (!targetVisitId) {
-                const { data } = await api.get(`/echo/open-notes/${patientId}`);
+                const visitMatch = window.location.pathname.match(/\/visit\/([a-f0-9-]+)/i);
+                if (visitMatch) {
+                    targetVisitId = visitMatch[1];
+                } else {
+                    const { data } = await api.get(`/echo/open-notes/${patientId}`);
 
-                if (data.count === 0) {
-                    setInsertError('No open notes found for today. Open a visit note first.');
-                    setInserting(false);
-                    return;
+                    if (data.count === 0) {
+                        setInsertError('No open notes found for today. Open a visit note first.');
+                        setInserting(false);
+                        return;
+                    }
+
+                    if (data.count > 1) {
+                        setOpenNotes(data.notes);
+                        setShowNotePicker(true);
+                        setInserting(false);
+                        return;
+                    }
+
+                    targetVisitId = data.notes[0].visitId;
                 }
-
-                if (data.count > 1) {
-                    // Multiple notes — show picker
-                    setOpenNotes(data.notes);
-                    setShowNotePicker(true);
-                    setInserting(false);
-                    return;
-                }
-
-                // Exactly one note — use it
-                targetVisitId = data.notes[0].visitId;
             }
 
             // Map visualization draft keys to API keys
@@ -828,21 +831,28 @@ function InsertIntoNoteButton({ messageContent, patientId }) {
 
         try {
             if (!targetVisitId) {
-                const { data } = await api.get(`/echo/open-notes/${patientId}`);
+                // If we're on a visit page, extract visitId from URL directly
+                const visitMatch = location.pathname.match(/\/visit\/([a-f0-9-]+)/i);
+                if (visitMatch) {
+                    targetVisitId = visitMatch[1];
+                } else {
+                    // Fallback: ask the server for open notes
+                    const { data } = await api.get(`/echo/open-notes/${patientId}`);
 
-                if (data.count === 0) {
-                    setErrorMsg('No open notes found for today. Open a visit note first.');
-                    setState('error');
-                    return;
+                    if (data.count === 0) {
+                        setErrorMsg('No open notes found for today. Open a visit note first.');
+                        setState('error');
+                        return;
+                    }
+
+                    if (data.count > 1) {
+                        setOpenNotes(data.notes);
+                        setState('picking');
+                        return;
+                    }
+
+                    targetVisitId = data.notes[0].visitId;
                 }
-
-                if (data.count > 1) {
-                    setOpenNotes(data.notes);
-                    setState('picking');
-                    return;
-                }
-
-                targetVisitId = data.notes[0].visitId;
             }
 
             const sections = parseSectionsFromText(text);
