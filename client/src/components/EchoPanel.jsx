@@ -116,8 +116,13 @@ function EchoTrendChart({ visualization }) {
 
 // ─── Note Draft Card ────────────────────────────────────────────────────────
 
-function NoteDraftCard({ visualization }) {
+function NoteDraftCard({ visualization, patientId }) {
     const [copied, setCopied] = useState({});
+    const [inserting, setInserting] = useState(false);
+    const [inserted, setInserted] = useState(false);
+    const [openNotes, setOpenNotes] = useState(null);
+    const [showNotePicker, setShowNotePicker] = useState(false);
+    const [insertError, setInsertError] = useState(null);
 
     const copyToClipboard = (section, text) => {
         navigator.clipboard.writeText(text);
@@ -125,10 +130,130 @@ function NoteDraftCard({ visualization }) {
         setTimeout(() => setCopied(prev => ({ ...prev, [section]: false })), 2000);
     };
 
+    const insertIntoNote = async (targetVisitId = null) => {
+        if (!patientId) return;
+        setInserting(true);
+        setInsertError(null);
+
+        try {
+            // If no target visit specified, find open notes first
+            if (!targetVisitId) {
+                const { data } = await api.get(`/echo/open-notes/${patientId}`);
+
+                if (data.count === 0) {
+                    setInsertError('No open notes found for today. Open a visit note first.');
+                    setInserting(false);
+                    return;
+                }
+
+                if (data.count > 1) {
+                    // Multiple notes — show picker
+                    setOpenNotes(data.notes);
+                    setShowNotePicker(true);
+                    setInserting(false);
+                    return;
+                }
+
+                // Exactly one note — use it
+                targetVisitId = data.notes[0].visitId;
+            }
+
+            // Map visualization draft keys to API keys
+            const sections = {};
+            for (const [section, text] of Object.entries(visualization.drafts)) {
+                const key = section.toLowerCase();
+                if (key === 'hpi' || key === 'history of present illness') sections.hpi = text;
+                else if (key === 'ros' || key === 'review of systems') sections.ros = text;
+                else if (key === 'pe' || key === 'physical exam' || key === 'physical examination') sections.pe = text;
+                else if (key === 'assessment') sections.assessment = text;
+                else if (key === 'plan') sections.plan = text;
+                else if (key === 'chief complaint') sections.chiefComplaint = text;
+                else sections[key] = text;
+            }
+
+            await api.post('/echo/write-to-note', { visitId: targetVisitId, sections });
+
+            setInserted(true);
+            setShowNotePicker(false);
+            setTimeout(() => setInserted(false), 4000);
+
+            // Trigger a reload of the visit note if currently open
+            window.dispatchEvent(new CustomEvent('eko-note-updated', { detail: { visitId: targetVisitId } }));
+        } catch (err) {
+            console.error('[NoteDraftCard] Insert error:', err);
+            setInsertError(err.response?.data?.error || 'Failed to insert into note');
+        } finally {
+            setInserting(false);
+        }
+    };
+
     if (!visualization?.drafts) return null;
 
     return (
         <div className="mt-3 space-y-2.5">
+            {/* Insert all at once button */}
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => insertIntoNote()}
+                    disabled={inserting || inserted}
+                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold transition-all
+                        ${inserted
+                            ? 'bg-emerald-500 text-white'
+                            : inserting
+                                ? 'bg-gray-100 text-gray-400 cursor-wait'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm active:scale-[0.98]'
+                        }`}
+                >
+                    {inserted ? (
+                        <><CheckCircle2 className="w-3.5 h-3.5" /> Inserted into Note</>
+                    ) : inserting ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Writing...</>
+                    ) : (
+                        <><PenTool className="w-3.5 h-3.5" /> Insert All into Note</>
+                    )}
+                </button>
+            </div>
+
+            {insertError && (
+                <div className="text-[10px] text-rose-600 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200">
+                    {insertError}
+                </div>
+            )}
+
+            {/* Note picker modal (multiple open notes) */}
+            {showNotePicker && openNotes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="text-[11px] font-bold text-amber-900">Multiple open notes found — select one:</span>
+                    </div>
+                    {openNotes.map((note) => (
+                        <button
+                            key={note.visitId}
+                            onClick={() => insertIntoNote(note.visitId)}
+                            className="w-full text-left px-3 py-2 bg-white rounded-lg border border-amber-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-[11px] group"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <span className="font-bold text-gray-800 group-hover:text-blue-700">{note.visitType}</span>
+                                    {note.time && <span className="text-gray-400 ml-2">{note.time}</span>}
+                                </div>
+                                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${note.status === 'draft' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
+                                    {note.status}
+                                </span>
+                            </div>
+                            {note.preview && (
+                                <p className="text-[10px] text-gray-400 truncate mt-0.5">{note.preview}...</p>
+                            )}
+                        </button>
+                    ))}
+                    <button onClick={() => setShowNotePicker(false)} className="text-[10px] text-gray-500 hover:text-gray-700 font-medium">
+                        Cancel
+                    </button>
+                </div>
+            )}
+
+            {/* Individual section drafts */}
             {Object.entries(visualization.drafts).map(([section, text]) => (
                 <div key={section} className="bg-white rounded-xl p-3 border border-emerald-200/60 shadow-sm relative group overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
@@ -1128,7 +1253,7 @@ export default function EchoPanel({ patientId, patientName }) {
                                 {msg.visualizations?.map((viz, vi) => (
                                     <div key={vi} className="animate-in fade-in slide-in-from-top-2 duration-500 delay-150">
                                         {viz.type === 'vital_trend' && <EchoTrendChart visualization={viz} />}
-                                        {viz.type === 'note_draft' && <NoteDraftCard visualization={viz} />}
+                                        {viz.type === 'note_draft' && <NoteDraftCard visualization={viz} patientId={patientId} />}
                                         {viz.type === 'diagnosis_suggestions' && <DiagnosisSuggestionsCard visualization={viz} />}
                                         {(viz.type === 'lab_analysis' || viz.type === 'lab_interpretation') && <LabResultsCard visualization={viz} />}
                                         {viz.type === 'clinical_gaps' && <ClinicalGapsCard visualization={viz} />}

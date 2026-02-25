@@ -1052,6 +1052,33 @@ const VisitNote = () => {
         fetchQuickActions();
     }, [fetchQuickActions]);
 
+    // Listen for Eko AI writing into this note
+    useEffect(() => {
+        const handleEkoNoteUpdate = async (e) => {
+            const { visitId } = e.detail || {};
+            if (!visitId || visitId !== currentVisitId) return;
+
+            console.log('[VisitNote] Eko wrote to note, reloading...', visitId);
+            try {
+                const response = await visitsAPI.get(visitId);
+                const visit = response.data;
+                if (visit?.note_draft) {
+                    const parsed = parseNoteText(visit.note_draft);
+                    setNoteData(prev => ({
+                        ...prev,
+                        ...parsed
+                    }));
+                    showToast('Eko inserted content into your note', 'success');
+                }
+            } catch (err) {
+                console.error('[VisitNote] Failed to reload after Eko update:', err);
+            }
+        };
+
+        window.addEventListener('eko-note-updated', handleEkoNoteUpdate);
+        return () => window.removeEventListener('eko-note-updated', handleEkoNoteUpdate);
+    }, [currentVisitId, parseNoteText, showToast]);
+
     // Find or create visit on mount
     useEffect(() => {
         let cleanup = null;
@@ -4030,6 +4057,46 @@ const VisitNote = () => {
                                         </button>
                                     </div>
 
+                                    {/* Macros Section — TOP */}
+                                    <div className="border-b border-gray-100">
+                                        <div className="px-3 py-2 bg-gray-50/50 flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5">
+                                                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase">Macros</span>
+                                            </div>
+                                            <button
+                                                onClick={() => setShowMacroAddModal(true)}
+                                                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-amber-600 transition-colors"
+                                                title="Create New Macro"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                        <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
+                                            <div className="space-y-1">
+                                                {sidebarMacros.map((m, idx) => (
+                                                    <div key={idx} className="flex items-center gap-1 group/macro">
+                                                        <button
+                                                            onClick={() => handleQuickMacroClick(m)}
+                                                            className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-amber-50 rounded border border-gray-100 hover:border-amber-200 transition-all flex items-center gap-1.5 group"
+                                                        >
+                                                            <Sparkles className="w-3 h-3 text-gray-400 group-hover:text-amber-500" />
+                                                            <span className="text-gray-700 group-hover:text-amber-700 font-medium">
+                                                                {m.shortcut_code || m.key}
+                                                            </span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => deleteSidebarMacro(m.id)}
+                                                            className="px-1 text-gray-300 hover:text-rose-400 opacity-0 group-hover/macro:opacity-100 transition-all"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Problem List Section */}
                                     <div className="border-b border-gray-100">
                                         <div className="px-3 py-2 bg-gray-50/50 flex items-center justify-between">
@@ -4199,45 +4266,6 @@ const VisitNote = () => {
                                         </div>
                                     </div>
 
-                                    {/* Macros Section */}
-                                    <div className="border-b border-gray-100">
-                                        <div className="px-3 py-2 bg-gray-50/50 flex items-center justify-between">
-                                            <div className="flex items-center gap-1.5">
-                                                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                                                <span className="text-[10px] font-bold text-gray-600 uppercase">Macros</span>
-                                            </div>
-                                            <button
-                                                onClick={() => setShowMacroAddModal(true)}
-                                                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-amber-600 transition-colors"
-                                                title="Create New Macro"
-                                            >
-                                                <Plus className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                        <div className="p-2 max-h-36 overflow-y-auto custom-scrollbar">
-                                            <div className="space-y-1">
-                                                {sidebarMacros.map((m, idx) => (
-                                                    <div key={idx} className="flex items-center gap-1 group/macro">
-                                                        <button
-                                                            onClick={() => handleQuickMacroClick(m)}
-                                                            className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-amber-50 rounded border border-gray-100 hover:border-amber-200 transition-all flex items-center gap-1.5 group"
-                                                        >
-                                                            <Sparkles className="w-3 h-3 text-gray-400 group-hover:text-amber-500" />
-                                                            <span className="text-gray-700 group-hover:text-amber-700 font-medium">
-                                                                {m.shortcut_code || m.key}
-                                                            </span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => deleteSidebarMacro(m.id)}
-                                                            className="px-1 text-gray-300 hover:text-rose-400 opacity-0 group-hover/macro:opacity-100 transition-all"
-                                                        >
-                                                            <X className="w-3 h-3" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
 
                                     {/* Results Import Section */}
                                     <div>

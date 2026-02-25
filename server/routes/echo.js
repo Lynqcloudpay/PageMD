@@ -269,6 +269,187 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
     }
 });
 
+// ─── Write to Note ──────────────────────────────────────────────────────────
+
+/**
+ * GET /api/echo/open-notes/:patientId
+ * Find today's open (draft/in-progress) visit notes for a patient
+ */
+router.get('/open-notes/:patientId', requirePermission('ai.echo'), async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const userId = req.user.id;
+
+        // Find draft/in-progress visits for this patient from today
+        const result = await pool.query(
+            `SELECT v.id, v.visit_date, v.visit_type, v.status, v.note_draft,
+                    v.created_at, a.appointment_time
+             FROM visits v
+             LEFT JOIN appointments a ON a.id = v.appointment_id
+             WHERE v.patient_id = $1
+               AND v.provider_id = $2
+               AND v.status NOT IN ('signed', 'cosigned', 'retracted')
+               AND v.visit_date = (CURRENT_TIMESTAMP AT TIME ZONE 'US/Eastern')::date
+             ORDER BY v.created_at DESC`,
+            [patientId, userId]
+        );
+
+        const notes = result.rows.map(r => ({
+            visitId: r.id,
+            visitDate: r.visit_date,
+            visitType: r.visit_type || 'Follow-up',
+            status: r.status,
+            time: r.appointment_time || null,
+            hasContent: !!(r.note_draft && r.note_draft.trim().length > 0),
+            preview: r.note_draft ? r.note_draft.substring(0, 100) : ''
+        }));
+
+        res.json({ notes, count: notes.length });
+    } catch (err) {
+        console.error('[Echo API] Open notes fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch open notes' });
+    }
+});
+
+/**
+ * POST /api/echo/write-to-note
+ * Insert AI-drafted content into a specific section of an open visit note
+ */
+router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => {
+    try {
+        const { visitId, sections } = req.body;
+        // sections: { hpi: "...", ros: "...", pe: "...", assessment: "...", plan: "..." }
+
+        if (!visitId || !sections || Object.keys(sections).length === 0) {
+            return res.status(400).json({ error: 'visitId and sections are required' });
+        }
+
+        // Verify the visit exists, belongs to this user, and is still draft
+        const visitCheck = await pool.query(
+            `SELECT id, note_draft, status, provider_id FROM visits WHERE id = $1`,
+            [visitId]
+        );
+
+        if (visitCheck.rows.length === 0) {
+            return res.status(404).json({ error: 'Visit not found' });
+        }
+
+        const visit = visitCheck.rows[0];
+        if (visit.provider_id !== req.user.id) {
+            return res.status(403).json({ error: 'You can only write to your own notes' });
+        }
+        if (['signed', 'cosigned', 'retracted'].includes(visit.status)) {
+            return res.status(400).json({ error: 'Cannot write to a signed/retracted note' });
+        }
+
+        // Parse existing note_draft into sections
+        const existingDraft = visit.note_draft || '';
+        const sectionMap = {};
+        const sectionOrder = [];
+
+        // Parse "Section Label: content" format
+        const sectionRegex = /^(Chief Complaint|HPI|Review of Systems|Physical Exam|Results|Assessment|Plan|Caregiver Training|ASCVD Risk|Safety Plan|Care Plan|Follow Up):\s*/gm;
+        let lastMatch = null;
+        let match;
+        const allMatches = [];
+
+        // Find all section headers
+        const regex = /(^|\n)(Chief Complaint|HPI|Review of Systems|Physical Exam|Results|Assessment|Plan|Caregiver Training|ASCVD Risk|Safety Plan|Care Plan|Follow Up):\s*/g;
+        while ((match = regex.exec(existingDraft)) !== null) {
+            allMatches.push({ label: match[2], index: match.index + match[0].length - match[2].length - 2, headerEnd: match.index + match[0].length });
+        }
+
+        // Extract content for each section
+        for (let i = 0; i < allMatches.length; i++) {
+            const label = allMatches[i].label;
+            const contentStart = allMatches[i].headerEnd;
+            const contentEnd = i + 1 < allMatches.length ? allMatches[i + 1].index : existingDraft.length;
+            sectionMap[label.toLowerCase()] = existingDraft.substring(contentStart, contentEnd).trim();
+            sectionOrder.push(label);
+        }
+
+        // Map incoming section keys to note section labels
+        const keyToLabel = {
+            'hpi': 'HPI',
+            'chiefComplaint': 'Chief Complaint',
+            'ros': 'Review of Systems',
+            'pe': 'Physical Exam',
+            'results': 'Results',
+            'assessment': 'Assessment',
+            'plan': 'Plan',
+            'carePlan': 'Care Plan',
+            'followUp': 'Follow Up'
+        };
+
+        const updatedSections = [];
+
+        // Apply incoming sections
+        for (const [key, content] of Object.entries(sections)) {
+            const label = keyToLabel[key] || key;
+            const normalizedKey = label.toLowerCase();
+
+            if (sectionMap.hasOwnProperty(normalizedKey)) {
+                // Section exists — replace content (or append if existing content is present)
+                const existing = sectionMap[normalizedKey];
+                if (existing && existing.trim().length > 0) {
+                    // Append with separator if there's already content
+                    sectionMap[normalizedKey] = existing + '\n\n' + content;
+                } else {
+                    sectionMap[normalizedKey] = content;
+                }
+            } else {
+                // Section doesn't exist — add it
+                sectionMap[normalizedKey] = content;
+                sectionOrder.push(label);
+            }
+
+            updatedSections.push(label);
+        }
+
+        // Reconstruct the note_draft in proper order
+        const canonicalOrder = [
+            'Chief Complaint', 'HPI', 'Review of Systems', 'Physical Exam',
+            'Results', 'Assessment', 'Plan', 'Caregiver Training', 'ASCVD Risk',
+            'Safety Plan', 'Care Plan', 'Follow Up'
+        ];
+
+        const outputSections = [];
+        for (const label of canonicalOrder) {
+            const key = label.toLowerCase();
+            if (sectionMap.hasOwnProperty(key) && sectionMap[key]) {
+                outputSections.push(`${label}: ${sectionMap[key]}`);
+            }
+        }
+
+        const updatedDraft = outputSections.join('\n\n');
+
+        // Save back to database
+        await pool.query(
+            `UPDATE visits SET note_draft = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+            [updatedDraft, visitId]
+        );
+
+        // Audit
+        try {
+            await pool.query(
+                `INSERT INTO echo_audit (conversation_id, user_id, tenant_id, patient_id, action, output_summary, risk_level)
+                 VALUES ($1, $2, $3, (SELECT patient_id FROM visits WHERE id = $4), $5, $6, $7)`,
+                [null, req.user.id, req.user.clinic_id, visitId,
+                    'write_to_note', `Wrote ${updatedSections.join(', ')} to visit ${visitId}`, 'medium']
+            );
+        } catch (auditErr) {
+            console.warn('[Echo API] Audit log failed (non-blocking):', auditErr.message);
+        }
+
+        console.log(`[Echo API] Wrote to note ${visitId}: ${updatedSections.join(', ')}`);
+        res.json({ success: true, updatedSections, visitId });
+
+    } catch (err) {
+        console.error('[Echo API] Write to note error:', err);
+        res.status(500).json({ error: 'Failed to write to note' });
+    }
+});
+
 // ─── Conversations ──────────────────────────────────────────────────────────
 
 /**
