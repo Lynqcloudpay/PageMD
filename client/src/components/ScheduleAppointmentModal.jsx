@@ -52,6 +52,15 @@ const ScheduleAppointmentModal = ({
         }
     }, [initialPatient, initialDate, initialTime]);
 
+    // Sync date/time when initialDate or initialTime props change (e.g. user navigates to a different day)
+    useEffect(() => {
+        setNewAppt(prev => ({
+            ...prev,
+            date: initialDate || prev.date,
+            time: initialTime || prev.time
+        }));
+    }, [initialDate, initialTime]);
+
     // Set default provider if not provided
     useEffect(() => {
         if (!newAppt.providerId && providers.length > 0) {
