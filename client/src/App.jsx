@@ -13,69 +13,89 @@ import { TaskProvider } from './context/TaskContext'
 import { PlatformAdminProvider } from './context/PlatformAdminContext'
 import { NotificationProvider } from './components/NotificationProvider'
 
+// Lazy-load with auto-retry on chunk failure (stale deploy recovery)
+const lazyRetry = (importFn) => React.lazy(() =>
+    importFn().catch((err) => {
+        // Chunk failed — likely a stale deploy. Try once more after a brief delay.
+        console.warn('[LazyRetry] Chunk load failed, retrying...', err.message);
+        return new Promise((resolve) => setTimeout(resolve, 1000))
+            .then(() => importFn())
+            .catch(() => {
+                // Still failing — force reload to get fresh index.html with new chunk refs
+                const lastReload = sessionStorage.getItem('chunk_reload');
+                const now = Date.now();
+                if (!lastReload || now - parseInt(lastReload) > 10000) {
+                    sessionStorage.setItem('chunk_reload', now.toString());
+                    window.location.reload();
+                }
+                throw err; // re-throw for ErrorBoundary if reload didn't happen
+            });
+    })
+);
+
 // Lazy loaded pages/components
-const Snapshot = React.lazy(() => import('./pages/Snapshot'));
-const VisitNote = React.lazy(() => import('./pages/VisitNote'));
+const Snapshot = lazyRetry(() => import('./pages/Snapshot'));
+const VisitNote = lazyRetry(() => import('./pages/VisitNote'));
 
-const Schedule = React.lazy(() => import('./pages/Schedule'));
-const MySchedule = React.lazy(() => import('./pages/MySchedule'));
-const Patients = React.lazy(() => import('./pages/Patients'));
-const Login = React.lazy(() => import('./pages/Login'));
-const LandingPage = React.lazy(() => import('./pages/LandingPage'));
-const FeaturesPage = React.lazy(() => import('./pages/FeaturesPage'));
-const SecurityPage = React.lazy(() => import('./pages/SecurityPage'));
-const PricingPage = React.lazy(() => import('./pages/PricingPage'));
-const ContactPage = React.lazy(() => import('./pages/ContactPage'));
-const AboutPage = React.lazy(() => import('./pages/AboutPage'));
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const PendingNotes = React.lazy(() => import('./pages/PendingNotes'));
-const Inbasket = React.lazy(() => import('./pages/InbasketRedesign'));
-const Analytics = React.lazy(() => import('./pages/Analytics'));
-const Messages = React.lazy(() => import('./pages/Messages'));
-const Telehealth = React.lazy(() => import('./pages/Telehealth'));
-const Billing = React.lazy(() => import('./pages/Billing'));
-const BillingManager = React.lazy(() => import('./pages/BillingManager'));
-const PaymentPosting = React.lazy(() => import('./pages/PaymentPosting'));
-const BillingReports = React.lazy(() => import('./pages/BillingReports'));
-const PatientStatements = React.lazy(() => import('./pages/PatientStatements'));
-const ClaimViewer = React.lazy(() => import('./pages/ClaimViewer'));
-const AdminSettings = React.lazy(() => import('./pages/AdminSettings'));
-const UserManagement = React.lazy(() => import('./pages/UserManagement'));
-const Cancellations = React.lazy(() => import('./pages/Cancellations'));
-const AppointmentRequests = React.lazy(() => import('./pages/AppointmentRequests'));
-const Profile = React.lazy(() => import('./pages/Profile'));
-const FeeSheet = React.lazy(() => import('./pages/FeeSheet'));
-const Compliance = React.lazy(() => import('./pages/Compliance'));
-const SupportPage = React.lazy(() => import('./pages/SupportPage'));
+const Schedule = lazyRetry(() => import('./pages/Schedule'));
+const MySchedule = lazyRetry(() => import('./pages/MySchedule'));
+const Patients = lazyRetry(() => import('./pages/Patients'));
+const Login = lazyRetry(() => import('./pages/Login'));
+const LandingPage = lazyRetry(() => import('./pages/LandingPage'));
+const FeaturesPage = lazyRetry(() => import('./pages/FeaturesPage'));
+const SecurityPage = lazyRetry(() => import('./pages/SecurityPage'));
+const PricingPage = lazyRetry(() => import('./pages/PricingPage'));
+const ContactPage = lazyRetry(() => import('./pages/ContactPage'));
+const AboutPage = lazyRetry(() => import('./pages/AboutPage'));
+const Dashboard = lazyRetry(() => import('./pages/Dashboard'));
+const PendingNotes = lazyRetry(() => import('./pages/PendingNotes'));
+const Inbasket = lazyRetry(() => import('./pages/InbasketRedesign'));
+const Analytics = lazyRetry(() => import('./pages/Analytics'));
+const Messages = lazyRetry(() => import('./pages/Messages'));
+const Telehealth = lazyRetry(() => import('./pages/Telehealth'));
+const Billing = lazyRetry(() => import('./pages/Billing'));
+const BillingManager = lazyRetry(() => import('./pages/BillingManager'));
+const PaymentPosting = lazyRetry(() => import('./pages/PaymentPosting'));
+const BillingReports = lazyRetry(() => import('./pages/BillingReports'));
+const PatientStatements = lazyRetry(() => import('./pages/PatientStatements'));
+const ClaimViewer = lazyRetry(() => import('./pages/ClaimViewer'));
+const AdminSettings = lazyRetry(() => import('./pages/AdminSettings'));
+const UserManagement = lazyRetry(() => import('./pages/UserManagement'));
+const Cancellations = lazyRetry(() => import('./pages/Cancellations'));
+const AppointmentRequests = lazyRetry(() => import('./pages/AppointmentRequests'));
+const Profile = lazyRetry(() => import('./pages/Profile'));
+const FeeSheet = lazyRetry(() => import('./pages/FeeSheet'));
+const Compliance = lazyRetry(() => import('./pages/Compliance'));
+const SupportPage = lazyRetry(() => import('./pages/SupportPage'));
 
-const PlatformAdminLogin = React.lazy(() => import('./pages/PlatformAdminLogin'));
-const PlatformAdminDashboard = React.lazy(() => import('./pages/PlatformAdminDashboard'));
-const PlatformAdminClinics = React.lazy(() => import('./pages/PlatformAdminClinics'));
-const PlatformAdminTeam = React.lazy(() => import('./pages/PlatformAdminTeam'));
-const PlatformAdminProfile = React.lazy(() => import('./pages/PlatformAdminProfile'));
-const PlatformAdminClinicDetails = React.lazy(() => import('./pages/PlatformAdminClinicDetails'));
-const PlatformAdminRoles = React.lazy(() => import('./pages/PlatformAdminRoles'));
-const PlatformAdminSupport = React.lazy(() => import('./pages/PlatformAdminSupport'));
-const PlatformAdminRevenue = React.lazy(() => import('./pages/PlatformAdminRevenue'));
-const PlatformAdminDevelopers = React.lazy(() => import('./pages/PlatformAdminDevelopers'));
-const PlatformAdminArchives = React.lazy(() => import('./pages/PlatformAdminArchives'));
-const ImpersonateHandler = React.lazy(() => import('./pages/ImpersonateHandler'));
-const SalesAdmin = React.lazy(() => import('./pages/SalesAdmin'));
-const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
-const VerifyDemo = React.lazy(() => import('./pages/VerifyDemo'));
-const DemoConfirmation = React.lazy(() => import('./pages/DemoConfirmation'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const SetupPassword = React.lazy(() => import('./pages/SetupPassword'));
+const PlatformAdminLogin = lazyRetry(() => import('./pages/PlatformAdminLogin'));
+const PlatformAdminDashboard = lazyRetry(() => import('./pages/PlatformAdminDashboard'));
+const PlatformAdminClinics = lazyRetry(() => import('./pages/PlatformAdminClinics'));
+const PlatformAdminTeam = lazyRetry(() => import('./pages/PlatformAdminTeam'));
+const PlatformAdminProfile = lazyRetry(() => import('./pages/PlatformAdminProfile'));
+const PlatformAdminClinicDetails = lazyRetry(() => import('./pages/PlatformAdminClinicDetails'));
+const PlatformAdminRoles = lazyRetry(() => import('./pages/PlatformAdminRoles'));
+const PlatformAdminSupport = lazyRetry(() => import('./pages/PlatformAdminSupport'));
+const PlatformAdminRevenue = lazyRetry(() => import('./pages/PlatformAdminRevenue'));
+const PlatformAdminDevelopers = lazyRetry(() => import('./pages/PlatformAdminDevelopers'));
+const PlatformAdminArchives = lazyRetry(() => import('./pages/PlatformAdminArchives'));
+const ImpersonateHandler = lazyRetry(() => import('./pages/ImpersonateHandler'));
+const SalesAdmin = lazyRetry(() => import('./pages/SalesAdmin'));
+const RegisterPage = lazyRetry(() => import('./pages/RegisterPage'));
+const VerifyDemo = lazyRetry(() => import('./pages/VerifyDemo'));
+const DemoConfirmation = lazyRetry(() => import('./pages/DemoConfirmation'));
+const ForgotPassword = lazyRetry(() => import('./pages/ForgotPassword'));
+const SetupPassword = lazyRetry(() => import('./pages/SetupPassword'));
 
-const PortalLogin = React.lazy(() => import('./portal/PortalLogin'));
-const PortalDashboard = React.lazy(() => import('./portal/PortalDashboard'));
-const PortalRegister = React.lazy(() => import('./portal/PortalRegister'));
-const PortalForgotPassword = React.lazy(() => import('./portal/PortalForgotPassword'));
-const PortalResetPassword = React.lazy(() => import('./portal/PortalResetPassword'));
-const PortalTelehealth = React.lazy(() => import('./portal/PortalTelehealth'));
-const GuestVisitPage = React.lazy(() => import('./pages/GuestVisitPage'));
-const PublicIntake = React.lazy(() => import('./pages/PublicIntake'));
-const DigitalIntake = React.lazy(() => import('./pages/DigitalIntake'));
+const PortalLogin = lazyRetry(() => import('./portal/PortalLogin'));
+const PortalDashboard = lazyRetry(() => import('./portal/PortalDashboard'));
+const PortalRegister = lazyRetry(() => import('./portal/PortalRegister'));
+const PortalForgotPassword = lazyRetry(() => import('./portal/PortalForgotPassword'));
+const PortalResetPassword = lazyRetry(() => import('./portal/PortalResetPassword'));
+const PortalTelehealth = lazyRetry(() => import('./portal/PortalTelehealth'));
+const GuestVisitPage = lazyRetry(() => import('./pages/GuestVisitPage'));
+const PublicIntake = lazyRetry(() => import('./pages/PublicIntake'));
+const DigitalIntake = lazyRetry(() => import('./pages/DigitalIntake'));
 
 // Patient Redirect Component - redirects /patient/:id to /patient/:id/snapshot
 const PatientRedirect = () => {
