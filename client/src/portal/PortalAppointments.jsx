@@ -170,7 +170,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
     if (loading && appointments.length === 0) return (
         <div className="flex flex-col items-center justify-center p-20">
             <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Checking Schedules...</p>
+            <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Checking Schedules...</p>
         </div>
     );
 
@@ -208,7 +208,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
         <div className="space-y-6 pb-10 animate-in fade-in duration-700">
             {/* TOP ACTION BAR */}
             <div className="flex justify-between items-center">
-                <h1 className="text-xl font-bold text-slate-800">My Appointments</h1>
+                <h1 className="text-xl font-bold text-gray-800">My Appointments</h1>
                 <button
                     onClick={() => setShowRequestForm(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -223,16 +223,16 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                     <div className="relative flex justify-between items-center">
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 bg-white/20 rounded-md text-[8px] font-black uppercase tracking-widest">Upcoming</span>
+                                <span className="px-2 py-0.5 bg-white/20 rounded-md text-[8px] font-bold uppercase tracking-widest">Upcoming</span>
                                 <span className="text-xs font-bold text-blue-100">{format(parseLocalSafe(nextAppt.appointment_date), 'EEEE, MMMM do')}</span>
                             </div>
-                            <h1 className="text-2xl font-black tracking-tight leading-none">
+                            <h1 className="text-2xl font-bold tracking-tight leading-none">
                                 {nextAppt.appointment_time.slice(0, 5)} with Dr. {nextAppt.provider_last_name}
                             </h1>
                             <div className="flex items-center gap-3 pt-1">
                                 <button
                                     onClick={() => onMessageShortcut?.('messages')}
-                                    className="px-4 py-2 bg-white text-blue-700 rounded-xl font-black text-[9px] uppercase tracking-widest hover:scale-105 transition-transform flex items-center gap-1.5"
+                                    className="px-4 py-2 bg-white text-blue-700 rounded-xl font-bold text-[9px] uppercase tracking-widest hover:scale-105 transition-transform flex items-center gap-1.5"
                                 >
                                     View Details <ArrowUpRight className="w-3 h-3" />
                                 </button>
@@ -241,33 +241,33 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                         setFormData({ ...formData, reason: `Reschedule request for current visit on ${format(parseLocalSafe(nextAppt.appointment_date), 'yyyy-MM-dd')}` });
                                         setShowRequestForm(true);
                                     }}
-                                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-colors border border-white/20"
+                                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest transition-colors border border-white/20"
                                 >
                                     Reschedule
                                 </button>
                                 <button
                                     onClick={() => setCancellingAppt(nextAppt)}
-                                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-100 rounded-xl font-black text-[9px] uppercase tracking-widest transition-colors border border-red-500/20"
+                                    className="px-4 py-2 bg-red-500/20 hover:bg-red-500/40 text-red-100 rounded-xl font-bold text-[9px] uppercase tracking-widest transition-colors border border-red-500/20"
                                 >
                                     Cancel Visit
                                 </button>
                             </div>
                         </div>
                         <div className="hidden sm:flex flex-col items-center justify-center p-4 bg-white/5 rounded-2xl border border-white/10 w-24">
-                            <span className="text-2xl font-black leading-none">{format(parseLocalSafe(nextAppt.appointment_date), 'dd')}</span>
+                            <span className="text-2xl font-bold leading-none">{format(parseLocalSafe(nextAppt.appointment_date), 'dd')}</span>
                             <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">{format(parseLocalSafe(nextAppt.appointment_date), 'MMM')}</span>
                         </div>
                     </div>
                 </div>
             ) : (
-                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
+                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-bold text-slate-800">No scheduled visits</h2>
-                        <p className="text-slate-400 text-xs mt-0.5">Stay proactive with your health checkups.</p>
+                        <h2 className="text-lg font-bold text-gray-800">No scheduled visits</h2>
+                        <p className="text-gray-400 text-xs mt-0.5">Stay proactive with your health checkups.</p>
                     </div>
                     <button
                         onClick={() => setShowRequestForm(true)}
-                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-lg shadow-blue-100"
+                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold uppercase tracking-widest text-[9px] shadow-lg shadow-blue-100"
                     >
                         Schedule Now
                     </button>
@@ -279,7 +279,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                 <div className="space-y-3">
                     <div className="flex items-center gap-2 ml-1">
                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-red-700">Action Required</h3>
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-700">Action Required</h3>
                     </div>
                     {withSuggestions.map(req => {
                         let slots = [];
@@ -304,7 +304,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                                 setError('Failed to cancel request. Please try again.');
                                             }
                                         }}
-                                        className="px-3 py-1.5 bg-red-100/50 hover:bg-red-200 text-red-700 text-[9px] font-black uppercase tracking-widest rounded-lg transition-colors border border-red-200/50"
+                                        className="px-3 py-1.5 bg-red-100/50 hover:bg-red-200 text-red-700 text-[9px] font-bold uppercase tracking-widest rounded-lg transition-colors border border-red-200/50"
                                     >
                                         None of these work
                                     </button>
@@ -329,7 +329,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                                 className="flex items-center gap-3 p-3 bg-white hover:bg-red-600 hover:text-white rounded-xl border border-red-100 hover:border-red-600 transition-all group"
                                             >
                                                 <div className="w-10 h-10 bg-red-100 group-hover:bg-white/20 rounded-lg flex flex-col items-center justify-center shrink-0">
-                                                    <span className="text-sm font-black text-red-700 group-hover:text-white leading-none">{format(parseLocalSafe(slot.date, slot.time), 'd')}</span>
+                                                    <span className="text-sm font-bold text-red-700 group-hover:text-white leading-none">{format(parseLocalSafe(slot.date, slot.time), 'd')}</span>
                                                     <span className="text-[7px] font-bold text-red-500 group-hover:text-white/80 uppercase">{format(parseLocalSafe(slot.date, slot.time), 'MMM')}</span>
                                                 </div>
                                                 <div className="text-left flex-1">
@@ -351,38 +351,38 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                 {/* 1. SCHEDULED - TABLE VIEW */}
                 <div className="space-y-4">
                     <SectionLabel icon={<Calendar size={14} className="text-blue-500" />} title="Scheduled Visits" count={scheduled.length} />
-                    <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
+                    <div className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden shadow-sm">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/50">
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Date & Time</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Clinician</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Type</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">Status</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100"></th>
+                                <tr className="bg-gray-50/50">
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Date & Time</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Clinician</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Type</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100">Status</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-gray-100"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-gray-50">
                                 {scheduled.map(appt => (
-                                    <tr key={appt.id} className="hover:bg-slate-50/30 transition-colors group">
+                                    <tr key={appt.id} className="hover:bg-gray-50/30 transition-colors group">
                                         <td className="px-6 py-5">
-                                            <div className="font-bold text-slate-800 text-sm">{format(parseLocalSafe(appt.appointment_date), 'MMM d, yyyy')}</div>
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase">{appt.appointment_time.slice(0, 5)}</div>
+                                            <div className="font-bold text-gray-800 text-sm">{format(parseLocalSafe(appt.appointment_date), 'MMM d, yyyy')}</div>
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase">{appt.appointment_time.slice(0, 5)}</div>
                                         </td>
                                         <td className="px-6 py-5">
-                                            <div className="text-sm font-bold text-slate-700">Dr. {appt.provider_last_name}</div>
+                                            <div className="text-sm font-bold text-gray-700">Dr. {appt.provider_last_name}</div>
                                         </td>
                                         <td className="px-6 py-5">
                                             <div className="flex items-center gap-1.5">
                                                 {appt.visit_method === 'telehealth' || (appt.appointment_type || '').toLowerCase().includes('telehealth') ? (
                                                     <>
                                                         <Video size={12} className="text-emerald-500" />
-                                                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Telehealth</span>
+                                                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-tight">Telehealth</span>
                                                     </>
                                                 ) : (
                                                     <>
                                                         <MapPin size={12} className="text-blue-500" />
-                                                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">In-Person</span>
+                                                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-tight">In-Person</span>
                                                     </>
                                                 )}
                                             </div>
@@ -391,9 +391,9 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             {(() => {
                                                 const effectiveStatus = (appt.patient_status === 'cancelled' || appt.patient_status === 'no_show') ? appt.patient_status : appt.status;
                                                 return (
-                                                    <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest ${effectiveStatus === 'confirmed' || effectiveStatus === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
+                                                    <span className={`px-2.5 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest ${effectiveStatus === 'confirmed' || effectiveStatus === 'scheduled' ? 'bg-emerald-50 text-emerald-600' :
                                                         effectiveStatus === 'arrived' ? 'bg-blue-50 text-blue-600' :
-                                                            (effectiveStatus === 'cancelled' || effectiveStatus === 'no_show') ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-500'
+                                                            (effectiveStatus === 'cancelled' || effectiveStatus === 'no_show') ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'
                                                         }`}>
                                                         {effectiveStatus === 'scheduled' ? 'Confirmed' : effectiveStatus}
                                                     </span>
@@ -404,12 +404,12 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => setCancellingAppt(appt)}
-                                                    className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                    className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                                                     title="Cancel Appointment"
                                                 >
                                                     <XCircle size={16} />
                                                 </button>
-                                                <button onClick={() => onMessageShortcut?.('messages')} className="p-2 text-slate-300 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
+                                                <button onClick={() => onMessageShortcut?.('messages')} className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all">
                                                     <ArrowUpRight size={16} />
                                                 </button>
                                             </div>
@@ -417,7 +417,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     </tr>
                                 ))}
                                 {scheduled.length === 0 && (
-                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-xs text-slate-300 font-bold uppercase tracking-[0.2em] italic">No upcoming visits found</td></tr>
+                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-xs text-gray-400 font-bold uppercase tracking-[0.2em] italic">No upcoming visits found</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -452,41 +452,41 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                             ))}
                         </div>
                     ) : (
-                        <div className="p-10 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
-                            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">No processing requests</p>
+                        <div className="p-10 text-center bg-gray-50/50 rounded-[2rem] border border-dashed border-gray-200">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">No processing requests</p>
                         </div>
                     )}
                 </div>
 
                 {/* 3. PAST VISITS - TABLE VIEW */}
                 <div className="space-y-4">
-                    <SectionLabel icon={<History size={14} className="text-slate-400" />} title="Past Visits" count={past.length} />
+                    <SectionLabel icon={<History size={14} className="text-gray-400" />} title="Past Visits" count={past.length} />
                     <div className="bg-white rounded-[2rem] border border-slate-50 overflow-hidden shadow-sm opacity-90 transition-opacity">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/30">
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Date & Time</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Clinician</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Type</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50">Status</th>
-                                    <th className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-slate-300 border-b border-slate-50"></th>
+                                <tr className="bg-gray-50/30">
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-slate-50">Date & Time</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-slate-50">Clinician</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-slate-50">Type</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-slate-50">Status</th>
+                                    <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-gray-400 border-b border-slate-50"></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-gray-50">
                                 {past.map(appt => (
-                                    <tr key={appt.id} className="hover:bg-slate-50/30 transition-colors">
+                                    <tr key={appt.id} className="hover:bg-gray-50/30 transition-colors">
                                         <td className="px-6 py-4">
-                                            <div className="font-bold text-slate-400 text-sm">{format(parseLocalSafe(appt.appointment_date), 'MMM d, yyyy')}</div>
-                                            <div className="text-[10px] font-bold text-slate-300">{appt.appointment_time.slice(0, 5)}</div>
+                                            <div className="font-bold text-gray-400 text-sm">{format(parseLocalSafe(appt.appointment_date), 'MMM d, yyyy')}</div>
+                                            <div className="text-[10px] font-bold text-gray-400">{appt.appointment_time.slice(0, 5)}</div>
                                         </td>
-                                        <td className="px-6 py-4 font-bold text-slate-400 text-sm">Dr. {appt.provider_last_name}</td>
+                                        <td className="px-6 py-4 font-bold text-gray-400 text-sm">Dr. {appt.provider_last_name}</td>
                                         <td className="px-6 py-4">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                                                 {appt.visit_method === 'telehealth' || (appt.appointment_type || '').toLowerCase().includes('telehealth') ? 'Telehealth' : 'In-Person'}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="px-2 py-0.5 bg-slate-100 text-slate-400 rounded text-[8px] font-black uppercase tracking-widest">
+                                            <span className="px-2 py-0.5 bg-gray-50 text-gray-400 rounded text-[8px] font-bold uppercase tracking-widest">
                                                 Seen
                                             </span>
                                         </td>
@@ -494,7 +494,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                     </tr>
                                 ))}
                                 {past.length === 0 && (
-                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-xs text-slate-200 font-bold uppercase tracking-[0.2em] italic">No visit history found</td></tr>
+                                    <tr><td colSpan="5" className="px-6 py-12 text-center text-xs text-gray-300 font-bold uppercase tracking-[0.2em] italic">No visit history found</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -503,7 +503,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
                 {/* 4. CANCELLED / DENIED */}
                 {(cancelledRequests.length > 0 || cancelledAppts.length > 0) && (
-                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
                         <div className="flex justify-between items-center">
                             <SectionLabel icon={<XCircle size={14} className="text-red-300" />} title="Cancelled & Denied" count={cancelledRequests.length + cancelledAppts.length} />
                             <button
@@ -518,7 +518,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                         console.error('Failed to clear:', e);
                                     }
                                 }}
-                                className="text-[9px] font-black text-red-300 hover:text-red-500 uppercase tracking-widest transition-colors"
+                                className="text-[9px] font-bold text-red-300 hover:text-red-500 uppercase tracking-widest transition-colors"
                             >
                                 Clear All
                             </button>
@@ -527,15 +527,15 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                             {cancelledAppts.map(appt => {
                                 const isNoShow = appt.patient_status === 'no_show';
                                 return (
-                                    <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-slate-50/50 opacity-60 flex items-center justify-between">
+                                    <div key={appt.id} className="p-4 rounded-2xl border border-transparent bg-gray-50/50 opacity-60 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-400 flex flex-col items-center justify-center shrink-0">
-                                                <span className="text-sm font-black leading-none">{format(parseLocalSafe(appt.appointment_date), 'dd')}</span>
+                                            <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-400 flex flex-col items-center justify-center shrink-0">
+                                                <span className="text-sm font-bold leading-none">{format(parseLocalSafe(appt.appointment_date), 'dd')}</span>
                                                 <span className="text-[8px] font-bold uppercase">{format(parseLocalSafe(appt.appointment_date), 'MMM')}</span>
                                             </div>
                                             <div>
-                                                <h4 className="text-xs font-bold text-slate-400 italic">Sch {format(parseLocalSafe(appt.appointment_date), 'MMM do')}</h4>
-                                                <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">{isNoShow ? 'No Show' : 'Cancelled'}</p>
+                                                <h4 className="text-xs font-bold text-gray-400 italic">Sch {format(parseLocalSafe(appt.appointment_date), 'MMM do')}</h4>
+                                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{isNoShow ? 'No Show' : 'Cancelled'}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -551,18 +551,18 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
             {/* REQUEST FORM MODAL */}
             {showRequestForm && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4" onClick={() => setShowRequestForm(false)}>
+                <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-md z-[100] flex items-center justify-center p-4" onClick={() => setShowRequestForm(false)}>
                     <div className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full p-8 animate-in zoom-in duration-300 relative max-h-[90vh] overflow-y-auto custom-scrollbar" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setShowRequestForm(false)} className="absolute top-6 right-6 w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-800 transition-all"><X size={16} /></button>
+                        <button onClick={() => setShowRequestForm(false)} className="absolute top-6 right-6 w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-800 transition-all"><X size={16} /></button>
 
                         <div className="mb-8">
-                            <h2 className="text-xl font-black tracking-tight text-slate-800">Request a Visit</h2>
-                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Our team will review and confirm</p>
+                            <h2 className="text-xl font-bold tracking-tight text-gray-800">Request a Visit</h2>
+                            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">Our team will review and confirm</p>
                         </div>
 
                         <form onSubmit={handleRequestSubmit} className="space-y-5">
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Clinician</label>
+                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Clinician</label>
                                 <select required value={formData.providerId} onChange={(e) => setFormData({ ...formData, providerId: e.target.value })} className="portal-input">
                                     <option value="">Any available</option>
                                     {staff.map(s => <option key={s.id} value={s.id}>{s.role === 'clinician' || s.role === 'physician' ? 'Dr.' : ''} {s.last_name}, {s.first_name}</option>)}
@@ -571,28 +571,28 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Visit Style</label>
-                                    <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100">
+                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Visit Style</label>
+                                    <div className="flex bg-gray-50 p-1 rounded-2xl border border-gray-100">
                                         <button
                                             type="button"
                                             onClick={() => setFormData({ ...formData, visitMethod: 'office' })}
-                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'office' ? 'bg-white shadow-md shadow-slate-200/50 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'office' ? 'bg-white shadow-md shadow-slate-200/50 text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                                         >
                                             <MapPin size={14} className="mb-1" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest">Office</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest">Office</span>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setFormData({ ...formData, visitMethod: 'telehealth' })}
-                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'telehealth' ? 'bg-white shadow-md shadow-slate-200/50 text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                                            className={`flex-1 flex flex-col items-center py-2.5 rounded-xl transition-all ${formData.visitMethod === 'telehealth' ? 'bg-white shadow-md shadow-slate-200/50 text-emerald-600' : 'text-gray-400 hover:text-gray-600'}`}
                                         >
                                             <Video size={14} className="mb-1" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest">Virtual</span>
+                                            <span className="text-[9px] font-bold uppercase tracking-widest">Virtual</span>
                                         </button>
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Urgency</label>
+                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Urgency</label>
                                     <select value={formData.appointmentType} onChange={(e) => setFormData({ ...formData, appointmentType: e.target.value })} className="portal-input">
                                         <option value="Routine Follow-up">Routine Follow-up</option>
                                         <option value="New Concern">New Concern</option>
@@ -604,11 +604,11 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Date</label>
+                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Date</label>
                                     <input type="date" required value={formData.preferredDate} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} min={new Date().toISOString().split('T')[0]} className="portal-input" />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Preferred Time</label>
+                                    <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Preferred Time</label>
                                     <select value={formData.preferredTimeRange} onChange={(e) => setFormData({ ...formData, preferredTimeRange: e.target.value })} className="portal-input">
                                         <option value="morning">Morning (8am-12pm)</option>
                                         <option value="afternoon">Afternoon (12pm-5pm)</option>
@@ -617,9 +617,9 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                             </div>
 
                             {formData.providerId && formData.preferredDate && (
-                                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest underline decoration-blue-500 decoration-2">Specific Slots</label>
+                                        <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest underline decoration-blue-500 decoration-2">Specific Slots</label>
                                         {loadingAvailability && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 justify-center">
@@ -627,9 +627,9 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             <button
                                                 key={slot.time} type="button" disabled={!slot.available}
                                                 onClick={() => setFormData(prev => ({ ...prev, exactTime: prev.exactTime === slot.time ? '' : slot.time }))}
-                                                className={`py-1.5 px-3 rounded-lg text-[10px] font-black transition-all border ${!slot.available ? 'bg-slate-100/50 text-slate-300 border-transparent' :
+                                                className={`py-1.5 px-3 rounded-lg text-[10px] font-bold transition-all border ${!slot.available ? 'bg-gray-50/50 text-gray-400 border-transparent' :
                                                     formData.exactTime === slot.time ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200' :
-                                                        'bg-white text-slate-600 border-slate-200 hover:border-blue-400'
+                                                        'bg-white text-gray-600 border-gray-200 hover:border-blue-400'
                                                     }`}
                                             >
                                                 {slot.time}
@@ -640,11 +640,11 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                             )}
 
                             <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Reason</label>
+                                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Reason</label>
                                 <textarea required value={formData.reason} onChange={(e) => setFormData({ ...formData, reason: e.target.value })} className="portal-input h-20" placeholder="Brief visit reason..." />
                             </div>
 
-                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-[1.2rem] font-black uppercase tracking-widest text-[10px] hover:bg-blue-700 transition-all shadow-xl shadow-blue-100">
+                            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-[1.2rem] font-bold uppercase tracking-widest text-[10px] hover:bg-blue-700 transition-all shadow-xl shadow-blue-100">
                                 Send Request
                             </button>
                         </form>
@@ -654,7 +654,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 
             {/* CANCELLATION MODAL - Premium UI */}
             {cancellingAppt && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-md z-[110] flex items-center justify-center p-4 animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
                         <div className="bg-gradient-to-br from-rose-500 to-red-600 p-8 text-white relative">
                             <button
@@ -667,15 +667,15 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                             <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
                                 <XCircle size={28} className="text-white" />
                             </div>
-                            <h2 className="text-2xl font-black tracking-tight leading-tight">Cancel Appointment?</h2>
-                            <p className="text-rose-100 text-[10px] font-black uppercase tracking-widest mt-2 opacity-80">
+                            <h2 className="text-2xl font-bold tracking-tight leading-tight">Cancel Appointment?</h2>
+                            <p className="text-rose-100 text-[10px] font-bold uppercase tracking-widest mt-2 opacity-80">
                                 {format(parseLocalSafe(cancellingAppt.appointment_date), 'EEEE, MMMM do')} @ {cancellingAppt.appointment_time.slice(0, 5)}
                             </p>
                         </div>
 
                         <div className="p-8 space-y-6">
                             <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Reason for Cancellation</label>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-1">Reason for Cancellation</label>
                                 <div className="grid grid-cols-1 gap-2">
                                     {[
                                         "Scheduling Conflict",
@@ -690,7 +690,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                             onClick={() => setCancelReason(r)}
                                             className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all border ${cancelReason === r
                                                 ? 'bg-rose-50 border-rose-200 text-rose-600 ring-2 ring-rose-100'
-                                                : 'bg-slate-50 border-transparent text-slate-600 hover:bg-slate-100'
+                                                : 'bg-gray-50 border-transparent text-gray-600 hover:bg-gray-50'
                                                 }`}
                                         >
                                             {r}
@@ -712,20 +712,20 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                                 <button
                                     onClick={handleCancelAppointment}
                                     disabled={!cancelReason || isCancelling}
-                                    className="w-full bg-rose-600 text-white py-4 rounded-[1.2rem] font-black uppercase tracking-widest text-[10px] hover:bg-rose-700 transition-all shadow-xl shadow-rose-100 disabled:opacity-50 disabled:shadow-none"
+                                    className="w-full bg-rose-600 text-white py-4 rounded-[1.2rem] font-bold uppercase tracking-widest text-[10px] hover:bg-rose-700 transition-all shadow-xl shadow-rose-100 disabled:opacity-50 disabled:shadow-none"
                                 >
                                     {isCancelling ? 'Processing...' : 'Confirm Cancellation'}
                                 </button>
                                 <button
                                     onClick={() => { setCancellingAppt(null); setCancelReason(''); }}
                                     disabled={isCancelling}
-                                    className="w-full text-slate-400 py-3 font-black uppercase tracking-widest text-[9px] hover:text-slate-600 transition-colors"
+                                    className="w-full text-gray-400 py-3 font-bold uppercase tracking-widest text-[9px] hover:text-gray-600 transition-colors"
                                 >
                                     Keep Appointment
                                 </button>
                             </div>
 
-                            <p className="text-[9px] text-center text-slate-400 font-medium px-4">
+                            <p className="text-[9px] text-center text-gray-400 font-medium px-4">
                                 Note: Cancellations within 24 hours may be subject to clinic-specific policies.
                             </p>
                         </div>
@@ -739,34 +739,34 @@ const PortalAppointments = ({ onMessageShortcut }) => {
 const SectionLabel = ({ icon, title, count }) => (
     <div className="flex items-center gap-2 mb-2 ml-1">
         {icon}
-        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-800">{title}</h3>
-        <span className="w-4 h-4 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center text-[8px] font-black">{count}</span>
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-800">{title}</h3>
+        <span className="w-4 h-4 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center text-[8px] font-bold">{count}</span>
     </div>
 );
 
 const CompactCard = ({ req, type, onCancel, onEdit }) => {
     const isPending = type === 'pending';
     return (
-        <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${isPending ? 'bg-white border-slate-100 shadow-sm' : 'bg-slate-50 border-transparent opacity-60'}`}>
+        <div className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${isPending ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-50 border-transparent opacity-60'}`}>
             <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center shrink-0 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-slate-200 text-slate-400'}`}>
-                    <span className="text-sm font-black leading-none">{format(parseLocalSafe(req.preferred_date), 'dd')}</span>
+                <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center shrink-0 ${isPending ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-400'}`}>
+                    <span className="text-sm font-bold leading-none">{format(parseLocalSafe(req.preferred_date), 'dd')}</span>
                     <span className="text-[8px] font-bold uppercase">{format(parseLocalSafe(req.preferred_date), 'MMM')}</span>
                 </div>
                 <div>
-                    <h4 className="text-xs font-bold text-slate-800">{format(parseLocalSafe(req.preferred_date), 'MMMM do')}</h4>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{req.preferred_time_range}</p>
+                    <h4 className="text-xs font-bold text-gray-800">{format(parseLocalSafe(req.preferred_date), 'MMMM do')}</h4>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">{req.preferred_time_range}</p>
                 </div>
             </div>
             {isPending && (
                 <div className="flex items-center gap-1">
                     {onEdit && (
-                        <button onClick={onEdit} className="p-2 text-slate-300 hover:text-blue-500 transition-colors" title="Edit">
+                        <button onClick={onEdit} className="p-2 text-gray-400 hover:text-blue-500 transition-colors" title="Edit">
                             <CalendarPlus size={13} />
                         </button>
                     )}
                     {onCancel && (
-                        <button onClick={onCancel} className="p-2 text-slate-300 hover:text-red-500 transition-colors" title="Cancel">
+                        <button onClick={onCancel} className="p-2 text-gray-400 hover:text-red-500 transition-colors" title="Cancel">
                             <Trash2 size={13} />
                         </button>
                     )}
@@ -774,7 +774,7 @@ const CompactCard = ({ req, type, onCancel, onEdit }) => {
             )}
             {!isPending && (
                 <div className="text-right">
-                    <span className="text-[8px] font-black uppercase text-slate-400 block">{req.status === 'denied' ? 'Denied' : 'Cancelled'}</span>
+                    <span className="text-[8px] font-bold uppercase text-gray-400 block">{req.status === 'denied' ? 'Denied' : 'Cancelled'}</span>
                     {req.status === 'denied' && req.denial_reason && (
                         <span className="text-[9px] text-red-400 font-medium italic block max-w-[120px] truncate" title={req.denial_reason}>
                             "{req.denial_reason}"

@@ -1602,7 +1602,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 />
 
                 {/* Quick Navigation Bar - Neutralized */}
-                <div className="px-6 py-4 bg-white border-b border-slate-200 mb-6 sticky top-0 z-40 rounded-b-2xl mx-2 shadow-[0_4px_20px_rgba(15,23,42,0.08)]">
+                <div className="px-6 py-4 bg-white border-b border-gray-200 mb-6 sticky top-0 z-40 rounded-b-2xl mx-2 shadow-[0_4px_20px_rgba(15,23,42,0.08)]">
                     <div className="flex items-center justify-between gap-1">
                         <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-hide">
                             <button
@@ -1611,32 +1611,32 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setShowPatientChart(true);
                                 }}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all shrink-0 whitespace-nowrap border-2",
                                     patientChartTab === 'hub'
                                         ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
-                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                        : "bg-white text-gray-500 border-gray-100 hover:border-gray-200 hover:text-gray-900"
                                 )}
                             >
-                                <UserCircle className={cn("w-3.5 h-3.5", patientChartTab === 'hub' ? "text-white" : "text-slate-400")} />
+                                <UserCircle className={cn("w-3.5 h-3.5", patientChartTab === 'hub' ? "text-white" : "text-gray-400")} />
                                 <span>Patient Hub</span>
                             </button>
-                            <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
+                            <div className="w-px h-6 bg-gray-100 mx-1 shrink-0"></div>
                             <button
                                 onClick={() => {
                                     setPatientChartTab('images');
                                     setShowPatientChart(true);
                                 }}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all shrink-0 whitespace-nowrap border-2",
                                     patientChartTab === 'images'
                                         ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
-                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                        : "bg-white text-gray-500 border-gray-100 hover:border-gray-200 hover:text-gray-900"
                                 )}
                             >
-                                <FileImage className={cn("w-3.5 h-3.5", patientChartTab === 'images' ? "text-white" : "text-slate-400")} />
+                                <FileImage className={cn("w-3.5 h-3.5", patientChartTab === 'images' ? "text-white" : "text-gray-400")} />
                                 <span>Images</span>
                                 {(documents || []).filter(d => d.doc_type === 'imaging').length > 0 && (
-                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-black", patientChartTab === 'images' ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", patientChartTab === 'images' ? "bg-white/20 text-white" : "bg-gray-50 text-gray-600")}>
                                         {(documents || []).filter(d => d.doc_type === 'imaging').length}
                                     </span>
                                 )}
@@ -1647,16 +1647,16 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setShowPatientChart(true);
                                 }}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all shrink-0 whitespace-nowrap border-2",
                                     patientChartTab === 'labs'
                                         ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
-                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                        : "bg-white text-gray-500 border-gray-100 hover:border-gray-200 hover:text-gray-900"
                                 )}
                             >
-                                <FlaskConical className={cn("w-3.5 h-3.5", patientChartTab === 'labs' ? "text-white" : "text-slate-400")} />
+                                <FlaskConical className={cn("w-3.5 h-3.5", patientChartTab === 'labs' ? "text-white" : "text-gray-400")} />
                                 <span>Labs</span>
                                 {(orders || []).filter(o => o.order_type === 'lab').length > 0 && (
-                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-black", patientChartTab === 'labs' ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", patientChartTab === 'labs' ? "bg-white/20 text-white" : "bg-gray-50 text-gray-600")}>
                                         {(orders || []).filter(o => o.order_type === 'lab').length}
                                     </span>
                                 )}
@@ -1667,28 +1667,28 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     setShowPatientChart(true);
                                 }}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black transition-all shrink-0 whitespace-nowrap border-2",
+                                    "flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all shrink-0 whitespace-nowrap border-2",
                                     patientChartTab === 'documents'
                                         ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100"
-                                        : "bg-white text-slate-500 border-slate-100 hover:border-slate-300 hover:text-slate-900"
+                                        : "bg-white text-gray-500 border-gray-100 hover:border-gray-200 hover:text-gray-900"
                                 )}
                             >
-                                <FileText className={cn("w-3.5 h-3.5", patientChartTab === 'documents' ? "text-white" : "text-slate-400")} />
+                                <FileText className={cn("w-3.5 h-3.5", patientChartTab === 'documents' ? "text-white" : "text-gray-400")} />
                                 <span>Documents</span>
                                 {(documents || []).filter(d => d.doc_type !== 'imaging').length > 0 && (
-                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-black", patientChartTab === 'documents' ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600")}>
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold", patientChartTab === 'documents' ? "bg-white/20 text-white" : "bg-gray-50 text-gray-600")}>
                                         {(documents || []).filter(d => d.doc_type !== 'imaging').length}
                                     </span>
                                 )}
                             </button>
                             <button
                                 onClick={() => setShowDocumentUploadModal(true)}
-                                className="flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors"
+                                className="flex items-center justify-center p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"
                                 title="Upload Document"
                             >
                                 <Upload className="w-4 h-4" />
                             </button>
-                            <div className="w-px h-6 bg-slate-200 mx-1 shrink-0"></div>
+                            <div className="w-px h-6 bg-gray-100 mx-1 shrink-0"></div>
                             <button
                                 onClick={() => setShowPrintOrdersModal(true)}
                                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg transition-all hover:bg-gray-50 hover:shadow-sm whitespace-nowrap"
@@ -1717,7 +1717,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setShowScheduleModal(true)}
-                                className="flex items-center gap-2 px-5 py-2.5 text-[12px] font-black text-blue-600 bg-blue-50 border border-blue-200 rounded-xl transition-all hover:bg-blue-100 hover:shadow-md active:scale-95 whitespace-nowrap"
+                                className="flex items-center gap-2 px-5 py-2.5 text-[12px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl transition-all hover:bg-blue-100 hover:shadow-md active:scale-95 whitespace-nowrap"
                             >
                                 <Calendar className="w-3.5 h-3.5" />
                                 <span>Schedule Patient</span>
@@ -1726,7 +1726,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             <div className="relative group/visit">
                                 <button
                                     onClick={() => todayDraftVisit ? navigate(`/patient/${id}/visit/${todayDraftVisit.id}`) : handleCreateNewVisit()}
-                                    className="flex items-center gap-2 px-6 py-2.5 text-[12px] font-black text-white bg-blue-600 rounded-xl transition-all hover:bg-blue-700 hover:shadow-xl hover:scale-105 shadow-lg shadow-blue-500/20 active:scale-95"
+                                    className="flex items-center gap-2 px-6 py-2.5 text-[12px] font-bold text-white bg-blue-600 rounded-xl transition-all hover:bg-blue-700 hover:shadow-xl hover:scale-105 shadow-lg shadow-blue-500/20 active:scale-95"
                                 >
                                     {todayDraftVisit ? (
                                         <>
@@ -1745,7 +1745,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             {layoutEditMode && (
                                 <button
                                     onClick={resetLayout}
-                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors whitespace-nowrap"
+                                    className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors whitespace-nowrap"
                                     title="Reset to Default Layout"
                                 >
                                     <RotateCcw className="w-3.5 h-3.5" />
@@ -1761,17 +1761,17 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     {/* Modular Grid - With Layout Editor Support */}
                     <div className="mb-8">
                         {layoutEditMode ? (
-                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
                                             Layout Editor Active
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => setLayoutEditMode(false)}
-                                        className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 rounded-lg hover:bg-slate-900 transition-all shadow-sm"
+                                        className="px-4 py-1.5 text-xs font-bold text-white bg-gray-100 rounded-lg hover:bg-gray-50 transition-all shadow-sm"
                                     >
                                         Save Changes
                                     </button>
@@ -1797,7 +1797,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             ) : (
                                                 <div className="flex items-center gap-2">
                                                     <button onClick={handleSaveSticky} className="text-[9px] font-medium text-emerald-600 bg-emerald-50/80 px-2 py-0.5 rounded-lg border border-emerald-100">Save</button>
-                                                    <button onClick={() => setIsEditingSticky(false)} className="text-[9px] font-medium text-slate-400">Cancel</button>
+                                                    <button onClick={() => setIsEditingSticky(false)} className="text-[9px] font-medium text-gray-400">Cancel</button>
                                                 </div>
                                             )}
                                         </div>
@@ -1811,7 +1811,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     autoFocus
                                                 />
                                             ) : (
-                                                <p className="text-[11px] font-medium text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                                <p className="text-[11px] font-medium text-gray-600 leading-relaxed whitespace-pre-wrap">
                                                     {stickyNoteText || "No active reminders for this patient. Click edit to add one."}
                                                 </p>
                                             )}
@@ -1819,20 +1819,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </div>
 
                                     {/* Visit History Section */}
-                                    <div className="bg-white rounded-xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)] overflow-hidden flex flex-col flex-1">
+                                    <div className="bg-white rounded-xl border-2 border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.05)] overflow-hidden flex flex-col flex-1">
                                         <div
-                                            className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 cursor-pointer hover:bg-slate-100 transition-colors group/header"
+                                            className="px-4 py-3.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 cursor-pointer hover:bg-gray-50 transition-colors group/header"
                                             onClick={() => setShowVisitFoldersModal(true)}
                                             title={`View all ${filteredNotes.length} medical encounters`}
                                         >
                                             <div className="flex items-center space-x-2">
-                                                <FileText className="w-3.5 h-3.5 text-slate-400 group-hover/header:text-slate-600" />
-                                                <h3 className="font-medium text-[11px] text-slate-600 tracking-wide">Visit History</h3>
+                                                <FileText className="w-3.5 h-3.5 text-gray-400 group-hover/header:text-gray-600" />
+                                                <h3 className="font-medium text-[11px] text-gray-600 tracking-wide">Visit History</h3>
                                                 {filteredNotes.length > 0 && (
-                                                    <span className="text-[10px] text-slate-400 font-medium ml-1">({filteredNotes.length})</span>
+                                                    <span className="text-[10px] text-gray-400 font-medium ml-1">({filteredNotes.length})</span>
                                                 )}
                                             </div>
-                                            <ChevronRight className="w-3 h-3 text-slate-300 group-hover/header:text-slate-500 group-hover/header:translate-x-0.5 transition-all" />
+                                            <ChevronRight className="w-3 h-3 text-gray-400 group-hover/header:text-gray-500 group-hover/header:translate-x-0.5 transition-all" />
                                         </div>
                                         <div className="p-3 overflow-y-auto scrollbar-hide flex-1 min-h-[400px]">
                                             {filteredNotes.length > 0 ? (
@@ -1840,7 +1840,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     {filteredNotes.map(note => (
                                                         <div
                                                             key={note.id}
-                                                            className="px-2 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer transition-colors group relative pl-3"
+                                                            className="px-2 py-1.5 hover:bg-gray-50 rounded-md cursor-pointer transition-colors group relative pl-3"
                                                             onClick={(e) => {
                                                                 if (e.target.closest('button')) return;
                                                                 handleViewNote(note.id);
@@ -1848,11 +1848,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         >
                                                             <div className={`absolute left-0 top-2 bottom-2 w-1 rounded-full transition-all ${note.preliminary ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' :
                                                                 note.retracted ? 'bg-red-500' :
-                                                                    (note.signed ? 'bg-emerald-400' : 'bg-slate-300')
+                                                                    (note.signed ? 'bg-emerald-400' : 'bg-gray-200')
                                                                 }`} />
                                                             <div className="flex items-center justify-between">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] font-medium text-slate-700">{note.type}</span>
+                                                                    <span className="text-[10px] font-medium text-gray-700">{note.type}</span>
                                                                     {note.retracted ? (
                                                                         <span className="text-[8px] font-medium text-red-500 bg-red-50/80 px-1.5 py-0.5 rounded-lg border border-red-100">Retracted</span>
                                                                     ) : note.preliminary ? (
@@ -1860,30 +1860,30 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     ) : note.signed ? (
                                                                         <span className="text-[8px] font-medium text-emerald-600 bg-emerald-50/80 px-1.5 py-0.5 rounded-lg border border-emerald-100">Signed</span>
                                                                     ) : (
-                                                                        <span className="text-[8px] font-medium text-slate-500 bg-slate-50/80 px-1.5 py-0.5 rounded-lg border border-slate-100">Draft</span>
+                                                                        <span className="text-[8px] font-medium text-gray-500 bg-gray-50/80 px-1.5 py-0.5 rounded-lg border border-gray-100">Draft</span>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex items-center gap-2">
                                                                     {!note.signed && !note.preliminary && !note.retracted && (
                                                                         <button
                                                                             onClick={(e) => handleDeleteNote(note.id, e)}
-                                                                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all rounded"
+                                                                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all rounded"
                                                                             title="Delete draft"
                                                                         >
                                                                             <Trash2 className="w-3 h-3" />
                                                                         </button>
                                                                     )}
-                                                                    <span className="text-[9px] text-slate-400 font-medium tabular-nums">{note.date}</span>
+                                                                    <span className="text-[9px] text-gray-400 font-medium tabular-nums">{note.date}</span>
                                                                 </div>
                                                             </div>
-                                                            <p className="text-[9px] text-slate-500 truncate mt-0.5">{note.chiefComplaint || "No complaint recorded"}</p>
+                                                            <p className="text-[9px] text-gray-500 truncate mt-0.5">{note.chiefComplaint || "No complaint recorded"}</p>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-6">
-                                                    <FileText className="w-6 h-6 text-slate-200 mx-auto mb-2" />
-                                                    <p className="text-[10px] text-slate-400">No clinical visits</p>
+                                                    <FileText className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+                                                    <p className="text-[10px] text-gray-400">No clinical visits</p>
                                                 </div>
                                             )}
                                         </div>
@@ -1913,10 +1913,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             <div className="flex flex-col text-left">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className={`text-[11px] font-bold text-${baseColor}-900 uppercase tracking-tight`}>{isReminder ? 'Clinical Reminder' : (flag.display_label || 'Medical Alert')}</span>
-                                                                    <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                                    <span className="text-[10px] text-slate-500 font-medium">{flag.severity || 'Medium Severity'}</span>
+                                                                    <span className="w-1 h-1 rounded-full bg-gray-100" />
+                                                                    <span className="text-[10px] text-gray-500 font-medium">{flag.severity || 'Medium Severity'}</span>
                                                                 </div>
-                                                                {flag.note && <p className="text-[10px] text-slate-600 font-medium mt-0.5">{flag.note}</p>}
+                                                                {flag.note && <p className="text-[10px] text-gray-600 font-medium mt-0.5">{flag.note}</p>}
                                                             </div>
                                                         </div>
                                                         {isReminder && (
@@ -1934,7 +1934,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     )}
 
                                     {/* Vitals Trend Wave - High Contrast Blue */}
-                                    <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 shadow-[0_4px_20px_rgba(15,23,42,0.06)] mb-4 relative overflow-hidden group/wave">
+                                    <div className="bg-white p-4 rounded-2xl border-2 border-gray-100 shadow-[0_4px_20px_rgba(15,23,42,0.06)] mb-4 relative overflow-hidden group/wave">
 
 
                                         <div className="flex justify-between items-center mb-6 relative">
@@ -1943,7 +1943,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <Waves className="w-4 h-4 opacity-90" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-[10px] font-black text-slate-500 tracking-widest mb-0.5 text-left uppercase">Clinical Trend Wave</h3>
+                                                    <h3 className="text-[10px] font-bold text-gray-500 tracking-widest mb-0.5 text-left uppercase">Clinical Trend Wave</h3>
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-sm font-bold text-gray-800">Cardiovascular Performance</span>
                                                         <span className={`px-2 py-0.5 bg-${vitalStatus.color}-50 text-${vitalStatus.color}-600 text-[9px] font-bold uppercase rounded-lg border border-${vitalStatus.color}-100`}>
@@ -1955,11 +1955,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <div className="flex gap-6 bg-gray-50 p-2 px-4 rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
-                                                    <span className="text-[9px] font-bold text-slate-600 tracking-wide">Sys. BP</span>
+                                                    <span className="text-[9px] font-bold text-gray-600 tracking-wide">Sys. BP</span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
-                                                    <span className="text-[9px] font-bold text-slate-600 tracking-wide">Heart Rate</span>
+                                                    <span className="text-[9px] font-bold text-gray-600 tracking-wide">Heart Rate</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -2036,20 +2036,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     const dateLabel = label ? label.split('-')[0] : '';
 
                                                                     return (
-                                                                        <div className="bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl rounded-2xl p-4 ring-1 ring-slate-950/5">
-                                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{dateLabel}</p>
+                                                                        <div className="bg-white/95 backdrop-blur-xl border border-gray-100 shadow-2xl rounded-2xl p-4 ring-1 ring-gray-950/5">
+                                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{dateLabel}</p>
                                                                             <div className="space-y-2.5">
                                                                                 <div className="flex items-center justify-between gap-8">
                                                                                     <div className="flex items-center gap-2">
                                                                                         <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                                                        <span className="text-[11px] font-semibold text-slate-600">BP Systolic</span>
+                                                                                        <span className="text-[11px] font-semibold text-gray-600">BP Systolic</span>
                                                                                     </div>
                                                                                     <span className="text-[13px] font-bold text-blue-700">{sysVal || '--'} <small className="text-[9px] text-blue-400 font-medium">mmHg</small></span>
                                                                                 </div>
                                                                                 <div className="flex items-center justify-between gap-8">
                                                                                     <div className="flex items-center gap-2">
                                                                                         <div className="w-2 h-2 rounded-full bg-rose-500" />
-                                                                                        <span className="text-[11px] font-semibold text-slate-600">Heart Rate</span>
+                                                                                        <span className="text-[11px] font-semibold text-gray-600">Heart Rate</span>
                                                                                     </div>
                                                                                     <span className="text-[13px] font-bold text-rose-700">{hrVal || '--'} <small className="text-[9px] text-rose-400 font-medium">bpm</small></span>
                                                                                 </div>
@@ -2089,9 +2089,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             ) : (
                                                 <div className="h-full flex flex-col items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
                                                     <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
-                                                        <Waves className="w-8 h-8 text-slate-200" />
+                                                        <Waves className="w-8 h-8 text-gray-300" />
                                                     </div>
-                                                    <p className="text-[11px] text-slate-400 font-black uppercase tracking-[0.2em]">No longitudinal vital trends recorded</p>
+                                                    <p className="text-[11px] text-gray-400 font-bold uppercase tracking-[0.2em]">No longitudinal vital trends recorded</p>
                                                 </div>
                                             )}
                                         </div>
@@ -2106,26 +2106,26 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg">
                                                         <Activity className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-black text-[11px] text-slate-900 uppercase tracking-wider">Problem List</h3>
+                                                    <h3 className="font-bold text-[11px] text-gray-900 uppercase tracking-wider">Problem List</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] font-black text-blue-600 hover:underline">Edit</button>
+                                                <button onClick={() => { setPatientChartTab('problems'); setShowPatientChart(true); }} className="text-[10px] font-bold text-blue-600 hover:underline">Edit</button>
                                             </div>
                                             <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {(problems || []).length > 0 ? (
                                                     <div className="space-y-0.5">
                                                         {(problems || []).map(prob => (
-                                                            <div key={prob.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group" title={prob.name}>
+                                                            <div key={prob.id} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors border-b border-slate-50 last:border-0 group" title={prob.name}>
                                                                 <div className="flex items-center gap-3 min-w-0">
                                                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-                                                                    <span className="text-[10px] font-medium text-slate-700 truncate group-hover:text-rose-600 leading-tight">{prob.name}</span>
+                                                                    <span className="text-[10px] font-medium text-gray-700 truncate group-hover:text-rose-600 leading-tight">{prob.name}</span>
                                                                 </div>
                                                             </div>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                                                        <Activity className="w-6 h-6 text-slate-200 mb-2" />
-                                                        <p className="text-[10px] text-slate-400 font-medium text-center">No active problems</p>
+                                                    <div className="h-full flex flex-col items-center justify-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                                                        <Activity className="w-6 h-6 text-gray-300 mb-2" />
+                                                        <p className="text-[10px] text-gray-400 font-medium text-center">No active problems</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -2138,23 +2138,23 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
                                                         <Pill className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h3 className="font-black text-[11px] text-slate-900 uppercase tracking-wider">Medications</h3>
+                                                    <h3 className="font-bold text-[11px] text-gray-900 uppercase tracking-wider">Medications</h3>
                                                 </div>
-                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] font-black text-blue-600 hover:underline">Edit</button>
+                                                <button onClick={() => { setPatientChartTab('medications'); setShowPatientChart(true); }} className="text-[10px] font-bold text-blue-600 hover:underline">Edit</button>
                                             </div>
                                             <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                 {(medications || []).filter(m => m.active !== false).length > 0 ? (
                                                     <div className="space-y-0.5">
                                                         {(medications || []).filter(m => m.active !== false).map(med => (
-                                                            <div key={med.id} className="flex flex-col px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 group" title={decodeHtmlEntities(med.medication_name)}>
+                                                            <div key={med.id} className="flex flex-col px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors border-b border-slate-50 last:border-0 group" title={decodeHtmlEntities(med.medication_name)}>
                                                                 <div className="flex items-center gap-2 min-w-0">
                                                                     <div className="w-1 h-1 rounded-full bg-emerald-400 flex-shrink-0" />
-                                                                    <span className="text-[10px] font-medium text-slate-700 truncate group-hover:text-blue-600 leading-tight">
+                                                                    <span className="text-[10px] font-medium text-gray-700 truncate group-hover:text-blue-600 leading-tight">
                                                                         {decodeHtmlEntities(med.medication_name)}
                                                                     </span>
                                                                 </div>
                                                                 {(med.dosage || med.frequency) && (
-                                                                    <p className="text-[9px] text-slate-400 font-medium ml-3 mt-0.5" title={`${med.dosage} ${med.frequency}`}>
+                                                                    <p className="text-[9px] text-gray-400 font-medium ml-3 mt-0.5" title={`${med.dosage} ${med.frequency}`}>
                                                                         {med.dosage}{med.dosage && med.frequency ? ' — ' : ''}{med.frequency}
                                                                     </p>
                                                                 )}
@@ -2162,9 +2162,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                                                        <Pill className="w-6 h-6 text-slate-200 mb-2" />
-                                                        <p className="text-[10px] text-slate-400 font-medium text-center">No active medications</p>
+                                                    <div className="h-full flex flex-col items-center justify-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                                                        <Pill className="w-6 h-6 text-gray-300 mb-2" />
+                                                        <p className="text-[10px] text-gray-400 font-medium text-center">No active medications</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -2179,9 +2179,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg">
                                                             <AlertCircle className="w-3.5 h-3.5" />
                                                         </div>
-                                                        <h3 className="font-black text-[11px] text-slate-900 uppercase tracking-wider">Allergies</h3>
+                                                        <h3 className="font-bold text-[11px] text-gray-900 uppercase tracking-wider">Allergies</h3>
                                                     </div>
-                                                    <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="text-[10px] font-black text-blue-600 hover:underline">Edit</button>
+                                                    <button onClick={() => { setPatientChartTab('allergies'); setShowPatientChart(true); }} className="text-[10px] font-bold text-blue-600 hover:underline">Edit</button>
                                                 </div>
                                                 <div className="p-2.5 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
                                                     {(allergies || []).length > 0 ? (
@@ -2198,7 +2198,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         </div>
                                                     ) : (
                                                         <div className="h-full flex items-center justify-center">
-                                                            <span className="text-[10px] font-medium text-slate-500 bg-slate-50/80 px-3 py-1 rounded-xl border border-slate-100">NKDA</span>
+                                                            <span className="text-[10px] font-medium text-gray-500 bg-gray-50/80 px-3 py-1 rounded-xl border border-gray-100">NKDA</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -2211,7 +2211,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <div className="p-1 bg-violet-50 text-violet-500 rounded-md">
                                                             <Scissors className="w-3 h-3" />
                                                         </div>
-                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Surgical History</h3>
+                                                        <h3 className="font-medium text-[10px] text-gray-600 tracking-wide">Surgical History</h3>
                                                     </div>
                                                     <button onClick={() => { setPatientChartTab('surgical'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
@@ -2219,18 +2219,18 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     {(surgicalHistory || []).length > 0 ? (
                                                         <div className="space-y-1.5">
                                                             {surgicalHistory.map(surg => (
-                                                                <div key={surg.id} className="text-[10px] p-2 rounded-lg bg-slate-50/30 border border-slate-100/50" title={surg.procedure_name}>
+                                                                <div key={surg.id} className="text-[10px] p-2 rounded-lg bg-gray-50/30 border border-gray-100/50" title={surg.procedure_name}>
                                                                     <div className="flex justify-between items-start">
-                                                                        <span className="font-medium text-slate-700 leading-tight truncate">{surg.procedure_name}</span>
-                                                                        <span className="text-[8px] font-medium text-slate-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
+                                                                        <span className="font-medium text-gray-700 leading-tight truncate">{surg.procedure_name}</span>
+                                                                        <span className="text-[8px] font-medium text-gray-400 shrink-0 ml-2">{surg.date ? new Date(surg.date).getFullYear() : '—'}</span>
                                                                     </div>
-                                                                    {surg.notes && <p className="text-[9px] text-slate-500 italic mt-0.5 line-clamp-1 truncate" title={surg.notes}>{surg.notes}</p>}
+                                                                    {surg.notes && <p className="text-[9px] text-gray-500 italic mt-0.5 line-clamp-1 truncate" title={surg.notes}>{surg.notes}</p>}
                                                                 </div>
                                                             ))}
                                                         </div>
                                                     ) : (
                                                         <div className="h-full flex items-center justify-center">
-                                                            <p className="text-[9px] text-slate-400 italic">No surgical history</p>
+                                                            <p className="text-[9px] text-gray-400 italic">No surgical history</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -2246,7 +2246,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <div className="p-1 bg-emerald-50 text-emerald-500 rounded-md">
                                                             <ShieldPlus className="w-3 h-3" />
                                                         </div>
-                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Family History</h3>
+                                                        <h3 className="font-medium text-[10px] text-gray-600 tracking-wide">Family History</h3>
                                                     </div>
                                                     <button onClick={() => { setPatientChartTab('family'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
@@ -2256,7 +2256,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                             {familyHistory.map(fam => (
                                                                 <div key={fam.id} className="flex flex-col px-2 py-1.5 rounded-lg bg-emerald-50/20 border border-emerald-100/10" title={`${fam.condition} - Relationship: ${fam.relationship}`}>
                                                                     <div className="flex items-center justify-between">
-                                                                        <span className="text-[10px] font-medium text-slate-700 truncate">{fam.condition}</span>
+                                                                        <span className="text-[10px] font-medium text-gray-700 truncate">{fam.condition}</span>
                                                                         <span className="text-[8px] font-medium text-emerald-600 bg-white/80 px-1 rounded border border-emerald-100 shrink-0 ml-2">{fam.relationship}</span>
                                                                     </div>
                                                                 </div>
@@ -2264,7 +2264,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         </div>
                                                     ) : (
                                                         <div className="h-full flex items-center justify-center">
-                                                            <p className="text-[9px] text-slate-400 italic">No family history</p>
+                                                            <p className="text-[9px] text-gray-400 italic">No family history</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -2277,7 +2277,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                         <div className="p-1 bg-indigo-50 text-indigo-500 rounded-md">
                                                             <Users className="w-3 h-3" />
                                                         </div>
-                                                        <h3 className="font-medium text-[10px] text-slate-600 tracking-wide">Social History</h3>
+                                                        <h3 className="font-medium text-[10px] text-gray-600 tracking-wide">Social History</h3>
                                                     </div>
                                                     <button onClick={() => { setPatientChartTab('social'); setShowPatientChart(true); }} className="text-[9px] font-bold text-blue-500 hover:underline">Edit</button>
                                                 </div>
@@ -2285,19 +2285,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     <div className="grid grid-cols-2 gap-2 mt-1">
                                                         <div className="p-2 rounded-xl bg-blue-50/40 border border-blue-100/30 text-center">
                                                             <p className="text-[7px] font-medium text-blue-400 tracking-tight mb-0.5">Smoking</p>
-                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.smoking_status || '—'}>{socialHistory?.smoking_status === 'Never smoker' ? 'Never' : (socialHistory?.smoking_status || '—')}</p>
+                                                            <p className="text-[10px] font-medium text-gray-600 truncate" title={socialHistory?.smoking_status || '—'}>{socialHistory?.smoking_status === 'Never smoker' ? 'Never' : (socialHistory?.smoking_status || '—')}</p>
                                                         </div>
                                                         <div className="p-2 rounded-xl bg-purple-50/40 border border-purple-100/30 text-center">
                                                             <p className="text-[7px] font-medium text-violet-400 tracking-tight mb-0.5">Alcohol</p>
-                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.alcohol_use || '—'}>{socialHistory?.alcohol_use || '—'}</p>
+                                                            <p className="text-[10px] font-medium text-gray-600 truncate" title={socialHistory?.alcohol_use || '—'}>{socialHistory?.alcohol_use || '—'}</p>
                                                         </div>
                                                         <div className="p-2 rounded-xl bg-emerald-50/40 border border-emerald-100/30 text-center">
                                                             <p className="text-[7px] font-medium text-emerald-400 tracking-tight mb-0.5">Occupation</p>
-                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.occupation || '—'}>{socialHistory?.occupation || '—'}</p>
+                                                            <p className="text-[10px] font-medium text-gray-600 truncate" title={socialHistory?.occupation || '—'}>{socialHistory?.occupation || '—'}</p>
                                                         </div>
                                                         <div className="p-2 rounded-xl bg-amber-50/40 border border-amber-100/30 text-center">
                                                             <p className="text-[7px] font-medium text-amber-400 tracking-tight mb-0.5">Exercise</p>
-                                                            <p className="text-[10px] font-medium text-slate-600 truncate" title={socialHistory?.exercise_frequency || '—'}>{socialHistory?.exercise_frequency || '—'}</p>
+                                                            <p className="text-[10px] font-medium text-gray-600 truncate" title={socialHistory?.exercise_frequency || '—'}>{socialHistory?.exercise_frequency || '—'}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -3036,7 +3036,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     </div>
                     <div className="flex justify-end gap-2">
                         <button onClick={() => setShowCardiacCathModal(false)} className="px-4 py-2 text-gray-600 font-bold">Cancel</button>
-                        <button onClick={handleCardiacCathUpload} disabled={!cardiacCathFile} className="px-6 py-2 bg-slate-700 text-white rounded-md font-bold hover:bg-slate-800 disabled:bg-gray-300">Save Result</button>
+                        <button onClick={handleCardiacCathUpload} disabled={!cardiacCathFile} className="px-6 py-2 bg-gray-100 text-white rounded-md font-bold hover:bg-gray-100 disabled:bg-gray-300">Save Result</button>
                     </div>
                 </div>
             </Modal>
@@ -3124,7 +3124,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                 title="Update Plan of Care"
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-slate-500 mb-2">Updates will be saved to the most recent visit note.</p>
+                    <p className="text-sm text-gray-500 mb-2">Updates will be saved to the most recent visit note.</p>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Current Plan</label>
                         <textarea
@@ -3174,21 +3174,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
             {/* Health Maintenance Edit Modal */}
             {showHMEditModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
-                        <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="font-black text-sm text-slate-800 uppercase tracking-widest">
+                <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
+                        <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                            <h3 className="font-bold text-sm text-gray-800 uppercase tracking-widest">
                                 {selectedHMItem ? 'Update Tracking' : 'Add Optimization Item'}
                             </h3>
-                            <button onClick={() => setShowHMEditModal(false)} className="text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setShowHMEditModal(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Specialty Focus</label>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Specialty Focus</label>
                                 <select
-                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none mb-3"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none mb-3"
                                     value={hmForm.specialty_focus}
                                     onChange={(e) => setHmForm({ ...hmForm, specialty_focus: e.target.value })}
                                 >
@@ -3197,11 +3197,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     ))}
                                 </select>
 
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Item Name</label>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Item Name</label>
                                 <div className="space-y-2">
                                     <input
                                         type="text"
-                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={hmForm.item_name}
                                         onChange={(e) => setHmForm({ ...hmForm, item_name: e.target.value })}
                                         placeholder="Type or select from suggestions..."
@@ -3211,7 +3211,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                             <button
                                                 key={preset}
                                                 onClick={() => setHmForm({ ...hmForm, item_name: preset })}
-                                                className="px-2 py-1 text-[9px] font-bold bg-white border border-slate-200 rounded-md hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
+                                                className="px-2 py-1 text-[9px] font-bold bg-white border border-gray-200 rounded-md hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
                                             >
                                                 {preset}
                                             </button>
@@ -3221,9 +3221,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Status</label>
                                     <select
-                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
                                         value={hmForm.status}
                                         onChange={(e) => setHmForm({ ...hmForm, status: e.target.value })}
                                     >
@@ -3235,10 +3235,10 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Due Date</label>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Due Date</label>
                                     <input
                                         type="date"
-                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
                                         value={hmForm.due_date}
                                         onChange={(e) => setHmForm({ ...hmForm, due_date: e.target.value })}
                                     />
@@ -3246,26 +3246,26 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             </div>
                             {hmForm.status === 'Completed' && (
                                 <div>
-                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Last Performed</label>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Last Performed</label>
                                     <input
                                         type="date"
-                                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none"
+                                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
                                         value={hmForm.last_performed || ''}
                                         onChange={(e) => setHmForm({ ...hmForm, last_performed: e.target.value })}
                                     />
                                 </div>
                             )}
                             <div>
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Clinical Notes</label>
+                                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Clinical Notes</label>
                                 <textarea
-                                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none h-20 resize-none"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none h-20 resize-none"
                                     value={hmForm.notes}
                                     onChange={(e) => setHmForm({ ...hmForm, notes: e.target.value })}
                                     placeholder="Study findings or optimization goals..."
                                 />
                             </div>
                         </div>
-                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                             {selectedHMItem && (
                                 <button
                                     onClick={() => handleDeleteHM(selectedHMItem.id)}
@@ -3275,7 +3275,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 </button>
                             )}
                             <div className="flex gap-3 ml-auto">
-                                <button onClick={() => setShowHMEditModal(false)} className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">CANCEL</button>
+                                <button onClick={() => setShowHMEditModal(false)} className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors">CANCEL</button>
                                 <button
                                     onClick={handleSaveHM}
                                     disabled={!hmForm.item_name || actionLoading}

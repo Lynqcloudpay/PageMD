@@ -300,8 +300,8 @@ const Cancellations = () => {
         <div className="p-4 max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Follow-up Tracker</h1>
-                <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Manage and track follow-ups for cancellations and no-shows</p>
+                <h1 className="text-xl font-bold text-[#111827] tracking-tighter uppercase mb-0.5">Follow-up Tracker</h1>
+                <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Manage and track follow-ups for cancellations and no-shows</p>
             </div>
 
             {/* Stats Cards */}
@@ -310,20 +310,20 @@ const Cancellations = () => {
                     onClick={() => setActiveTab('pending')}
                     className={`p-4 rounded-xl border transition-all relative overflow-hidden group ${activeTab === 'pending'
                         ? 'bg-amber-50 border-amber-200 shadow-md ring-1 ring-amber-100'
-                        : 'bg-white border-slate-200 hover:border-amber-200 hover:shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-amber-200 hover:shadow-sm'
                         }`}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'pending' ? 'text-amber-700' : 'text-slate-500'}`}>Pending</span>
-                        <div className={`p-1.5 rounded-lg ${activeTab === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-500'}`}>
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'pending' ? 'text-amber-700' : 'text-gray-500'}`}>Pending</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'pending' ? 'bg-amber-100 text-amber-600' : 'bg-gray-50 text-gray-400 group-hover:bg-amber-50 group-hover:text-amber-500'}`}>
                             <Clock size={16} />
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-semibold ${activeTab === 'pending' ? 'text-amber-700' : 'text-[#10141A]/60'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'pending' ? 'text-amber-700' : 'text-[#111827]/60'}`}>
                             {stats.pending_count || 0}
                         </span>
-                        <span className="text-xs text-slate-400 font-medium">notes</span>
+                        <span className="text-xs text-gray-400 font-medium">notes</span>
                     </div>
                 </button>
 
@@ -331,20 +331,20 @@ const Cancellations = () => {
                     onClick={() => setActiveTab('addressed')}
                     className={`p-4 rounded-xl border transition-all group ${activeTab === 'addressed'
                         ? 'bg-emerald-50 border-emerald-200 shadow-md ring-1 ring-emerald-100'
-                        : 'bg-white border-slate-200 hover:border-emerald-200 hover:shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-emerald-200 hover:shadow-sm'
                         }`}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-slate-500'}`}>Addressed</span>
-                        <div className={`p-1.5 rounded-lg ${activeTab === 'addressed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500'}`}>
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-gray-500'}`}>Addressed</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'addressed' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-50 text-gray-400 group-hover:bg-emerald-50 group-hover:text-emerald-500'}`}>
                             <CheckCircle size={16} />
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-semibold ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-[#10141A]/60'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'addressed' ? 'text-emerald-700' : 'text-[#111827]/60'}`}>
                             {stats.addressed_count || 0}
                         </span>
-                        <span className="text-xs text-slate-400 font-medium">done</span>
+                        <span className="text-xs text-gray-400 font-medium">done</span>
                     </div>
                 </button>
 
@@ -352,20 +352,20 @@ const Cancellations = () => {
                     onClick={() => setActiveTab('dismissed')}
                     className={`p-4 rounded-xl border transition-all group ${activeTab === 'dismissed'
                         ? 'bg-rose-50 border-rose-200 shadow-md ring-1 ring-rose-100'
-                        : 'bg-white border-slate-200 hover:border-rose-200 hover:shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-rose-200 hover:shadow-sm'
                         }`}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'dismissed' ? 'text-rose-700' : 'text-slate-500'}`}>Dismissed</span>
-                        <div className={`p-1.5 rounded-lg ${activeTab === 'dismissed' ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400 group-hover:bg-rose-50 group-hover:text-rose-500'}`}>
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'dismissed' ? 'text-rose-700' : 'text-gray-500'}`}>Dismissed</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'dismissed' ? 'bg-rose-100 text-rose-600' : 'bg-gray-50 text-gray-400 group-hover:bg-rose-50 group-hover:text-rose-500'}`}>
                             <Ban size={16} />
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-semibold ${activeTab === 'dismissed' ? 'text-[#CE6969]' : 'text-[#10141A]/60'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'dismissed' ? 'text-[#CE6969]' : 'text-[#111827]/60'}`}>
                             {stats.dismissed_count || 0}
                         </span>
-                        <span className="text-xs text-slate-400 font-medium">closed</span>
+                        <span className="text-xs text-gray-400 font-medium">closed</span>
                     </div>
                 </button>
 
@@ -373,20 +373,20 @@ const Cancellations = () => {
                     onClick={() => setActiveTab('all')}
                     className={`p-4 rounded-xl border transition-all group ${activeTab === 'all'
                         ? 'bg-blue-50 border-blue-200 shadow-md ring-1 ring-blue-100'
-                        : 'bg-white border-slate-200 hover:border-blue-200 hover:shadow-sm'
+                        : 'bg-white border-gray-200 hover:border-blue-200 hover:shadow-sm'
                         }`}
                 >
                     <div className="flex items-center justify-between mb-2">
-                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'all' ? 'text-blue-700' : 'text-slate-500'}`}>Total</span>
-                        <div className={`p-1.5 rounded-lg ${activeTab === 'all' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
+                        <span className={`text-xs font-semibold uppercase tracking-wider ${activeTab === 'all' ? 'text-blue-700' : 'text-gray-500'}`}>Total</span>
+                        <div className={`p-1.5 rounded-lg ${activeTab === 'all' ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500'}`}>
                             <Calendar size={16} />
                         </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-semibold ${activeTab === 'all' ? 'text-[#83A2DB]' : 'text-[#10141A]/60'}`}>
+                        <span className={`text-3xl font-semibold ${activeTab === 'all' ? 'text-[#2563EB]' : 'text-[#111827]/60'}`}>
                             {stats.total_count || 0}
                         </span>
-                        <span className="text-xs text-slate-400 font-medium">records</span>
+                        <span className="text-xs text-gray-400 font-medium">records</span>
                     </div>
                 </button>
             </div>
@@ -394,19 +394,19 @@ const Cancellations = () => {
             {/* Filters Row */}
             <div className="flex items-center gap-3 mb-6">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
                         placeholder="Search patient, provider, or reason..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
                     />
                 </div>
                 <select
                     value={dateRange}
                     onChange={(e) => setDateRange(e.target.value)}
-                    className="px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-50 transition-colors"
+                    className="px-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                     <option value="7">Last 7 days</option>
                     <option value="30">Last 30 days</option>
@@ -415,7 +415,7 @@ const Cancellations = () => {
                 </select>
                 <button
                     onClick={() => { fetchFollowups(); fetchStats(); }}
-                    className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm rounded-xl transition-all"
+                    className="p-2.5 text-gray-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm rounded-xl transition-all"
                     title="Refresh Data"
                 >
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -443,29 +443,29 @@ const Cancellations = () => {
                 ) : (
                     <div className="space-y-6">
                         {groupedFollowups.map((group, index) => (
-                            <div key={group.date} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group/card transition-all hover:shadow-md">
+                            <div key={group.date} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group/card transition-all hover:shadow-md">
                                 {/* Date Header */}
                                 <div
-                                    className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                                    className="px-5 py-4 bg-gray-50/50 border-b border-gray-100 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
                                     onClick={() => toggleGroup(group.date)}
                                 >
                                     <div className="flex items-center gap-4">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) // Check if collapsed
-                                            ? 'bg-white border border-slate-200 text-slate-400'
+                                            ? 'bg-white border border-gray-200 text-gray-400'
                                             : 'bg-blue-600 border border-blue-600 text-white'
                                             }`}>
                                             <Calendar size={18} />
                                         </div>
                                         <div>
                                             <h3 className={`text-sm font-semibold tracking-tight transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
-                                                ? 'text-slate-600'
+                                                ? 'text-gray-600'
                                                 : 'text-blue-900'
                                                 }`}>
                                                 {group.displayDate}
                                             </h3>
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
-                                                    ? 'bg-slate-200 text-slate-600'
+                                                    ? 'bg-gray-100 text-gray-600'
                                                     : 'bg-blue-100 text-blue-700'
                                                     }`}>
                                                     {group.items.length} Pending Note{group.items.length !== 1 ? 's' : ''}
@@ -474,7 +474,7 @@ const Cancellations = () => {
                                         </div>
                                     </div>
                                     <div className={`p-2 rounded-lg transition-colors ${(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0)
-                                        ? 'text-slate-400 group-hover/card:bg-white'
+                                        ? 'text-gray-400 group-hover/card:bg-white'
                                         : 'text-blue-600 bg-blue-50'
                                         }`}>
                                         {(collapsedGroups[group.date] !== undefined ? collapsedGroups[group.date] : index !== 0) ? (
@@ -492,10 +492,10 @@ const Cancellations = () => {
                                             <div key={followup.id} className="transition-all">
                                                 {/* Main Row */}
                                                 <div
-                                                    className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${['no_show', 'no-show'].includes(followup.appointmentStatus)
+                                                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${['no_show', 'no-show'].includes(followup.appointmentStatus)
                                                         ? 'border-l-[6px] border-l-orange-400/80'
                                                         : 'border-l-[6px] border-l-red-400/80'
-                                                        } ${expandedId === followup.id ? 'bg-slate-50' : ''}`}
+                                                        } ${expandedId === followup.id ? 'bg-gray-50' : ''}`}
                                                     onClick={() => setExpandedId(expandedId === followup.id ? null : followup.id)}
                                                 >
                                                     <div className="flex items-center justify-between">

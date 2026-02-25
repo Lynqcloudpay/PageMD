@@ -31,21 +31,21 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center mb-6">
                     <img src="/logo.png" alt="PageMD" className="h-12 w-auto" />
                 </div>
-                <h2 className="text-center text-3xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
                     Forgot Password
                 </h2>
-                <p className="mt-2 text-center text-sm text-slate-600">
+                <p className="mt-2 text-center text-sm text-gray-600">
                     Enter your email address and we'll send you a link to reset your password.
                 </p>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
+                <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-gray-100">
                     {message ? (
                         <div className="rounded-xl bg-blue-50 p-4 mb-6 border border-blue-100">
                             <div className="flex">
@@ -62,7 +62,7 @@ const ForgotPassword = () => {
                     ) : (
                         <form className="space-y-6" onSubmit={handleSubmit}>
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                                     Email address
                                 </label>
                                 <div className="mt-1">
@@ -74,7 +74,7 @@ const ForgotPassword = () => {
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="block w-full appearance-none rounded-xl border border-slate-200 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
+                                        className="block w-full appearance-none rounded-xl border border-gray-200 px-4 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
                                         placeholder="you@example.com"
                                     />
                                 </div>

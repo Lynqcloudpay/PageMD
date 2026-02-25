@@ -257,14 +257,14 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
     if (submitState === 'success') {
         return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-y-auto">
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md" />
+                <div className="fixed inset-0 bg-gray-50/40 backdrop-blur-md" />
                 <div className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-12 text-center overflow-hidden">
                     <div className="relative z-10">
                         <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 rounded-full mb-6 text-emerald-600">
                             <CheckCircle2 className="w-12 h-12" />
                         </div>
-                        <h2 className="text-3xl font-black text-slate-900 mb-2">Verified!</h2>
-                        <p className="text-slate-500 font-medium">Launching your healthcare sandbox...</p>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Verified!</h2>
+                        <p className="text-gray-500 font-medium">Launching your healthcare sandbox...</p>
                         <div className="mt-8 flex justify-center">
                             <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
                         </div>
@@ -278,9 +278,9 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
     if (submitState === 'verify') {
         return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-y-auto pt-10 pb-10">
-                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
+                <div className="fixed inset-0 bg-gray-50/40 backdrop-blur-md" onClick={onClose} />
                 <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/50 overflow-hidden transform transition-all p-8 md:p-12">
-                    <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400">
+                    <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-50 text-gray-400">
                         <X className="w-5 h-5" />
                     </button>
 
@@ -288,7 +288,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-6 text-blue-600 rotate-3">
                             <KeyRound className="w-8 h-8" />
                         </div>
-                        <h2 className="text-3xl font-black text-slate-900 mb-3 tracking-tight">Verify Email</h2>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-3 tracking-tight">Verify Email</h2>
                         {duplicateNotice ? (
                             <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 mb-4 animate-in fade-in slide-in-from-top-2 duration-700">
                                 <p className="text-blue-700 text-xs font-bold leading-relaxed">
@@ -297,12 +297,12 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                                 </p>
                             </div>
                         ) : (
-                            <p className="text-slate-500 text-sm font-medium">
+                            <p className="text-gray-500 text-sm font-medium">
                                 We've sent a 6-digit code to <br />
                                 <span className="text-blue-600 font-bold">{formData.email}</span>
                             </p>
                         )}
-                        <p className="text-[10px] text-slate-400 mt-4 font-bold uppercase tracking-widest bg-slate-50 py-2 px-4 rounded-lg border border-slate-100 italic">
+                        <p className="text-[10px] text-gray-400 mt-4 font-bold uppercase tracking-widest bg-gray-50 py-2 px-4 rounded-lg border border-gray-100 italic">
                             Tip: Check your <span className="text-blue-600">Spam or Junk</span> email folder
                         </p>
                     </div>
@@ -327,7 +327,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                                     onChange={(e) => handleCodeChange(idx, e.target.value)}
                                     onKeyDown={(e) => handleKeyDown(idx, e)}
                                     onPaste={(e) => handlePaste(idx, e)}
-                                    className="w-12 h-16 md:w-14 md:h-20 text-center text-2xl font-black text-slate-900 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
+                                    className="w-12 h-16 md:w-14 md:h-20 text-center text-2xl font-bold text-gray-900 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all outline-none"
                                 />
                             ))}
                         </div>
@@ -345,7 +345,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                     <div className="mt-8 text-center">
                         <button
                             onClick={() => setSubmitState('form')}
-                            className="text-slate-400 hover:text-slate-600 text-sm font-semibold transition-colors"
+                            className="text-gray-400 hover:text-gray-600 text-sm font-semibold transition-colors"
                         >
                             Not your email? Change it
                         </button>
@@ -358,9 +358,9 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
     // Initial Form State
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 overflow-y-auto pt-10 pb-10">
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
+            <div className="fixed inset-0 bg-gray-50/40 backdrop-blur-md" onClick={onClose} />
             <div className="relative w-full max-w-xl bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/50 overflow-hidden transform transition-all p-8 md:p-12">
-                <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors z-10">
+                <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors z-10">
                     <X className="w-5 h-5" />
                 </button>
 
@@ -369,10 +369,10 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                         <Zap className="w-3 h-3 fill-current" />
                         Secure Access
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-3 tracking-tight">
+                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 tracking-tight">
                         Experience PageMD <span className="text-blue-600">Now</span>
                     </h2>
-                    <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                    <p className="text-gray-500 text-sm font-medium leading-relaxed">
                         Enter your professional details to access your private sandbox.
                     </p>
                 </div>
@@ -387,47 +387,47 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid md:grid-cols-2 gap-4">
                         <div className="relative group">
-                            <User className="absolute left-4 top-4 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <User className="absolute left-4 top-4 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                             <input
                                 required type="text" placeholder="Full Name" value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
+                                className="w-full pl-11 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
                             />
                         </div>
                         <div className="relative group">
-                            <Building2 className="absolute left-4 top-4 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <Building2 className="absolute left-4 top-4 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                             <input
                                 required type="text" placeholder="Practice Name" value={formData.practice}
                                 onChange={(e) => setFormData({ ...formData, practice: e.target.value })}
-                                className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
+                                className="w-full pl-11 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
                             />
                         </div>
                     </div>
 
                     <div className="relative group">
-                        <Stethoscope className="absolute left-4 top-4 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <Stethoscope className="absolute left-4 top-4 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             type="text" placeholder="Specialty (Optional)" value={formData.specialty}
                             onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                            className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
+                            className="w-full pl-11 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
                         />
                     </div>
 
                     <div className="relative group">
-                        <Mail className="absolute left-4 top-4 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <Mail className="absolute left-4 top-4 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             required type="email" placeholder="Work Email" value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
+                            className="w-full pl-11 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
                         />
                     </div>
 
                     <div className="relative group">
-                        <Phone className="absolute left-4 top-4 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <Phone className="absolute left-4 top-4 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             required type="tel" placeholder="Phone Number" value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
+                            className="w-full pl-11 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-sm font-medium"
                         />
                     </div>
 
@@ -438,7 +438,7 @@ const LeadCaptureModal = ({ isOpen, onClose, onLaunch, initialData }) => {
                         {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Get Started <ArrowRight className="w-5 h-5" /></>}
                     </button>
 
-                    <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest font-bold mt-6 flex items-center justify-center gap-2">
+                    <p className="text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold mt-6 flex items-center justify-center gap-2">
                         <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                         Secure • HIPAA Compliant
                     </p>

@@ -116,11 +116,11 @@ const PricingPage = () => {
                 </div>
 
                 <div className="max-w-5xl mx-auto text-center relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] mb-6 shadow-sm">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-[0.2em] mb-6 shadow-sm">
                         <Zap className="w-3 h-3" />
                         The Growth Engine
                     </div>
-                    <h1 className="text-4xl lg:text-6xl font-black tracking-tight mb-8">
+                    <h1 className="text-4xl lg:text-6xl font-bold tracking-tight mb-8">
                         $0 Implementation. <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 uppercase tracking-wider">Zero Barriers</span>
                     </h1>
@@ -129,11 +129,11 @@ const PricingPage = () => {
                         As your practice expands, your average cost per doctor drops automatically.
                     </p>
                     <div className="flex justify-center gap-4 flex-wrap">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-4 py-2 rounded-full uppercase tracking-widest shadow-sm transition-transform hover:scale-105">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-4 py-2 rounded-full uppercase tracking-widest shadow-sm transition-transform hover:scale-105">
                             <Check className="w-3.5 h-3.5" />
                             Month-to-month
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-full uppercase tracking-widest shadow-sm transition-transform hover:scale-105">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-full uppercase tracking-widest shadow-sm transition-transform hover:scale-105">
                             <Check className="w-3.5 h-3.5" />
                             No Contracts
                         </div>
@@ -157,12 +157,12 @@ const PricingPage = () => {
 
                             <div className="mb-12 relative z-10">
                                 <div className="flex justify-between items-end mb-6">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.25em] leading-none">Practice Size</label>
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.25em] leading-none">Practice Size</label>
                                     <div className="flex items-baseline gap-1">
-                                        <span className={`text-4xl font-black tracking-tighter tabular-nums transition-all duration-300 ${isAnimating ? 'text-blue-600' : 'text-gray-900'}`}>
+                                        <span className={`text-4xl font-bold tracking-tighter tabular-nums transition-all duration-300 ${isAnimating ? 'text-blue-600' : 'text-gray-900'}`}>
                                             {seats === 11 ? '11' : seats}{seats === 11 && '+'}
                                         </span>
-                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">MD</span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MD</span>
                                     </div>
                                 </div>
 
@@ -197,7 +197,7 @@ const PricingPage = () => {
                                     </button>
                                 </div>
 
-                                <div className="flex justify-between mt-4 px-12 text-[9px] font-black text-gray-300 uppercase tracking-[0.2em]">
+                                <div className="flex justify-between mt-4 px-12 text-[9px] font-bold text-gray-300 uppercase tracking-[0.2em]">
                                     <span className={seats === 1 ? 'text-blue-500' : ''}>Solo</span>
                                     <span className={seats > 1 && seats < 11 ? 'text-blue-500' : ''}>Scaling</span>
                                     <span className={seats === 11 ? 'text-blue-500' : ''}>Enterprise</span>
@@ -208,12 +208,12 @@ const PricingPage = () => {
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Tier</p>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Current Tier</p>
                                         <p className="text-base font-bold text-gray-900">{currentTier.name}</p>
                                     </div>
                                     <div className="p-5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-100 transition-transform active:scale-[0.98]">
                                         <p className="text-[9px] font-bold text-blue-100 uppercase tracking-widest mb-1">Avg. Monthly / Doctor</p>
-                                        <p className={`text-2xl font-black tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${avgCostPerSeat}</p>
+                                        <p className={`text-2xl font-bold tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${avgCostPerSeat}</p>
                                     </div>
                                 </div>
 
@@ -222,7 +222,7 @@ const PricingPage = () => {
                                         <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center">
                                             <TrendingDown className="w-3.5 h-3.5 text-white" />
                                         </div>
-                                        <h3 className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Staircase Calculation</h3>
+                                        <h3 className="text-[10px] font-bold text-indigo-900 uppercase tracking-widest">Staircase Calculation</h3>
                                     </div>
                                     {seats === 1 ? (
                                         <p className="text-[10px] font-bold text-indigo-900/60 leading-relaxed italic">Add providers to see the discounted breakdown.</p>
@@ -239,9 +239,9 @@ const PricingPage = () => {
                                                     <span className="text-base font-bold text-gray-400 line-through tabular-nums">${(seats * 399).toLocaleString()}</span>
                                                 </div>
                                                 <div className="text-right">
-                                                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">Your Price</span>
+                                                    <span className="text-[9px] font-bold text-indigo-600 uppercase tracking-widest">Your Price</span>
                                                     <div className="flex items-baseline gap-2">
-                                                        <span className={`text-2xl font-black text-indigo-900 tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${totalMonthly.toLocaleString()}</span>
+                                                        <span className={`text-2xl font-bold text-indigo-900 tabular-nums transition-transform ${isAnimating ? 'scale-105' : ''}`}>${totalMonthly.toLocaleString()}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -249,7 +249,7 @@ const PricingPage = () => {
                                             {/* Savings Badge */}
                                             {totalSavings > 0 && (
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
                                                         ↓ Save ${totalSavings.toLocaleString()}/mo
                                                     </span>
                                                 </div>
@@ -265,14 +265,14 @@ const PricingPage = () => {
                         </div>
 
                         <div className="lg:w-1/2 bg-gray-50/50 p-8 lg:p-14 flex flex-col justify-center border-l border-gray-100">
-                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-10">The Reward Curve</h3>
+                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-10">The Reward Curve</h3>
                             <div className="space-y-6">
                                 {TIERS.slice(0, 6).map((tier, idx) => {
                                     const isCurrent = currentTier.name === tier.name;
                                     const percentage = (tier.rate / TIERS[0].rate) * 100;
                                     return (
                                         <div key={idx} className={`relative transition-all duration-500 ${isCurrent ? 'opacity-100' : 'opacity-40 grayscale'}`}>
-                                            <div className="flex justify-between items-center mb-1 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                                            <div className="flex justify-between items-center mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
                                                 <span>{tier.name}</span>
                                                 <span className={isCurrent ? 'text-blue-600' : ''}>${tier.rate}/MO</span>
                                             </div>
@@ -292,7 +292,7 @@ const PricingPage = () => {
             </section>
 
             {/* Referral Rewards Advertising (The Growth Loop) */}
-            <section className="py-24 px-6 relative overflow-hidden bg-slate-900 border-y border-white/5">
+            <section className="py-24 px-6 relative overflow-hidden bg-gray-50 border-y border-white/5">
                 <div className="absolute top-0 right-0 w-full h-full opacity-20 pointer-events-none">
                     <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-500 rounded-full blur-[120px]"></div>
                     <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500 rounded-full blur-[120px]"></div>
@@ -301,15 +301,15 @@ const PricingPage = () => {
                 <div className="max-w-6xl mx-auto relative z-10">
                     <div className="lg:flex items-center gap-20">
                         <div className="lg:w-5/12 mb-12 lg:mb-0">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-blue-500/20">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-6 border border-blue-500/20">
                                 <Users className="w-3 h-3" />
                                 Exclusive Referral Benefit
                             </div>
-                            <h2 className="text-4xl font-black text-white tracking-tight mb-8 leading-tight">
+                            <h2 className="text-4xl font-bold text-white tracking-tight mb-8 leading-tight">
                                 Unlock <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300 uppercase tracking-wider">Ghost Seats</span> <br />
                                 & Subsidize Your Practice.
                             </h2>
-                            <p className="text-slate-400 text-lg leading-relaxed mb-10">
+                            <p className="text-gray-400 text-lg leading-relaxed mb-10">
                                 Why pay full price when your network can pay it for you? Refer a colleague to PageMD, and we’ll credit your account with a <span className="text-white font-bold">Ghost Seat</span>.
                                 <br /><br />
                                 These seats count toward your billing tiers just like a physical provider, automatically lowering your monthly rate per doctor for as long as your referral stays active.
@@ -322,7 +322,7 @@ const PricingPage = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-white">Compound Savings</p>
-                                        <p className="text-xs text-slate-500">The more you refer, the more your individual cost drops.</p>
+                                        <p className="text-xs text-gray-500">The more you refer, the more your individual cost drops.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-4">
@@ -331,7 +331,7 @@ const PricingPage = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-white">30-Day Churn Grace Period</p>
-                                        <p className="text-xs text-slate-500">If a referral leaves, we keep your discount active for 30 days while you find a replacement.</p>
+                                        <p className="text-xs text-gray-500">If a referral leaves, we keep your discount active for 30 days while you find a replacement.</p>
                                     </div>
                                 </div>
                             </div>
@@ -343,20 +343,20 @@ const PricingPage = () => {
                                     <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center mb-6 shadow-xl shadow-blue-900/40">
                                         <TrendingDown className="w-6 h-6 text-white" />
                                     </div>
-                                    <h3 className="text-xl font-black text-white mb-4 uppercase tracking-wider">Physical vs. Ghost</h3>
-                                    <p className="text-sm text-slate-400 leading-relaxed mb-6 italic">
+                                    <h3 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">Physical vs. Ghost</h3>
+                                    <p className="text-sm text-gray-400 leading-relaxed mb-6 italic">
                                         "I have 2 doctors in our practice, but I referred 4 friends. My billing tier jumped from 'Partner' to 'Premier', saving me $3,600 this year."
                                     </p>
                                     <div className="flex items-center gap-2 pt-6 border-t border-white/10">
                                         <div className="flex -space-x-2">
                                             {[1, 2].map(i => (
-                                                <div key={i} className="w-8 h-8 rounded-full bg-slate-700 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-tighter">MD</div>
+                                                <div key={i} className="w-8 h-8 rounded-full bg-gray-100 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-tighter">MD</div>
                                             ))}
                                             {[1, 2, 3, 4].map(i => (
-                                                <div key={i} className="w-8 h-8 rounded-full bg-blue-500 border-2 border-slate-900 flex items-center justify-center text-[10px] font-black text-white uppercase tracking-tighter shadow-lg shadow-blue-500/50">G</div>
+                                                <div key={i} className="w-8 h-8 rounded-full bg-blue-500 border-2 border-slate-900 flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-tighter shadow-lg shadow-blue-500/50">G</div>
                                             ))}
                                         </div>
-                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest ml-auto">Level 6 Pricing Unlocked</span>
+                                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest ml-auto">Level 6 Pricing Unlocked</span>
                                     </div>
                                 </div>
 
@@ -365,14 +365,14 @@ const PricingPage = () => {
                                         <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
                                             <Calculator className="w-6 h-6 text-white" />
                                         </div>
-                                        <h3 className="text-xl font-black text-white mb-4 uppercase tracking-wider">Viral Subsidy Logic</h3>
+                                        <h3 className="text-xl font-bold text-white mb-4 uppercase tracking-wider">Viral Subsidy Logic</h3>
                                         <p className="text-sm text-blue-100 leading-relaxed">
-                                            Refer just 10 colleagues and unlock <span className="font-black text-white underline decoration-cyan-400 decoration-4 underline-offset-4">Enterprise Pricing</span> regardless of your actual practice size.
+                                            Refer just 10 colleagues and unlock <span className="font-bold text-white underline decoration-cyan-400 decoration-4 underline-offset-4">Enterprise Pricing</span> regardless of your actual practice size.
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => navigate('/contact')}
-                                        className="mt-8 w-full py-4 bg-white text-blue-600 font-black rounded-xl hover:shadow-xl hover:shadow-white/20 transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
+                                        className="mt-8 w-full py-4 bg-white text-blue-600 font-bold rounded-xl hover:shadow-xl hover:shadow-white/20 transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest"
                                     >
                                         Start Referring
                                         <ArrowRight className="w-4 h-4" />
@@ -388,7 +388,7 @@ const PricingPage = () => {
             <section className="py-24 px-6 bg-gray-50/30">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
-                        <h2 className="text-2xl font-black text-gray-900 mb-2">Transparent Growth Model</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Transparent Growth Model</h2>
                         <p className="text-xs text-gray-500 font-medium">As you grow, your licensing cost per seat automatically drops.</p>
                     </div>
 
@@ -396,10 +396,10 @@ const PricingPage = () => {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-gray-100 bg-white">
-                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400">Tier Name</th>
-                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400 text-center">Practice Size</th>
-                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-gray-400 text-center">Standard Rate</th>
-                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-black text-blue-500 text-center bg-blue-50/30">Avg. Monthly / Doctor</th>
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-bold text-gray-400">Tier Name</th>
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-bold text-gray-400 text-center">Practice Size</th>
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-bold text-gray-400 text-center">Standard Rate</th>
+                                    <th className="px-6 py-4 uppercase tracking-[0.2em] text-[10px] font-bold text-blue-500 text-center bg-blue-50/30">Avg. Monthly / Doctor</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -426,11 +426,11 @@ const PricingPage = () => {
                                             </td>
                                             <td className="px-6 py-5 text-center">
                                                 <span className="text-sm font-bold text-gray-400 line-through mr-1">${TIERS[0].rate}</span>
-                                                <span className={`text-sm font-black transition-colors ${isCurrent ? 'text-gray-900 scale-110 inline-block' : 'text-gray-900'}`}>${tier.rate}</span>
+                                                <span className={`text-sm font-bold transition-colors ${isCurrent ? 'text-gray-900 scale-110 inline-block' : 'text-gray-900'}`}>${tier.rate}</span>
                                                 <span className="text-[9px] text-gray-400 font-bold ml-1">/mo</span>
                                             </td>
                                             <td className={`px-6 py-5 text-center transition-colors ${isCurrent ? 'bg-blue-600/5' : ''}`}>
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shadow-lg transition-all duration-500 uppercase tracking-wider ${isCurrent ? 'bg-blue-600 text-white scale-110' : 'bg-blue-50 text-blue-600 shadow-transparent'}`}>
+                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg transition-all duration-500 uppercase tracking-wider ${isCurrent ? 'bg-blue-600 text-white scale-110' : 'bg-blue-50 text-blue-600 shadow-transparent'}`}>
                                                     <TrendingDown className={`w-3.5 h-3.5 transition-transform ${isCurrent ? 'rotate-0' : '-rotate-45 opacity-50'}`} />
                                                     {idx === 0 ? '$399' : idx === 1 ? '~$332' : idx === 2 ? '~$299' : idx === 3 ? '~$261' : idx === 4 ? '~$239' : '<$169'}
                                                 </div>
@@ -448,10 +448,10 @@ const PricingPage = () => {
 
                         <div className="relative z-10 lg:flex items-start justify-between gap-12">
                             <div className="lg:w-1/2 mb-8 lg:mb-0">
-                                <span className="inline-block px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-[0.2em] mb-6 border border-white/20 shadow-lg">
+                                <span className="inline-block px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-[0.2em] mb-6 border border-white/20 shadow-lg">
                                     No "Half EMRs"
                                 </span>
-                                <h3 className="text-3xl font-black mb-6 leading-tight">
+                                <h3 className="text-3xl font-bold mb-6 leading-tight">
                                     Every Plan Includes <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white">Everything.</span>
                                 </h3>
                                 <p className="text-blue-100/90 text-sm leading-relaxed mb-8 font-medium">
@@ -461,7 +461,7 @@ const PricingPage = () => {
                                 </p>
                                 <button
                                     onClick={() => navigate('/contact')}
-                                    className="w-full sm:w-auto px-8 py-4 bg-white text-blue-600 font-black rounded-xl hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95 text-xs uppercase tracking-widest"
+                                    className="w-full sm:w-auto px-8 py-4 bg-white text-blue-600 font-bold rounded-xl hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2 active:scale-95 text-xs uppercase tracking-widest"
                                 >
                                     Get Started Now
                                     <ArrowRight className="w-4 h-4" />
@@ -469,7 +469,7 @@ const PricingPage = () => {
                             </div>
 
                             <div className="lg:w-1/2 bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/10 shadow-inner">
-                                <h4 className="text-xs font-black uppercase tracking-[0.2em] mb-6 text-blue-200 border-b border-white/10 pb-4">
+                                <h4 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-blue-200 border-b border-white/10 pb-4">
                                     Unrestricted Access To:
                                 </h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
@@ -502,7 +502,7 @@ const PricingPage = () => {
                             <Shield className="w-8 h-8 text-indigo-600" />
                         </div>
                         <h2 className="text-xl font-bold text-indigo-900 mb-4 uppercase tracking-widest">Onboarding & Compliance</h2>
-                        <p className="text-4xl font-black text-indigo-900 mb-6">$25.00</p>
+                        <p className="text-4xl font-bold text-indigo-900 mb-6">$25.00</p>
                         <p className="text-base font-bold text-indigo-800 mb-2">Provider Credentialing Fee (One-time, per new prescriber)</p>
                         <p className="text-sm text-gray-500 bg-white/50 backdrop-blur-sm p-4 rounded-2xl italic border border-indigo-100 mt-6">
                             "Includes secure identity verification required for Surescripts and DEA compliance."
@@ -515,7 +515,7 @@ const PricingPage = () => {
             <section className="py-24 px-6">
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-16 underline decoration-blue-500 decoration-4 underline-offset-8">
-                        <h2 className="text-3xl font-black tracking-tight">Modern Clinical Infrastructure</h2>
+                        <h2 className="text-3xl font-bold tracking-tight">Modern Clinical Infrastructure</h2>
                     </div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -539,7 +539,7 @@ const PricingPage = () => {
                 </div>
 
                 <div className="max-w-4xl mx-auto text-center relative z-10">
-                    <h2 className="text-3xl lg:text-5xl font-black text-white mb-8 tracking-tight">
+                    <h2 className="text-3xl lg:text-5xl font-bold text-white mb-8 tracking-tight">
                         Ready to Transform Your Practice?
                     </h2>
                     <p className="text-lg text-blue-100 mb-12 font-medium">
@@ -548,14 +548,14 @@ const PricingPage = () => {
                     <div className="flex flex-col sm:flex-row justify-center gap-6">
                         <button
                             onClick={() => navigate('/contact')}
-                            className="px-10 py-5 bg-white text-blue-600 font-black rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            className="px-10 py-5 bg-white text-blue-600 font-bold rounded-2xl shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
                         >
                             Request Demo
                             <ArrowRight className="w-5 h-5" />
                         </button>
                         <button
                             onClick={() => navigate('/contact')}
-                            className="px-10 py-5 bg-blue-800/30 backdrop-blur-md text-white border border-white/20 font-black rounded-2xl hover:bg-blue-800/40 transition-all"
+                            className="px-10 py-5 bg-blue-800/30 backdrop-blur-md text-white border border-white/20 font-bold rounded-2xl hover:bg-blue-800/40 transition-all"
                         >
                             Talk to Sales
                         </button>
@@ -568,11 +568,11 @@ const PricingPage = () => {
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
                     <img src="/logo.png" alt="PageMD" className="h-8 w-auto grayscale opacity-50 transition-all hover:grayscale-0 hover:opacity-100" />
                     <div className="flex gap-8">
-                        <Link to="/about" className="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest">About</Link>
-                        <Link to="/contact" className="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest">Contact</Link>
-                        <Link to="/security" className="text-[10px] font-black text-gray-400 hover:text-blue-600 uppercase tracking-widest">Security</Link>
+                        <Link to="/about" className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-widest">About</Link>
+                        <Link to="/contact" className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-widest">Contact</Link>
+                        <Link to="/security" className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-widest">Security</Link>
                     </div>
-                    <div className="text-[10px] font-black text-gray-300 uppercase tracking-widest">© {currentYear} PageMD. All rights reserved.</div>
+                    <div className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">© {currentYear} PageMD. All rights reserved.</div>
                 </div>
             </footer>
         </div>

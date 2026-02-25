@@ -25,7 +25,7 @@ const SignatureCard = ({
                             }`}>
                             <FileSignature className="w-4 h-4" />
                         </div>
-                        <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-500">
+                        <h4 className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
                             {type === 'Cosigner' ? 'Attending Cosignature' : 'Electronic Signature'}
                         </h4>
                         {!isPreliminary && (
@@ -69,7 +69,7 @@ const SignatureCard = ({
                 <div className="flex flex-col items-end gap-2 shrink-0">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-gray-100 shadow-sm">
                         <Shield className="w-4 h-4 text-primary-500" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-primary-600">Secure Vault Manifest</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-primary-600">Secure Vault Manifest</span>
                     </div>
                 </div>
             </div>

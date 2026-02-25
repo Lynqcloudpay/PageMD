@@ -322,12 +322,12 @@ const ChartReviewModal = ({
         ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
         return (
-            <div className="flex-1 bg-slate-50 overflow-y-auto custom-scrollbar p-4">
+            <div className="flex-1 bg-gray-50 overflow-y-auto custom-scrollbar p-4">
                 <div className="grid grid-cols-5 gap-4 h-full">
                     {/* Left Column - Main Content (3/5) */}
                     <div className="col-span-3 space-y-3">
                         {/* Patient Header */}
-                        <div className="p-4 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center gap-4">
+                        <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center gap-4">
                             <div className="relative">
                                 {patientData ? (
                                     <PatientHeaderPhoto
@@ -337,7 +337,7 @@ const ChartReviewModal = ({
                                         className="w-12 h-12 text-sm shadow border-2 border-white"
                                     />
                                 ) : (
-                                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-300 animate-pulse">
+                                    <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 animate-pulse">
                                         <Clock className="w-5 h-5" />
                                     </div>
                                 )}
@@ -346,17 +346,17 @@ const ChartReviewModal = ({
                             <div className="flex-1 min-w-0">
                                 {patientData ? (
                                     <>
-                                        <h2 className="text-lg font-black text-slate-900 truncate tracking-tight">
+                                        <h2 className="text-lg font-bold text-gray-900 truncate tracking-tight">
                                             {patientName.full}
                                         </h2>
-                                        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">
                                             MRN: {patientData?.id || patientData?.patient_id || '---'} • <span className="text-emerald-600">Active Record</span>
                                         </div>
                                     </>
                                 ) : (
                                     <div className="space-y-2">
-                                        <div className="h-4 w-32 bg-slate-100 rounded animate-pulse"></div>
-                                        <div className="h-2 w-20 bg-slate-50 rounded animate-pulse"></div>
+                                        <div className="h-4 w-32 bg-gray-50 rounded animate-pulse"></div>
+                                        <div className="h-2 w-20 bg-gray-50 rounded animate-pulse"></div>
                                     </div>
                                 )}
                             </div>
@@ -376,26 +376,26 @@ const ChartReviewModal = ({
                                 >
                                     <span className={`text-[9px] font-bold ${stat.color} uppercase`}>{stat.label}</span>
                                     <div className="flex items-baseline gap-0.5">
-                                        <span className="text-base font-bold text-slate-900">{stat.value}</span>
-                                        <span className="text-[8px] text-slate-400">{stat.unit}</span>
+                                        <span className="text-base font-bold text-gray-900">{stat.value}</span>
+                                        <span className="text-[8px] text-gray-400">{stat.unit}</span>
                                     </div>
                                 </button>
                             ))}
                         </div>
 
                         {/* Trend Chart - Selectable vitals */}
-                        <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm">
+                        <div className="p-3 rounded-lg bg-white border border-gray-200 shadow-sm">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-slate-700">Vitals Trend</span>
+                                <span className="text-xs font-bold text-gray-700">Vitals Trend</span>
                                 <div className="flex gap-1">
-                                    <button onClick={() => toggleVital('hr')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.hr ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.hr ? 'bg-rose-500' : 'bg-slate-300'}`}></span>HR
+                                    <button onClick={() => toggleVital('hr')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.hr ? 'bg-rose-100 text-rose-600' : 'bg-gray-50 text-gray-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.hr ? 'bg-rose-500' : 'bg-gray-200'}`}></span>HR
                                     </button>
-                                    <button onClick={() => toggleVital('bp')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.bp ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.bp ? 'bg-blue-600' : 'bg-slate-300'}`}></span>BP
+                                    <button onClick={() => toggleVital('bp')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.bp ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.bp ? 'bg-blue-600' : 'bg-gray-200'}`}></span>BP
                                     </button>
-                                    <button onClick={() => toggleVital('bmi')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.bmi ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.bmi ? 'bg-purple-600' : 'bg-slate-300'}`}></span>BMI
+                                    <button onClick={() => toggleVital('bmi')} className={`flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded ${selectedVitals.bmi ? 'bg-purple-100 text-purple-600' : 'bg-gray-50 text-gray-400'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedVitals.bmi ? 'bg-purple-600' : 'bg-gray-200'}`}></span>BMI
                                     </button>
                                 </div>
                             </div>
@@ -433,12 +433,12 @@ const ChartReviewModal = ({
                                                     if (active && payload && payload.length) {
                                                         const dateLabel = payload[0]?.payload?.name || '';
                                                         return (
-                                                            <div className="bg-white border border-slate-200 rounded-md shadow-lg p-2 text-[10px]">
-                                                                <div className="font-bold text-slate-500 mb-1 border-b border-slate-100 pb-1">{dateLabel}</div>
+                                                            <div className="bg-white border border-gray-200 rounded-md shadow-lg p-2 text-[10px]">
+                                                                <div className="font-bold text-gray-500 mb-1 border-b border-gray-100 pb-1">{dateLabel}</div>
                                                                 {payload.map((p, i) => (
                                                                     <div key={i} className="flex items-center gap-2 mb-0.5">
                                                                         <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color }}></div>
-                                                                        <span className="text-slate-600 font-medium">{p.name}:</span>
+                                                                        <span className="text-gray-600 font-medium">{p.name}:</span>
                                                                         <span className="font-bold ml-auto" style={{ color: p.color }}>{p.value}</span>
                                                                     </div>
                                                                 ))}
@@ -454,20 +454,20 @@ const ChartReviewModal = ({
                                         </AreaChart>
                                     </ResponsiveContainer>
                                 ) : (
-                                    <div className="flex items-center justify-center h-full text-slate-400 text-[10px] italic">No trend data available</div>
+                                    <div className="flex items-center justify-center h-full text-gray-400 text-[10px] italic">No trend data available</div>
                                 )}
                             </div>
                         </div>
 
                         {/* Quick Stats below chart */}
                         <div className="grid grid-cols-2 gap-2">
-                            <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-center">
-                                <div className="text-[9px] text-slate-400 uppercase">Total Visits</div>
-                                <div className="text-lg font-bold text-slate-900">{visits.length}</div>
+                            <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                                <div className="text-[9px] text-gray-400 uppercase">Total Visits</div>
+                                <div className="text-lg font-bold text-gray-900">{visits.length}</div>
                             </div>
-                            <div className="p-2.5 rounded-lg bg-white border border-slate-200 text-center">
-                                <div className="text-[9px] text-slate-400 uppercase">Last Visit</div>
-                                <div className="text-sm font-bold text-slate-900">{visits[0] ? format(new Date(visits[0].visit_date), 'M/d/yy') : '--'}</div>
+                            <div className="p-2.5 rounded-lg bg-white border border-gray-200 text-center">
+                                <div className="text-[9px] text-gray-400 uppercase">Last Visit</div>
+                                <div className="text-sm font-bold text-gray-900">{visits[0] ? format(new Date(visits[0].visit_date), 'M/d/yy') : '--'}</div>
                             </div>
                         </div>
                     </div>
@@ -475,67 +475,67 @@ const ChartReviewModal = ({
                     {/* Right Column - Sidebar (2/5) */}
                     <div className="col-span-2 space-y-3">
                         {/* Timeline - Clickable events */}
-                        <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm">
-                            <h3 className="text-xs font-bold text-slate-700 mb-3">Recent Activity</h3>
+                        <div className="p-3 rounded-lg bg-white border border-gray-200 shadow-sm">
+                            <h3 className="text-xs font-bold text-gray-700 mb-3">Recent Activity</h3>
                             <div className="space-y-1 max-h-[280px] overflow-y-auto custom-scrollbar">
                                 {timelineItems.length > 0 ? timelineItems.slice(0, 12).map((item, i) => (
                                     <div
                                         key={item.id || i}
                                         onClick={item.onClick}
-                                        className="flex items-start gap-2 p-2 rounded-md hover:bg-slate-50 transition-colors cursor-pointer border border-transparent hover:border-slate-200 group"
+                                        className="flex items-start gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200 group"
                                     >
                                         <span className="text-sm mt-0.5">{item.icon}</span>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className="text-[11px] font-medium text-slate-900 truncate group-hover:text-blue-600">{item.title}</span>
-                                                <span className="text-[9px] text-slate-400 shrink-0">{item.dateLabel}</span>
+                                                <span className="text-[11px] font-medium text-gray-900 truncate group-hover:text-blue-600">{item.title}</span>
+                                                <span className="text-[9px] text-gray-400 shrink-0">{item.dateLabel}</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[9px] text-slate-500">{item.subtitle}</span>
-                                                <span className="text-[8px] text-slate-400">{item.timeLabel}</span>
+                                                <span className="text-[9px] text-gray-500">{item.subtitle}</span>
+                                                <span className="text-[8px] text-gray-400">{item.timeLabel}</span>
                                             </div>
                                         </div>
                                     </div>
                                 )) : (
-                                    <div className="py-4 text-center text-slate-400 text-xs">No activity recorded</div>
+                                    <div className="py-4 text-center text-gray-400 text-xs">No activity recorded</div>
                                 )}
                             </div>
                         </div>
 
                         {/* Active Problems */}
-                        <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm">
-                            <h3 className="text-xs font-bold text-slate-700 mb-2">Active Problems</h3>
+                        <div className="p-3 rounded-lg bg-white border border-gray-200 shadow-sm">
+                            <h3 className="text-xs font-bold text-gray-700 mb-2">Active Problems</h3>
                             <div className="space-y-1">
                                 {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 5).map((p, i) => (
-                                    <div key={i} className="text-[11px] text-slate-600 flex items-start gap-1.5">
+                                    <div key={i} className="text-[11px] text-gray-600 flex items-start gap-1.5">
                                         <span className="text-blue-500 mt-0.5">•</span>
                                         <span className="truncate">{decodeHtmlEntities(p.problem_name || p.name)}</span>
                                     </div>
                                 ))}
                                 {(!patientData?.problems || patientData.problems.filter(p => p.status === 'active').length === 0) && (
-                                    <div className="text-[11px] text-slate-400 italic">No active problems</div>
+                                    <div className="text-[11px] text-gray-400 italic">No active problems</div>
                                 )}
                             </div>
                         </div>
 
                         {/* Medications */}
-                        <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm">
-                            <h3 className="text-xs font-bold text-slate-700 mb-2">Medications</h3>
+                        <div className="p-3 rounded-lg bg-white border border-gray-200 shadow-sm">
+                            <h3 className="text-xs font-bold text-gray-700 mb-2">Medications</h3>
                             <div className="space-y-1">
                                 {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 5).map((m, i) => (
-                                    <div key={i} className="text-[11px] text-slate-600 truncate">
+                                    <div key={i} className="text-[11px] text-gray-600 truncate">
                                         {decodeHtmlEntities(m.medication_name || m.name)}
                                     </div>
                                 ))}
                                 {(!patientData?.medications || patientData.medications.length === 0) && (
-                                    <div className="text-[11px] text-slate-400 italic">No medications</div>
+                                    <div className="text-[11px] text-gray-400 italic">No medications</div>
                                 )}
                             </div>
                         </div>
 
                         {/* Allergies */}
-                        <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-sm">
-                            <h3 className="text-xs font-bold text-slate-700 mb-2">Allergies</h3>
+                        <div className="p-3 rounded-lg bg-white border border-gray-200 shadow-sm">
+                            <h3 className="text-xs font-bold text-gray-700 mb-2">Allergies</h3>
                             {(patientData?.allergies || []).length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
                                     {patientData.allergies.map((a, i) => (
@@ -556,7 +556,7 @@ const ChartReviewModal = ({
 
     const renderNotesTab = () => {
         const selectedVisit = visits.find(v => v.id === selectedVisitId) || visits[0];
-        if (!selectedVisit) return <div className="text-center text-slate-400 py-12 font-bold uppercase tracking-widest text-xs">No visits recorded</div>;
+        if (!selectedVisit) return <div className="text-center text-gray-400 py-12 font-bold uppercase tracking-widest text-xs">No visits recorded</div>;
 
         const noteText = typeof selectedVisit.note_draft === 'string' ? selectedVisit.note_draft : (selectedVisit.fullNote || '');
         const decoded = decodeHtmlEntities(noteText);
@@ -589,10 +589,10 @@ const ChartReviewModal = ({
         return (
             <div className="flex flex-1 overflow-hidden bg-white text-left">
                 {/* Visit History Sidebar */}
-                <div className="w-64 border-r border-slate-100 bg-slate-50/50 flex flex-col h-full overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex-shrink-0">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Encounter History</div>
-                        <div className="text-xs font-bold text-slate-500">{visits.length} Recorded Visits</div>
+                <div className="w-64 border-r border-gray-100 bg-gray-50/50 flex flex-col h-full overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 flex-shrink-0">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">Encounter History</div>
+                        <div className="text-xs font-bold text-gray-500">{visits.length} Recorded Visits</div>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {visits.map((visit) => {
@@ -603,22 +603,22 @@ const ChartReviewModal = ({
                                 <button
                                     key={visit.id}
                                     onClick={() => setSelectedVisitId(visit.id)}
-                                    className={`w-full text-left p-4 border-b border-slate-100 transition-all ${isActive
+                                    className={`w-full text-left p-4 border-b border-gray-100 transition-all ${isActive
                                         ? 'bg-white border-l-4 border-l-blue-600 shadow-sm'
                                         : 'hover:bg-white/60'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between mb-1">
-                                        <span className={`text-sm font-black ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>
+                                        <span className={`text-sm font-bold ${isActive ? 'text-gray-900' : 'text-gray-600'}`}>
                                             {format(date, 'MMM d, yyyy')}
                                         </span>
-                                        {(visit.locked || visit.signed) && <Lock className="w-3 h-3 text-slate-300" />}
+                                        {(visit.locked || visit.signed) && <Lock className="w-3 h-3 text-gray-400" />}
                                     </div>
-                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider truncate">
                                         {visit.visit_type?.replace('_', ' ') || 'Office Visit'}
                                     </div>
                                     {getChiefComplaint(visit) && (
-                                        <div className="text-[10px] font-medium text-slate-500 mt-1 line-clamp-2 italic">
+                                        <div className="text-[10px] font-medium text-gray-500 mt-1 line-clamp-2 italic">
                                             "{getChiefComplaint(visit)}"
                                         </div>
                                     )}
@@ -631,17 +631,17 @@ const ChartReviewModal = ({
                 {/* Clinical Note Content */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar bg-white p-12">
                     <div className="max-w-3xl">
-                        <div className="flex items-center justify-between pb-8 border-b border-slate-100 mb-10">
+                        <div className="flex items-center justify-between pb-8 border-b border-gray-100 mb-10">
                             <div>
-                                <h1 className="text-3xl font-black text-slate-900 leading-tight">
+                                <h1 className="text-3xl font-bold text-gray-900 leading-tight">
                                     Clinical Encounter Note
                                 </h1>
                                 <div className="flex items-center gap-2 mt-2">
                                     <span className="text-sm font-bold text-blue-600">
                                         {format(new Date(selectedVisit.visit_date), 'MMMM d, yyyy')}
                                     </span>
-                                    <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                                    <span className="text-sm font-medium text-slate-400">
+                                    <span className="w-1 h-1 rounded-full bg-gray-100"></span>
+                                    <span className="text-sm font-medium text-gray-400">
                                         Dr. {selectedVisit.provider_last_name || 'MD'}
                                     </span>
                                 </div>
@@ -651,7 +651,7 @@ const ChartReviewModal = ({
                         <div className="space-y-6">
                             {/* CC Section */}
                             <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100/50">
-                                <h4 className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-2">Chief Complaint</h4>
+                                <h4 className="text-[9px] font-bold text-blue-600 uppercase tracking-widest mb-2">Chief Complaint</h4>
                                 <div className="text-base font-medium text-blue-900 italic">
                                     "{ccMatch ? ccMatch[1].trim() : 'Not documented'}"
                                 </div>
@@ -660,8 +660,8 @@ const ChartReviewModal = ({
                             {/* HPI Section */}
                             {hpiMatch && (
                                 <div>
-                                    <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">History of Present Illness</h4>
-                                    <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                    <h4 className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2">History of Present Illness</h4>
+                                    <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                                         {hpiMatch[1].trim()}
                                     </div>
                                 </div>
@@ -669,17 +669,17 @@ const ChartReviewModal = ({
 
                             {/* Vitals Section */}
                             {Object.keys(cleanVitals).length > 0 && (
-                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                    <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">Vitals</h4>
+                                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                    <h4 className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-3">Vitals</h4>
                                     <div className="grid grid-cols-4 gap-3 text-xs">
-                                        {cleanVitals.bp && <div><span className="text-slate-400">BP:</span> <span className="font-bold">{cleanVitals.bp}</span></div>}
-                                        {(cleanVitals.pulse || cleanVitals.hr) && <div><span className="text-slate-400">HR:</span> <span className="font-bold">{cleanVitals.pulse || cleanVitals.hr}</span></div>}
-                                        {cleanVitals.temp && <div><span className="text-slate-400">Temp:</span> <span className="font-bold">{cleanVitals.temp}</span></div>}
-                                        {cleanVitals.resp && <div><span className="text-slate-400">RR:</span> <span className="font-bold">{cleanVitals.resp}</span></div>}
-                                        {(cleanVitals.o2sat || cleanVitals.spo2) && <div><span className="text-slate-400">SpO2:</span> <span className="font-bold">{cleanVitals.o2sat || cleanVitals.spo2}%</span></div>}
-                                        {cleanVitals.weight && <div><span className="text-slate-400">Wt:</span> <span className="font-bold">{cleanVitals.weight}</span></div>}
-                                        {cleanVitals.height && <div><span className="text-slate-400">Ht:</span> <span className="font-bold">{cleanVitals.height}</span></div>}
-                                        {cleanVitals.bmi && <div><span className="text-slate-400">BMI:</span> <span className="font-bold">{cleanVitals.bmi}</span></div>}
+                                        {cleanVitals.bp && <div><span className="text-gray-400">BP:</span> <span className="font-bold">{cleanVitals.bp}</span></div>}
+                                        {(cleanVitals.pulse || cleanVitals.hr) && <div><span className="text-gray-400">HR:</span> <span className="font-bold">{cleanVitals.pulse || cleanVitals.hr}</span></div>}
+                                        {cleanVitals.temp && <div><span className="text-gray-400">Temp:</span> <span className="font-bold">{cleanVitals.temp}</span></div>}
+                                        {cleanVitals.resp && <div><span className="text-gray-400">RR:</span> <span className="font-bold">{cleanVitals.resp}</span></div>}
+                                        {(cleanVitals.o2sat || cleanVitals.spo2) && <div><span className="text-gray-400">SpO2:</span> <span className="font-bold">{cleanVitals.o2sat || cleanVitals.spo2}%</span></div>}
+                                        {cleanVitals.weight && <div><span className="text-gray-400">Wt:</span> <span className="font-bold">{cleanVitals.weight}</span></div>}
+                                        {cleanVitals.height && <div><span className="text-gray-400">Ht:</span> <span className="font-bold">{cleanVitals.height}</span></div>}
+                                        {cleanVitals.bmi && <div><span className="text-gray-400">BMI:</span> <span className="font-bold">{cleanVitals.bmi}</span></div>}
                                     </div>
                                 </div>
                             )}
@@ -687,7 +687,7 @@ const ChartReviewModal = ({
                             {/* Assessment */}
                             {assessmentMatch && (
                                 <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
-                                    <h4 className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">Assessment</h4>
+                                    <h4 className="text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-2">Assessment</h4>
                                     <div className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
                                         {assessmentMatch[1].trim()}
                                     </div>
@@ -697,7 +697,7 @@ const ChartReviewModal = ({
                             {/* Plan */}
                             {planText && (
                                 <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-                                    <h4 className="text-[9px] font-black text-emerald-700 uppercase tracking-widest mb-2">Plan</h4>
+                                    <h4 className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest mb-2">Plan</h4>
                                     <div className="text-sm text-emerald-900 leading-relaxed whitespace-pre-wrap">
                                         {planText}
                                     </div>
@@ -707,7 +707,7 @@ const ChartReviewModal = ({
                             {/* Care Plan */}
                             {carePlanText && (
                                 <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                                    <h4 className="text-[9px] font-black text-purple-700 uppercase tracking-widest mb-2">Care Plan</h4>
+                                    <h4 className="text-[9px] font-bold text-purple-700 uppercase tracking-widest mb-2">Care Plan</h4>
                                     <div className="text-sm text-purple-900 leading-relaxed whitespace-pre-wrap">
                                         {carePlanText}
                                     </div>
@@ -717,7 +717,7 @@ const ChartReviewModal = ({
                             {/* Follow-up */}
                             {followUpText && (
                                 <div className="p-4 bg-cyan-50 rounded-xl border border-cyan-100">
-                                    <h4 className="text-[9px] font-black text-cyan-700 uppercase tracking-widest mb-2">Follow-up</h4>
+                                    <h4 className="text-[9px] font-bold text-cyan-700 uppercase tracking-widest mb-2">Follow-up</h4>
                                     <div className="text-sm text-cyan-900 leading-relaxed whitespace-pre-wrap">
                                         {followUpText}
                                     </div>
@@ -728,13 +728,13 @@ const ChartReviewModal = ({
                 </div>
 
                 {/* Sidebar Info */}
-                <div className="w-64 border-l border-slate-100 bg-slate-50/30 p-6 overflow-y-auto custom-scrollbar h-full">
+                <div className="w-64 border-l border-gray-100 bg-gray-50/30 p-6 overflow-y-auto custom-scrollbar h-full">
                     <div className="space-y-10">
                         <div>
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Conditions</h4>
+                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Conditions</h4>
                             <div className="space-y-3">
                                 {(patientData?.problems || []).filter(p => p.status === 'active').slice(0, 5).map((p, i) => (
-                                    <div key={i} className="text-xs font-bold text-slate-700 flex items-start gap-2">
+                                    <div key={i} className="text-xs font-bold text-gray-700 flex items-start gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0"></div>
                                         <span>{decodeHtmlEntities(p.problem_name || p.name)}</span>
                                     </div>
@@ -743,10 +743,10 @@ const ChartReviewModal = ({
                         </div>
 
                         <div>
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Medications</h4>
+                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Medications</h4>
                             <div className="space-y-3">
                                 {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 5).map((m, i) => (
-                                    <div key={i} className="text-xs font-medium text-slate-600">
+                                    <div key={i} className="text-xs font-medium text-gray-600">
                                         {decodeHtmlEntities(m.medication_name || m.name)}
                                     </div>
                                 ))}
@@ -754,17 +754,17 @@ const ChartReviewModal = ({
                         </div>
 
                         <div>
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Allergies</h4>
+                            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Allergies</h4>
                             {(patientData?.allergies || []).length > 0 ? (
                                 <div className="space-y-2">
                                     {patientData.allergies.map((a, i) => (
-                                        <div key={i} className="px-2 py-1 bg-rose-50 text-rose-600 text-[10px] font-black rounded-lg border border-rose-100 inline-block mr-2">
+                                        <div key={i} className="px-2 py-1 bg-rose-50 text-rose-600 text-[10px] font-bold rounded-lg border border-rose-100 inline-block mr-2">
                                             {decodeHtmlEntities(a.allergen || a.name)}
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-[11px] font-black text-emerald-600 uppercase tracking-widest">NKDA</div>
+                                <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest">NKDA</div>
                             )}
                         </div>
                     </div>
@@ -776,17 +776,17 @@ const ChartReviewModal = ({
     const renderVitalsTab = () => {
         return (
             <div className="flex-1 flex flex-col overflow-hidden bg-white">
-                <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                    <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                         <Activity className="w-4 h-4 text-primary-500" />
                         Vitals History
                     </h3>
-                    <div className="text-xs text-slate-400">Showing last {visits.length} visits</div>
+                    <div className="text-xs text-gray-400">Showing last {visits.length} visits</div>
                 </div>
                 <div className="flex-1 overflow-auto custom-scrollbar p-6">
                     <div className="border rounded-xl overflow-hidden shadow-sm">
                         <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                            <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
                                 <tr>
                                     <th className="px-4 py-3 font-semibold">Date</th>
                                     <th className="px-4 py-3 font-semibold">BP</th>
@@ -798,7 +798,7 @@ const ChartReviewModal = ({
                                     <th className="px-4 py-3 font-semibold">Weight</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
+                            <tbody className="divide-y divide-gray-100 bg-white">
                                 {visits.map(visit => {
                                     // Handle vitals being a string (JSON) or object
                                     let v = visit.vitals || {};
@@ -822,8 +822,8 @@ const ChartReviewModal = ({
                                     const isHighBP = (v.systolic && parseInt(v.systolic) > 140) || (v.diastolic && parseInt(v.diastolic) > 90);
 
                                     return (
-                                        <tr key={visit.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-4 py-3 font-medium text-slate-900 border-r border-slate-50">
+                                        <tr key={visit.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-4 py-3 font-medium text-gray-900 border-r border-slate-50">
                                                 {format(new Date(visit.visit_date), 'MMM d, yyyy')}
                                             </td>
                                             <td className={`px-4 py-3 ${isHighBP ? 'text-red-600 font-bold' : ''}`}>
@@ -833,14 +833,14 @@ const ChartReviewModal = ({
                                             <td className="px-4 py-3">{temp}</td>
                                             <td className="px-4 py-3">{rr}</td>
                                             <td className="px-4 py-3">{o2}</td>
-                                            <td className="px-4 py-3 font-medium text-slate-700">{bmi}</td>
-                                            <td className="px-4 py-3 text-slate-500">{weight}</td>
+                                            <td className="px-4 py-3 font-medium text-gray-700">{bmi}</td>
+                                            <td className="px-4 py-3 text-gray-500">{weight}</td>
                                         </tr>
                                     );
                                 })}
                                 {visits.length === 0 && (
                                     <tr>
-                                        <td colSpan="8" className="px-4 py-8 text-center text-slate-400">
+                                        <td colSpan="8" className="px-4 py-8 text-center text-gray-400">
                                             No vitals recorded
                                         </td>
                                     </tr>
@@ -893,15 +893,15 @@ const ChartReviewModal = ({
             });
 
         return (
-            <div className="flex-1 flex flex-col bg-slate-50 border-l border-slate-200 overflow-auto custom-scrollbar">
-                <div className="p-4 bg-white border-b border-slate-100 flex items-center justify-between sticky top-0 z-10">
+            <div className="flex-1 flex flex-col bg-gray-50 border-l border-gray-200 overflow-auto custom-scrollbar">
+                <div className="p-4 bg-white border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
                     <div>
-                        <h4 className="font-bold text-slate-900">{item.title}</h4>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                        <h4 className="font-bold text-gray-900">{item.title}</h4>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
                             {item.date ? format(new Date(item.date), 'MMMM dd, yyyy') : 'No Date'}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                    <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-lg text-gray-400">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -910,17 +910,17 @@ const ChartReviewModal = ({
                     {item.type === 'document' ? (
                         <div className="h-full flex flex-col space-y-6">
                             {loading ? (
-                                <div className="h-64 flex items-center justify-center bg-white rounded-xl border-2 border-dashed border-slate-200">
+                                <div className="h-64 flex items-center justify-center bg-white rounded-xl border-2 border-dashed border-gray-200">
                                     <div className="flex flex-col items-center animate-pulse">
-                                        <FileImage className="w-12 h-12 text-slate-200 mb-2" />
-                                        <span className="text-xs text-slate-400 font-bold uppercase">Loading Document...</span>
+                                        <FileImage className="w-12 h-12 text-gray-300 mb-2" />
+                                        <span className="text-xs text-gray-400 font-bold uppercase">Loading Document...</span>
                                     </div>
                                 </div>
                             ) : src ? (
                                 <div className="flex-1 flex flex-col space-y-4 min-h-0">
-                                    <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-slate-200/50 overflow-hidden min-h-[400px]">
+                                    <div className="flex-1 bg-white p-2 rounded-2xl shadow-sm border border-gray-200/50 overflow-hidden min-h-[400px]">
                                         {mimeType?.startsWith('image/') ? (
-                                            <div className="h-full overflow-auto custom-scrollbar flex items-center justify-center bg-slate-100/50 rounded-xl">
+                                            <div className="h-full overflow-auto custom-scrollbar flex items-center justify-center bg-gray-50/50 rounded-xl">
                                                 <img
                                                     src={src}
                                                     className="max-w-full h-auto rounded-lg shadow-lg cursor-zoom-in"
@@ -936,7 +936,7 @@ const ChartReviewModal = ({
                                             />
                                         )}
                                     </div>
-                                    <p className="text-[10px] text-slate-400 text-center font-medium italic">
+                                    <p className="text-[10px] text-gray-400 text-center font-medium italic">
                                         Tip: Click on image documents to open in a new tab for full-size viewing.
                                     </p>
                                 </div>
@@ -951,9 +951,9 @@ const ChartReviewModal = ({
                                     {metrics.length > 0 && (
                                         <div className="grid grid-cols-2 gap-3">
                                             {metrics.map((m, i) => (
-                                                <div key={i} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">{m.label}</span>
-                                                    <span className="text-[13px] font-bold text-slate-800">{m.value}</span>
+                                                <div key={i} className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest block mb-1">{m.label}</span>
+                                                    <span className="text-[13px] font-bold text-gray-800">{m.value}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -961,7 +961,7 @@ const ChartReviewModal = ({
 
                                     {interpretation && (
                                         <div className="bg-blue-600 p-5 rounded-2xl shadow-blue-200 shadow-xl">
-                                            <span className="text-[9px] font-black text-blue-100 uppercase tracking-widest block mb-2 opacity-80">Physician Interpretation</span>
+                                            <span className="text-[9px] font-bold text-blue-100 uppercase tracking-widest block mb-2 opacity-80">Physician Interpretation</span>
                                             <div className="text-[15px] font-bold text-white leading-relaxed italic">"{interpretation}"</div>
                                         </div>
                                     )}
@@ -969,21 +969,21 @@ const ChartReviewModal = ({
                             )}
                         </div>
                     ) : (
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200/50">
-                            <h5 className="font-black text-[10px] text-slate-400 uppercase tracking-widest mb-4">Order Details</h5>
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200/50">
+                            <h5 className="font-bold text-[10px] text-gray-400 uppercase tracking-widest mb-4">Order Details</h5>
                             <div className="space-y-4">
                                 <div>
-                                    <div className="text-[10px] font-bold text-slate-400 mb-0.5">Description</div>
-                                    <div className="text-sm text-slate-800 font-medium">{item.description || 'No description provided'}</div>
+                                    <div className="text-[10px] font-bold text-gray-400 mb-0.5">Description</div>
+                                    <div className="text-sm text-gray-800 font-medium">{item.description || 'No description provided'}</div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
                                     <div>
-                                        <div className="text-[10px] font-bold text-slate-400">Status</div>
+                                        <div className="text-[10px] font-bold text-gray-400">Status</div>
                                         <div className="text-sm font-bold text-blue-600">{item.status}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[10px] font-bold text-slate-400">Category</div>
-                                        <div className="text-sm font-bold text-slate-800">{item.category}</div>
+                                        <div className="text-[10px] font-bold text-gray-400">Category</div>
+                                        <div className="text-sm font-bold text-gray-800">{item.category}</div>
                                     </div>
                                 </div>
                             </div>
@@ -1001,7 +1001,7 @@ const ChartReviewModal = ({
             return (
                 <div className="flex-1 flex flex-col items-center justify-center py-12">
                     <RefreshCw className="w-8 h-8 text-primary-500 animate-spin mb-2" />
-                    <p className="text-slate-500">Loading {type}...</p>
+                    <p className="text-gray-500">Loading {type}...</p>
                 </div>
             );
         }
@@ -1018,15 +1018,15 @@ const ChartReviewModal = ({
         if (filteredRecords.length === 0) {
             return (
                 <div className="flex-1 flex flex-col items-center justify-center py-12 text-center p-8">
-                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                        {type === 'Labs' && <FlaskConical className="w-8 h-8 text-slate-300" />}
-                        {type === 'Imaging' && <FileImage className="w-8 h-8 text-slate-300" />}
-                        {type === 'Echo' && <Heart className="w-8 h-8 text-slate-300" />}
-                        {type === 'EKG' && <Waves className="w-8 h-8 text-slate-300" />}
-                        {type === 'Docs' && <FileText className="w-8 h-8 text-slate-300" />}
+                    <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4">
+                        {type === 'Labs' && <FlaskConical className="w-8 h-8 text-gray-400" />}
+                        {type === 'Imaging' && <FileImage className="w-8 h-8 text-gray-400" />}
+                        {type === 'Echo' && <Heart className="w-8 h-8 text-gray-400" />}
+                        {type === 'EKG' && <Waves className="w-8 h-8 text-gray-400" />}
+                        {type === 'Docs' && <FileText className="w-8 h-8 text-gray-400" />}
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-1">No {type} Found</h3>
-                    <p className="text-sm text-slate-500">No records found for this category.</p>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">No {type} Found</h3>
+                    <p className="text-sm text-gray-500">No records found for this category.</p>
                 </div>
             );
         }
@@ -1034,19 +1034,19 @@ const ChartReviewModal = ({
         return (
             <div className="flex-1 flex overflow-hidden">
                 <div className={`${selectedItem ? 'w-1/2' : 'w-full'} flex flex-col overflow-hidden`}>
-                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                        <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                             {type} History
                         </h3>
-                        <div className="text-xs text-slate-400">{filteredRecords.length} records</div>
+                        <div className="text-xs text-gray-400">{filteredRecords.length} records</div>
                     </div>
                     <div className="flex-1 overflow-auto custom-scrollbar p-0">
-                        <div className="divide-y divide-slate-100">
+                        <div className="divide-y divide-gray-100">
                             {filteredRecords.map(item => (
                                 <div
                                     key={item.id}
                                     onClick={() => setSelectedItem(item)}
-                                    className={`p-4 cursor-pointer transition-all flex items-start gap-4 hover:bg-slate-50 ${selectedItem?.id === item.id ? 'bg-blue-50/50 border-r-4 border-blue-500' : ''}`}
+                                    className={`p-4 cursor-pointer transition-all flex items-start gap-4 hover:bg-gray-50 ${selectedItem?.id === item.id ? 'bg-blue-50/50 border-r-4 border-blue-500' : ''}`}
                                 >
                                     <div className="mt-1">
                                         {item.type === 'record' && <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>}
@@ -1055,22 +1055,22 @@ const ChartReviewModal = ({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between mb-1">
-                                            <h4 className="font-semibold text-slate-900 truncate">{item.title}</h4>
-                                            <span className="text-[10px] text-slate-500 flex items-center gap-1 shrink-0 ml-2">
+                                            <h4 className="font-semibold text-gray-900 truncate">{item.title}</h4>
+                                            <span className="text-[10px] text-gray-500 flex items-center gap-1 shrink-0 ml-2">
                                                 <Clock className="w-3 h-3" />
                                                 {item.date ? format(new Date(item.date), 'MM/dd/yy') : '--'}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-slate-600 mb-2 truncate">{item.description}</p>
+                                        <p className="text-xs text-gray-600 mb-2 truncate">{item.description}</p>
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-black border uppercase tracking-tighter
+                                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border uppercase tracking-tighter
                                                     ${item.type === 'record' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                                     item.type === 'order' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                                                         'bg-amber-50 text-amber-700 border-amber-100'
                                                 }`}>
                                                 {item.type}
                                             </span>
-                                            {item.status && <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.status}</span>}
+                                            {item.status && <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{item.status}</span>}
                                         </div>
                                     </div>
                                 </div>
@@ -1087,23 +1087,23 @@ const ChartReviewModal = ({
     };
 
     const modalContent = (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[2000] p-4" onClick={onClose}>
-            <div className="bg-slate-50 rounded-[2rem] shadow-2xl w-full max-w-[1240px] h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-md flex items-center justify-center z-[2000] p-4" onClick={onClose}>
+            <div className="bg-gray-50 rounded-[2rem] shadow-2xl w-full max-w-[1240px] h-[90vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
                 {/* Clean Professional Header */}
-                <div className="px-8 py-5 bg-white border-b border-slate-100 flex items-center justify-between flex-shrink-0 relative">
+                <div className="px-8 py-5 bg-white border-b border-gray-100 flex items-center justify-between flex-shrink-0 relative">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
                             <Stethoscope className="w-5 h-5" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">Chart Review</h2>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{patientData.first_name} {patientData.last_name}</p>
+                            <h2 className="text-lg font-bold text-gray-900 tracking-tight leading-none mb-1">Chart Review</h2>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{patientData.first_name} {patientData.last_name}</p>
                         </div>
                     </div>
 
                     {/* Centered Tab Navigation */}
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <div className="flex gap-0.5 p-1 bg-slate-100 rounded-lg shadow-inner">
+                        <div className="flex gap-0.5 p-1 bg-gray-50 rounded-lg shadow-inner">
                             {['Summary', 'Notes', 'Vitals', 'Labs', 'Imaging', 'Echo', 'EKG', 'Docs'].map((tab) => {
                                 const isActive = (activeTab || 'Summary') === tab;
                                 return (
@@ -1112,7 +1112,7 @@ const ChartReviewModal = ({
                                         onClick={() => setActiveTab(tab)}
                                         className={`px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide rounded-md transition-all ${isActive
                                             ? 'bg-white text-blue-600 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                                            : 'text-gray-500 hover:text-gray-900 hover:bg-white/50'
                                             }`}
                                     >
                                         {tab}
@@ -1124,7 +1124,7 @@ const ChartReviewModal = ({
 
                     <button
                         onClick={onClose}
-                        className="w-10 h-10 rounded-full bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 flex items-center justify-center transition-all group border border-slate-100"
+                        className="w-10 h-10 rounded-full bg-gray-50 hover:bg-rose-50 hover:text-rose-600 text-gray-400 flex items-center justify-center transition-all group border border-gray-100"
                     >
                         <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
                     </button>
@@ -1148,20 +1148,20 @@ const ChartReviewModal = ({
                 </div>
 
                 {/* Professional Footer */}
-                <div className="px-8 py-8 bg-white border-t border-slate-100 flex items-center justify-between flex-shrink-0 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
-                    <div className="flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center">
-                            <Clock className="w-4 h-4 text-slate-300" />
+                <div className="px-8 py-8 bg-white border-t border-gray-100 flex items-center justify-between flex-shrink-0 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-gray-400" />
                         </div>
                         <div>
-                            <div className="text-slate-500">{activeTab} View</div>
+                            <div className="text-gray-500">{activeTab} View</div>
                             <div className="text-[10px] font-medium lowercase italic">Last updated: {format(new Date(), 'h:mm a')}</div>
                         </div>
                     </div>
                     {onViewFullChart && (
                         <button
                             onClick={onViewFullChart}
-                            className="px-10 py-4 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center gap-2 hover:-translate-y-0.5"
+                            className="px-10 py-4 bg-blue-600 text-white text-xs font-bold uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 flex items-center gap-2 hover:-translate-y-0.5"
                         >
                             Open Full Patient Chart
                             <Eye className="w-4 h-4" />

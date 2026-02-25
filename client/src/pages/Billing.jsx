@@ -145,8 +145,8 @@ const Billing = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Billing & Claims</h1>
-                    <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Manage claims, fee sheets, and billing operations</p>
+                    <h1 className="text-xl font-bold text-[#111827] tracking-tighter uppercase mb-0.5">Billing & Claims</h1>
+                    <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Manage claims, fee sheets, and billing operations</p>
                 </div>
                 <div className="flex items-center space-x-2">
                     <button
@@ -179,7 +179,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Total Claims</p>
-                            <p className="text-2xl font-semibold text-[#10141A] mt-1">{statistics.total}</p>
+                            <p className="text-2xl font-semibold text-[#111827] mt-1">{statistics.total}</p>
                         </div>
                         <Receipt className="w-8 h-8 text-primary-600" />
                     </div>
@@ -206,7 +206,7 @@ const Billing = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-gray-600">Total Amount</p>
-                            <p className="text-2xl font-semibold text-[#10141A] mt-1">${statistics.totalAmount.toFixed(2)}</p>
+                            <p className="text-2xl font-semibold text-[#111827] mt-1">${statistics.totalAmount.toFixed(2)}</p>
                         </div>
                         <TrendingUp className="w-8 h-8 text-primary-600" />
                     </div>
@@ -790,7 +790,7 @@ const SuperbillModal = ({ isOpen, onClose, onSuccess }) => {
                                             navigate(`/patient/${selectedPatient.id}/superbill/${sb.id}`);
                                             onClose();
                                         }}
-                                        className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded hover:bg-slate-50 transition-colors"
+                                        className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded hover:bg-gray-50 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
                                             <Receipt className="w-4 h-4 text-blue-500" />

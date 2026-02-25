@@ -57,10 +57,10 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/40 z-[200] flex flex-col p-4 backdrop-blur-md">
+        <div className="fixed inset-0 bg-gray-50/40 z-[200] flex flex-col p-4 backdrop-blur-md">
             {/* Top Workspace Toolbar */}
             <div className="flex justify-between items-center mb-6 pl-2 pr-2 relative z-[250]">
-                <div className="flex items-center gap-3 text-white font-black tracking-tight bg-slate-900/70 border border-white/10 px-4 py-2 rounded-full shadow-xl backdrop-blur-xl">
+                <div className="flex items-center gap-3 text-white font-bold tracking-tight bg-gray-50/70 border border-white/10 px-4 py-2 rounded-full shadow-xl backdrop-blur-xl">
                     <Layers className="w-4 h-4 text-blue-400" />
                     <span>Chart Review Workspace</span>
 
@@ -76,8 +76,8 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                         {showDropdown && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
-                                <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 overflow-hidden animate-slide-up">
-                                    <div className="px-4 py-2 text-[9px] font-bold uppercase text-slate-400 tracking-widest border-b border-slate-100 bg-slate-50">Active Workspace Tabs</div>
+                                <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-gray-200 py-2 z-50 overflow-hidden animate-slide-up">
+                                    <div className="px-4 py-2 text-[9px] font-bold uppercase text-gray-400 tracking-widest border-b border-gray-100 bg-gray-50">Active Workspace Tabs</div>
                                     <div className="max-h-[40vh] overflow-y-auto">
                                         {openVisits.map(vId => {
                                             const vData = visitsData[vId];
@@ -92,16 +92,16 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                                         handleOpenNewVisit(vId);
                                                         setShowDropdown(false);
                                                     }}
-                                                    className={`w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors flex items-center justify-between group ${isCurrentFront ? 'bg-blue-50/30' : ''}`}
+                                                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-slate-50 last:border-0 transition-colors flex items-center justify-between group ${isCurrentFront ? 'bg-blue-50/30' : ''}`}
                                                 >
                                                     <div className="flex-1 min-w-0 pr-3">
-                                                        <div className={`text-[11px] font-bold ${isCurrentFront ? 'text-blue-600' : 'text-slate-800'}`}>
+                                                        <div className={`text-[11px] font-bold ${isCurrentFront ? 'text-blue-600' : 'text-gray-800'}`}>
                                                             {vDate}
                                                         </div>
-                                                        <div className="text-[10px] text-slate-500 truncate">{vCC}</div>
+                                                        <div className="text-[10px] text-gray-500 truncate">{vCC}</div>
                                                     </div>
                                                     {isCurrentFront && (
-                                                        <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest bg-blue-100 px-2 py-0.5 rounded-full">Viewing</span>
+                                                        <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest bg-blue-100 px-2 py-0.5 rounded-full">Viewing</span>
                                                     )}
                                                 </button>
                                             );
@@ -114,7 +114,7 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-3 bg-slate-900/70 hover:bg-slate-900 text-white rounded-full transition-all border border-white/10 backdrop-blur-xl shadow-xl group"
+                    className="p-3 bg-gray-50/70 hover:bg-gray-50 text-white rounded-full transition-all border border-white/10 backdrop-blur-xl shadow-xl group"
                 >
                     <X className="w-5 h-5 group-hover:rotate-90 transition-transform" />
                 </button>
@@ -190,12 +190,12 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
 
                                 {/* Main Card Body */}
                                 <div
-                                    className={`w-full h-full relative rounded-l-[1.5rem] rounded-r-[0.9rem] bg-[#F8FAFC] overflow-hidden shadow-[-8px_8px_30px_rgba(0,0,0,0.15)] ${isFront ? 'border-none' : 'border border-slate-300'}`}
+                                    className={`w-full h-full relative rounded-l-[1.5rem] rounded-r-[0.9rem] bg-white overflow-hidden shadow-[-8px_8px_30px_rgba(0,0,0,0.15)] ${isFront ? 'border-none' : 'border border-gray-200'}`}
                                 >
                                     {/* Invisible overlay to intercept clicks on background cards cleanly */}
                                     {!isFront && (
                                         <div
-                                            className="absolute inset-0 z-50 bg-slate-900/5 hover:bg-slate-900/10 transition-colors cursor-pointer"
+                                            className="absolute inset-0 z-50 bg-gray-50/5 hover:bg-gray-50/10 transition-colors cursor-pointer"
                                             onClick={() => handleOpenNewVisit(vId)}
                                         />
                                     )}

@@ -16,7 +16,7 @@ const PatientHeaderPhoto = ({ firstName, lastName, photoUrl, className = "w-24 h
 
     return (
         <div
-            className={`rounded-full flex items-center justify-center font-black overflow-hidden border-2 border-white shadow-sm ring-1 ring-slate-200 ${bgColor} ${textColor} ${className} ${onClick ? 'cursor-pointer hover:ring-blue-400 hover:shadow-md transition-all' : ''}`}
+            className={`rounded-full flex items-center justify-center font-bold overflow-hidden border-2 border-white shadow-sm ring-1 ring-gray-200 ${bgColor} ${textColor} ${className} ${onClick ? 'cursor-pointer hover:ring-blue-400 hover:shadow-md transition-all' : ''}`}
             onClick={onClick}
         >
             {authenticatedPhotoUrl ? (

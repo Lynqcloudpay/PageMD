@@ -156,12 +156,12 @@ const PortalMessages = () => {
     };
 
     return (
-        <div className="flex flex-col h-[500px] md:h-[calc(100vh-180px)] lg:h-[calc(100vh-130px)] border border-slate-100 rounded-[2.5rem] overflow-hidden bg-white shadow-2xl shadow-slate-200/50 animate-in fade-in duration-500">
+        <div className="flex flex-col h-[500px] md:h-[calc(100vh-180px)] lg:h-[calc(100vh-130px)] border border-gray-100 rounded-[2.5rem] overflow-hidden bg-white shadow-2xl shadow-slate-200/50 animate-in fade-in duration-500">
             <div className="flex flex-1 overflow-hidden">
                 {/* Threads Sidebar */}
-                <div className={`w-full md:w-80 lg:w-96 border-r border-slate-50 flex flex-col bg-slate-50/20 ${selectedThread || showNewThreadForm ? 'hidden md:flex' : 'flex'}`}>
+                <div className={`w-full md:w-80 lg:w-96 border-r border-slate-50 flex flex-col bg-gray-50/20 ${selectedThread || showNewThreadForm ? 'hidden md:flex' : 'flex'}`}>
                     <div className="p-6 border-b border-slate-50 flex justify-between items-center bg-white">
-                        <h2 className="text-xl font-bold text-slate-800 tracking-tight">Messages</h2>
+                        <h2 className="text-xl font-bold text-gray-800 tracking-tight">Messages</h2>
                         <button
                             onClick={() => setShowNewThreadForm(true)}
                             className="w-9 h-9 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
@@ -172,18 +172,18 @@ const PortalMessages = () => {
 
                     <div className="p-4 bg-white/50 border-b border-slate-50">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Search conversations..."
-                                className="w-full pl-9 pr-4 py-2 bg-slate-100/50 border-none rounded-xl text-[12px] focus:ring-2 focus:ring-blue-600/10 outline-none transition-all"
+                                className="w-full pl-9 pr-4 py-2 bg-gray-50/50 border-none rounded-xl text-[12px] focus:ring-2 focus:ring-blue-600/10 outline-none transition-all"
                             />
                         </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {threads.length === 0 ? (
-                            <div className="p-10 text-center text-slate-300">
+                            <div className="p-10 text-center text-gray-400">
                                 <MessageSquare className="w-10 h-10 mx-auto mb-4 opacity-5" />
                                 <p className="text-[10px] font-bold uppercase tracking-widest">No messages yet</p>
                             </div>
@@ -204,25 +204,25 @@ const PortalMessages = () => {
 
                                 <div className="flex justify-between items-start mb-1.5 pl-2">
                                     <div className="flex-1 min-w-0">
-                                        <h3 className={`font-bold tracking-tight truncate text-sm ${thread.unread_count > 0 ? 'text-slate-900' : 'text-slate-700'}`}>
+                                        <h3 className={`font-bold tracking-tight truncate text-sm ${thread.unread_count > 0 ? 'text-gray-900' : 'text-gray-700'}`}>
                                             {thread.last_sender_name ? `Dr. ${thread.last_sender_name}` : (thread.staff_first_name ? `Dr. ${thread.staff_first_name} ${thread.staff_last_name}` : 'Care Team')}
                                         </h3>
-                                        <p className="text-[10px] text-slate-400 truncate font-medium">{thread.subject}</p>
+                                        <p className="text-[10px] text-gray-400 truncate font-medium">{thread.subject}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] text-slate-400 font-bold whitespace-nowrap">
+                                        <span className="text-[9px] text-gray-400 font-bold whitespace-nowrap">
                                             {new Date(thread.last_message_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                         </span>
                                         <button
                                             onClick={(e) => handleDeleteThread(thread.id, e)}
-                                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all"
+                                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
                                             title="Delete conversation"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
-                                <p className={`text-[12px] truncate pl-2 ${thread.unread_count > 0 ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>
+                                <p className={`text-[12px] truncate pl-2 ${thread.unread_count > 0 ? 'text-gray-800 font-semibold' : 'text-gray-500'}`}>
                                     {thread.last_message_body || 'No messages'}
                                 </p>
                             </div>
@@ -235,19 +235,19 @@ const PortalMessages = () => {
                     {showNewThreadForm ? (
                         <div className="flex-1 flex flex-col animate-in slide-in-from-right duration-300">
                             <div className="p-6 border-b border-slate-50 flex items-center gap-4">
-                                <button onClick={() => setShowNewThreadForm(false)} className="md:hidden p-2 text-slate-400 hover:text-slate-800">
+                                <button onClick={() => setShowNewThreadForm(false)} className="md:hidden p-2 text-gray-400 hover:text-gray-800">
                                     <ChevronLeft />
                                 </button>
-                                <h1 className="text-xl font-bold text-slate-800 tracking-tight">New Conversation</h1>
+                                <h1 className="text-xl font-bold text-gray-800 tracking-tight">New Conversation</h1>
                             </div>
                             <div className="p-8 flex-1 overflow-y-auto">
                                 <form onSubmit={handleCreateThread} className="max-w-xl space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Send to Staff Member</label>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Send to Staff Member</label>
                                         <select
                                             value={assignedUserId}
                                             onChange={(e) => setAssignedUserId(e.target.value)}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-bold text-[12px] text-slate-800 appearance-none"
+                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-bold text-[12px] text-gray-800 appearance-none"
                                         >
                                             <option value="">Select a specific clinician (optional)</option>
                                             {staff.map(s => (
@@ -258,22 +258,22 @@ const PortalMessages = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Subject</label>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Subject</label>
                                         <input
                                             type="text"
                                             value={newThreadSubject}
                                             onChange={(e) => setNewThreadSubject(e.target.value)}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-bold text-[13px] text-slate-800 placeholder:text-slate-300"
+                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-bold text-[13px] text-gray-800 placeholder:text-gray-400"
                                             placeholder="What is this regarding?"
                                             required
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Message Detail</label>
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Message Detail</label>
                                         <textarea
                                             value={newMessage}
                                             onChange={(e) => setNewMessage(e.target.value)}
-                                            className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl h-48 focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-medium text-[13px] text-slate-800 placeholder:text-slate-300"
+                                            className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-2xl h-48 focus:bg-white focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 outline-none transition-all font-medium text-[13px] text-gray-800 placeholder:text-gray-400"
                                             placeholder="Please describe your inquiry..."
                                             required
                                         />
@@ -288,7 +288,7 @@ const PortalMessages = () => {
                                         <button
                                             type="button"
                                             onClick={() => setShowNewThreadForm(false)}
-                                            className="px-8 py-3.5 bg-slate-100 text-slate-600 rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-slate-200 transition-all"
+                                            className="px-8 py-3.5 bg-gray-50 text-gray-600 rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:bg-gray-100 transition-all"
                                         >
                                             Cancel
                                         </button>
@@ -300,33 +300,33 @@ const PortalMessages = () => {
                         <>
                             <div className="p-5 border-b border-slate-50 flex justify-between items-center bg-white/90 backdrop-blur-md sticky top-0 z-10">
                                 <div className="flex items-center gap-4">
-                                    <button onClick={() => setSelectedThread(null)} className="md:hidden p-2 text-slate-400 hover:text-slate-800">
+                                    <button onClick={() => setSelectedThread(null)} className="md:hidden p-2 text-gray-400 hover:text-gray-800">
                                         <ChevronLeft />
                                     </button>
                                     <div>
                                         <div className="text-[9px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-0.5">Secure Conversation</div>
-                                        <h3 className="text-lg font-bold text-slate-800 tracking-tight leading-none">{selectedThread.subject}</h3>
+                                        <h3 className="text-lg font-bold text-gray-800 tracking-tight leading-none">{selectedThread.subject}</h3>
                                     </div>
                                 </div>
-                                <button className="p-2 text-slate-300 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors">
+                                <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">
                                     <MoreVertical className="w-4.5 h-4.5" />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-[#F8FAFC]/50">
+                            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white/50">
                                 {messages.map(msg => (
                                     <div
                                         key={msg.id}
                                         className={`flex flex-col ${msg.sender_portal_account_id ? 'items-end' : 'items-start'}`}
                                     >
                                         <div className="flex items-center gap-2 mb-1.5 px-2">
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
                                                 {msg.sender_user_id ? `Dr. ${msg.staff_first_name} ${msg.staff_last_name}` : 'You'} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                         <div className={`max-w-[85%] lg:max-w-[75%] p-4 px-5 rounded-[1.8rem] shadow-sm text-sm ${msg.sender_portal_account_id
                                             ? 'bg-blue-600 text-white rounded-tr-none'
-                                            : 'bg-white border border-slate-100 text-slate-800 rounded-tl-none shadow-slate-200/50'}`}>
+                                            : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none shadow-slate-200/50'}`}>
                                             <div className="font-medium leading-relaxed">
                                                 {msg.body.split('\n').map((line, i) => {
                                                     const suggestMatch = line.match(/\[SUGGEST_SLOT:(.+?)T(.+?)\]/i);
@@ -377,11 +377,11 @@ const PortalMessages = () => {
                             </div>
 
                             <div className="p-4 md:p-5 bg-white border-t border-slate-50">
-                                <form onSubmit={handleSendMessage} className="flex items-end gap-3 bg-slate-100/50 p-1.5 pl-5 rounded-[1.5rem] focus-within:ring-4 focus-within:ring-blue-600/5 transition-all">
+                                <form onSubmit={handleSendMessage} className="flex items-end gap-3 bg-gray-50/50 p-1.5 pl-5 rounded-[1.5rem] focus-within:ring-4 focus-within:ring-blue-600/5 transition-all">
                                     <textarea
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
-                                        className="flex-1 py-2.5 bg-transparent border-none outline-none font-medium text-[13px] text-slate-800 placeholder:text-slate-400 resize-none max-h-32 min-h-[40px] custom-scrollbar"
+                                        className="flex-1 py-2.5 bg-transparent border-none outline-none font-medium text-[13px] text-gray-800 placeholder:text-gray-400 resize-none max-h-32 min-h-[40px] custom-scrollbar"
                                         placeholder="Type your reply..."
                                         rows={1}
                                         onKeyDown={(e) => {
@@ -401,12 +401,12 @@ const PortalMessages = () => {
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center text-slate-400 flex-col p-10">
+                        <div className="flex-1 flex items-center justify-center text-gray-400 flex-col p-10">
                             <div className="w-24 h-24 bg-blue-50/50 rounded-full flex items-center justify-center mb-6">
                                 <MessageSquare className="w-8 h-8 text-blue-200" />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-1.5 tracking-tight">Messaging Center</h3>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">Send secure information to your care team</p>
+                            <h3 className="text-xl font-bold text-gray-800 mb-1.5 tracking-tight">Messaging Center</h3>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">Send secure information to your care team</p>
                             <button
                                 onClick={() => setShowNewThreadForm(true)}
                                 className="px-8 py-3.5 bg-blue-600 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-200"

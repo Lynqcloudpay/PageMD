@@ -42,7 +42,7 @@ const VisitNoteHeader = ({
             <div className="mb-6">
                 <button
                     onClick={() => navigate(`/patient/${id}/snapshot`)}
-                    className="group flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-all"
+                    className="group flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-all"
                 >
                     <div className="p-1.5 rounded-full group-hover:bg-blue-50 transition-colors">
                         <ArrowLeft className="w-4 h-4" />
@@ -95,7 +95,7 @@ const VisitNoteHeader = ({
                                     value={visitType}
                                     onChange={(e) => setVisitType(e.target.value)}
                                     disabled={isLocked}
-                                    className="text-xl font-bold text-slate-800 bg-transparent border-none p-0 focus:ring-0 cursor-pointer hover:text-blue-600 transition-colors"
+                                    className="text-xl font-bold text-gray-800 bg-transparent border-none p-0 focus:ring-0 cursor-pointer hover:text-blue-600 transition-colors"
                                 >
                                     <option value="Office Visit">Office Visit</option>
                                     <option value="Follow-up">Follow-up</option>
@@ -104,13 +104,13 @@ const VisitNoteHeader = ({
                                     <option value="Telehealth Visit">Telehealth</option>
                                     <option value="Consultation">Consultation</option>
                                 </select>
-                                <span className="text-xl font-light text-slate-300">/</span>
-                                <span className="text-xl font-bold text-slate-800">Visit Note</span>
+                                <span className="text-xl font-light text-gray-400">/</span>
+                                <span className="text-xl font-bold text-gray-800">Visit Note</span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs font-medium text-slate-400">
+                            <div className="flex items-center gap-3 text-xs font-medium text-gray-400">
                                 <span>{visitDate}</span>
-                                <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                                <span className="text-slate-500">{providerName}</span>
+                                <span className="w-1 h-1 bg-gray-100 rounded-full"></span>
+                                <span className="text-gray-500">{providerName}</span>
                             </div>
                         </div>
                     </div>
@@ -118,7 +118,7 @@ const VisitNoteHeader = ({
                     <div className="flex flex-wrap items-center gap-2.5">
                         <button
                             onClick={() => setShowChartReview(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition-all shadow-lg shadow-slate-200"
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-white rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-lg shadow-slate-200"
                         >
                             <Eye className="w-4 h-4" />
                             <span>Review</span>
@@ -129,9 +129,9 @@ const VisitNoteHeader = ({
                                 <button
                                     onClick={handleSave}
                                     disabled={isSaving}
-                                    className="px-4 py-2 bg-white text-slate-700 border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                                    className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
                                 >
-                                    <Save className="w-4 h-4 text-slate-400" />
+                                    <Save className="w-4 h-4 text-gray-400" />
                                     <span>{isSaving ? 'Saving...' : 'Save'}</span>
                                 </button>
                                 <button
@@ -151,10 +151,10 @@ const VisitNoteHeader = ({
                             </div>
                         )}
 
-                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-100">
+                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-100">
                             <button
                                 onClick={() => setShowPrintModal(true)}
-                                className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-500 hover:border-blue-100 transition-all shadow-sm"
+                                className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-400 hover:text-blue-500 hover:border-blue-100 transition-all shadow-sm"
                                 title="Print Note"
                             >
                                 <Printer className="w-4 h-4" />
@@ -163,7 +163,7 @@ const VisitNoteHeader = ({
                                 onClick={() => setShowQuickActions(!showQuickActions)}
                                 className={`p-2.5 rounded-xl transition-all shadow-sm border ${showQuickActions
                                     ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                    : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                    : 'bg-white text-gray-400 border-gray-200 hover:border-gray-200'
                                     }`}
                                 title="Insights Panel"
                             >

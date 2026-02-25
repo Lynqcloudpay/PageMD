@@ -42,13 +42,13 @@ function EchoTrendChart({ visualization }) {
     const gradientId = `chartGradient-${label.replace(/\s+/g, '')}`;
 
     return (
-        <div className="bg-white rounded-xl p-4 mt-2 border border-slate-200/60 shadow-sm transition-all hover:shadow-md group">
+        <div className="bg-white rounded-xl p-4 mt-2 border border-gray-200/60 shadow-sm transition-all hover:shadow-md group">
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-slate-50 group-hover:bg-blue-50 transition-colors">
+                    <div className="p-1.5 rounded-lg bg-gray-50 group-hover:bg-blue-50 transition-colors">
                         <TrendingUp className={`w-3.5 h-3.5 ${severityColor === '#ef4444' ? 'text-red-500' : 'text-blue-500'}`} />
                     </div>
-                    <span className="text-[12px] font-bold text-slate-700 tracking-tight">{label}</span>
+                    <span className="text-[12px] font-bold text-gray-700 tracking-tight">{label}</span>
                 </div>
                 {stats?.trend && stats.trend !== 'stable' && (
                     <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border ${stats.trend === 'rising'
@@ -105,7 +105,7 @@ function EchoTrendChart({ visualization }) {
             </svg>
             {clinicalContext?.recommendation && (
                 <p className={`text-[10px] mt-1 ${clinicalContext.severity === 'high' ? 'text-red-600 font-medium' :
-                    clinicalContext.severity === 'moderate' ? 'text-amber-600' : 'text-slate-500'
+                    clinicalContext.severity === 'moderate' ? 'text-amber-600' : 'text-gray-500'
                     }`}>
                     {clinicalContext.recommendation}
                 </p>
@@ -137,7 +137,7 @@ function NoteDraftCard({ visualization }) {
                             <div className="p-1 rounded-lg bg-emerald-50 text-emerald-600">
                                 <PenTool className="w-3.5 h-3.5" />
                             </div>
-                            <span className="text-[11px] font-black text-emerald-900 uppercase tracking-widest">
+                            <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-widest">
                                 {section === 'hpi' ? 'HPI Draft' : `Draft: ${section}`}
                             </span>
                         </div>
@@ -152,7 +152,7 @@ function NoteDraftCard({ visualization }) {
                             {copied[section] ? 'Copied' : 'Copy'}
                         </button>
                     </div>
-                    <div className="text-[12px] text-slate-700 leading-relaxed font-serif italic bg-slate-50/50 p-2.5 rounded-lg border border-slate-100">
+                    <div className="text-[12px] text-gray-700 leading-relaxed font-serif italic bg-gray-50/50 p-2.5 rounded-lg border border-gray-100">
                         {text}
                     </div>
                 </div>
@@ -181,11 +181,11 @@ function DiagnosisSuggestionsCard({ visualization }) {
                             <code className="text-[10px] font-mono font-bold text-amber-700 flex-shrink-0">
                                 {dx.icd10_code}
                             </code>
-                            <span className="text-[11px] text-slate-700 truncate">{dx.description}</span>
+                            <span className="text-[11px] text-gray-700 truncate">{dx.description}</span>
                         </div>
                         <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${dx.relevance === 'high' ? 'bg-amber-200 text-amber-800' :
                             dx.relevance === 'medium' ? 'bg-amber-100 text-amber-600' :
-                                'bg-slate-100 text-slate-500'
+                                'bg-gray-50 text-gray-500'
                             }`}>
                             {dx.relevance}
                         </span>
@@ -216,7 +216,7 @@ function StagedActionCard({ visualization, onApprove, onReject }) {
         <div className={`mt-2.5 rounded-2xl p-3 border transition-all duration-300 relative overflow-hidden ${isCommitted
             ? 'bg-green-50/50 border-green-200'
             : isRejected
-                ? 'bg-slate-50 border-slate-200 opacity-60'
+                ? 'bg-gray-50 border-gray-200 opacity-60'
                 : 'bg-white border-blue-200 shadow-sm hover:shadow-md hover:border-blue-300'
             }`}>
             {/* Background Accent */}
@@ -225,23 +225,23 @@ function StagedActionCard({ visualization, onApprove, onReject }) {
             )}
 
             <div className="flex items-start gap-3 relative z-10">
-                <div className={`p-2 rounded-xl shadow-sm ${isCommitted ? 'bg-green-100 text-green-600' : isRejected ? 'bg-slate-100 text-slate-500' : 'bg-blue-600 text-white'}`}>
+                <div className={`p-2 rounded-xl shadow-sm ${isCommitted ? 'bg-green-100 text-green-600' : isRejected ? 'bg-gray-50 text-gray-500' : 'bg-blue-600 text-white'}`}>
                     <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                        <p className={`text-[12px] font-black tracking-tight ${isCommitted ? 'text-green-800' : isRejected ? 'text-slate-600' : 'text-slate-900'}`}>
+                        <p className={`text-[12px] font-bold tracking-tight ${isCommitted ? 'text-green-800' : isRejected ? 'text-gray-600' : 'text-gray-900'}`}>
                             {visualization.label}
                         </p>
                         {isCommitted && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
                     </div>
-                    <p className={`text-[11px] mt-0.5 leading-tight ${isCommitted ? 'text-green-600' : 'text-slate-500'}`}>
+                    <p className={`text-[11px] mt-0.5 leading-tight ${isCommitted ? 'text-green-600' : 'text-gray-500'}`}>
                         {isCommitted ? 'Action successfully committed to patient chart.' : isRejected ? 'Action declined.' : visualization.message.split('\n\n**Preview:**')[0]}
                     </p>
                     {!isCommitted && !isRejected && visualization.type === 'send_message' && (
-                        <div className="mt-2 bg-slate-50/50 rounded-lg p-2 border border-blue-50/50">
-                            <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">Message Preview</span>
-                            <p className="text-[10px] text-slate-600 italic mt-1 leading-snug line-clamp-3">
+                        <div className="mt-2 bg-gray-50/50 rounded-lg p-2 border border-blue-50/50">
+                            <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">Message Preview</span>
+                            <p className="text-[10px] text-gray-600 italic mt-1 leading-snug line-clamp-3">
                                 {visualization.payload?.body}
                             </p>
                         </div>
@@ -260,7 +260,7 @@ function StagedActionCard({ visualization, onApprove, onReject }) {
                             <AlertTriangle className={`w-3 h-3 ${visualization.interactionWarning.severity === 'high' ? 'animate-pulse' : ''}`} />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest leading-none mt-0.5">
+                            <p className="text-[10px] font-bold uppercase tracking-widest leading-none mt-0.5">
                                 {visualization.interactionWarning.risk} — {visualization.interactionWarning.severity.toUpperCase()} RISK
                             </p>
                             <p className="text-[10px] mt-1 font-medium leading-snug opacity-90">
@@ -272,16 +272,16 @@ function StagedActionCard({ visualization, onApprove, onReject }) {
             )}
 
             {!isCommitted && !isRejected && (
-                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
                     <button
                         onClick={() => onApprove(visualization)}
-                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-wider rounded-lg shadow-sm transition-all active:scale-[0.97]"
+                        className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold uppercase tracking-wider rounded-lg shadow-sm transition-all active:scale-[0.97]"
                     >
                         Approve
                     </button>
                     <button
                         onClick={() => onReject(visualization)}
-                        className="px-4 py-1.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 text-[10px] font-bold rounded-lg transition-all active:scale-[0.97]"
+                        className="px-4 py-1.5 bg-white border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 text-[10px] font-bold rounded-lg transition-all active:scale-[0.97]"
                     >
                         Decline
                     </button>
@@ -309,7 +309,7 @@ function LabResultsCard({ visualization }) {
         high: 'bg-orange-100 text-orange-800 border-orange-200',
         moderate: 'bg-amber-100 text-amber-700 border-amber-200',
         normal: 'bg-green-100 text-green-700 border-green-200',
-        unknown: 'bg-slate-100 text-slate-600 border-slate-200'
+        unknown: 'bg-gray-50 text-gray-600 border-gray-200'
     };
 
     const severityIcon = {
@@ -337,26 +337,26 @@ function LabResultsCard({ visualization }) {
 
             <div className="space-y-1.5">
                 {results.map((r, i) => (
-                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white border border-slate-200/80 shadow-sm group hover:border-blue-200 transition-all">
+                    <div key={i} className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-white border border-gray-200/80 shadow-sm group hover:border-blue-200 transition-all">
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <div className={`w-2 h-2 rounded-full ${r.severity === 'critical' ? 'bg-red-500 animate-pulse ring-4 ring-red-100' :
                                 r.severity === 'high' ? 'bg-red-400' :
                                     r.severity === 'moderate' ? 'bg-amber-400' : 'bg-green-400'
                                 }`} />
                             <div className="min-w-0">
-                                <p className="text-[11px] font-bold text-slate-700 truncate">{r.testName || r.rawTestName}</p>
-                                <p className="text-[9px] text-slate-400 font-medium">Ref: {r.normalRange || 'N/A'}</p>
+                                <p className="text-[11px] font-bold text-gray-700 truncate">{r.testName || r.rawTestName}</p>
+                                <p className="text-[9px] text-gray-400 font-medium">Ref: {r.normalRange || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="flex flex-col items-end flex-shrink-0">
-                            <span className={`text-[12px] font-black ${r.severity === 'critical' ? 'text-red-600' :
+                            <span className={`text-[12px] font-bold ${r.severity === 'critical' ? 'text-red-600' :
                                 r.severity === 'high' ? 'text-red-500' :
-                                    r.severity === 'moderate' ? 'text-amber-600' : 'text-slate-900'
+                                    r.severity === 'moderate' ? 'text-amber-600' : 'text-gray-900'
                                 }`}>
                                 {r.value} <small className="text-[9px] font-bold opacity-60 uppercase">{r.unit}</small>
                             </span>
                             {r.status !== 'normal' && (
-                                <span className={`text-[8px] font-black uppercase tracking-widest ${r.severity === 'critical' ? 'text-red-500' : 'text-amber-500'
+                                <span className={`text-[8px] font-bold uppercase tracking-widest ${r.severity === 'critical' ? 'text-red-500' : 'text-amber-500'
                                     }`}>
                                     {r.status.replace('_', ' ')}
                                 </span>
@@ -368,17 +368,17 @@ function LabResultsCard({ visualization }) {
 
             {/* Trends section */}
             {visualization.trends?.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-100">
+                <div className="mt-3 pt-3 border-t border-gray-100">
                     <div className="flex items-center gap-1.5 mb-2">
                         <Activity className="w-3 h-3 text-blue-500" />
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Longitudinal Trends</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Longitudinal Trends</span>
                     </div>
                     <div className="space-y-1">
                         {visualization.trends.filter(t => t.direction !== 'stable').map((t, i) => (
-                            <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-100">
-                                <span className="text-[11px] font-bold text-slate-600">{t.testName}</span>
+                            <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-lg bg-gray-50 border border-gray-100">
+                                <span className="text-[11px] font-bold text-gray-600">{t.testName}</span>
                                 <div className="flex items-center gap-1.5">
-                                    <span className={`text-[10px] font-black ${t.direction === 'rising' ? 'text-red-500' : 'text-blue-500'}`}>
+                                    <span className={`text-[10px] font-bold ${t.direction === 'rising' ? 'text-red-500' : 'text-blue-500'}`}>
                                         {t.direction === 'rising' ? '+' : ''}{t.percentChange}%
                                     </span>
                                     {t.direction === 'rising'
@@ -421,10 +421,10 @@ function ClinicalGapsCard({ visualization }) {
     };
 
     return (
-        <div className="mt-2 bg-slate-50 rounded-lg p-2.5 border border-slate-200/60">
+        <div className="mt-2 bg-gray-50 rounded-lg p-2.5 border border-gray-200/60">
             <div className="flex items-center gap-1.5 mb-2">
                 <AlertTriangle className="w-3 h-3 text-amber-500" />
-                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">
                     Care Gaps & Opportunities
                 </span>
             </div>
@@ -442,7 +442,7 @@ function ClinicalGapsCard({ visualization }) {
                 ))}
             </div>
             {visualization.summary && (
-                <p className="text-[9px] text-slate-400 mt-2 text-right italic">{visualization.summary}</p>
+                <p className="text-[9px] text-gray-400 mt-2 text-right italic">{visualization.summary}</p>
             )}
         </div>
     );
@@ -463,17 +463,17 @@ function RiskAssessmentCard({ visualization }) {
                     <Activity className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                    <span className="text-[12px] font-black text-slate-900 tracking-tight">Predictive Insight Engine</span>
+                    <span className="text-[12px] font-bold text-gray-900 tracking-tight">Predictive Insight Engine</span>
                     <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest leading-none mt-0.5">Clinical Prognosis</p>
                 </div>
             </div>
 
             <div className="space-y-3 relative z-10">
                 {visualization.scores.map((score, i) => (
-                    <div key={i} className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 hover:border-blue-200 transition-all">
+                    <div key={i} className="p-3 rounded-2xl bg-gray-50/80 border border-gray-100 hover:border-blue-200 transition-all">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{score.type === 'ascvd' ? 'ASCVD 10-Year Risk' : 'CHA2DS2-VASc'}</span>
-                            <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${score.level === 'high' || score.score >= 2 ? 'bg-red-100 text-red-600' :
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{score.type === 'ascvd' ? 'ASCVD 10-Year Risk' : 'CHA2DS2-VASc'}</span>
+                            <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tighter ${score.level === 'high' || score.score >= 2 ? 'bg-red-100 text-red-600' :
                                 score.level === 'intermediate' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'
                                 }`}>
                                 {score.level || (score.score >= 2 ? 'Actionable' : 'Monitor')}
@@ -481,11 +481,11 @@ function RiskAssessmentCard({ visualization }) {
                         </div>
 
                         <div className="flex items-end gap-2 mb-2">
-                            <span className={`text-2xl font-black tracking-tight ${score.level === 'high' || score.score >= 2 ? 'text-red-500' : 'text-slate-900'
+                            <span className={`text-2xl font-bold tracking-tight ${score.level === 'high' || score.score >= 2 ? 'text-red-500' : 'text-gray-900'
                                 }`}>
                                 {score.score}<small className="text-[10px] font-bold opacity-60 ml-0.5 uppercase">{score.unit}</small>
                             </span>
-                            <div className="flex-1 h-1.5 bg-slate-200 rounded-full overflow-hidden mb-2 relative">
+                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2 relative">
                                 <div
                                     className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ${(score.type === 'ascvd' && score.score > 20) || (score.type === 'chads' && score.score >= 4) ? 'bg-red-500' :
                                         (score.type === 'ascvd' && score.score > 7.5) || (score.type === 'chads' && score.score >= 2) ? 'bg-amber-500' : 'bg-green-500'
@@ -495,7 +495,7 @@ function RiskAssessmentCard({ visualization }) {
                             </div>
                         </div>
 
-                        <p className="text-[11px] font-medium text-slate-700 leading-snug">
+                        <p className="text-[11px] font-medium text-gray-700 leading-snug">
                             {score.interpretation}
                         </p>
                         <div className="mt-2.5 flex items-start gap-2 p-2 rounded-xl bg-white/60 border border-blue-50">
@@ -541,7 +541,7 @@ function DocumentAnalysisCard({ visualization }) {
                     <FileImage className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                    <span className="text-[12px] font-black text-slate-900 tracking-tight">
+                    <span className="text-[12px] font-bold text-gray-900 tracking-tight">
                         {docTypeLabels[visualization.document_type] || 'Document Analysis'}
                     </span>
                     <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest leading-none mt-0.5">
@@ -551,7 +551,7 @@ function DocumentAnalysisCard({ visualization }) {
             </div>
 
             {visualization.summary && (
-                <p className="text-[11px] text-slate-600 mb-3 leading-relaxed relative z-10">
+                <p className="text-[11px] text-gray-600 mb-3 leading-relaxed relative z-10">
                     {visualization.summary}
                 </p>
             )}
@@ -559,13 +559,13 @@ function DocumentAnalysisCard({ visualization }) {
             {visualization.key_findings?.length > 0 && (
                 <div className="space-y-1.5 relative z-10">
                     {visualization.key_findings.map((f, i) => (
-                        <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50/80 border border-slate-100 hover:border-indigo-200 transition-all">
+                        <div key={i} className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50/80 border border-gray-100 hover:border-indigo-200 transition-all">
                             <div className="flex items-center gap-2.5">
                                 <div className={`w-2 h-2 rounded-full ${flagDots[f.flag] || flagDots.info}`} />
-                                <span className="text-[11px] font-bold text-slate-600">{f.label}</span>
+                                <span className="text-[11px] font-bold text-gray-600">{f.label}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-[11px] font-black text-slate-800">{f.value}</span>
+                                <span className="text-[11px] font-bold text-gray-800">{f.value}</span>
                                 <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full border ${flagColors[f.flag] || flagColors.info}`}>
                                     {f.flag}
                                 </span>
@@ -576,11 +576,11 @@ function DocumentAnalysisCard({ visualization }) {
             )}
 
             {visualization.recommendations?.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-100 relative z-10">
-                    <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Recommendations</span>
+                <div className="mt-3 pt-3 border-t border-gray-100 relative z-10">
+                    <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Recommendations</span>
                     <ul className="mt-1.5 space-y-1">
                         {visualization.recommendations.map((r, i) => (
-                            <li key={i} className="flex items-start gap-1.5 text-[10px] text-slate-600">
+                            <li key={i} className="flex items-start gap-1.5 text-[10px] text-gray-600">
                                 <ChevronRight className="w-2.5 h-2.5 mt-0.5 text-indigo-400 flex-shrink-0" />
                                 {r}
                             </li>
@@ -611,7 +611,7 @@ function EvidenceCard({ visualization }) {
                     <BookOpen className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                    <span className="text-[12px] font-black text-slate-900 tracking-tight">Clinical Evidence</span>
+                    <span className="text-[12px] font-bold text-gray-900 tracking-tight">Clinical Evidence</span>
                     <p className="text-[9px] font-bold text-teal-500 uppercase tracking-widest leading-none mt-0.5">
                         {visualization.count} Guideline{visualization.count !== 1 ? 's' : ''} Found
                     </p>
@@ -620,14 +620,14 @@ function EvidenceCard({ visualization }) {
 
             <div className="space-y-2.5 relative z-10">
                 {visualization.results.map((g, i) => (
-                    <div key={i} className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 hover:border-teal-200 transition-all">
+                    <div key={i} className="p-3 rounded-2xl bg-gray-50/80 border border-gray-100 hover:border-teal-200 transition-all">
                         <div className="flex items-center justify-between mb-1.5">
                             <div className="flex items-center gap-2">
-                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{g.source}</span>
-                                <span className="text-[8px] font-bold text-slate-300">({g.year})</span>
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{g.source}</span>
+                                <span className="text-[8px] font-bold text-gray-400">({g.year})</span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${categoryColors[g.category] || 'bg-slate-100 text-slate-500'}`}>
+                                <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${categoryColors[g.category] || 'bg-gray-50 text-gray-500'}`}>
                                     {g.category}
                                 </span>
                                 <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
@@ -635,8 +635,8 @@ function EvidenceCard({ visualization }) {
                                 </span>
                             </div>
                         </div>
-                        <p className="text-[10px] font-bold text-slate-700 leading-none mb-1">{g.topic}</p>
-                        <p className="text-[10px] text-slate-600 leading-relaxed">{g.recommendation}</p>
+                        <p className="text-[10px] font-bold text-gray-700 leading-none mb-1">{g.topic}</p>
+                        <p className="text-[10px] text-gray-600 leading-relaxed">{g.recommendation}</p>
                     </div>
                 ))}
             </div>
@@ -1003,14 +1003,14 @@ export default function EchoPanel({ patientId, patientName }) {
 
     return (
         <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-h-[650px] flex flex-col
-                        bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200/60
+                        bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-gray-200/60
                         overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
 
             {/* Header */}
             <div className={`flex items-center justify-between px-4 py-3 text-white sticky top-0 z-20 backdrop-blur-xl border-b
                             ${isPatientMode
                     ? 'bg-blue-600/90 border-blue-400/20'
-                    : 'bg-slate-800/95 border-slate-600/30'}`}>
+                    : 'bg-gray-100/95 border-gray-300/30'}`}>
                 <div className="flex items-center gap-2.5">
                     <div className="relative group">
                         <div className="absolute -inset-1 bg-white/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1021,8 +1021,8 @@ export default function EchoPanel({ patientId, patientName }) {
                     </div>
                     <div>
                         <div className="flex items-center gap-1.5">
-                            <h3 className="text-[13px] font-black tracking-tight uppercase">Eko</h3>
-                            <span className="text-[7px] font-black bg-white/20 px-1 rounded-[4px] tracking-widest h-3 flex items-center">PRO</span>
+                            <h3 className="text-[13px] font-bold tracking-tight uppercase">Eko</h3>
+                            <span className="text-[7px] font-bold bg-white/20 px-1 rounded-[4px] tracking-widest h-3 flex items-center">PRO</span>
                         </div>
                         <p className="text-[10px] opacity-70 font-medium leading-none mt-0.5">
                             {patientName
@@ -1035,10 +1035,10 @@ export default function EchoPanel({ patientId, patientName }) {
                 </div>
                 <div className="flex items-center gap-1">
                     {/* Mode indicator badge */}
-                    <span className={`text-[8px] font-black px-2 py-0.5 rounded-full mr-1 tracking-wider border
+                    <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full mr-1 tracking-wider border
                                    ${isPatientMode
                             ? 'bg-blue-400/20 text-blue-50 border-blue-300/30'
-                            : 'bg-slate-500/20 text-slate-100 border-slate-400/30'}`}>
+                            : 'bg-gray-100/20 text-slate-100 border-slate-400/30'}`}>
                         {isPatientMode ? 'CHART' : 'GLOBAL'}
                     </span>
 
@@ -1082,10 +1082,10 @@ export default function EchoPanel({ patientId, patientName }) {
                             <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-4 border-white rounded-full shadow-sm z-10" />
                         </div>
                         <div>
-                            <p className="text-base font-black text-slate-800 tracking-tight">
+                            <p className="text-base font-bold text-gray-800 tracking-tight">
                                 {isPatientMode ? "Hi, I'm Eko" : "Hi, I'm Eko — Global Mode"}
                             </p>
-                            <p className="text-[11px] text-slate-500 leading-relaxed max-w-[240px] mx-auto mt-2">
+                            <p className="text-[11px] text-gray-500 leading-relaxed max-w-[240px] mx-auto mt-2">
                                 {isPatientMode
                                     ? 'Ask me anything about this chart. I can analyze trends, draft HPIs, and stage medical orders.'
                                     : 'I can help you navigate the EMR, check your schedule, or manage your clinical inbox.'}
@@ -1096,11 +1096,11 @@ export default function EchoPanel({ patientId, patientName }) {
                                 <button key={i}
                                     onClick={() => sendMessage(action.prompt)}
                                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] 
-                                                   font-semibold text-slate-600 bg-white border border-slate-200
+                                                   font-semibold text-gray-600 bg-white border border-gray-200
                                                    hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200
                                                    hover:shadow-md hover:shadow-blue-500/5
                                                    transition-all duration-200 group active:scale-[0.98]">
-                                    <div className="p-1.5 rounded-lg bg-slate-50 group-hover:bg-blue-100 transition-colors">
+                                    <div className="p-1.5 rounded-lg bg-gray-50 group-hover:bg-blue-100 transition-colors">
                                         <action.icon className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                                     </div>
                                     <span className="truncate">{action.label}</span>
@@ -1122,13 +1122,13 @@ export default function EchoPanel({ patientId, patientName }) {
                             ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-md px-4 py-2.5 shadow-lg shadow-blue-500/10'
                             : msg.isError
                                 ? 'bg-red-50 text-red-700 rounded-2xl rounded-tl-md px-4 py-2.5 border border-red-100 shadow-sm'
-                                : 'bg-white text-slate-700 rounded-2xl rounded-tl-md px-4 py-2.5 border border-slate-200/60 shadow-sm'
+                                : 'bg-white text-gray-700 rounded-2xl rounded-tl-md px-4 py-2.5 border border-gray-200/60 shadow-sm'
                             }`}>
                             <div className="text-[12px] leading-relaxed whitespace-pre-wrap">
                                 {msg.role === 'assistant' ? (
                                     (msg.content || '').split(/(\*\*.*?\*\*|!!.*?!!)/g).map((part, index) => {
                                         if (part.startsWith('**') && part.endsWith('**')) {
-                                            return <strong key={index} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+                                            return <strong key={index} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
                                         }
                                         if (part.startsWith('!!') && part.endsWith('!!')) {
                                             return <span key={index} className="font-bold text-red-600">{part.slice(2, -2)}</span>;
@@ -1185,7 +1185,7 @@ export default function EchoPanel({ patientId, patientName }) {
                                 <div className="flex flex-wrap gap-1.5 mt-3">
                                     {msg.toolCalls.map((tc, ti) => (
                                         <span key={ti} className="inline-flex items-center gap-1 px-2 py-1 
-                                                                    rounded-lg bg-slate-50 border border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-tight">
+                                                                    rounded-lg bg-gray-50 border border-gray-100 text-[9px] font-bold text-gray-400 uppercase tracking-tight">
                                             {tc.name.includes('add_') || tc.name.includes('create_') || tc.name.includes('draft_') ? (
                                                 <Zap className="w-2.5 h-2.5 text-amber-500" />
                                             ) : (
@@ -1202,7 +1202,7 @@ export default function EchoPanel({ patientId, patientName }) {
                                 const pending = (msg.visualizations || []).filter(v => v.type === 'staged_action' && !v.status);
                                 if (pending.length > 1) {
                                     return (
-                                        <div className="mt-3 pt-3 border-t border-slate-200/60 flex justify-end">
+                                        <div className="mt-3 pt-3 border-t border-gray-200/60 flex justify-end">
                                             <button
                                                 onClick={() => handleApproveAction(pending, i)}
                                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold shadow-sm hover:bg-blue-700 transition-all"
@@ -1233,14 +1233,14 @@ export default function EchoPanel({ patientId, patientName }) {
                         <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 border border-blue-200 shadow-sm bg-white ring-2 ring-blue-50 animate-bounce transition-all duration-1000">
                             <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
                         </div>
-                        <div className="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 border border-slate-200/60 shadow-sm">
+                        <div className="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 border border-gray-200/60 shadow-sm">
                             <div className="flex items-center gap-2">
                                 <div className="flex gap-1">
                                     <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
                                     <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
                                     <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" />
                                 </div>
-                                <span className="text-[11px] font-bold text-slate-500 tracking-tight uppercase">Eko is working</span>
+                                <span className="text-[11px] font-bold text-gray-500 tracking-tight uppercase">Eko is working</span>
                             </div>
                         </div>
                     </div>
@@ -1273,12 +1273,12 @@ export default function EchoPanel({ patientId, patientName }) {
             <div className="px-3 pb-3 pt-1">
                 {usage && (
                     <div className="flex items-center justify-between px-2 mb-1.5">
-                        <span className="text-[9px] text-slate-300">
+                        <span className="text-[9px] text-gray-400">
                             {usage.model} · {usage.latencyMs}ms · {usage.totalTokens} tokens
                         </span>
                     </div>
                 )}
-                <div className="flex flex-col gap-2 bg-slate-50 rounded-xl border border-slate-200/60 
+                <div className="flex flex-col gap-2 bg-gray-50 rounded-xl border border-gray-200/60 
                                 focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100
                                 transition-all duration-150 px-3 py-2">
 
@@ -1311,7 +1311,7 @@ export default function EchoPanel({ patientId, patientName }) {
                         />
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="p-2.5 rounded-2xl bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-95 group"
+                            className="p-2.5 rounded-2xl bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-95 group"
                             title="Attach Clinical Document"
                         >
                             <Paperclip className="w-5 h-5 group-hover:rotate-12 transition-transform" />
@@ -1322,7 +1322,7 @@ export default function EchoPanel({ patientId, patientName }) {
                             onMouseLeave={handleStopRecording}
                             className={`p-2.5 rounded-2xl transition-all active:scale-95 group ${isRecording
                                 ? 'bg-red-500 text-white animate-pulse'
-                                : 'bg-slate-50 text-slate-400 hover:text-red-500 hover:bg-red-50'
+                                : 'bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50'
                                 }`}
                             title="Hold to Record"
                         >
@@ -1339,7 +1339,7 @@ export default function EchoPanel({ patientId, patientName }) {
                                 : "Ask Eko or navigate... (Hold Alt to talk)"}
                             disabled={isGlobalLoading}
                             rows={1}
-                            className="flex-1 bg-transparent text-[12px] text-slate-700 placeholder-slate-300
+                            className="flex-1 bg-transparent text-[12px] text-gray-700 placeholder-slate-300
                                    resize-none outline-none max-h-[80px]"
                             style={{ fieldSizing: 'content' }}
                         />
@@ -1348,7 +1348,7 @@ export default function EchoPanel({ patientId, patientName }) {
                             onClick={() => sendMessage()}
                             disabled={(!input.trim() && !isRecording) || isGlobalLoading}
                             className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center 
-                                   text-white shadow-lg shadow-blue-500/20 disabled:opacity-30 disabled:bg-slate-300
+                                   text-white shadow-lg shadow-blue-500/20 disabled:opacity-30 disabled:bg-gray-200
                                    hover:bg-blue-700 transition-all active:scale-95 flex-shrink-0"
                         >
                             <Send className="w-5 h-5 translate-x-0.5 -translate-y-0.5" />
@@ -1356,8 +1356,8 @@ export default function EchoPanel({ patientId, patientName }) {
                     </div>
                     {!isRecording && (
                         <div className="flex justify-center mt-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                            <span className="text-[10px] text-slate-400 font-medium tracking-tight">
-                                💡 Tip: Hold <kbd className="bg-slate-100 border border-slate-300 px-1 rounded text-[9px] font-sans">Alt</kbd> to talk
+                            <span className="text-[10px] text-gray-400 font-medium tracking-tight">
+                                💡 Tip: Hold <kbd className="bg-gray-50 border border-gray-200 px-1 rounded text-[9px] font-sans">Alt</kbd> to talk
                             </span>
                         </div>
                     )}

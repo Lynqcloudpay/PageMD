@@ -108,13 +108,13 @@ const PlatformAdminTeam = () => {
                             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                             Back to Dashboard
                         </button>
-                        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
                             <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg shadow-purple-500/20">
                                 <Users className="w-6 h-6 text-white" />
                             </div>
                             Team Management
                         </h1>
-                        <p className="text-slate-500 text-sm mt-2 ml-14 font-medium">Manage platform administrators and their roles</p>
+                        <p className="text-gray-500 text-sm mt-2 ml-14 font-medium">Manage platform administrators and their roles</p>
                     </div>
 
                     <button
@@ -131,43 +131,43 @@ const PlatformAdminTeam = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                    <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">User</th>
-                                    <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">Role</th>
-                                    <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">Last Login</th>
-                                    <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-wider">Joined</th>
-                                    <th className="px-6 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-wider">Actions</th>
+                                <tr className="bg-gray-50/50 border-b border-gray-100">
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Role</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Last Login</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Joined</th>
+                                    <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-gray-100">
                                 {loading ? (
                                     <tr>
                                         <td colSpan="6" className="p-12 text-center">
                                             <div className="flex justify-center mb-4">
                                                 <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
                                             </div>
-                                            <p className="text-slate-400 font-medium">Loading team members...</p>
+                                            <p className="text-gray-400 font-medium">Loading team members...</p>
                                         </td>
                                     </tr>
                                 ) : team.length > 0 ? (
                                     team.map((user) => (
-                                        <tr key={user.id} className="hover:bg-slate-50/80 transition-colors group">
+                                        <tr key={user.id} className="hover:bg-gray-50/80 transition-colors group">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-purple-500/20 group-hover:scale-105 transition-transform">
                                                         {user.first_name?.[0]}{user.last_name?.[0]}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-bold text-slate-700">{user.first_name} {user.last_name}</p>
-                                                        <p className="text-xs text-slate-400 font-medium">{user.email}</p>
+                                                        <p className="text-sm font-bold text-gray-700">{user.first_name} {user.last_name}</p>
+                                                        <p className="text-xs text-gray-400 font-medium">{user.email}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm ${user.role === 'super_admin' ? 'bg-purple-100 text-purple-700 border-purple-200' :
                                                     user.role === 'it_manager' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                                                        'bg-slate-100 text-slate-600 border-slate-200'
+                                                        'bg-gray-50 text-gray-600 border-gray-200'
                                                     }`}>
                                                     {user.role.replace('_', ' ')}
                                                 </span>
@@ -186,14 +186,14 @@ const PlatformAdminTeam = () => {
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-2 h-2 rounded-full bg-slate-400"></div>
-                                                        <span className="text-xs text-slate-500 font-bold">Inactive</span>
+                                                        <span className="text-xs text-gray-500 font-bold">Inactive</span>
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-xs text-slate-500 font-medium">
+                                            <td className="px-6 py-4 text-xs text-gray-500 font-medium">
                                                 {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : 'Never'}
                                             </td>
-                                            <td className="px-6 py-4 text-xs text-slate-500 font-medium">
+                                            <td className="px-6 py-4 text-xs text-gray-500 font-medium">
                                                 {new Date(user.created_at).toLocaleDateString()}
                                             </td>
                                             <td className="px-6 py-4 text-right">
@@ -203,7 +203,7 @@ const PlatformAdminTeam = () => {
                                                             setEditingUser({ ...user });
                                                             setShowEditModal(true);
                                                         }}
-                                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                                                         title="Edit User"
                                                     >
                                                         <Edit2 className="w-4 h-4" />
@@ -214,7 +214,7 @@ const PlatformAdminTeam = () => {
                                                                 setDeletingUser(user);
                                                                 setShowDeleteModal(true);
                                                             }}
-                                                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                                                             title="Delete User"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -226,8 +226,8 @@ const PlatformAdminTeam = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="6" className="p-12 text-center text-slate-400">
-                                            <Users className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                                        <td colSpan="6" className="p-12 text-center text-gray-400">
+                                            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                             <p className="font-medium">No team members found</p>
                                         </td>
                                     </tr>
@@ -240,11 +240,11 @@ const PlatformAdminTeam = () => {
 
             {/* Add User Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-50/60 backdrop-blur-sm">
                     <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 relative animate-in fade-in zoom-in duration-200">
                         <button
                             onClick={() => setShowAddModal(false)}
-                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                            className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
                         >
                             <XCircle className="w-6 h-6" />
                         </button>
@@ -254,8 +254,8 @@ const PlatformAdminTeam = () => {
                                 <Plus className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-black text-slate-800">Add Team Member</h2>
-                                <p className="text-sm text-slate-500 font-medium">Provide access details</p>
+                                <h2 className="text-xl font-bold text-gray-800">Add Team Member</h2>
+                                <p className="text-sm text-gray-500 font-medium">Provide access details</p>
                             </div>
                         </div>
 
@@ -269,37 +269,37 @@ const PlatformAdminTeam = () => {
                         <form onSubmit={handleAddUser} className="space-y-5">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">First Name</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">First Name</label>
                                     <input
                                         type="text"
                                         required
                                         value={newUser.firstName}
                                         onChange={e => setNewUser({ ...newUser, firstName: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Last Name</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Last Name</label>
                                     <input
                                         type="text"
                                         required
                                         value={newUser.lastName}
                                         onChange={e => setNewUser({ ...newUser, lastName: e.target.value })}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Email Address</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Email Address</label>
                                 <div className="relative">
-                                    <Mail className="absolute left-4 top-2.5 w-4 h-4 text-slate-400" />
+                                    <Mail className="absolute left-4 top-2.5 w-4 h-4 text-gray-400" />
                                     <input
                                         type="email"
                                         required
                                         value={newUser.email}
                                         onChange={e => setNewUser({ ...newUser, email: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
                                     />
                                 </div>
                             </div>
@@ -313,14 +313,14 @@ const PlatformAdminTeam = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Role Assignment</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Role Assignment</label>
                                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                                     {roles.map((role) => (
                                         <label
                                             key={role.value}
                                             className={`flex items-start p-3 rounded-xl border cursor-pointer transition-all ${newUser.role === role.value
                                                 ? 'bg-purple-50 border-purple-200 shadow-sm'
-                                                : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                                                : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50'
                                                 }`}
                                         >
                                             <div className="relative flex items-center mt-0.5">
@@ -330,14 +330,14 @@ const PlatformAdminTeam = () => {
                                                     value={role.value}
                                                     checked={newUser.role === role.value}
                                                     onChange={e => setNewUser({ ...newUser, role: e.target.value })}
-                                                    className="w-4 h-4 text-purple-600 border-slate-300 focus:ring-purple-500 "
+                                                    className="w-4 h-4 text-purple-600 border-gray-200 focus:ring-purple-500 "
                                                 />
                                             </div>
                                             <div className="ml-3">
-                                                <div className={`text-sm font-bold ${newUser.role === role.value ? 'text-purple-700' : 'text-slate-700'}`}>
+                                                <div className={`text-sm font-bold ${newUser.role === role.value ? 'text-purple-700' : 'text-gray-700'}`}>
                                                     {role.label}
                                                 </div>
-                                                <div className="text-[11px] text-slate-500 font-medium">{role.desc}</div>
+                                                <div className="text-[11px] text-gray-500 font-medium">{role.desc}</div>
                                             </div>
                                         </label>
                                     ))}
@@ -356,14 +356,14 @@ const PlatformAdminTeam = () => {
             )}
             {/* Edit User Modal */}
             {showEditModal && editingUser && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-50/60 backdrop-blur-sm">
                     <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 relative animate-in fade-in zoom-in duration-200">
                         <button
                             onClick={() => {
                                 setShowEditModal(false);
                                 setEditingUser(null);
                             }}
-                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                            className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
                         >
                             <XCircle className="w-6 h-6" />
                         </button>
@@ -373,8 +373,8 @@ const PlatformAdminTeam = () => {
                                 <Edit2 className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-black text-slate-800">Edit Team Member</h2>
-                                <p className="text-sm text-slate-500 font-medium">{editingUser.email}</p>
+                                <h2 className="text-xl font-bold text-gray-800">Edit Team Member</h2>
+                                <p className="text-sm text-gray-500 font-medium">{editingUser.email}</p>
                             </div>
                         </div>
 
@@ -387,14 +387,14 @@ const PlatformAdminTeam = () => {
 
                         <form onSubmit={handleUpdateUser} className="space-y-5">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Role Assignment</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Role Assignment</label>
                                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                                     {roles.map((role) => (
                                         <label
                                             key={role.value}
                                             className={`flex items-start p-3 rounded-xl border cursor-pointer transition-all ${editingUser.role === role.value
                                                 ? 'bg-blue-50 border-blue-200 shadow-sm'
-                                                : 'bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                                                : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50'
                                                 }`}
                                         >
                                             <div className="relative flex items-center mt-0.5">
@@ -404,29 +404,29 @@ const PlatformAdminTeam = () => {
                                                     value={role.value}
                                                     checked={editingUser.role === role.value}
                                                     onChange={e => setEditingUser({ ...editingUser, role: e.target.value })}
-                                                    className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 "
+                                                    className="w-4 h-4 text-blue-600 border-gray-200 focus:ring-blue-500 "
                                                 />
                                             </div>
                                             <div className="ml-3">
-                                                <div className={`text-sm font-bold ${editingUser.role === role.value ? 'text-blue-700' : 'text-slate-700'}`}>
+                                                <div className={`text-sm font-bold ${editingUser.role === role.value ? 'text-blue-700' : 'text-gray-700'}`}>
                                                     {role.label}
                                                 </div>
-                                                <div className="text-[11px] text-slate-500 font-medium">{role.desc}</div>
+                                                <div className="text-[11px] text-gray-500 font-medium">{role.desc}</div>
                                             </div>
                                         </label>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
                                 <div>
-                                    <p className="text-sm font-bold text-slate-700">Account Status</p>
-                                    <p className="text-xs text-slate-500 font-medium">{editingUser.is_active ? 'Active' : 'Inactive'}</p>
+                                    <p className="text-sm font-bold text-gray-700">Account Status</p>
+                                    <p className="text-xs text-gray-500 font-medium">{editingUser.is_active ? 'Active' : 'Inactive'}</p>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setEditingUser({ ...editingUser, is_active: !editingUser.is_active })}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${editingUser.is_active ? 'bg-emerald-500' : 'bg-slate-300'
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${editingUser.is_active ? 'bg-emerald-500' : 'bg-gray-200'
                                         }`}
                                 >
                                     <span
@@ -448,16 +448,16 @@ const PlatformAdminTeam = () => {
             )}
             {/* Delete Confirmation Modal */}
             {showDeleteModal && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-50/60 backdrop-blur-sm">
                     <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-8 relative animate-in fade-in zoom-in duration-200">
                         <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6 text-red-600">
                             <Trash2 className="w-8 h-8" />
                         </div>
 
                         <div className="text-center mb-8">
-                            <h2 className="text-xl font-black text-slate-800">Remove Team Member?</h2>
-                            <p className="text-sm text-slate-500 font-medium mt-2">
-                                Are you sure you want to remove <span className="text-slate-800 font-bold">{deletingUser?.first_name} {deletingUser?.last_name}</span>? This action cannot be undone.
+                            <h2 className="text-xl font-bold text-gray-800">Remove Team Member?</h2>
+                            <p className="text-sm text-gray-500 font-medium mt-2">
+                                Are you sure you want to remove <span className="text-gray-800 font-bold">{deletingUser?.first_name} {deletingUser?.last_name}</span>? This action cannot be undone.
                             </p>
                         </div>
 
@@ -467,7 +467,7 @@ const PlatformAdminTeam = () => {
                                     setShowDeleteModal(false);
                                     setDeletingUser(null);
                                 }}
-                                className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm uppercase tracking-wider"
+                                className="flex-1 py-3 px-4 bg-gray-50 text-gray-600 font-bold rounded-xl hover:bg-gray-100 transition-all text-sm uppercase tracking-wider"
                             >
                                 Cancel
                             </button>

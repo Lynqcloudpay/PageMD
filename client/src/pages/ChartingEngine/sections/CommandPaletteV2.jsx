@@ -110,10 +110,10 @@ const CommandPaletteV2 = ({ isOpen, onClose, onSelect, dotPhrases = [] }) => {
     return (
         <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[15vh]" onClick={onClose}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <div className="relative w-full max-w-xl mx-4 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full max-w-xl mx-4 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* Search Input */}
-                <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
-                    <Search className="w-5 h-5 text-slate-400 shrink-0" />
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                    <Search className="w-5 h-5 text-gray-400 shrink-0" />
                     <input
                         ref={inputRef}
                         type="text"
@@ -121,10 +121,10 @@ const CommandPaletteV2 = ({ isOpen, onClose, onSelect, dotPhrases = [] }) => {
                         onChange={e => setQuery(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Search diagnoses, orders, medications, phrases..."
-                        className="flex-1 text-base text-slate-800 placeholder-slate-400 outline-none bg-transparent"
+                        className="flex-1 text-base text-gray-800 placeholder-slate-400 outline-none bg-transparent"
                     />
-                    {isLoading && <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0" />}
-                    <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all">
+                    {isLoading && <Loader2 className="w-4 h-4 text-gray-400 animate-spin shrink-0" />}
+                    <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-all">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
@@ -133,19 +133,19 @@ const CommandPaletteV2 = ({ isOpen, onClose, onSelect, dotPhrases = [] }) => {
                 <div ref={listRef} className="max-h-[50vh] overflow-y-auto">
                     {query.length < 2 ? (
                         <div className="px-5 py-8 text-center">
-                            <Hash className="w-8 h-8 text-slate-200 mx-auto mb-2" />
-                            <p className="text-sm text-slate-400">Type to search across diagnoses, orders, and phrases</p>
-                            <p className="text-xs text-slate-300 mt-1">⌘K to open · ESC to close · ↑↓ to navigate · Enter to select</p>
+                            <Hash className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-400">Type to search across diagnoses, orders, and phrases</p>
+                            <p className="text-xs text-gray-400 mt-1">⌘K to open · ESC to close · ↑↓ to navigate · Enter to select</p>
                         </div>
                     ) : results.length === 0 && !isLoading ? (
                         <div className="px-5 py-8 text-center">
-                            <p className="text-sm text-slate-400">No results for "{query}"</p>
+                            <p className="text-sm text-gray-400">No results for "{query}"</p>
                         </div>
                     ) : (
                         Object.entries(grouped).map(([type, items]) => (
                             <div key={type}>
-                                <div className="px-5 py-2 bg-slate-50/50 border-b border-slate-50">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <div className="px-5 py-2 bg-gray-50/50 border-b border-slate-50">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                                         {CATEGORY_ICONS[type]} {CATEGORY_LABELS[type] || type}
                                     </span>
                                 </div>
@@ -154,14 +154,14 @@ const CommandPaletteV2 = ({ isOpen, onClose, onSelect, dotPhrases = [] }) => {
                                     return (
                                         <button
                                             key={`${type}-${thisIdx}`}
-                                            className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all ${thisIdx === selectedIdx ? 'bg-primary-50 text-primary-700' : 'hover:bg-slate-50 text-slate-700'
+                                            className={`w-full flex items-center gap-3 px-5 py-2.5 text-left transition-all ${thisIdx === selectedIdx ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50 text-gray-700'
                                                 }`}
                                             onClick={() => { onSelect(item); onClose(); }}
                                             onMouseEnter={() => setSelectedIdx(thisIdx)}
                                         >
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold truncate">{item.title}</p>
-                                                {item.subtitle && <p className="text-[11px] text-slate-400 truncate">{item.subtitle}</p>}
+                                                {item.subtitle && <p className="text-[11px] text-gray-400 truncate">{item.subtitle}</p>}
                                             </div>
                                             <ArrowRight className={`w-3.5 h-3.5 shrink-0 transition-opacity ${thisIdx === selectedIdx ? 'opacity-100 text-primary-500' : 'opacity-0'}`} />
                                         </button>
@@ -174,9 +174,9 @@ const CommandPaletteV2 = ({ isOpen, onClose, onSelect, dotPhrases = [] }) => {
 
                 {/* Footer */}
                 {results.length > 0 && (
-                    <div className="px-5 py-2 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                        <span className="text-[10px] text-slate-400">{results.length} result{results.length !== 1 ? 's' : ''}</span>
-                        <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                    <div className="px-5 py-2 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                        <span className="text-[10px] text-gray-400">{results.length} result{results.length !== 1 ? 's' : ''}</span>
+                        <div className="flex items-center gap-3 text-[10px] text-gray-400">
                             <span>↑↓ Navigate</span>
                             <span>↵ Select</span>
                             <span>ESC Close</span>

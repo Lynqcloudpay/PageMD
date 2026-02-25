@@ -116,7 +116,7 @@ const PlatformAdminRoles = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
             </div>
         );
@@ -127,12 +127,12 @@ const PlatformAdminRoles = () => {
             <div className="max-w-6xl mx-auto relative z-10">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Global Role Templates</h1>
-                        <p className="text-slate-500 font-medium">Define canonical permission schemas for all clinic tenants.</p>
+                        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Global Role Templates</h1>
+                        <p className="text-gray-500 font-medium">Define canonical permission schemas for all clinic tenants.</p>
                     </div>
                     <button
                         onClick={handleCreate}
-                        className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-[0.98]"
+                        className="flex items-center gap-2 px-6 py-3 bg-gray-50 text-white rounded-2xl font-bold shadow-xl shadow-slate-900/20 hover:bg-gray-100 transition-all active:scale-[0.98]"
                     >
                         <Plus className="w-5 h-5" />
                         New Template
@@ -146,26 +146,26 @@ const PlatformAdminRoles = () => {
                                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
                                     <Shield className="w-6 h-6" />
                                 </div>
-                                <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-widest">
+                                <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-widest">
                                     {(tpl.privilege_set || tpl.privileges || []).length} Privileges
                                 </span>
                             </div>
 
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">{tpl.display_name || tpl.name || tpl.role_key}</h3>
-                            <p className="text-sm text-slate-500 mb-6 line-clamp-2">{tpl.description || 'No description available'}</p>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2">{tpl.display_name || tpl.name || tpl.role_key}</h3>
+                            <p className="text-sm text-gray-500 mb-6 line-clamp-2">{tpl.description || 'No description available'}</p>
 
                             <div className="flex flex-wrap gap-2 mb-6 max-h-32 overflow-y-auto p-1">
                                 {(tpl.privilege_set || tpl.privileges || []).map((p, idx) => (
-                                    <span key={idx} className="text-[10px] font-bold text-slate-600 bg-slate-100/80 px-2 py-1 rounded-md border border-slate-200">
+                                    <span key={idx} className="text-[10px] font-bold text-gray-600 bg-gray-50/80 px-2 py-1 rounded-md border border-gray-200">
                                         {p}
                                     </span>
                                 ))}
                             </div>
 
-                            <div className="flex items-center justify-between pt-4 border-t border-slate-100 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-100 opacity-60 group-hover:opacity-100 transition-opacity">
                                 <button
                                     onClick={() => handleEdit(tpl)}
-                                    className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                                    className="flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-indigo-600 transition-colors"
                                 >
                                     <Edit className="w-3.5 h-3.5" />
                                     Edit Privileges
@@ -185,13 +185,13 @@ const PlatformAdminRoles = () => {
 
             {/* Edit/Create Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-gray-50/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                            <h2 className="text-xl font-bold text-slate-800">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                            <h2 className="text-xl font-bold text-gray-800">
                                 {editingId ? 'Edit Role Template' : 'Create New Template'}
                             </h2>
-                            <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
@@ -200,55 +200,55 @@ const PlatformAdminRoles = () => {
                             <form id="roleForm" onSubmit={handleSubmit} className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Role Key (ID)</label>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Role Key (ID)</label>
                                         <input
                                             type="text"
                                             required
                                             disabled={!!editingId}
                                             value={formData.role_key}
                                             onChange={e => setFormData({ ...formData, role_key: e.target.value })}
-                                            className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
+                                            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
                                             placeholder="e.g. CLINICAL_ADMIN"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Display Name</label>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Display Name</label>
                                         <input
                                             type="text"
                                             required
                                             value={formData.display_name}
                                             onChange={e => setFormData({ ...formData, display_name: e.target.value })}
-                                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium"
+                                            className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium"
                                             placeholder="e.g. Clinical Administrator"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Description</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Description</label>
                                     <textarea
                                         value={formData.description}
                                         onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none h-20 text-sm"
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none h-20 text-sm"
                                         placeholder="Describe the responsibilities of this role..."
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Privileges</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Privileges</label>
                                     <div className="grid grid-cols-2 gap-2 text-sm">
                                         {ALL_PRIVILEGES.map(priv => (
                                             <label key={priv} className={`
                                                 flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all
                                                 ${formData.privileges.includes(priv)
                                                     ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                                                    : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'}
+                                                    : 'bg-white border-gray-100 hover:border-gray-200 text-gray-600'}
                                             `}>
                                                 <input
                                                     type="checkbox"
                                                     checked={formData.privileges.includes(priv)}
                                                     onChange={() => togglePrivilege(priv)}
-                                                    className="w-4 h-4 text-indigo-600 rounded-md border-slate-300 focus:ring-indigo-500"
+                                                    className="w-4 h-4 text-indigo-600 rounded-md border-gray-200 focus:ring-indigo-500"
                                                 />
                                                 <span className="font-medium font-mono text-xs">{priv}</span>
                                             </label>
@@ -258,11 +258,11 @@ const PlatformAdminRoles = () => {
                             </form>
                         </div>
 
-                        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
+                        <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
                             <button
                                 type="button"
                                 onClick={() => setShowModal(false)}
-                                className="px-5 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+                                className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
                             >
                                 Cancel
                             </button>

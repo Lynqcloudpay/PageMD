@@ -301,7 +301,7 @@ const Layout = ({ children }) => {
     }, []);
 
     return (
-        <div className="flex flex-col bg-[#F8FAFC] transition-colors" style={{ minHeight: '100dvh' }}>
+        <div className="flex flex-col bg-white transition-colors" style={{ minHeight: '100dvh' }}>
             {user?.isSandbox && <DemoBanner />}
             <div className="flex flex-1">
 
@@ -314,11 +314,11 @@ const Layout = ({ children }) => {
                         sidebarCollapsed ? 'w-[4.5rem]' : 'w-[14.5rem]'
                     )}
                 >
-                    <div className="flex flex-col h-full bg-[#111827] border-r border-slate-800 shadow-2xl">
+                    <div className="flex flex-col h-full bg-white border-r border-gray-200">
 
                         {/* Logo Area */}
                         <div className={cn(
-                            "flex items-center h-20 border-b border-slate-800/50 pt-1",
+                            "flex items-center h-20 border-b border-gray-100 pt-1",
                             sidebarCollapsed ? "justify-center px-0" : "px-4 justify-start"
                         )}>
                             <Link
@@ -335,20 +335,20 @@ const Layout = ({ children }) => {
                                             src="/logo-icon.png"
                                             alt="PMD"
                                             className="w-10 h-10 object-contain transition-opacity"
-                                            style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
+                                            style={{}}
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
                                                 if (e.target.nextSibling) e.target.nextSibling.classList.remove('hidden');
                                             }}
                                         />
-                                        <div className="hidden w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center text-slate-300 text-[10px] font-semibold">P</div>
+                                        <div className="hidden w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 text-[10px] font-semibold">P</div>
                                     </div>
                                 ) : (
                                     <img
                                         src="/logo.png"
                                         alt="PageMD Logo"
                                         className="h-10 w-auto object-contain max-w-[160px] transition-opacity"
-                                        style={{ filter: 'invert(1) hue-rotate(180deg) brightness(1.1)' }}
+                                        style={{}}
                                         onError={(e) => { e.target.style.display = 'none'; }}
                                     />
                                 )}
@@ -363,7 +363,7 @@ const Layout = ({ children }) => {
                                 <div>
                                     {!sidebarCollapsed && (
                                         <div className="px-4 pt-6 pb-2">
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em]">
                                                 Navigation
                                             </span>
                                         </div>
@@ -386,14 +386,14 @@ const Layout = ({ children }) => {
 
                                 {/* Divider */}
                                 <div className={cn("mt-4 mb-1", sidebarCollapsed ? "mx-2" : "mx-4")}>
-                                    <div className="h-px bg-white/10" />
+                                    <div className="h-px bg-gray-100" />
                                 </div>
 
                                 {/* Workflow section */}
                                 <div>
                                     {!sidebarCollapsed && (
                                         <div className="px-4 pt-0.5 pb-2">
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em]">
                                                 Workflows
                                             </span>
                                         </div>
@@ -416,7 +416,7 @@ const Layout = ({ children }) => {
                         </div>
 
                         {/* User profile — bottom */}
-                        <div className="border-t border-white/5 p-3 bg-black/5">
+                        <div className="border-t border-gray-100 p-3 bg-gray-50/50">
                             {user && (
                                 <div className={cn("flex flex-col gap-2", sidebarCollapsed ? "items-center" : "")}>
                                     {/* 3 Lines Toggle */}
@@ -424,12 +424,12 @@ const Layout = ({ children }) => {
                                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                                         className={cn(
                                             "flex items-center gap-3 p-2 rounded-xl transition-all w-full group border border-transparent",
-                                            sidebarCollapsed ? "justify-center hover:bg-slate-800" : "hover:bg-white/5 hover:border-white/10"
+                                            sidebarCollapsed ? "justify-center hover:bg-gray-100" : "hover:bg-gray-50"
                                         )}
                                         title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                                     >
-                                        <Menu className={cn("w-4 h-4 transition-colors", sidebarCollapsed ? "text-slate-400 group-hover:text-white" : "text-slate-500 group-hover:text-blue-400")} />
-                                        {!sidebarCollapsed && <span className="text-[11px] font-bold text-slate-400 group-hover:text-white uppercase tracking-widest">Collapse Menu</span>}
+                                        <Menu className={cn("w-4 h-4 transition-colors", sidebarCollapsed ? "text-gray-400 group-hover:text-gray-600" : "text-gray-400 group-hover:text-blue-600")} />
+                                        {!sidebarCollapsed && <span className="text-[11px] font-medium text-gray-400 group-hover:text-gray-600 uppercase tracking-widest">Collapse Menu</span>}
                                     </button>
 
                                     {/* Logout Button */}
@@ -441,13 +441,13 @@ const Layout = ({ children }) => {
                                             }
                                         }}
                                         className={cn(
-                                            "flex items-center gap-3 p-2 rounded-xl transition-all w-full group border border-transparent text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/10",
+                                            "flex items-center gap-3 p-2 rounded-xl transition-all w-full group border border-transparent text-gray-400 hover:text-rose-500 hover:bg-rose-50",
                                             sidebarCollapsed ? "justify-center" : ""
                                         )}
                                         title="Sign Out"
                                     >
                                         <LogOut className="w-4 h-4" strokeWidth={2} />
-                                        {!sidebarCollapsed && <span className="text-[11px] font-bold uppercase tracking-widest">Sign Out</span>}
+                                        {!sidebarCollapsed && <span className="text-[11px] font-medium uppercase tracking-widest">Sign Out</span>}
                                     </button>
 
                                     {/* Profile Avatar */}
@@ -455,16 +455,16 @@ const Layout = ({ children }) => {
                                         onClick={() => navigate('/profile')}
                                         className={cn(
                                             "flex items-center gap-3 p-1 rounded-xl transition-all group w-full",
-                                            sidebarCollapsed ? "justify-center" : "hover:bg-white/5"
+                                            sidebarCollapsed ? "justify-center" : "hover:bg-gray-50"
                                         )}
                                     >
-                                        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-[12px] font-black shadow-lg shadow-blue-500/40 flex-shrink-0">
+                                        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-[12px] font-bold shadow-sm flex-shrink-0">
                                             {(user.firstName?.[0] || 'U') + (user.lastName?.[0] || '')}
                                         </div>
                                         {!sidebarCollapsed && (
                                             <div className="text-left flex-1 min-w-0">
-                                                <div className="text-[13px] font-bold text-white leading-tight truncate">{user.firstName} {user.lastName}</div>
-                                                <div className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest">{user.role_name || user.role || 'User'}</div>
+                                                <div className="text-[13px] font-semibold text-gray-900 leading-tight truncate">{user.firstName} {user.lastName}</div>
+                                                <div className="text-[10px] text-gray-400 font-medium truncate uppercase tracking-wider">{user.role_name || user.role || 'User'}</div>
                                             </div>
                                         )}
                                     </button>
@@ -479,19 +479,19 @@ const Layout = ({ children }) => {
                 {/* ═══════════════════════════════════════════════ */}
                 {showSearch && (
                     <div
-                        className="fixed inset-0 bg-[#10141A]/40 backdrop-blur-sm z-50 flex items-start justify-center pt-[12vh] animate-fade-in"
+                        className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm z-50 flex items-start justify-center pt-[12vh] animate-fade-in"
                         onClick={() => setShowSearch(false)}
                     >
                         <div
-                            className="bg-white rounded-2xl shadow-large w-full max-w-xl mx-4 animate-scale-in border border-[#E4E4E4]"
+                            className="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 animate-scale-in border border-gray-200"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="p-4 border-b border-[#E4E4E4]/60 flex items-center gap-3">
-                                <Search className="w-4 h-4 text-[#83A2DB]" strokeWidth={1.8} />
+                            <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+                                <Search className="w-4 h-4 text-blue-500" strokeWidth={1.8} />
                                 <input
                                     type="text"
                                     placeholder="Search by name or MRN..."
-                                    className="flex-1 outline-none bg-transparent text-[#10141A] placeholder:text-[#10141A]/25 text-sm font-normal"
+                                    className="flex-1 outline-none bg-transparent text-gray-900 placeholder:text-gray-400 text-sm font-normal"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     autoFocus
@@ -507,33 +507,33 @@ const Layout = ({ children }) => {
                                         setSearchQuery('');
                                         setSearchResults([]);
                                     }}
-                                    className="p-1.5 hover:bg-[#10141A]/[0.04] rounded-lg transition-colors"
+                                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                                 >
-                                    <X className="w-4 h-4 text-[#10141A]/30" strokeWidth={1.5} />
+                                    <X className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
                                 </button>
                             </div>
                             <div className="max-h-80 overflow-y-auto">
                                 {loading ? (
                                     <div className="p-12 text-center">
-                                        <div className="inline-block spinner text-[#83A2DB]"></div>
-                                        <p className="mt-3 text-xs text-[#10141A]/40">Searching...</p>
+                                        <div className="inline-block spinner text-blue-500"></div>
+                                        <p className="mt-3 text-xs text-gray-400">Searching...</p>
                                     </div>
                                 ) : searchResults.length > 0 ? (
-                                    <div className="divide-y divide-[#E4E4E4]/40">
+                                    <div className="divide-y divide-gray-100">
                                         {searchResults.map((patient) => (
                                             <button
                                                 key={patient.id}
                                                 onClick={() => handleSearchSelect(patient)}
-                                                className="w-full p-3.5 text-left hover:bg-[#83A2DB]/[0.04] transition-all focus:outline-none group"
+                                                className="w-full p-3.5 text-left hover:bg-blue-50/50 transition-all focus:outline-none group"
                                             >
-                                                <div className="text-sm font-medium text-[#10141A]/80 group-hover:text-[#10141A]">
+                                                <div className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
                                                     {patient.name || 'Unknown'}
                                                 </div>
-                                                <div className="text-xs text-[#10141A]/35 mt-1 flex items-center gap-2">
-                                                    <span className="px-1.5 py-0.5 bg-[#10141A]/[0.04] rounded text-[10px] font-medium text-[#10141A]/50">{patient.mrn || 'N/A'}</span>
-                                                    <span className="text-[#E4E4E4]">·</span>
+                                                <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                                                    <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-500">{patient.mrn || 'N/A'}</span>
+                                                    <span className="text-gray-300">·</span>
                                                     <span>{patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</span>
-                                                    <span className="text-[#E4E4E4]">·</span>
+                                                    <span className="text-gray-300">·</span>
                                                     <span>{patient.sex || 'N/A'}</span>
                                                 </div>
                                             </button>
@@ -541,14 +541,14 @@ const Layout = ({ children }) => {
                                     </div>
                                 ) : searchQuery.trim() ? (
                                     <div className="p-12 text-center">
-                                        <p className="text-sm text-[#10141A]/50">No patients found for "{searchQuery}"</p>
-                                        <p className="text-[11px] text-[#10141A]/25 mt-1.5">Try searching by name or MRN</p>
+                                        <p className="text-sm text-gray-500">No patients found for "{searchQuery}"</p>
+                                        <p className="text-[11px] text-gray-400 mt-1.5">Try searching by name or MRN</p>
                                     </div>
                                 ) : (
                                     <div className="p-12 text-center">
-                                        <Search className="w-8 h-8 text-[#10141A]/10 mx-auto mb-3" strokeWidth={1.5} />
-                                        <p className="text-sm text-[#10141A]/40">Start typing to search...</p>
-                                        <p className="text-[11px] text-[#10141A]/20 mt-1">⌘K to open this search</p>
+                                        <Search className="w-8 h-8 text-gray-200 mx-auto mb-3" strokeWidth={1.5} />
+                                        <p className="text-sm text-gray-400">Start typing to search...</p>
+                                        <p className="text-[11px] text-gray-300 mt-1">⌘K to open this search</p>
                                     </div>
                                 )}
                             </div>
@@ -567,14 +567,14 @@ const Layout = ({ children }) => {
                     style={{ height: '100dvh' }}
                 >
                     {/* Header strip */}
-                    <div className="h-12 bg-white border-b border-gray-200/60 px-6 flex items-center justify-between flex-shrink-0 relative z-40">
+                    <div className="h-12 bg-white border-b border-gray-100 px-6 flex items-center justify-between flex-shrink-0 relative z-40">
                         <div className="flex-1 overflow-hidden">
                             <PatientTabs />
                         </div>
                         <div className="flex items-center gap-2 pl-4 flex-shrink-0 overflow-visible">
                             <button
                                 onClick={() => setShowSupportModal(true)}
-                                className="w-9 h-9 rounded-full bg-white/80 border border-[#E4E4E4] text-[#10141A]/40 hover:bg-slate-100 hover:text-[#83A2DB] transition-all flex items-center justify-center"
+                                className="w-9 h-9 rounded-full bg-white border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-blue-500 transition-all flex items-center justify-center"
                                 title="Report an Issue (Shift+?)"
                             >
                                 <HelpCircle className="w-5 h-5" strokeWidth={1.5} />
@@ -584,7 +584,7 @@ const Layout = ({ children }) => {
                     </div>
 
                     {/* Page Content */}
-                    <div className="flex-1 overflow-y-auto min-h-0 relative h-full bg-[#F8FAFC]">
+                    <div className="flex-1 overflow-y-auto min-h-0 relative h-full bg-white">
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={location.pathname}

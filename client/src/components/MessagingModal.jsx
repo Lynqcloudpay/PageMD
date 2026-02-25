@@ -58,26 +58,26 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
         >
             <div className="flex flex-col h-full gap-4">
                 {/* Header Context - Compact */}
-                <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">
                             {patient.first_name?.[0]}{patient.last_name?.[0]}
                         </div>
                         <div>
-                            <h4 className="text-sm font-bold text-slate-900 leading-tight">{patient.first_name} {patient.last_name}</h4>
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium h-4">
+                            <h4 className="text-sm font-bold text-gray-900 leading-tight">{patient.first_name} {patient.last_name}</h4>
+                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium h-4">
                                 {patient.email || <span className="text-red-500 italic">No email on file</span>}
                             </div>
                         </div>
                     </div>
                     {/* Priority Toggle - Compact */}
-                    <div className="flex p-1 bg-white border border-slate-200 rounded-lg">
+                    <div className="flex p-1 bg-white border border-gray-200 rounded-lg">
                         <button
                             type="button"
                             onClick={() => setPriority('normal')}
                             className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${priority === 'normal'
                                 ? 'bg-blue-50 text-blue-700 shadow-sm'
-                                : 'text-slate-400 hover:text-slate-600'
+                                : 'text-gray-400 hover:text-gray-600'
                                 }`}
                         >
                             Normal
@@ -87,7 +87,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                             onClick={() => setPriority('urgent')}
                             className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${priority === 'urgent'
                                 ? 'bg-red-50 text-red-700 shadow-sm'
-                                : 'text-slate-400 hover:text-slate-600'
+                                : 'text-gray-400 hover:text-gray-600'
                                 }`}
                         >
                             Urgent
@@ -106,7 +106,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                 <div className="space-y-3 flex-1 flex flex-col">
                     <input
                         type="text"
-                        className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
                         placeholder="Subject"
                         value={subject}
                         onChange={(e) => setSubject(e.target.value)}
@@ -114,7 +114,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                     />
 
                     <textarea
-                        className="w-full flex-1 p-4 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm min-h-[200px]"
+                        className="w-full flex-1 p-4 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm min-h-[200px]"
                         placeholder="Type your secure message here..."
                         value={body}
                         onChange={(e) => setBody(e.target.value)}
@@ -123,7 +123,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-4">
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 gap-4">
                     {/* Notification Toggle - Compact Switch Style */}
                     <label className="flex items-center gap-3 cursor-pointer group">
                         <div className="relative">
@@ -137,11 +137,11 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                                 }}
                                 disabled={!patient.email}
                             />
-                            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            <div className="w-9 h-5 bg-gray-100 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                         </div>
                         <div className="flex flex-col">
-                            <span className={`text-xs font-bold ${notifyPatient ? 'text-blue-700' : 'text-slate-500'}`}>Email Notification</span>
-                            <span className="text-[9px] text-slate-400">
+                            <span className={`text-xs font-bold ${notifyPatient ? 'text-blue-700' : 'text-gray-500'}`}>Email Notification</span>
+                            <span className="text-[9px] text-gray-400">
                                 {notifyPatient ? 'Patient will be emailed' : 'Silent (Portal only)'}
                             </span>
                         </div>
@@ -150,7 +150,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                     <div className="flex gap-2">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
+                            className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
                             disabled={sending}
                         >
                             Cancel
@@ -159,7 +159,7 @@ const MessagingModal = ({ isOpen, onClose, patient, currentUser }) => {
                             onClick={handleSend}
                             disabled={sending || !patient.email || !body.trim()}
                             className={`px-6 py-2 rounded-lg font-bold text-xs uppercase tracking-wider text-white shadow-md transition-all flex items-center gap-2 ${sending || !patient.email || !body.trim()
-                                ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                                ? 'bg-gray-200 cursor-not-allowed shadow-none'
                                 : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg active:scale-95'
                                 }`}
                         >

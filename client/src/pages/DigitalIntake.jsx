@@ -86,8 +86,8 @@ const DigitalIntake = () => {
             case 'IN_PROGRESS': return 'bg-amber-50 text-amber-700 border-amber-100';
             case 'APPROVED': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
             case 'NEEDS_EDITS': return 'bg-rose-50 text-rose-700 border-rose-100';
-            case 'EXPIRED': return 'bg-slate-100 text-slate-500 border-slate-200';
-            default: return 'bg-slate-50 text-slate-700 border-slate-100';
+            case 'EXPIRED': return 'bg-gray-50 text-gray-500 border-gray-200';
+            default: return 'bg-gray-50 text-gray-700 border-gray-100';
         }
     };
 
@@ -105,8 +105,8 @@ const DigitalIntake = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Digital Intake</h1>
-                    <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Universal QR Workflow • Azure Blue Engine</p>
+                    <h1 className="text-xl font-bold text-[#111827] tracking-tighter uppercase mb-0.5">Digital Intake</h1>
+                    <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Universal QR Workflow • Azure Blue Engine</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
@@ -119,7 +119,7 @@ const DigitalIntake = () => {
                     <button
                         onClick={() => fetchSessions(true)}
                         disabled={refreshing}
-                        className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm rounded-xl transition-all"
+                        className="p-2.5 text-gray-500 hover:text-blue-600 hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm rounded-xl transition-all"
                     >
                         <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                     </button>
@@ -134,28 +134,28 @@ const DigitalIntake = () => {
                     { label: 'In Progress', value: sessions.filter(s => s.status === 'IN_PROGRESS' || s.status === 'NEEDS_EDITS').length, icon: RefreshCw, color: 'amber' },
                     { label: 'Created Patients', value: sessions.filter(s => s.status === 'APPROVED').length, icon: CheckCircle, color: 'emerald' },
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+                    <div key={i} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{stat.label}</span>
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{stat.label}</span>
                             <div className={`p-1.5 rounded-lg bg-${stat.color}-50 text-${stat.color}-600 group-hover:scale-110 transition-transform`}>
                                 <stat.icon size={16} />
                             </div>
                         </div>
-                        <div className="text-2xl font-semibold text-[#10141A]">{stat.value}</div>
+                        <div className="text-2xl font-semibold text-[#111827]">{stat.value}</div>
                     </div>
                 ))}
             </div>
 
             {/* Filters and Search */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
                 <div className="relative max-w-md w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
                         placeholder="Search registrations..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                        className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
                     />
                 </div>
             </div>
@@ -167,45 +167,45 @@ const DigitalIntake = () => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
             ) : filteredSessions.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-                    <Smartphone className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                    <h3 className="text-lg font-semibold text-slate-800 mb-2">No registrations found</h3>
-                    <p className="text-slate-500 text-sm">Waiting for new QR code scans...</p>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                    <Smartphone className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No registrations found</h3>
+                    <p className="text-gray-500 text-sm">Waiting for new QR code scans...</p>
                 </div>
             ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                    <div className="divide-y divide-slate-100">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="divide-y divide-gray-100">
                         {filteredSessions
                             .sort((a, b) => new Date(b.created_at || b.updated_at) - new Date(a.created_at || a.updated_at))
                             .map((session) => (
-                                <div key={session.id} className="px-5 py-4 hover:bg-slate-50 group transition-colors">
+                                <div key={session.id} className="px-5 py-4 hover:bg-gray-50 group transition-colors">
                                     <div className="flex items-center justify-between gap-4">
                                         {/* Left: Patient Info */}
                                         <div
                                             className={`flex-1 min-w-0 flex items-center gap-4 ${session.patient_id ? 'cursor-pointer' : ''}`}
                                             onClick={() => session.patient_id && navigate(`/patient/${session.patient_id}/snapshot`)}
                                         >
-                                            <div className={`w-10 h-10 bg-white border border-[#E4E4E4] text-[#10141A]/60 rounded-xl flex items-center justify-center font-medium text-sm shadow-[0_1px_4px_rgba(0,0,0,0.03)] group-hover:border-[#83A2DB]/30 group-hover:text-[#83A2DB] transition-colors ${session.patient_id ? 'group-hover:bg-[#83A2DB]/5' : ''}`}>
+                                            <div className={`w-10 h-10 bg-white border border-[#E5E7EB] text-[#111827]/60 rounded-xl flex items-center justify-center font-medium text-sm shadow-[0_1px_4px_rgba(0,0,0,0.03)] group-hover:border-[#2563EB]/30 group-hover:text-[#2563EB] transition-colors ${session.patient_id ? 'group-hover:bg-[#2563EB]/5' : ''}`}>
                                                 {(session.prefill_json?.firstName?.[0] || '') + (session.prefill_json?.lastName?.[0] || '')}
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`font-semibold text-sm text-slate-800 ${session.patient_id ? 'group-hover:text-blue-700 underline decoration-blue-200 underline-offset-2' : ''} transition-colors`}>
+                                                    <div className={`font-semibold text-sm text-gray-800 ${session.patient_id ? 'group-hover:text-blue-700 underline decoration-blue-200 underline-offset-2' : ''} transition-colors`}>
                                                         {session.prefill_json?.firstName} {session.prefill_json?.lastName}
                                                     </div>
                                                     {session.prefill_json?.dob && (
-                                                        <span className="text-xs text-slate-400 font-mono bg-slate-100 px-1.5 rounded">
+                                                        <span className="text-xs text-gray-400 font-mono bg-gray-50 px-1.5 rounded">
                                                             {session.prefill_json.dob}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
-                                                    <Calendar className="w-3 h-3 text-slate-400" />
+                                                <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                                                    <Calendar className="w-3 h-3 text-gray-400" />
                                                     <span>{formatSessionDate(session.created_at || session.updated_at)}</span>
                                                     {session.prefill_json?.phone && (
                                                         <>
-                                                            <span className="w-1 h-1 rounded-full bg-slate-300 mx-1"></span>
-                                                            <Smartphone className="w-3 h-3 text-slate-400" />
+                                                            <span className="w-1 h-1 rounded-full bg-gray-200 mx-1"></span>
+                                                            <Smartphone className="w-3 h-3 text-gray-400" />
                                                             <span>{session.prefill_json.phone}</span>
                                                         </>
                                                     )}
@@ -237,13 +237,13 @@ const DigitalIntake = () => {
                                                             e.stopPropagation();
                                                             setMenuSessionId(menuSessionId === session.id ? null : session.id);
                                                         }}
-                                                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                                                     >
                                                         <MoreVertical className="w-4 h-4" />
                                                     </button>
 
                                                     {menuSessionId === session.id && (
-                                                        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50 animate-fadeInShort origin-top-right">
+                                                        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-fadeInShort origin-top-right">
                                                             <div className="fixed inset-0 z-40" onClick={() => setMenuSessionId(null)} />
                                                             <div className="relative z-50">
                                                                 {session.patient_id && (
@@ -252,7 +252,7 @@ const DigitalIntake = () => {
                                                                             navigate(`/patient/${session.patient_id}/snapshot`);
                                                                             setMenuSessionId(null);
                                                                         }}
-                                                                        className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                                                        className="w-full text-left px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                                                                     >
                                                                         <User className="w-3.5 h-3.5" /> Open Chart
                                                                     </button>
@@ -298,7 +298,7 @@ const DigitalIntake = () => {
                             <Shield className="w-5 h-5" />
                             <span className="text-sm font-semibold uppercase tracking-widest">Azure Secure workflow active</span>
                         </div>
-                        <p className="text-slate-500 text-sm max-w-xs mx-auto">Patients can scan this to start their registration on their own mobile device.</p>
+                        <p className="text-gray-500 text-sm max-w-xs mx-auto">Patients can scan this to start their registration on their own mobile device.</p>
                     </div>
 
                     <div className="bg-white p-8 rounded-[2rem] inline-block border-4 border-blue-100 shadow-2xl shadow-blue-100">
@@ -312,19 +312,19 @@ const DigitalIntake = () => {
                                 fgColor="#2563eb"
                             />
                         </div>
-                        <div className="mt-6 text-2xl font-semibold text-[#10141A] tracking-tight">Scan to Register</div>
-                        <div className="text-[#83A2DB] font-medium text-xs tracking-widest uppercase mt-1">{user?.clinicName || 'Your Clinic'}</div>
+                        <div className="mt-6 text-2xl font-semibold text-[#111827] tracking-tight">Scan to Register</div>
+                        <div className="text-[#2563EB] font-medium text-xs tracking-widest uppercase mt-1">{user?.clinicName || 'Your Clinic'}</div>
                     </div>
 
                     <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 text-left space-y-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-[#83A2DB] uppercase tracking-widest">Clinic Link</span>
+                            <span className="text-xs font-medium text-[#2563EB] uppercase tracking-widest">Clinic Link</span>
                             <button
                                 onClick={() => {
                                     navigator.clipboard.writeText(universalURL);
                                     showSuccess('Link copied to clipboard');
                                 }}
-                                className="flex items-center gap-1 text-[#83A2DB] font-medium text-xs hover:text-[#83A2DB]/80 transition-colors"
+                                className="flex items-center gap-1 text-[#2563EB] font-medium text-xs hover:text-[#2563EB]/80 transition-colors"
                             >
                                 <Copy className="w-4 h-4" /> Copy
                             </button>
@@ -333,7 +333,7 @@ const DigitalIntake = () => {
                             href={universalURL}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[#83A2DB] font-mono text-sm break-all font-medium hover:underline block"
+                            className="text-[#2563EB] font-mono text-sm break-all font-medium hover:underline block"
                         >
                             {universalURL}
                         </a>
@@ -341,7 +341,7 @@ const DigitalIntake = () => {
 
                     <button
                         onClick={() => window.print()}
-                        className="w-full py-4 bg-[#83A2DB] text-white rounded-xl font-medium text-lg shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:bg-[#83A2DB]/90 active:scale-95 transition-all"
+                        className="w-full py-4 bg-[#2563EB] text-white rounded-xl font-medium text-lg shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:bg-[#2563EB]/90 active:scale-95 transition-all"
                     >
                         Print Signage
                     </button>

@@ -59,7 +59,7 @@ const PlatformAdminSupport = () => {
     };
 
     const priorityColors = {
-        low: 'bg-slate-100 text-slate-600 border-slate-200',
+        low: 'bg-gray-50 text-gray-600 border-gray-200',
         medium: 'bg-blue-100 text-blue-700 border-blue-200',
         high: 'bg-orange-100 text-orange-700 border-orange-200',
         critical: 'bg-red-100 text-red-700 border-red-200'
@@ -69,7 +69,7 @@ const PlatformAdminSupport = () => {
         open: 'bg-amber-100 text-amber-700 border-amber-200',
         in_progress: 'bg-blue-100 text-blue-700 border-blue-200',
         resolved: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-        closed: 'bg-slate-100 text-slate-600 border-slate-200'
+        closed: 'bg-gray-50 text-gray-600 border-gray-200'
     };
 
     // Redirect if not authenticated
@@ -96,16 +96,16 @@ const PlatformAdminSupport = () => {
                         <ArrowLeft className="w-4 h-4" />
                         Back to Dashboard
                     </button>
-                    <h1 className="text-3xl font-bold text-slate-800 mb-2">Support Tickets</h1>
-                    <p className="text-slate-500">View and manage user-submitted issues</p>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Support Tickets</h1>
+                    <p className="text-gray-500">View and manage user-submitted issues</p>
                 </div>
 
                 {/* Stats Cards */}
                 {stats && (
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                         <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/80 shadow-lg shadow-slate-200/50">
-                            <div className="text-3xl font-bold text-slate-800">{stats.total || 0}</div>
-                            <div className="text-sm text-slate-500 mt-1">Total Tickets</div>
+                            <div className="text-3xl font-bold text-gray-800">{stats.total || 0}</div>
+                            <div className="text-sm text-gray-500 mt-1">Total Tickets</div>
                         </div>
                         <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-amber-100 shadow-lg shadow-amber-100/50">
                             <div className="text-3xl font-bold text-amber-600">{stats.open_count || 0}</div>
@@ -129,11 +129,11 @@ const PlatformAdminSupport = () => {
                 {/* Actions Bar */}
                 <div className="mb-8 flex flex-wrap items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <Filter className="w-4 h-4 text-slate-400" />
+                        <Filter className="w-4 h-4 text-gray-400" />
                         <select
                             value={filter.status}
                             onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}
-                            className="px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         >
                             <option value="all">All Status</option>
                             <option value="open">Open</option>
@@ -144,7 +144,7 @@ const PlatformAdminSupport = () => {
                         <select
                             value={filter.priority}
                             onChange={(e) => setFilter(prev => ({ ...prev, priority: e.target.value }))}
-                            className="px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                            className="px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                         >
                             <option value="">All Priorities</option>
                             <option value="critical">Critical</option>
@@ -171,9 +171,9 @@ const PlatformAdminSupport = () => {
                             </div>
                         ) : tickets.length === 0 ? (
                             <div className="text-center py-16 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg">
-                                <Ticket className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                                <p className="text-slate-600 font-medium">No support tickets found</p>
-                                <p className="text-sm text-slate-400 mt-2">Tickets submitted by users will appear here</p>
+                                <Ticket className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600 font-medium">No support tickets found</p>
+                                <p className="text-sm text-gray-400 mt-2">Tickets submitted by users will appear here</p>
                             </div>
                         ) : (
                             tickets.map((ticket) => (
@@ -185,8 +185,8 @@ const PlatformAdminSupport = () => {
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                            <h3 className="font-semibold text-slate-800">{ticket.subject}</h3>
-                                            <p className="text-sm text-slate-500 mt-1 line-clamp-2">{ticket.description}</p>
+                                            <h3 className="font-semibold text-gray-800">{ticket.subject}</h3>
+                                            <p className="text-sm text-gray-500 mt-1 line-clamp-2">{ticket.description}</p>
                                             <div className="flex items-center gap-2 mt-3">
                                                 <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${priorityColors[ticket.priority]}`}>
                                                     {ticket.priority}
@@ -194,14 +194,14 @@ const PlatformAdminSupport = () => {
                                                 <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${statusColors[ticket.status]}`}>
                                                     {ticket.status?.replace('_', ' ')}
                                                 </span>
-                                                <span className="text-xs text-slate-400">
+                                                <span className="text-xs text-gray-400">
                                                     {ticket.clinic_name || 'Unknown Clinic'}
                                                 </span>
                                             </div>
                                         </div>
-                                        <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
+                                        <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                                     </div>
-                                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-400">
+                                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
                                         <span>{ticket.user_email}</span>
                                         <span>•</span>
                                         <span>{new Date(ticket.created_at).toLocaleString()}</span>
@@ -215,23 +215,23 @@ const PlatformAdminSupport = () => {
                     <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg shadow-slate-200/50 p-6 h-fit sticky top-8">
                         {selectedTicket ? (
                             <>
-                                <h2 className="text-xl font-bold text-slate-800 mb-5">{selectedTicket.subject}</h2>
+                                <h2 className="text-xl font-bold text-gray-800 mb-5">{selectedTicket.subject}</h2>
 
                                 <div className="space-y-5">
                                     <div>
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Description</label>
-                                        <p className="text-slate-700 mt-1">{selectedTicket.description}</p>
+                                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Description</label>
+                                        <p className="text-gray-700 mt-1">{selectedTicket.description}</p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Priority</label>
+                                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Priority</label>
                                             <p className={`inline-block mt-1 px-2.5 py-1 rounded-lg text-sm font-medium border ${priorityColors[selectedTicket.priority]}`}>
                                                 {selectedTicket.priority}
                                             </p>
                                         </div>
                                         <div>
-                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Status</label>
+                                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Status</label>
                                             <p className={`inline-block mt-1 px-2.5 py-1 rounded-lg text-sm font-medium border ${statusColors[selectedTicket.status]}`}>
                                                 {selectedTicket.status?.replace('_', ' ')}
                                             </p>
@@ -239,12 +239,12 @@ const PlatformAdminSupport = () => {
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Submitted By</label>
-                                        <p className="text-slate-700 mt-1">{selectedTicket.user_email}</p>
+                                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Submitted By</label>
+                                        <p className="text-gray-700 mt-1">{selectedTicket.user_email}</p>
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Clinic</label>
+                                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Clinic</label>
                                         {selectedTicket.clinic_id ? (
                                             <button
                                                 onClick={() => navigate(`/platform-admin/clinics/${selectedTicket.clinic_id}`)}
@@ -253,32 +253,32 @@ const PlatformAdminSupport = () => {
                                                 {selectedTicket.clinic_name || 'View Clinic'} →
                                             </button>
                                         ) : (
-                                            <p className="text-slate-500 mt-1 italic">Unknown / No clinic linked</p>
+                                            <p className="text-gray-500 mt-1 italic">Unknown / No clinic linked</p>
                                         )}
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Created</label>
-                                        <p className="text-slate-700 mt-1">{new Date(selectedTicket.created_at).toLocaleString()}</p>
+                                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">Created</label>
+                                        <p className="text-gray-700 mt-1">{new Date(selectedTicket.created_at).toLocaleString()}</p>
                                     </div>
 
                                     {selectedTicket.context_data && (
                                         <div>
-                                            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">User Context</label>
-                                            <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+                                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wider">User Context</label>
+                                            <div className="mt-2 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
                                                 {selectedTicket.context_data.clientState && (
                                                     <>
                                                         <div className="flex items-start gap-2">
-                                                            <span className="text-slate-400 text-sm w-24 flex-shrink-0">Page:</span>
-                                                            <span className="text-slate-700 text-sm font-medium">{selectedTicket.context_data.clientState.route || 'Unknown'}</span>
+                                                            <span className="text-gray-400 text-sm w-24 flex-shrink-0">Page:</span>
+                                                            <span className="text-gray-700 text-sm font-medium">{selectedTicket.context_data.clientState.route || 'Unknown'}</span>
                                                         </div>
                                                         <div className="flex items-start gap-2">
-                                                            <span className="text-slate-400 text-sm w-24 flex-shrink-0">Screen:</span>
-                                                            <span className="text-slate-700 text-sm">{selectedTicket.context_data.clientState.screenSize || 'Unknown'}</span>
+                                                            <span className="text-gray-400 text-sm w-24 flex-shrink-0">Screen:</span>
+                                                            <span className="text-gray-700 text-sm">{selectedTicket.context_data.clientState.screenSize || 'Unknown'}</span>
                                                         </div>
                                                         <div className="flex items-start gap-2">
-                                                            <span className="text-slate-400 text-sm w-24 flex-shrink-0">Browser:</span>
-                                                            <span className="text-slate-700 text-sm">
+                                                            <span className="text-gray-400 text-sm w-24 flex-shrink-0">Browser:</span>
+                                                            <span className="text-gray-700 text-sm">
                                                                 {selectedTicket.context_data.userAgent?.includes('Chrome') ? 'Chrome' :
                                                                     selectedTicket.context_data.userAgent?.includes('Safari') ? 'Safari' :
                                                                         selectedTicket.context_data.userAgent?.includes('Firefox') ? 'Firefox' : 'Other'}
@@ -290,8 +290,8 @@ const PlatformAdminSupport = () => {
                                                 )}
                                                 {selectedTicket.context_data.auditTrail?.length > 0 && (
                                                     <div>
-                                                        <span className="text-slate-400 text-sm block mb-2">Recent Actions:</span>
-                                                        <ul className="text-sm text-slate-600 space-y-1">
+                                                        <span className="text-gray-400 text-sm block mb-2">Recent Actions:</span>
+                                                        <ul className="text-sm text-gray-600 space-y-1">
                                                             {selectedTicket.context_data.auditTrail.slice(0, 5).map((log, i) => (
                                                                 <li key={i} className="flex items-center gap-2">
                                                                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full"></span>
@@ -302,14 +302,14 @@ const PlatformAdminSupport = () => {
                                                     </div>
                                                 )}
                                                 {(!selectedTicket.context_data.auditTrail || selectedTicket.context_data.auditTrail.length === 0) && (
-                                                    <p className="text-sm text-slate-500 italic">No recent platform actions recorded</p>
+                                                    <p className="text-sm text-gray-500 italic">No recent platform actions recorded</p>
                                                 )}
                                             </div>
                                         </div>
                                     )}
 
-                                    <div className="pt-5 border-t border-slate-100">
-                                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3 block">Update Status</label>
+                                    <div className="pt-5 border-t border-gray-100">
+                                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3 block">Update Status</label>
                                         <div className="flex flex-wrap gap-2">
                                             {['open', 'in_progress', 'resolved', 'closed'].map((status) => (
                                                 <button
@@ -323,7 +323,7 @@ const PlatformAdminSupport = () => {
                                                     disabled={selectedTicket.status === status}
                                                     className={`px-4 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${selectedTicket.status === status
                                                         ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-                                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:scale-105'
+                                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:scale-105'
                                                         }`}
                                                 >
                                                     {status.replace('_', ' ')}
@@ -335,8 +335,8 @@ const PlatformAdminSupport = () => {
                             </>
                         ) : (
                             <div className="text-center py-12">
-                                <Clock className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                                <p className="text-slate-500">Select a ticket to view details</p>
+                                <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                <p className="text-gray-500">Select a ticket to view details</p>
                             </div>
                         )}
                     </div>

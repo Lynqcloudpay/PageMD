@@ -46,16 +46,16 @@ const ImpersonateHandler = () => {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-red-100 text-center">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
                         <AlertCircle className="w-8 h-8" />
                     </div>
-                    <h1 className="text-xl font-bold text-slate-800 mb-2">Access Denied</h1>
-                    <p className="text-slate-500 mb-6">{error}</p>
+                    <h1 className="text-xl font-bold text-gray-800 mb-2">Access Denied</h1>
+                    <p className="text-gray-500 mb-6">{error}</p>
                     <button
                         onClick={() => window.close()}
-                        className="px-6 py-2 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-all"
+                        className="px-6 py-2 bg-gray-100 text-white rounded-xl font-bold hover:bg-gray-50 transition-all"
                     >
                         Close Window
                     </button>
@@ -65,12 +65,12 @@ const ImpersonateHandler = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 animate-bounce shadow-lg shadow-blue-500/20">
                 <Loader2 className="w-8 h-8 animate-spin" />
             </div>
-            <h1 className="text-xl font-black text-slate-800 tracking-tight mb-2">Securing "Break Glass" Session</h1>
-            <p className="text-slate-500 font-medium">Verifying audit clearance and establishing secure tunnel...</p>
+            <h1 className="text-xl font-bold text-gray-800 tracking-tight mb-2">Securing "Break Glass" Session</h1>
+            <p className="text-gray-500 font-medium">Verifying audit clearance and establishing secure tunnel...</p>
         </div>
     );
 };

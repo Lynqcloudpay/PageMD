@@ -512,7 +512,7 @@ const Inbasket = () => {
             {/* Sidebar */}
             <div className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-10">
                 <div className="p-4 border-b border-gray-100">
-                    <h2 className="text-sm font-black text-gray-900 flex items-center gap-2 mb-4 uppercase tracking-tighter">
+                    <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4 uppercase tracking-tighter">
                         <Inbox className="w-4 h-4" /> In Basket
                     </h2>
 
@@ -692,21 +692,21 @@ const Inbasket = () => {
                             <div className="h-4 w-px bg-white/20" />
                             <button
                                 onClick={() => handleBatchAction('complete')}
-                                className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-black uppercase tracking-widest transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all"
                             >
                                 <CheckCircleIcon className="w-3.5 h-3.5" /> Complete All
                             </button>
                             {selectedItems.every(i => i.type === 'cosignature_required') && (
                                 <button
                                     onClick={() => setShowBatchCosignModal(true)}
-                                    className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-600 rounded-md text-[11px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
+                                    className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500 hover:bg-emerald-600 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20"
                                 >
                                     <FileSignature className="w-3.5 h-3.5" /> Batch Cosign
                                 </button>
                             )}
                             <button
                                 onClick={() => handleBatchAction('read')}
-                                className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-black uppercase tracking-widest transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-bold uppercase tracking-widest transition-all"
                             >
                                 <Mail className="w-3.5 h-3.5" /> Mark Read
                             </button>
@@ -829,7 +829,7 @@ const Inbasket = () => {
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => handleAction('complete')}
-                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-100 hover:scale-105 active:scale-95"
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-emerald-100 hover:scale-105 active:scale-95"
                                     title="Mark as Complete (Archive)"
                                 >
                                     <CheckCircleIcon className="w-4 h-4" /> Finish
@@ -918,7 +918,7 @@ const Inbasket = () => {
                                             <p className="text-sm font-medium text-blue-900">Incoming Portal Message</p>
                                             <p className="text-xs text-blue-600">Reply to patient via the Message center</p>
                                         </div>
-                                        <button onClick={scrollToHistory} className="text-blue-600 text-xs font-black uppercase tracking-widest hover:underline flex items-center gap-1">
+                                        <button onClick={scrollToHistory} className="text-blue-600 text-xs font-bold uppercase tracking-widest hover:underline flex items-center gap-1">
                                             <MessageSquare className="w-3 h-3" /> View Conversation
                                         </button>
                                     </div>
@@ -989,7 +989,7 @@ const Inbasket = () => {
                                 {details?.notes && details.notes.length > 0 && (
                                     <div className="border-t border-gray-100 pt-6 mt-6 scroll-mt-20" ref={historyRef}>
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Conversation History</h3>
+                                            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Conversation History</h3>
                                             <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-bold">Secure Encryption Active</span>
                                         </div>
                                         <div className="space-y-6">
@@ -1000,7 +1000,7 @@ const Inbasket = () => {
                                                 return (
                                                     <div key={note.id} className={`flex gap-3 ${isStaff ? 'flex-row-reverse' : ''}`}>
                                                         {/* Avatar */}
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0 shadow-sm border ${isPatient
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 shadow-sm border ${isPatient
                                                             ? 'bg-white border-gray-200 text-gray-500'
                                                             : 'bg-blue-600 border-blue-700 text-white'
                                                             }`}>
@@ -1010,7 +1010,7 @@ const Inbasket = () => {
                                                         {/* Bubble Container */}
                                                         <div className={`flex flex-col ${!isPatient ? 'items-end' : 'items-start'} max-w-[80%]`}>
                                                             <div className={`flex items-baseline gap-2 mb-1.5 ${!isPatient ? 'flex-row-reverse text-right' : 'text-left'}`}>
-                                                                <span className={`text-[11px] font-black tracking-tight ${!isPatient ? 'text-blue-700' : 'text-gray-900'}`}>
+                                                                <span className={`text-[11px] font-bold tracking-tight ${!isPatient ? 'text-blue-700' : 'text-gray-900'}`}>
                                                                     {note.first_name || 'Care Team'}
                                                                 </span>
                                                                 <span className="text-[9px] text-gray-400 font-bold uppercase">{format(new Date(note.created_at), 'h:mm a')}</span>
@@ -1429,7 +1429,7 @@ const Inbasket = () => {
                                 </div>
 
                                 {/* Right Column: Schedule Browser */}
-                                <div className="w-full md:w-[380px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-4 flex flex-col overflow-y-auto">
+                                <div className="w-full md:w-[380px] bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 p-4 flex flex-col overflow-y-auto">
                                     {approvalData.providerId ? (
                                         <DaySchedulePreview
                                             date={approvalData.appointmentDate}
@@ -1448,7 +1448,7 @@ const Inbasket = () => {
                                             }}
                                         />
                                     ) : (
-                                        <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+                                        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                                             Select a provider to view schedule
                                         </div>
                                     )}
@@ -1529,7 +1529,7 @@ const Inbasket = () => {
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-[11px] font-black uppercase tracking-widest text-gray-400 mb-2">Clinical Attestation Text</label>
+                                <label className="block text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Clinical Attestation Text</label>
                                 <textarea
                                     value={batchAttestation}
                                     onChange={e => setBatchAttestation(e.target.value)}
@@ -1556,7 +1556,7 @@ const Inbasket = () => {
                             <button
                                 onClick={handleBatchCosign}
                                 disabled={!batchAttestation.trim()}
-                                className="flex-2 px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2"
+                                className="flex-2 px-8 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-200 disabled:opacity-50 disabled:shadow-none transition-all flex items-center justify-center gap-2"
                             >
                                 <Check className="w-4 h-4" /> Complete Batch Cosign
                             </button>
@@ -1622,17 +1622,17 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
 
     return (
         <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between mb-3 bg-white p-2 rounded border border-slate-200 shadow-sm">
-                <button onClick={() => changeDay(-1)} className="p-1 hover:bg-slate-100 rounded"><ChevronLeft className="w-4 h-4" /></button>
+            <div className="flex items-center justify-between mb-3 bg-white p-2 rounded border border-gray-200 shadow-sm">
+                <button onClick={() => changeDay(-1)} className="p-1 hover:bg-gray-50 rounded"><ChevronLeft className="w-4 h-4" /></button>
                 <span className="font-bold text-sm">{format(currentDate, 'EEEE, MMM d, yyyy')}</span>
-                <button onClick={() => changeDay(1)} className="p-1 hover:bg-slate-100 rounded"><ChevronRight className="w-4 h-4" /></button>
+                <button onClick={() => changeDay(1)} className="p-1 hover:bg-gray-50 rounded"><ChevronRight className="w-4 h-4" /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white rounded-lg border border-slate-200">
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white rounded-lg border border-gray-200">
                 {loading ? (
-                    <div className="text-xs text-slate-400 p-8 text-center flex items-center justify-center h-full">Loading schedule...</div>
+                    <div className="text-xs text-gray-400 p-8 text-center flex items-center justify-center h-full">Loading schedule...</div>
                 ) : (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-gray-100">
                         {slots.map(slot => {
                             // Find appointment in this slot
                             // robust check for appointment_time
@@ -1641,7 +1641,7 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                             const isSuggested = suggestedSlots.some(s => s.date === currentDateStr && s.time === slot);
 
                             // Determine row style
-                            let rowClass = "hover:bg-slate-50";
+                            let rowClass = "hover:bg-gray-50";
                             if (isSelected) rowClass = "bg-emerald-50";
                             else if (isSuggested) rowClass = "bg-amber-50 ring-1 ring-inset ring-amber-200";
 
@@ -1655,14 +1655,14 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                                         }
                                     }}
                                 >
-                                    <span className={`font-medium w-14 shrink-0 ${isSuggested ? 'text-amber-700 font-bold' : 'text-slate-400'}`}>{slot}</span>
+                                    <span className={`font-medium w-14 shrink-0 ${isSuggested ? 'text-amber-700 font-bold' : 'text-gray-400'}`}>{slot}</span>
                                     <div className="flex-1">
                                         {appt ? (
                                             <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded w-full truncate border border-blue-200 cursor-default">
                                                 {appt.patient_name || 'Booked'} ({appt.duration}m)
                                             </div>
                                         ) : (
-                                            <span className={`${isSuggested ? 'text-amber-600 font-bold' : 'text-slate-300 italic'}`}>
+                                            <span className={`${isSuggested ? 'text-amber-600 font-bold' : 'text-gray-400 italic'}`}>
                                                 {isSuggested ? 'Suggested' : 'Available'}
                                             </span>
                                         )}
@@ -1674,7 +1674,7 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                     </div>
                 )}
             </div>
-            <div className="mt-2 text-xs text-slate-400 text-center">
+            <div className="mt-2 text-xs text-gray-400 text-center">
                 Click available slots to suggest them
             </div>
         </div>

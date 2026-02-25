@@ -156,7 +156,7 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
                         </div>
                         <div>
                             <div className="flex items-center space-x-2">
-                                <h2 className="text-xl font-black text-gray-900">{type} Review Center</h2>
+                                <h2 className="text-xl font-bold text-gray-900">{type} Review Center</h2>
                                 <span className={`px-2 py-0.5 rounded-full bg-${color}-100 text-${color}-700 text-[10px] font-bold uppercase`}>Commercial Grade</span>
                             </div>
                             <p className="text-xs text-gray-500 font-medium">Patient: <span className="text-gray-900 font-bold">{patientName}</span> • History: {filteredDocs.length} Studies</p>
@@ -187,7 +187,7 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
                     {/* Sidebar: Study History */}
                     <div className="w-72 bg-white border-r border-gray-100 flex flex-col">
                         <div className="p-4 border-b border-gray-50 bg-gray-50/50">
-                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center space-x-2">
+                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center space-x-2">
                                 <History className="w-3 h-3" />
                                 <span>Study Repository</span>
                             </h3>
@@ -256,7 +256,7 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
 
                             <div className="flex items-center space-x-4">
                                 <div className="flex flex-col items-end">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase">Analysis Engine</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase">Analysis Engine</span>
                                     <span className={`text-[11px] font-bold text-${color}-600 underline decoration-2 underline-offset-4 ring-offset-2 ring-1 ring-${color}-200 px-2 rounded-full`}>High-Fidelity Viewing</span>
                                 </div>
                                 <a
@@ -327,15 +327,15 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
                         {/* Analysis Footer */}
                         <div className="h-48 bg-white border-t border-gray-100 p-6 flex gap-8">
                             <div className="flex-1">
-                                <h4 className={`text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2`}>
+                                <h4 className={`text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2`}>
                                     <Info className="w-3 h-3" />
                                     <span>Clinical Interpretation</span>
                                 </h4>
                                 <div className="grid grid-cols-4 gap-4">
                                     {Object.entries(parseTags(selectedDoc)).map(([key, value]) => (
                                         <div key={key} className={`p-3 rounded-2xl bg-${color}-50/50 border border-${color}-100/50`}>
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-tight">{key.replace('_', ' ')}</p>
-                                            <p className={`text-sm font-black text-${color}-900`}>{value}</p>
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{key.replace('_', ' ')}</p>
+                                            <p className={`text-sm font-bold text-${color}-900`}>{value}</p>
                                         </div>
                                     ))}
                                     {Object.keys(parseTags(selectedDoc)).length === 0 && (
@@ -347,7 +347,7 @@ const CardiologyViewer = ({ isOpen, onClose, type, documents, patientName }) => 
                             </div>
 
                             <div className="w-80 border-l border-gray-100 pl-8">
-                                <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Quick Actions</h4>
+                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Actions</h4>
                                 <div className="space-y-2">
                                     <button className={`w-full py-3 bg-${color}-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-${color}-200 hover:bg-${color}-700 transition-all flex items-center justify-center gap-2`}>
                                         <Download className="w-4 h-4" /> Download Original DICOM/PDF

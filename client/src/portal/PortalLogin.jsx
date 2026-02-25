@@ -73,8 +73,8 @@ const PortalLogin = () => {
                         <div className="mb-8">
                             <img src="/logo.png" alt="PageMD Logo" className="h-12 mx-auto object-contain" />
                         </div>
-                        <h1 className="text-2xl font-bold text-slate-800 tracking-tight mb-2">Patient Portal</h1>
-                        <p className="text-slate-500 text-sm font-medium">Secure access to your health records</p>
+                        <h1 className="text-2xl font-bold text-gray-800 tracking-tight mb-2">Patient Portal</h1>
+                        <p className="text-gray-500 text-sm font-medium">Secure access to your health records</p>
                     </div>
 
                     {error && (
@@ -89,7 +89,7 @@ const PortalLogin = () => {
 
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-2">
-                            <label htmlFor="email" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                            <label htmlFor="email" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
                             <input
                                 id="email"
                                 name="email"
@@ -99,7 +99,7 @@ const PortalLogin = () => {
                                 autoCapitalize="none"
                                 autoCorrect="off"
                                 spellCheck="false"
-                                className="w-full px-5 py-3.5 rounded-2xl border border-slate-100 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-slate-800"
+                                className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-gray-800"
                                 placeholder="name@example.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
@@ -108,7 +108,7 @@ const PortalLogin = () => {
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between mb-1">
-                                <label htmlFor="password" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                                <label htmlFor="password" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
                                 <Link to="/portal/forgot-password" className="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider">Forgot Password?</Link>
                             </div>
                             <input
@@ -117,7 +117,7 @@ const PortalLogin = () => {
                                 type="password"
                                 required
                                 autoComplete="current-password"
-                                className="w-full px-5 py-3.5 rounded-2xl border border-slate-100 bg-slate-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-slate-800"
+                                className="w-full px-5 py-3.5 rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-300 font-medium text-gray-800"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}

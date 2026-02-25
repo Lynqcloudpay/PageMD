@@ -102,7 +102,7 @@ const PlatformAdminClinics = () => {
             case 'active': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
             case 'trial': return 'bg-amber-100 text-amber-700 border-amber-200';
             case 'suspended': return 'bg-red-100 text-red-700 border-red-200';
-            default: return 'bg-slate-100 text-slate-600 border-slate-200';
+            default: return 'bg-gray-50 text-gray-600 border-gray-200';
         }
     };
 
@@ -124,20 +124,20 @@ const PlatformAdminClinics = () => {
                         <ArrowLeft className="w-4 h-4" />
                         Back to Dashboard
                     </button>
-                    <h1 className="text-3xl font-bold text-slate-800 mb-2">Clinic Management</h1>
-                    <p className="text-slate-500">Add, manage, and monitor all clinics on the platform</p>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Clinic Management</h1>
+                    <p className="text-gray-500">Add, manage, and monitor all clinics on the platform</p>
                 </div>
 
                 {/* Actions Bar */}
                 <div className="mb-8 flex flex-wrap items-center gap-4">
                     <div className="flex-1 min-w-[300px] relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
                             placeholder="Search clinics..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3.5 bg-white/80 backdrop-blur-xl border border-slate-200 rounded-2xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-300 shadow-sm"
+                            className="w-full pl-12 pr-4 py-3.5 bg-white/80 backdrop-blur-xl border border-gray-200 rounded-2xl text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-300 shadow-sm"
                         />
                     </div>
                     <button
@@ -174,7 +174,7 @@ const PlatformAdminClinics = () => {
                                         <img
                                             src={clinic.logo_url}
                                             alt={`${clinic.display_name} logo`}
-                                            className="w-14 h-14 rounded-2xl object-cover shadow-lg group-hover:scale-105 transition-transform border border-slate-100"
+                                            className="w-14 h-14 rounded-2xl object-cover shadow-lg group-hover:scale-105 transition-transform border border-gray-100"
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
                                                 e.target.nextSibling.style.display = 'flex';
@@ -187,15 +187,15 @@ const PlatformAdminClinics = () => {
                                         <Building2 className="w-7 h-7 text-white" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors text-lg truncate">{clinic.display_name}</h3>
-                                        <p className="text-sm text-slate-400 truncate">{clinic.slug}</p>
+                                        <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors text-lg truncate">{clinic.display_name}</h3>
+                                        <p className="text-sm text-gray-400 truncate">{clinic.slug}</p>
                                     </div>
-                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all shrink-0" />
+                                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all shrink-0" />
                                 </div>
 
                                 <div className="space-y-3 text-sm">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-slate-500 flex items-center gap-2">
+                                        <span className="text-gray-500 flex items-center gap-2">
                                             <Users className="w-4 h-4" />
                                             Status
                                         </span>
@@ -219,25 +219,25 @@ const PlatformAdminClinics = () => {
 
                                     {/* Feature Badges */}
                                     <div className="flex items-center gap-2 py-1">
-                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mr-1">Features</span>
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mr-1">Features</span>
                                         <div className="flex items-center gap-2">
                                             {clinic.enabled_features?.efax && <Activity className="w-3.5 h-3.5 text-indigo-400" title="eFax Enabled" />}
                                             {clinic.enabled_features?.labs && <Database className="w-3.5 h-3.5 text-blue-400" title="Labs Enabled" />}
                                             {clinic.enabled_features?.telehealth && <Zap className="w-3.5 h-3.5 text-orange-400" title="Telehealth Enabled" />}
                                             {clinic.enabled_features?.eprescribe && <Shield className="w-3.5 h-3.5 text-purple-400" title="ePrescribe Enabled" />}
                                             {!clinic.enabled_features || Object.values(clinic.enabled_features).every(v => !v) && (
-                                                <span className="text-[10px] text-slate-300 italic">None enabled</span>
+                                                <span className="text-[10px] text-gray-400 italic">None enabled</span>
                                             )}
                                         </div>
                                     </div>
                                     {clinic.specialty && (
                                         <div className="flex items-center justify-between">
-                                            <span className="text-slate-500">Specialty</span>
-                                            <span className="text-slate-700 font-medium">{clinic.specialty}</span>
+                                            <span className="text-gray-500">Specialty</span>
+                                            <span className="text-gray-700 font-medium">{clinic.specialty}</span>
                                         </div>
                                     )}
                                     {clinic.contact_email && (
-                                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                                        <div className="flex items-center gap-2 text-gray-400 text-xs">
                                             <Mail className="w-3.5 h-3.5" />
                                             <span className="truncate">{clinic.contact_email}</span>
                                         </div>
@@ -247,9 +247,9 @@ const PlatformAdminClinics = () => {
                         ))
                     ) : (
                         <div className="col-span-full text-center py-20">
-                            <Building2 className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-                            <p className="text-slate-400 text-lg font-medium">No clinics found</p>
-                            <p className="text-slate-400 text-sm">Try adjusting your search or add a new clinic</p>
+                            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="text-gray-400 text-lg font-medium">No clinics found</p>
+                            <p className="text-gray-400 text-sm">Try adjusting your search or add a new clinic</p>
                         </div>
                     )}
                 </div>
@@ -258,10 +258,10 @@ const PlatformAdminClinics = () => {
             {/* Add Clinic Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
+                    <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-gray-100">
                         <button
                             onClick={() => setShowAddModal(false)}
-                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                            className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
                         >
                             <XCircle className="w-6 h-6" />
                         </button>
@@ -271,8 +271,8 @@ const PlatformAdminClinics = () => {
                                 <Plus className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
-                                <p className="text-slate-500 text-sm">Create a new clinic with dedicated database</p>
+                                <h2 className="text-2xl font-bold text-gray-800">Onboard New Clinic</h2>
+                                <p className="text-gray-500 text-sm">Create a new clinic with dedicated database</p>
                             </div>
                         </div>
 
@@ -285,44 +285,44 @@ const PlatformAdminClinics = () => {
                         <form onSubmit={handleCreateClinic} className="space-y-6">
                             {/* Clinic Details */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                     <Building2 className="w-4 h-4" /> Clinic Details
                                 </h3>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="col-span-2">
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Display Name</label>
                                         <input
                                             type="text"
                                             required
                                             placeholder="e.g. Heart Center of Nevada"
                                             value={newClinic.displayName}
                                             onChange={e => setNewClinic({ ...newClinic, displayName: e.target.value })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Slug (Subdomain)</label>
                                         <input
                                             type="text"
                                             required
                                             placeholder="e.g. heart-center-nv"
                                             value={newClinic.slug}
                                             onChange={handleSlugChange}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                         />
-                                        <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier (auto-formatted)</p>
+                                        <p className="text-[10px] text-gray-400 mt-1">Unique URL identifier (auto-formatted)</p>
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Specialty</label>
                                         <input
                                             type="text"
                                             placeholder="e.g. Cardiology"
                                             value={newClinic.details.specialty}
                                             onChange={e => setNewClinic({ ...newClinic, details: { ...newClinic.details, specialty: e.target.value } })}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                         />
                                     </div>
                                 </div>
@@ -330,47 +330,47 @@ const PlatformAdminClinics = () => {
 
                             {/* Initial Admin User */}
                             <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                     <Shield className="w-4 h-4" /> Initial Admin User
                                 </h3>
-                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">First Name</label>
                                             <input
                                                 type="text"
                                                 required
                                                 value={newClinic.adminUser.firstName}
                                                 onChange={e => setNewClinic({ ...newClinic, adminUser: { ...newClinic.adminUser, firstName: e.target.value } })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Last Name</label>
                                             <input
                                                 type="text"
                                                 required
                                                 value={newClinic.adminUser.lastName}
                                                 onChange={e => setNewClinic({ ...newClinic, adminUser: { ...newClinic.adminUser, lastName: e.target.value } })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Email</label>
                                         <input
                                             type="email"
                                             required
                                             placeholder="admin@clinic.com"
                                             value={newClinic.adminUser.email}
                                             onChange={e => setNewClinic({ ...newClinic, adminUser: { ...newClinic.adminUser, email: e.target.value } })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-semibold text-slate-600 mb-1.5">Temporary Password</label>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Temporary Password</label>
                                         <input
                                             type="password"
                                             required
@@ -378,7 +378,7 @@ const PlatformAdminClinics = () => {
                                             placeholder="Min 8 characters"
                                             value={newClinic.adminUser.password}
                                             onChange={e => setNewClinic({ ...newClinic, adminUser: { ...newClinic.adminUser, password: e.target.value } })}
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                         />
                                     </div>
                                 </div>
@@ -397,7 +397,7 @@ const PlatformAdminClinics = () => {
                                         </>
                                     )}
                                 </button>
-                                <p className="text-center text-[10px] text-slate-400 mt-3">
+                                <p className="text-center text-[10px] text-gray-400 mt-3">
                                     This will create a new dedicated database schema and initial admin account.
                                 </p>
                             </div>

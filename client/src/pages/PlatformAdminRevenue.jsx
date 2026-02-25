@@ -52,8 +52,8 @@ const PlatformAdminRevenue = () => {
                         <ArrowLeft className="w-4 h-4" />
                         Back to Dashboard
                     </button>
-                    <h1 className="text-3xl font-bold text-slate-800 mb-2">Revenue Analytics</h1>
-                    <p className="text-slate-500">Track billing, subscriptions, and financial metrics</p>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Revenue Analytics</h1>
+                    <p className="text-gray-500">Track billing, subscriptions, and financial metrics</p>
                 </div>
 
                 {loading ? (
@@ -70,10 +70,10 @@ const PlatformAdminRevenue = () => {
                                         <DollarSign className="w-7 h-7 text-white" />
                                     </div>
                                     <div>
-                                        <div className="text-3xl font-bold text-slate-800">
+                                        <div className="text-3xl font-bold text-gray-800">
                                             ${parseFloat(revenueData?.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                         </div>
-                                        <div className="text-sm text-slate-500">Monthly Revenue</div>
+                                        <div className="text-sm text-gray-500">Monthly Revenue</div>
                                     </div>
                                 </div>
                             </div>
@@ -84,8 +84,8 @@ const PlatformAdminRevenue = () => {
                                         <CreditCard className="w-7 h-7 text-white" />
                                     </div>
                                     <div>
-                                        <div className="text-3xl font-bold text-slate-800">{revenueData?.transactions || 0}</div>
-                                        <div className="text-sm text-slate-500">Transactions</div>
+                                        <div className="text-3xl font-bold text-gray-800">{revenueData?.transactions || 0}</div>
+                                        <div className="text-sm text-gray-500">Transactions</div>
                                     </div>
                                 </div>
                             </div>
@@ -96,8 +96,8 @@ const PlatformAdminRevenue = () => {
                                         <TrendingUp className="w-7 h-7 text-white" />
                                     </div>
                                     <div>
-                                        <div className="text-3xl font-bold text-slate-800">$0</div>
-                                        <div className="text-sm text-slate-500">Avg. Per Clinic</div>
+                                        <div className="text-3xl font-bold text-gray-800">$0</div>
+                                        <div className="text-sm text-gray-500">Avg. Per Clinic</div>
                                     </div>
                                 </div>
                             </div>
@@ -108,8 +108,8 @@ const PlatformAdminRevenue = () => {
                                         <PieChart className="w-7 h-7 text-white" />
                                     </div>
                                     <div>
-                                        <div className="text-3xl font-bold text-slate-800">0%</div>
-                                        <div className="text-sm text-slate-500">MoM Growth</div>
+                                        <div className="text-3xl font-bold text-gray-800">0%</div>
+                                        <div className="text-sm text-gray-500">MoM Growth</div>
                                     </div>
                                 </div>
                             </div>
@@ -120,27 +120,27 @@ const PlatformAdminRevenue = () => {
                             <div className="w-20 h-20 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-3xl flex items-center justify-center mx-auto mb-6">
                                 <BarChart3 className="w-10 h-10 text-emerald-600" />
                             </div>
-                            <h2 className="text-2xl font-bold text-slate-800 mb-4">Revenue Dashboard Coming Soon</h2>
-                            <p className="text-slate-500 max-w-lg mx-auto mb-8">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Revenue Dashboard Coming Soon</h2>
+                            <p className="text-gray-500 max-w-lg mx-auto mb-8">
                                 Detailed billing analytics, subscription management, and financial reports will be available here.
                                 This feature is being developed to support Stripe integration and clinic billing.
                             </p>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                     <Calendar className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                                    <h3 className="font-semibold text-slate-700">Subscription Tracking</h3>
-                                    <p className="text-sm text-slate-500 mt-1">Monitor active subscriptions and renewals</p>
+                                    <h3 className="font-semibold text-gray-700">Subscription Tracking</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Monitor active subscriptions and renewals</p>
                                 </div>
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                     <TrendingUp className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                                    <h3 className="font-semibold text-slate-700">Revenue Charts</h3>
-                                    <p className="text-sm text-slate-500 mt-1">Visualize revenue trends over time</p>
+                                    <h3 className="font-semibold text-gray-700">Revenue Charts</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Visualize revenue trends over time</p>
                                 </div>
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                     <CreditCard className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                                    <h3 className="font-semibold text-slate-700">Invoice History</h3>
-                                    <p className="text-sm text-slate-500 mt-1">View and export transaction records</p>
+                                    <h3 className="font-semibold text-gray-700">Invoice History</h3>
+                                    <p className="text-sm text-gray-500 mt-1">View and export transaction records</p>
                                 </div>
                             </div>
                         </div>

@@ -26,9 +26,9 @@ const StatusBtn = memo(({ statusKey, label, currentStatus, currentOrder, statusT
     const showTime = (isPast || isActive) && (time > 0);
 
     const colors = {
-        arrived: isActive ? 'text-indigo-700 font-semibold bg-indigo-50/50 px-1.5 py-0 rounded border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
-        checked_in: isActive ? 'text-teal-700 font-semibold bg-teal-50/50 px-1.5 py-0 rounded border border-teal-100 shadow-sm' : isPast ? 'text-teal-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium',
-        checked_out: isActive ? 'text-rose-600 font-semibold bg-rose-50 px-1.5 py-0 rounded border border-rose-100 shadow-sm' : isPast ? 'text-rose-500 font-medium' : 'text-slate-400 hover:text-slate-500 font-medium'
+        arrived: isActive ? 'text-indigo-700 font-semibold bg-indigo-50/50 px-1.5 py-0 rounded border border-indigo-100 shadow-sm' : isPast ? 'text-indigo-500 font-medium' : 'text-gray-400 hover:text-gray-500 font-medium',
+        checked_in: isActive ? 'text-teal-700 font-semibold bg-teal-50/50 px-1.5 py-0 rounded border border-teal-100 shadow-sm' : isPast ? 'text-teal-500 font-medium' : 'text-gray-400 hover:text-gray-500 font-medium',
+        checked_out: isActive ? 'text-rose-600 font-semibold bg-rose-50 px-1.5 py-0 rounded border border-rose-100 shadow-sm' : isPast ? 'text-rose-500 font-medium' : 'text-gray-400 hover:text-gray-500 font-medium'
     };
 
     const isDisabled = saving || isTerminalState || !canUpdateStatus;
@@ -141,7 +141,7 @@ const RoomBtn = memo(({
                             ? 'bg-amber-50 border-amber-200 text-amber-700 font-semibold'
                             : 'bg-violet-50 border-violet-200 text-violet-700 font-semibold')
                         : (status === 'checked_out' || status === 'completed') ? 'bg-violet-50 border-violet-100 text-violet-400 font-medium'
-                            : 'bg-white border-slate-100 text-slate-300 hover:text-slate-400'
+                            : 'bg-white border-gray-100 text-gray-400 hover:text-gray-400'
                         } ${saving || isTerminalState || !canUpdateStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-violet-300'}`}
                 >
                     {isTerminalState && status !== 'in_room' && <span className="text-[9px] font-bold mr-1">✓</span>}
@@ -480,7 +480,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
                         formatCompactTime={formatCompactTime}
                     />
-                    <span className="text-slate-200 text-[8px] mx-1">•</span>
+                    <span className="text-gray-300 text-[8px] mx-1">•</span>
                     <StatusBtn
                         statusKey="checked_in" label="Checked In"
                         currentStatus={status} currentOrder={currentOrder}
@@ -489,7 +489,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         saving={saving} isTerminalState={isTerminalState} canUpdateStatus={canUpdateStatus}
                         formatCompactTime={formatCompactTime}
                     />
-                    <span className="text-slate-200 text-[8px] mx-1">•</span>
+                    <span className="text-gray-300 text-[8px] mx-1">•</span>
                     <RoomBtn
                         status={status} roomSubStatus={roomSubStatus} room={room}
                         roomInput={roomInput} setRoomInput={setRoomInput}
@@ -501,7 +501,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                         formatCompactTime={formatCompactTime}
                         displayRoom={displayRoom} hasRoomTime={hasRoomTime} nurseTime={nurseTime} readyTime={readyTime}
                     />
-                    <span className="text-slate-200 text-[8px] mx-1">•</span>
+                    <span className="text-gray-300 text-[8px] mx-1">•</span>
                     <StatusBtn
                         statusKey="checked_out" label="Out"
                         currentStatus={status} currentOrder={currentOrder}
@@ -520,7 +520,7 @@ const InlinePatientStatus = ({ appointment, onStatusUpdate, showNoShowCancelled 
                 )}
 
                 {showNoShowCancelled && !isTerminalState && (
-                    <div className="ml-4 flex items-center gap-3 border-l border-slate-100 pl-4">
+                    <div className="ml-4 flex items-center gap-3 border-l border-gray-100 pl-4">
                         <NoShowCancelledBtn
                             statusKey="no_show" label="No Show"
                             currentStatus={status} handleNoShowOrCancelled={handleNoShowOrCancelled}

@@ -49,7 +49,7 @@ const RegisterPage = () => {
                     </div>
 
                     <div className="space-y-4">
-                        <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+                        <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
                             Referral Applied
                         </h1>
                         <p className="text-lg text-gray-600 leading-relaxed">
@@ -61,7 +61,7 @@ const RegisterPage = () => {
                         </p>
                     </div>
 
-                    <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100 flex flex-col items-center gap-6">
+                    <div className="p-8 rounded-3xl bg-gray-50 border border-gray-100 flex flex-col items-center gap-6">
                         <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                         <div className="space-y-2">
                             <p className="text-sm font-bold text-gray-900 uppercase tracking-widest">Redirecting to Practice Setup</p>
@@ -86,7 +86,7 @@ const RegisterPage = () => {
 
                     <button
                         onClick={() => navigate(`/contact${referralCode ? `?ref=${referralCode}` : ''}`)}
-                        className="text-xs font-black text-gray-400 hover:text-blue-600 uppercase tracking-[0.2em] transition-colors"
+                        className="text-xs font-bold text-gray-400 hover:text-blue-600 uppercase tracking-[0.2em] transition-colors"
                     >
                         Click here if not redirected in 5 seconds
                     </button>

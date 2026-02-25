@@ -228,7 +228,7 @@ const DeveloperPortalTab = () => {
 
             {/* Create App Modal */}
             {isCreatingApp && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-50/40 backdrop-blur-sm">
                     <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
                         <div className="px-8 py-6 bg-gradient-to-r from-primary-600 to-indigo-600 text-white">
                             <h4 className="text-xl font-bold">Register New Application</h4>
@@ -318,7 +318,7 @@ const DeveloperPortalTab = () => {
 
             {/* Secret Reveal Modal */}
             {showSecretModal && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-gray-50/60 backdrop-blur-md">
                     <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
                         <div className="p-8 text-center space-y-6">
                             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
@@ -330,7 +330,7 @@ const DeveloperPortalTab = () => {
                                     For security, we only show this secret once. Store it immediately and securely.
                                 </p>
                             </div>
-                            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3 break-all font-mono text-sm text-gray-700 selection:bg-emerald-200">
+                            <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl flex items-center gap-3 break-all font-mono text-sm text-gray-700 selection:bg-emerald-200">
                                 {showSecretModal}
                                 <button onClick={() => copyToClipboard(showSecretModal)} className="shrink-0 p-2 hover:bg-white rounded-lg text-primary-600 shadow-sm transition-all active:scale-90">
                                     <Copy className="w-5 h-5" />
@@ -338,7 +338,7 @@ const DeveloperPortalTab = () => {
                             </div>
                             <button
                                 onClick={() => setShowSecretModal(null)}
-                                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black transition-all"
+                                className="w-full py-4 bg-gray-50 text-white rounded-2xl font-bold hover:bg-black transition-all"
                             >
                                 I have saved the secret
                             </button>

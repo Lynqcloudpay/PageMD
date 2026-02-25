@@ -55,7 +55,7 @@ const PlatformAdminDashboard = () => {
                     <div className="w-16 h-16 rounded-2xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-xl shadow-blue-500/10 flex items-center justify-center">
                         <div className="w-10 h-10 rounded-full border-3 border-blue-100 border-t-blue-500 animate-spin"></div>
                     </div>
-                    <p className="mt-4 text-slate-500 text-sm font-medium">Loading dashboard...</p>
+                    <p className="mt-4 text-gray-500 text-sm font-medium">Loading dashboard...</p>
                 </div>
             </div>
         );
@@ -86,8 +86,8 @@ const PlatformAdminDashboard = () => {
                                 <Shield className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-slate-800">Platform Admin</h1>
-                                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                                <h1 className="text-xl font-bold text-gray-800">Platform Admin</h1>
+                                <p className="text-xs text-gray-500 flex items-center gap-1.5">
                                     <Cpu className="w-3 h-3" />
                                     Command Center
                                 </p>
@@ -102,13 +102,13 @@ const PlatformAdminDashboard = () => {
                             </div>
 
                             {/* Admin Profile */}
-                            <div className="flex items-center gap-3 px-4 py-2 bg-white/80 border border-slate-200/80 rounded-xl shadow-sm">
+                            <div className="flex items-center gap-3 px-4 py-2 bg-white/80 border border-gray-200/80 rounded-xl shadow-sm">
                                 <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-500/20">
                                     <span className="text-white font-bold text-sm">{admin?.first_name?.[0]}</span>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-semibold text-slate-800">{admin?.first_name} {admin?.last_name}</p>
-                                    <p className="text-[11px] text-slate-500 capitalize">{admin?.role}</p>
+                                    <p className="text-sm font-semibold text-gray-800">{admin?.first_name} {admin?.last_name}</p>
+                                    <p className="text-[11px] text-gray-500 capitalize">{admin?.role}</p>
                                 </div>
                             </div>
 
@@ -129,8 +129,8 @@ const PlatformAdminDashboard = () => {
             <main className="max-w-[1600px] mx-auto px-6 py-8 relative z-10">
                 {/* Welcome Section */}
                 <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-slate-800">Welcome back, {admin?.first_name}!</h2>
-                    <p className="text-slate-500 mt-1">Here's what's happening across your platform today.</p>
+                    <h2 className="text-2xl font-bold text-gray-800">Welcome back, {admin?.first_name}!</h2>
+                    <p className="text-gray-500 mt-1">Here's what's happening across your platform today.</p>
                 </div>
 
                 {/* Stats Grid - Premium Cards */}
@@ -151,8 +151,8 @@ const PlatformAdminDashboard = () => {
                                     <span className="text-[11px] font-bold text-emerald-600">+{activeClinics}</span>
                                 </div>
                             </div>
-                            <h3 className="text-4xl font-bold text-slate-800 mb-1">{totalClinics}</h3>
-                            <p className="text-sm font-medium text-slate-500 mb-3">Total Clinics</p>
+                            <h3 className="text-4xl font-bold text-gray-800 mb-1">{totalClinics}</h3>
+                            <p className="text-sm font-medium text-gray-500 mb-3">Total Clinics</p>
                             <div className="flex items-center gap-3 text-xs">
                                 <span className="text-emerald-600 font-semibold flex items-center gap-1.5 px-2 py-1 bg-emerald-50 rounded-lg">
                                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
@@ -164,7 +164,7 @@ const PlatformAdminDashboard = () => {
                                 </span>
                             </div>
                         </div>
-                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                     </button>
 
                     {/* Revenue Card */}
@@ -180,13 +180,13 @@ const PlatformAdminDashboard = () => {
                                 </div>
                                 <BarChart3 className="w-5 h-5 text-emerald-400" />
                             </div>
-                            <h3 className="text-4xl font-bold text-slate-800 mb-1">${monthlyRevenue.toLocaleString()}</h3>
-                            <p className="text-sm font-medium text-slate-500 mb-3">Monthly Revenue</p>
+                            <h3 className="text-4xl font-bold text-gray-800 mb-1">${monthlyRevenue.toLocaleString()}</h3>
+                            <p className="text-sm font-medium text-gray-500 mb-3">Monthly Revenue</p>
                             <div className="text-xs text-emerald-600 font-semibold px-2 py-1 bg-emerald-50 rounded-lg inline-block">
                                 {transactions} transactions this month
                             </div>
                         </div>
-                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                     </button>
 
                     {/* Support Tickets Card */}
@@ -206,13 +206,13 @@ const PlatformAdminDashboard = () => {
                                     <CheckCircle className="w-5 h-5 text-emerald-500" />
                                 )}
                             </div>
-                            <h3 className="text-4xl font-bold text-slate-800 mb-1">{openTickets}</h3>
-                            <p className="text-sm font-medium text-slate-500 mb-3">Open Tickets</p>
+                            <h3 className="text-4xl font-bold text-gray-800 mb-1">{openTickets}</h3>
+                            <p className="text-sm font-medium text-gray-500 mb-3">Open Tickets</p>
                             <div className={`text-xs font-semibold px-2 py-1 rounded-lg inline-block ${openTickets > 0 ? 'text-amber-600 bg-amber-50' : 'text-emerald-600 bg-emerald-50'}`}>
                                 {openTickets === 0 ? '✓ All tickets resolved' : 'Requires attention'}
                             </div>
                         </div>
-                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-slate-300 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
                     </button>
 
                     {/* System Health Card */}
@@ -229,13 +229,13 @@ const PlatformAdminDashboard = () => {
                                 <CheckCircle className="w-5 h-5 text-emerald-500" />
                             </div>
                             <h3 className="text-4xl font-bold text-emerald-600 mb-1">100%</h3>
-                            <p className="text-sm font-medium text-slate-500 mb-3">System Health</p>
+                            <p className="text-sm font-medium text-gray-500 mb-3">System Health</p>
                             <div className="text-xs text-emerald-600 font-semibold px-2 py-1 bg-emerald-50 rounded-lg inline-flex items-center gap-1.5">
                                 <Globe className="w-3 h-3" />
                                 All systems operational
                             </div>
                         </div>
-                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="absolute bottom-6 right-6 w-5 h-5 text-gray-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                     </button>
                 </div>
 
@@ -243,7 +243,7 @@ const PlatformAdminDashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     {/* Quick Actions */}
                     <div className="lg:col-span-2 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg shadow-slate-200/50 p-6">
-                        <h2 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-3">
+                        <h2 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/25">
                                 <Zap className="w-5 h-5 text-white" />
                             </div>
@@ -255,8 +255,8 @@ const PlatformAdminDashboard = () => {
                                 className="group p-5 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/60 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all"
                             >
                                 <Building2 className="w-10 h-10 text-blue-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Manage Clinics</p>
-                                <p className="text-[11px] text-slate-500">View, edit, suspend</p>
+                                <p className="text-sm font-bold text-gray-800 mb-1">Manage Clinics</p>
+                                <p className="text-[11px] text-gray-500">View, edit, suspend</p>
                             </button>
 
                             <button
@@ -264,8 +264,8 @@ const PlatformAdminDashboard = () => {
                                 className="group p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200/60 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/10 transition-all"
                             >
                                 <LineChart className="w-10 h-10 text-emerald-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Revenue Analytics</p>
-                                <p className="text-[11px] text-slate-500">Billing & reports</p>
+                                <p className="text-sm font-bold text-gray-800 mb-1">Revenue Analytics</p>
+                                <p className="text-[11px] text-gray-500">Billing & reports</p>
                             </button>
 
                             <button
@@ -273,8 +273,8 @@ const PlatformAdminDashboard = () => {
                                 className="group p-5 rounded-xl bg-gradient-to-br from-amber-50 to-orange-100/50 border border-amber-200/60 hover:border-amber-300 hover:shadow-lg hover:shadow-amber-500/10 transition-all"
                             >
                                 <Ticket className="w-10 h-10 text-amber-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Support Queue</p>
-                                <p className="text-[11px] text-slate-500">Manage tickets</p>
+                                <p className="text-sm font-bold text-gray-800 mb-1">Support Queue</p>
+                                <p className="text-[11px] text-gray-500">Manage tickets</p>
                             </button>
 
                             <button
@@ -282,8 +282,8 @@ const PlatformAdminDashboard = () => {
                                 className="group p-5 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100/50 border border-purple-200/60 hover:border-purple-300 hover:shadow-lg hover:shadow-purple-500/10 transition-all"
                             >
                                 <Users className="w-10 h-10 text-purple-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Team Management</p>
-                                <p className="text-[11px] text-slate-500">Users & roles</p>
+                                <p className="text-sm font-bold text-gray-800 mb-1">Team Management</p>
+                                <p className="text-[11px] text-gray-500">Users & roles</p>
                             </button>
 
                             <button
@@ -291,8 +291,8 @@ const PlatformAdminDashboard = () => {
                                 className="group p-5 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100/50 border border-indigo-200/60 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-500/10 transition-all"
                             >
                                 <Shield className="w-10 h-10 text-indigo-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Role Governance</p>
-                                <p className="text-[11px] text-slate-500">Global templates & drift</p>
+                                <p className="text-sm font-bold text-gray-800 mb-1">Role Governance</p>
+                                <p className="text-[11px] text-gray-500">Global templates & drift</p>
                             </button>
 
                             <button
@@ -300,17 +300,17 @@ const PlatformAdminDashboard = () => {
                                 className="group p-5 rounded-xl bg-gradient-to-br from-rose-50 to-rose-100/50 border border-rose-200/60 hover:border-rose-300 hover:shadow-lg hover:shadow-rose-500/10 transition-all"
                             >
                                 <Key className="w-10 h-10 text-rose-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Developer Platform</p>
-                                <p className="text-[11px] text-slate-500">API keys & partners</p>
+                                <p className="text-sm font-bold text-gray-800 mb-1">Developer Platform</p>
+                                <p className="text-[11px] text-gray-500">API keys & partners</p>
                             </button>
 
                             <button
                                 onClick={() => handleNavigation('/platform-admin/settings')}
-                                className="group p-5 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-slate-200/60 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-500/10 transition-all"
+                                className="group p-5 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100/50 border border-gray-200/60 hover:border-gray-200 hover:shadow-lg hover:shadow-slate-500/10 transition-all"
                             >
-                                <Settings className="w-10 h-10 text-slate-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">System Settings</p>
-                                <p className="text-[11px] text-slate-500">Configuration</p>
+                                <Settings className="w-10 h-10 text-gray-600 mb-3" />
+                                <p className="text-sm font-bold text-gray-800 mb-1">System Settings</p>
+                                <p className="text-[11px] text-gray-500">Configuration</p>
                             </button>
 
                             <button
@@ -318,15 +318,15 @@ const PlatformAdminDashboard = () => {
                                 className="group p-5 rounded-xl bg-gradient-to-br from-cyan-50 to-cyan-100/50 border border-cyan-200/60 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-500/10 transition-all"
                             >
                                 <Database className="w-10 h-10 text-cyan-600 mb-3" />
-                                <p className="text-sm font-bold text-slate-800 mb-1">Archives</p>
-                                <p className="text-[11px] text-slate-500">HIPAA backups</p>
+                                <p className="text-sm font-bold text-gray-800 mb-1">Archives</p>
+                                <p className="text-[11px] text-gray-500">HIPAA backups</p>
                             </button>
                         </div>
                     </div>
 
                     {/* Recent Clinics */}
                     <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/80 shadow-lg shadow-slate-200/50 p-6">
-                        <h2 className="text-lg font-bold text-slate-800 mb-5 flex items-center gap-3">
+                        <h2 className="text-lg font-bold text-gray-800 mb-5 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
                                 <Clock className="w-5 h-5 text-white" />
                             </div>
@@ -338,20 +338,20 @@ const PlatformAdminDashboard = () => {
                                     <button
                                         key={idx}
                                         onClick={() => handleNavigation(`/platform-admin/clinics/${clinic.id}`)}
-                                        className="w-full flex items-center justify-between p-4 rounded-xl bg-slate-50/80 border border-slate-200/60 hover:bg-blue-50/50 hover:border-blue-200 transition-all"
+                                        className="w-full flex items-center justify-between p-4 rounded-xl bg-gray-50/80 border border-gray-200/60 hover:bg-blue-50/50 hover:border-blue-200 transition-all"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-md shadow-blue-500/20">
                                                 {clinic.display_name.charAt(0)}
                                             </div>
                                             <div className="text-left">
-                                                <p className="font-semibold text-slate-800 text-sm">{clinic.display_name}</p>
-                                                <p className="text-[11px] text-slate-500">{new Date(clinic.created_at).toLocaleDateString()}</p>
+                                                <p className="font-semibold text-gray-800 text-sm">{clinic.display_name}</p>
+                                                <p className="text-[11px] text-gray-500">{new Date(clinic.created_at).toLocaleDateString()}</p>
                                             </div>
                                         </div>
                                         <span className={`px-2.5 py-1 text-[11px] font-bold rounded-lg ${clinic.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
                                             clinic.status === 'trial' ? 'bg-amber-100 text-amber-700' :
-                                                'bg-slate-100 text-slate-600'
+                                                'bg-gray-50 text-gray-600'
                                             }`}>
                                             {clinic.status}
                                         </span>
@@ -359,8 +359,8 @@ const PlatformAdminDashboard = () => {
                                 ))
                             ) : (
                                 <div className="text-center py-10">
-                                    <Building2 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                                    <p className="text-slate-400 text-sm">No recent clinics</p>
+                                    <Building2 className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                                    <p className="text-gray-400 text-sm">No recent clinics</p>
                                 </div>
                             )}
                         </div>
@@ -373,18 +373,18 @@ const PlatformAdminDashboard = () => {
                         <div className="flex items-center gap-6">
                             <div className="flex items-center gap-2">
                                 <Server className="w-4 h-4 text-blue-500" />
-                                <span className="text-sm text-slate-600">API: <span className="text-emerald-600 font-semibold">Online</span></span>
+                                <span className="text-sm text-gray-600">API: <span className="text-emerald-600 font-semibold">Online</span></span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Database className="w-4 h-4 text-cyan-500" />
-                                <span className="text-sm text-slate-600">Database: <span className="text-emerald-600 font-semibold">Connected</span></span>
+                                <span className="text-sm text-gray-600">Database: <span className="text-emerald-600 font-semibold">Connected</span></span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Globe className="w-4 h-4 text-indigo-500" />
-                                <span className="text-sm text-slate-600">CDN: <span className="text-emerald-600 font-semibold">Active</span></span>
+                                <span className="text-sm text-gray-600">CDN: <span className="text-emerald-600 font-semibold">Active</span></span>
                             </div>
                         </div>
-                        <div className="text-sm text-slate-400 font-medium">
+                        <div className="text-sm text-gray-400 font-medium">
                             Last updated: {new Date().toLocaleTimeString()}
                         </div>
                     </div>

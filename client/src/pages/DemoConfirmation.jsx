@@ -45,11 +45,11 @@ const DemoConfirmation = () => {
 
     if (status === 'loading') {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-3xl shadow-xl flex flex-col items-center animate-pulse">
                     <img src="/logo.png" alt="PageMD" className="h-8 mb-6 opacity-50" />
                     <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-                    <p className="text-slate-400 text-sm font-medium">Updating appointment status...</p>
+                    <p className="text-gray-400 text-sm font-medium">Updating appointment status...</p>
                 </div>
             </div>
         );
@@ -73,8 +73,8 @@ const DemoConfirmation = () => {
                         </div>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight">Let's Reschedule?</h2>
-                    <p className="text-slate-500 mb-8 leading-relaxed max-w-xs mx-auto">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-3 tracking-tight">Let's Reschedule?</h2>
+                    <p className="text-gray-500 mb-8 leading-relaxed max-w-xs mx-auto">
                         This appointment was previously cancelled. If you're ready to chat, we'd still love to connect at a time that works better for you!
                     </p>
 
@@ -84,7 +84,7 @@ const DemoConfirmation = () => {
                             Schedule New Demo
                             <ArrowRight className="w-4 h-4 ml-2 opacity-50 group-hover:translate-x-1 transition-transform" />
                         </a>
-                        <a href="mailto:support@pagemd.com" className="flex items-center justify-center w-full py-3.5 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-slate-50 transition-all">
+                        <a href="mailto:support@pagemd.com" className="flex items-center justify-center w-full py-3.5 bg-white text-gray-600 border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all">
                             Contact Support
                         </a>
                     </div>
@@ -103,25 +103,25 @@ const DemoConfirmation = () => {
                         </div>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2 tracking-tight">You're All Set!</h2>
-                    <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2 tracking-tight">You're All Set!</h2>
+                    <p className="text-gray-500 mb-8 max-w-xs mx-auto">
                         Your appointment has been confirmed. A calendar invitation with video details has been sent to your email.
                     </p>
 
-                    <div className="bg-slate-50 rounded-2xl p-5 w-full border border-slate-100 text-left mb-6">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Next Steps</h3>
+                    <div className="bg-gray-50 rounded-2xl p-5 w-full border border-gray-100 text-left mb-6">
+                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Next Steps</h3>
                         <div className="space-y-3">
                             <div className="flex items-start gap-3">
                                 <div className="mt-0.5 p-1 bg-blue-100 rounded-full">
                                     <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                                 </div>
-                                <span className="text-sm text-slate-600">Check your inbox for the meeting link</span>
+                                <span className="text-sm text-gray-600">Check your inbox for the meeting link</span>
                             </div>
                             <div className="flex items-start gap-3">
                                 <div className="mt-0.5 p-1 bg-blue-100 rounded-full">
                                     <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
                                 </div>
-                                <span className="text-sm text-slate-600">Prepare any questions for our team</span>
+                                <span className="text-sm text-gray-600">Prepare any questions for our team</span>
                             </div>
                         </div>
                     </div>
@@ -138,18 +138,18 @@ const DemoConfirmation = () => {
             return (
                 <>
                     <div className="relative mb-6">
-                        <div className="absolute inset-0 bg-slate-100 rounded-full scale-150 opacity-20 filter blur-xl"></div>
-                        <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-slate-50 to-white border border-slate-100 rounded-full shadow-sm">
-                            <XCircle className="text-slate-400" size={36} />
+                        <div className="absolute inset-0 bg-gray-50 rounded-full scale-150 opacity-20 filter blur-xl"></div>
+                        <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-tr from-slate-50 to-white border border-gray-100 rounded-full shadow-sm">
+                            <XCircle className="text-gray-400" size={36} />
                         </div>
                     </div>
 
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2 tracking-tight">Appointment Declined</h2>
-                    <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-2 tracking-tight">Appointment Declined</h2>
+                    <p className="text-gray-500 mb-8 max-w-xs mx-auto">
                         We've notified the team. If your schedule opens up, feel free to book a new time!
                     </p>
 
-                    <a href="/" className="flex items-center justify-center w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
+                    <a href="/" className="flex items-center justify-center w-full py-3.5 bg-gray-50 text-white rounded-xl font-bold hover:bg-gray-100 transition-all shadow-lg shadow-slate-200">
                         Return to Homepage
                     </a>
                 </>
@@ -165,11 +165,11 @@ const DemoConfirmation = () => {
                         <AlertCircle className="text-amber-500" size={36} />
                     </div>
                 </div>
-                <h2 className="text-2xl font-bold text-slate-800 mb-2 tracking-tight">Link Expired</h2>
-                <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2 tracking-tight">Link Expired</h2>
+                <p className="text-gray-500 mb-8 max-w-xs mx-auto">
                     {errorMessage || "We couldn't process this request. The link may have expired or is invalid."}
                 </p>
-                <a href="/" className="flex items-center justify-center w-full py-3.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
+                <a href="/" className="flex items-center justify-center w-full py-3.5 bg-gray-50 text-white rounded-xl font-bold hover:bg-gray-100 transition-all shadow-lg shadow-slate-200">
                     Return to Homepage
                 </a>
             </>
@@ -177,7 +177,7 @@ const DemoConfirmation = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 selection:bg-blue-100">
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 selection:bg-blue-100">
             {/* Main Card */}
             <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/50 w-full max-w-md overflow-hidden relative border border-white">
 
@@ -196,11 +196,11 @@ const DemoConfirmation = () => {
 
             {/* Footer */}
             <div className="mt-8 text-center space-y-2">
-                <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">PageMD EMR</p>
-                <div className="flex gap-4 text-xs text-slate-400">
-                    <a href="#" className="hover:text-slate-600 transition-colors">Privacy</a>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">PageMD EMR</p>
+                <div className="flex gap-4 text-xs text-gray-400">
+                    <a href="#" className="hover:text-gray-600 transition-colors">Privacy</a>
                     <span>•</span>
-                    <a href="#" className="hover:text-slate-600 transition-colors">Support</a>
+                    <a href="#" className="hover:text-gray-600 transition-colors">Support</a>
                 </div>
             </div>
         </div>

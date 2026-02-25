@@ -44,7 +44,7 @@ const PortalResetPassword = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 relative overflow-hidden flex items-center justify-center p-6">
+        <div className="min-h-screen bg-gray-50 relative overflow-hidden flex items-center justify-center p-6">
             {/* Background Decoration */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-blue-100/50 blur-3xl" />
@@ -59,8 +59,8 @@ const PortalResetPassword = () => {
                             alt="PageMD"
                             className="h-10 mx-auto mb-6 opacity-90 hover:opacity-100 transition-opacity"
                         />
-                        <h1 className="text-2xl font-bold text-slate-900 mb-2">Reset Password</h1>
-                        <p className="text-slate-500 text-sm leading-relaxed">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">Reset Password</h1>
+                        <p className="text-gray-500 text-sm leading-relaxed">
                             Create a new, strong password for your portal account.
                         </p>
                     </div>
@@ -70,8 +70,8 @@ const PortalResetPassword = () => {
                             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-600 shadow-md shadow-emerald-100/50">
                                 <CheckCircle2 size={32} />
                             </div>
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">Password Reset Successful</h3>
-                            <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Password Reset Successful</h3>
+                            <p className="text-gray-600 text-sm mb-6 leading-relaxed">
                                 Your password has been securely updated. <br />You can now log in with your new credentials.
                             </p>
                             <button
@@ -85,9 +85,9 @@ const PortalResetPassword = () => {
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">New Password</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">New Password</label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
                                         <Lock size={20} />
                                     </div>
                                     <input
@@ -96,13 +96,13 @@ const PortalResetPassword = () => {
                                         minLength={12}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                        className="w-full pl-11 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                                         placeholder="Min. 12 characters"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
                                     >
                                         {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
@@ -110,9 +110,9 @@ const PortalResetPassword = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Confirm Password</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Confirm Password</label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
                                         <Lock size={20} />
                                     </div>
                                     <input
@@ -120,7 +120,7 @@ const PortalResetPassword = () => {
                                         required
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="w-full pl-11 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                        className="w-full pl-11 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                                         placeholder="Repeat password"
                                     />
                                 </div>
@@ -154,7 +154,7 @@ const PortalResetPassword = () => {
                 </div>
 
                 <div className="mt-8 text-center bg-white/50 backdrop-blur-sm py-2 px-4 rounded-full inline-block mx-auto transform left-1/2 -translate-x-1/2 relative border border-white/20">
-                    <p className="text-xs font-semibold text-slate-500 flex items-center gap-2">
+                    <p className="text-xs font-semibold text-gray-500 flex items-center gap-2">
                         <Lock size={12} className="text-emerald-500" />
                         Secure Encrypted Connection
                     </p>

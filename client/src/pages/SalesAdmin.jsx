@@ -969,8 +969,8 @@ const SalesAdmin = () => {
             case 'demo_scheduled': return 'bg-indigo-100 text-indigo-700';
             case 'follow_up': return 'bg-orange-100 text-orange-700';
             case 'converted': return 'bg-emerald-100 text-emerald-700';
-            case 'closed': return 'bg-slate-100 text-slate-700';
-            default: return 'bg-slate-100 text-slate-600';
+            case 'closed': return 'bg-gray-50 text-gray-700';
+            default: return 'bg-gray-50 text-gray-600';
         }
     };
 
@@ -1025,37 +1025,37 @@ const SalesAdmin = () => {
                             <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                                 <Users className="w-8 h-8 text-blue-600" />
                             </div>
-                            <h1 className="text-2xl font-bold text-slate-800">Sales Team Login</h1>
-                            <p className="text-slate-500 mt-2">Sign in to manage inquiries</p>
+                            <h1 className="text-2xl font-bold text-gray-800">Sales Team Login</h1>
+                            <p className="text-gray-500 mt-2">Sign in to manage inquiries</p>
                         </div>
 
                         <form onSubmit={handleLogin} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                                 <input
                                     type="email"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     placeholder="your.email@pagemd.com"
                                     required
                                 />
                             </div>
                             <div className="relative group">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
                                 <div className="relative">
                                     <input
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
                                         placeholder="Enter password"
                                         required
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-blue-600 transition-colors"
                                     >
                                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                     </button>
@@ -1086,7 +1086,7 @@ const SalesAdmin = () => {
                         </form>
 
                         <div className="mt-6 text-center">
-                            <Link to="/" className="text-sm text-slate-500 hover:text-blue-600">
+                            <Link to="/" className="text-sm text-gray-500 hover:text-blue-600">
                                 ← Back to PageMD
                             </Link>
                         </div>
@@ -1110,18 +1110,18 @@ const SalesAdmin = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 relative font-figtree antialiased">
+        <div className="min-h-screen bg-gray-50 relative font-figtree antialiased">
             {/* Header */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+            <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
                 <div className="max-w-[1600px] mx-auto px-8 py-5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link to="/" className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                                <ArrowLeft className="w-5 h-5 text-slate-600" />
+                            <Link to="/" className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                                <ArrowLeft className="w-5 h-5 text-gray-600" />
                             </Link>
                             <div>
-                                <h1 className="text-xl font-bold text-slate-800">Sales Dashboard</h1>
-                                <p className="text-sm text-slate-500">Welcome back, {currentUser?.username}</p>
+                                <h1 className="text-xl font-bold text-gray-800">Sales Dashboard</h1>
+                                <p className="text-sm text-gray-500">Welcome back, {currentUser?.username}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -1131,11 +1131,11 @@ const SalesAdmin = () => {
                                     fetchMasterSchedule();
                                 }}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-sm ${viewMode === 'master'
-                                    ? 'bg-slate-800 text-white shadow-inner scale-[0.98]'
-                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                    ? 'bg-gray-100 text-white shadow-inner scale-[0.98]'
+                                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                                     }`}
                             >
-                                <Calendar className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-400'}`} />
+                                <Calendar className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-gray-400'}`} />
                                 <span className="font-bold">Schedule</span>
                             </button>
                             <button
@@ -1145,10 +1145,10 @@ const SalesAdmin = () => {
                                 }}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all shadow-sm ${viewMode === 'salvage'
                                     ? 'bg-rose-600 text-white shadow-inner scale-[0.98]'
-                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                                     }`}
                             >
-                                <Archive className={`w-4 h-4 ${viewMode === 'salvage' ? 'text-white' : 'text-slate-400'}`} />
+                                <Archive className={`w-4 h-4 ${viewMode === 'salvage' ? 'text-white' : 'text-gray-400'}`} />
                                 <span className="font-bold">Salvage</span>
                                 <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold ${viewMode === 'salvage' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-600'}`}>
                                     {inquiries.filter(i => {
@@ -1164,7 +1164,7 @@ const SalesAdmin = () => {
                             </button>
                             <button
                                 onClick={() => setShowSettings(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                             >
                                 <Settings className="w-4 h-4" />
                                 Settings
@@ -1179,7 +1179,7 @@ const SalesAdmin = () => {
                             </button>
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-colors"
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                             >
                                 <LogOut className="w-4 h-4" />
                                 Logout
@@ -1192,18 +1192,18 @@ const SalesAdmin = () => {
             <div className="max-w-[1600px] mx-auto px-8 py-10">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-4 gap-4 mb-8">
-                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                    <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-center justify-between mb-3">
-                            <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-slate-100 transition-colors">
-                                <Inbox className="w-5 h-5 text-slate-400" />
+                            <div className="p-2 bg-gray-50 rounded-xl group-hover:bg-gray-50 transition-colors">
+                                <Inbox className="w-5 h-5 text-gray-400" />
                             </div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Volume</span>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Volume</span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-800 tracking-tight">{stats.total}</div>
-                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Active inquiries</div>
+                        <div className="text-2xl font-bold text-gray-800 tracking-tight">{stats.total}</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">Active inquiries</div>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                    <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-center justify-between mb-3">
                             <div className="p-2 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
                                 <UserPlus className="w-5 h-5 text-blue-500" />
@@ -1211,10 +1211,10 @@ const SalesAdmin = () => {
                             <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">New Leads</span>
                         </div>
                         <div className="text-2xl font-bold text-blue-600 tracking-tight">{stats.new}</div>
-                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Awaiting contact</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">Awaiting contact</div>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                    <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-center justify-between mb-3">
                             <div className="p-2 bg-yellow-50 rounded-xl group-hover:bg-yellow-100 transition-colors">
                                 <MessageSquare className="w-5 h-5 text-yellow-500" />
@@ -1222,10 +1222,10 @@ const SalesAdmin = () => {
                             <span className="text-[9px] font-bold text-yellow-500 status-glow uppercase tracking-widest">Nurturing</span>
                         </div>
                         <div className="text-2xl font-bold text-yellow-600 tracking-tight">{stats.contacted}</div>
-                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">In discussion</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">In discussion</div>
                     </div>
 
-                    <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition-all group">
+                    <div className="bg-white rounded-2xl p-5 border border-gray-200/60 shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-center justify-between mb-3">
                             <div className="p-2 bg-emerald-50 rounded-xl group-hover:bg-emerald-100 transition-colors">
                                 <TrendingUp className="w-5 h-5 text-emerald-500" />
@@ -1233,7 +1233,7 @@ const SalesAdmin = () => {
                             <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Conversion</span>
                         </div>
                         <div className="text-2xl font-bold text-emerald-600 tracking-tight">{stats.converted}</div>
-                        <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tight">Closed won</div>
+                        <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-tight">Closed won</div>
                     </div>
                 </div>
 
@@ -1243,14 +1243,14 @@ const SalesAdmin = () => {
                 {/* Sidebar & Detail Panel */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start h-[calc(100vh-260px)] min-h-[600px] pb-6">
                     {/* Sidebar */}
-                    <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-full border-r border-slate-200 bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-100">
-                        <div className="p-4 border-b border-slate-100 bg-white shrink-0">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4 block">
+                    <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-full border-r border-gray-200 bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                        <div className="p-4 border-b border-gray-100 bg-white shrink-0">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-4 block">
                                 Inquiry Categories
                             </span>
 
                             {/* View Toggles */}
-                            <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-sm mb-4">
+                            <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-200 shadow-sm mb-4">
                                 <button
                                     onClick={() => {
                                         setViewMode('pool');
@@ -1258,12 +1258,12 @@ const SalesAdmin = () => {
                                     }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'pool'
                                         ? 'bg-white text-blue-600 shadow-md transform scale-[1.02]'
-                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'
                                         }`}
                                 >
-                                    <Inbox className={`w-4 h-4 ${viewMode === 'pool' ? 'text-blue-600' : 'text-slate-300'}`} />
+                                    <Inbox className={`w-4 h-4 ${viewMode === 'pool' ? 'text-blue-600' : 'text-gray-400'}`} />
                                     Lead Pool
-                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'pool' ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'}`}>
+                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'pool' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
                                         {inquiries.filter(i => {
                                             if (i.is_claimed) return false;
                                             const s = (i.status || 'new').toLowerCase().trim();
@@ -1281,12 +1281,12 @@ const SalesAdmin = () => {
                                     }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'personal'
                                         ? 'bg-blue-600 text-white shadow-md transform scale-[1.02]'
-                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'
                                         }`}
                                 >
-                                    <Shield className={`w-4 h-4 ${viewMode === 'personal' ? 'text-white' : 'text-slate-300'}`} />
+                                    <Shield className={`w-4 h-4 ${viewMode === 'personal' ? 'text-white' : 'text-gray-400'}`} />
                                     {(currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') ? 'Pipeline' : 'My Pipeline'}
-                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'personal' ? 'bg-blue-500 text-blue-100' : 'bg-slate-200 text-slate-500'}`}>
+                                    <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[9px] ${viewMode === 'personal' ? 'bg-blue-500 text-blue-100' : 'bg-gray-100 text-gray-500'}`}>
                                         {inquiries.filter(i => {
                                             if (!i.is_claimed) return false;
                                             const s = (i.status || 'new').toLowerCase().trim();
@@ -1307,11 +1307,11 @@ const SalesAdmin = () => {
                                         fetchMasterSchedule();
                                     }}
                                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'master'
-                                        ? 'bg-slate-800 text-white shadow-md transform scale-[1.02]'
-                                        : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                                        ? 'bg-gray-100 text-white shadow-md transform scale-[1.02]'
+                                        : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'
                                         }`}
                                 >
-                                    <Activity className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-slate-300'}`} />
+                                    <Activity className={`w-4 h-4 ${viewMode === 'master' ? 'text-white' : 'text-gray-400'}`} />
                                     {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') ? 'Team' : 'Schedule'}
                                 </button>
                             </div>
@@ -1320,20 +1320,20 @@ const SalesAdmin = () => {
                             {viewMode === 'personal' && (currentUser?.username === 'admin' || currentUser?.role === 'sales_manager') && (
                                 <div className="mb-4">
                                     <div className="relative">
-                                        <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                        <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                                         <select
                                             value={pipelineUserFilter}
                                             onChange={(e) => setPipelineUserFilter(e.target.value)}
-                                            className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 uppercase tracking-wide focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 appearance-none shadow-sm cursor-pointer hover:border-blue-300 transition-colors"
+                                            className="w-full pl-9 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 uppercase tracking-wide focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 appearance-none shadow-sm cursor-pointer hover:border-blue-300 transition-colors"
                                         >
                                             <option value="all">Global View (All)</option>
                                             <option value="mine">My Pipeline Only</option>
-                                            <option disabled className="bg-slate-50">──────────</option>
+                                            <option disabled className="bg-gray-50">──────────</option>
                                             {teamUsers.map(u => (
                                                 <option key={u.id} value={u.id}>{u.username}'s Pipeline</option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                                     </div>
                                 </div>
                             )}
@@ -1368,7 +1368,7 @@ const SalesAdmin = () => {
                                                     onClick={() => setStatusFilter('verified')}
                                                     className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-2 border ${statusFilter === 'verified'
                                                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
-                                                        : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+                                                        : 'bg-white text-gray-500 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
                                                         }`}
                                                 >
                                                     <span className="flex items-center gap-1.5">
@@ -1388,7 +1388,7 @@ const SalesAdmin = () => {
                                                     onClick={() => setStatusFilter('unverified')}
                                                     className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-2 border ${statusFilter === 'unverified'
                                                         ? 'bg-amber-600 text-white border-amber-600 shadow-md'
-                                                        : 'bg-white text-slate-400 border-slate-200 hover:border-amber-300 hover:bg-amber-50'
+                                                        : 'bg-white text-gray-400 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
                                                         }`}
                                                 >
                                                     <span className="flex items-center gap-1.5">
@@ -1493,7 +1493,7 @@ const SalesAdmin = () => {
                                                     onClick={() => setStatusFilter(cat.id === 'all' ? '' : cat.id)}
                                                     className={`px-2 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between gap-1.5 border w-full ${isActive
                                                         ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-[1.02]'
-                                                        : 'bg-white text-slate-500 border-slate-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
+                                                        : 'bg-white text-gray-500 border-gray-200 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600'
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-1.5 truncate">
@@ -1517,8 +1517,8 @@ const SalesAdmin = () => {
 
                             {/* Salvage Sub-Category Filter */}
                             {viewMode === 'salvage' && (
-                                <div className="flex flex-wrap gap-2 mb-4 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider w-full mb-1">Recovery Categories</span>
+                                <div className="flex flex-wrap gap-2 mb-4 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider w-full mb-1">Recovery Categories</span>
                                     {(() => {
                                         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -1576,8 +1576,8 @@ const SalesAdmin = () => {
                                                     key={cat.id}
                                                     onClick={() => setSalvageFilter(cat.id)}
                                                     className={`px-2 py-1.5 rounded text-[9px] font-bold uppercase tracking-wide transition-all flex items-center gap-1 border ${salvageFilter === cat.id
-                                                        ? (cat.id === 'all' ? 'bg-slate-800 text-white border-slate-800' : `bg-${cat.color}-600 text-white border-${cat.color}-600`)
-                                                        : `bg-white text-slate-500 border-slate-200 hover:border-${cat.color}-300`
+                                                        ? (cat.id === 'all' ? 'bg-gray-100 text-white border-gray-200' : `bg-${cat.color}-600 text-white border-${cat.color}-600`)
+                                                        : `bg-white text-gray-500 border-gray-200 hover:border-${cat.color}-300`
                                                         }`}
                                                 >
                                                     <cat.icon className="w-3 h-3" />
@@ -1596,19 +1596,19 @@ const SalesAdmin = () => {
                             )}
 
                             <div className="relative group">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Search leads..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-xs font-medium outline-none"
+                                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-xs font-medium outline-none"
                                 />
                             </div>
                         </div>
 
                         {loading ? (
-                            <div className="p-12 text-center text-slate-400">
+                            <div className="p-12 text-center text-gray-400">
                                 <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3" />
                                 Loading inquiries...
                             </div>
@@ -1616,7 +1616,7 @@ const SalesAdmin = () => {
                             <div className="p-12 text-center text-red-500">
                                 <XCircle className="w-8 h-8 mx-auto mb-3" />
                                 <div className="font-medium mb-2">Error loading inquiries</div>
-                                <p className="text-sm text-slate-500">{error}</p>
+                                <p className="text-sm text-gray-500">{error}</p>
                                 <button
                                     onClick={fetchInquiries}
                                     className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -1625,8 +1625,8 @@ const SalesAdmin = () => {
                                 </button>
                             </div>
                         ) : filteredInquiries.length === 0 ? (
-                            <div className="p-12 text-center text-slate-400">
-                                <Inbox className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                            <div className="p-12 text-center text-gray-400">
+                                <Inbox className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                                 <div className="font-medium">No inquiries yet</div>
                                 <p className="text-sm mt-1">New leads will appear here when someone submits a form</p>
                             </div>
@@ -1703,9 +1703,9 @@ const SalesAdmin = () => {
 
                                     if (displayItems.length === 0) {
                                         return (
-                                            <div className="p-12 text-center text-slate-400">
-                                                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                    <Inbox className="w-6 h-6 text-slate-200" />
+                                            <div className="p-12 text-center text-gray-400">
+                                                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                    <Inbox className="w-6 h-6 text-gray-300" />
                                                 </div>
                                                 <p className="text-xs font-bold uppercase tracking-wider">No leads in this category</p>
                                             </div>
@@ -1744,7 +1744,7 @@ const SalesAdmin = () => {
                                     });
 
                                     return (
-                                        <div className="divide-y divide-slate-50">
+                                        <div className="divide-y divide-gray-50">
                                             {sortedItems.map((inquiry) => {
                                                 const isHot = isHotLead(inquiry);
                                                 return (
@@ -1755,7 +1755,7 @@ const SalesAdmin = () => {
                                                             ? 'bg-blue-50/60 border-l-blue-500'
                                                             : isHot
                                                                 ? 'border-l-orange-500 bg-gradient-to-r from-orange-50 to-amber-50/50 hover:from-orange-100 hover:to-amber-100/50 animate-pulse'
-                                                                : 'border-l-transparent hover:bg-slate-50/80'
+                                                                : 'border-l-transparent hover:bg-gray-50/80'
                                                             }`}
                                                     >
                                                         {/* Name + Status */}
@@ -1764,12 +1764,12 @@ const SalesAdmin = () => {
                                                             {isHot && (
                                                                 <div className="w-2 h-2 rounded-full bg-orange-500 animate-ping flex-shrink-0" title="Active now!" />
                                                             )}
-                                                            <h3 className={`text-[13px] font-bold truncate ${isHot ? 'text-orange-700' : 'text-slate-800'}`}>{inquiry.name}</h3>
+                                                            <h3 className={`text-[13px] font-bold truncate ${isHot ? 'text-orange-700' : 'text-gray-800'}`}>{inquiry.name}</h3>
                                                             <span className={`text-[7px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider flex-shrink-0 ${getStatusColor(inquiry.status)}`}>
                                                                 {inquiry.status?.replace('_', ' ') || 'new'}
                                                             </span>
                                                             {inquiry.is_claimed && (
-                                                                <Lock className="w-3 h-3 text-slate-300 flex-shrink-0" />
+                                                                <Lock className="w-3 h-3 text-gray-400 flex-shrink-0" />
                                                             )}
                                                             {inquiry.last_activity_at && (new Date(inquiry.last_activity_at) - new Date(inquiry.created_at) > 1000 * 60 * 5) && !isHot && (
                                                                 <span className="text-[7px] px-1 py-0.5 rounded font-bold uppercase bg-rose-100 text-rose-500 flex-shrink-0">
@@ -1779,7 +1779,7 @@ const SalesAdmin = () => {
                                                         </div>
 
                                                         {/* Practice/Email */}
-                                                        <div className="hidden lg:block text-[10px] text-slate-400 truncate max-w-[120px]">
+                                                        <div className="hidden lg:block text-[10px] text-gray-400 truncate max-w-[120px]">
                                                             {inquiry.practice_name || inquiry.email}
                                                         </div>
 
@@ -1793,7 +1793,7 @@ const SalesAdmin = () => {
 
                                                         {/* Date + Unread */}
                                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                                            <span className="text-[9px] text-slate-300 font-medium">
+                                                            <span className="text-[9px] text-gray-400 font-medium">
                                                                 {inquiry.created_at ? format(new Date(inquiry.created_at), 'M/d') : '-'}
                                                             </span>
                                                             {parseInt(inquiry.unread_count || 0) > 0 && (
@@ -1813,17 +1813,17 @@ const SalesAdmin = () => {
                     </div>
 
                     {/* Detail Panel */}
-                    <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col h-full shadow-sm">
+                    <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col h-full shadow-sm">
                         {viewMode === 'master' ? (
-                            <div className="flex flex-col h-full bg-slate-50/30 overflow-hidden">
-                                <div className="p-6 border-b border-slate-100 bg-white flex items-center justify-between">
+                            <div className="flex flex-col h-full bg-gray-50/30 overflow-hidden">
+                                <div className="p-6 border-b border-gray-100 bg-white flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-lg font-bold text-slate-800 tracking-tight">
+                                        <h2 className="text-lg font-bold text-gray-800 tracking-tight">
                                             {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin')
                                                 ? (scheduleFilter === 'all' ? 'Team Schedule' : 'My Schedule')
                                                 : 'My Schedule'}
                                         </h2>
-                                        <p className="text-xs text-slate-400 font-medium">
+                                        <p className="text-xs text-gray-400 font-medium">
                                             {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && scheduleFilter === 'all'
                                                 ? 'Control tower view of all upcoming team demos'
                                                 : 'Your personal demo schedule and availability'
@@ -1831,12 +1831,12 @@ const SalesAdmin = () => {
                                         </p>
                                     </div>
                                     {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && (
-                                        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-sm">
+                                        <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-200 shadow-sm">
                                             <button
                                                 onClick={() => setScheduleFilter('all')}
                                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'all'
                                                     ? 'bg-white text-blue-600 shadow-sm'
-                                                    : 'text-slate-400 hover:text-slate-600'
+                                                    : 'text-gray-400 hover:text-gray-600'
                                                     }`}
                                             >
                                                 Team
@@ -1845,7 +1845,7 @@ const SalesAdmin = () => {
                                                 onClick={() => setScheduleFilter('mine')}
                                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-tight transition-all ${scheduleFilter === 'mine'
                                                     ? 'bg-white text-blue-600 shadow-sm'
-                                                    : 'text-slate-400 hover:text-slate-600'
+                                                    : 'text-gray-400 hover:text-gray-600'
                                                     }`}
                                             >
                                                 My Demos
@@ -1856,29 +1856,29 @@ const SalesAdmin = () => {
 
                                 <div className="flex-1 flex overflow-hidden">
                                     {/* Left Side: Calendar Grid */}
-                                    <div className="w-[320px] bg-white border-r border-slate-100 flex flex-col shrink-0">
+                                    <div className="w-[320px] bg-white border-r border-gray-100 flex flex-col shrink-0">
                                         <div className="p-4 border-b border-slate-50 flex items-center justify-between">
-                                            <span className="text-sm font-bold text-slate-700">
+                                            <span className="text-sm font-bold text-gray-700">
                                                 {format(currentMonth, 'MMMM yyyy')}
                                             </span>
                                             <div className="flex gap-1">
                                                 <button
                                                     onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                                                    className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400"
+                                                    className="p-1.5 hover:bg-gray-50 rounded-lg text-gray-400"
                                                 >
                                                     <ChevronDown className="w-4 h-4 rotate-90" />
                                                 </button>
                                                 <button
                                                     onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                                                    className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400"
+                                                    className="p-1.5 hover:bg-gray-50 rounded-lg text-gray-400"
                                                 >
                                                     <ChevronRight className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="p-4 grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-2xl overflow-hidden shadow-inner shrink-0">
+                                        <div className="p-4 grid grid-cols-7 gap-px bg-gray-100 border border-gray-200 rounded-2xl overflow-hidden shadow-inner shrink-0">
                                             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                                                <div key={day} className="bg-slate-50 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">{day}</div>
+                                                <div key={day} className="bg-gray-50 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">{day}</div>
                                             ))}
                                             {(() => {
                                                 const start = startOfWeek(startOfMonth(currentMonth));
@@ -1899,13 +1899,13 @@ const SalesAdmin = () => {
                                                             onClick={() => setSelectedDate(day)}
                                                             className={`
                                                                 relative h-12 flex flex-col items-center justify-center bg-white text-[12px] font-bold transition-all
-                                                                ${!isCurrentMonth ? 'text-slate-200' : 'text-slate-600'}
+                                                                ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-600'}
                                                                 ${isSelected ? '!bg-blue-600 !text-white z-10 shadow-lg scale-[1.05] rounded-lg' : 'hover:bg-blue-50/50'}
                                                             `}
                                                         >
                                                             <span>{format(day, 'd')}</span>
                                                             {hasDemos && !isSelected && (
-                                                                <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                                                                <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-500' : 'bg-gray-200'}`} />
                                                             )}
                                                             {isTodayDate && !isSelected && (
                                                                 <div className="absolute top-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
@@ -1915,28 +1915,28 @@ const SalesAdmin = () => {
                                                 });
                                             })()}
                                         </div>
-                                        <div className="mt-auto p-4 bg-slate-50/50 rounded-b-2xl border-t border-slate-100">
+                                        <div className="mt-auto p-4 bg-gray-50/50 rounded-b-2xl border-t border-gray-100">
                                             <div className="flex items-center gap-4">
                                                 <div className="flex items-center gap-1.5">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Today</span>
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">Today</span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Scheduled Demo</span>
+                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">Scheduled Demo</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Right Side: Daily Schedule */}
-                                    <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+                                    <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
                                         <div className="mb-6 flex items-center justify-between">
                                             <div>
-                                                <h3 className="text-sm font-bold text-slate-800">
+                                                <h3 className="text-sm font-bold text-gray-800">
                                                     {isToday(selectedDate) ? 'Today' : format(selectedDate, 'EEEE, MMM do')}
                                                 </h3>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                                                     Daily Breakdown
                                                 </span>
                                             </div>
@@ -1953,9 +1953,9 @@ const SalesAdmin = () => {
 
                                             if (dayDemos.length === 0) {
                                                 return (
-                                                    <div className="py-20 flex flex-col items-center justify-center text-slate-400">
-                                                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-4 border border-slate-100 shadow-sm">
-                                                            <Calendar className="w-8 h-8 text-slate-200" />
+                                                    <div className="py-20 flex flex-col items-center justify-center text-gray-400">
+                                                        <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-4 border border-gray-100 shadow-sm">
+                                                            <Calendar className="w-8 h-8 text-gray-300" />
                                                         </div>
                                                         <p className="text-xs font-bold uppercase tracking-widest opacity-50">Availability Open</p>
                                                         <p className="text-[10px] mt-1">No demos scheduled for this date</p>
@@ -1969,22 +1969,22 @@ const SalesAdmin = () => {
                                                         <div
                                                             key={demo.id}
                                                             onClick={() => setSelectedDemo(demo)}
-                                                            className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all group cursor-pointer active:scale-[0.99]"
+                                                            className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all group cursor-pointer active:scale-[0.99]"
                                                         >
                                                             <div className="flex items-center gap-4">
-                                                                <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors">
-                                                                    <Clock className="w-5 h-5 text-slate-400 group-hover:text-blue-500" />
+                                                                <div className="p-3 bg-gray-50 rounded-xl group-hover:bg-blue-50 transition-colors">
+                                                                    <Clock className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
                                                                 </div>
                                                                 <div>
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-sm font-bold text-slate-800">{format(parseISO(demo.scheduled_at), 'h:mm a')}</span>
-                                                                        <span className="text-xs text-slate-400">•</span>
-                                                                        <span className="text-xs font-bold text-slate-600">{demo.lead_name}</span>
+                                                                        <span className="text-sm font-bold text-gray-800">{format(parseISO(demo.scheduled_at), 'h:mm a')}</span>
+                                                                        <span className="text-xs text-gray-400">•</span>
+                                                                        <span className="text-xs font-bold text-gray-600">{demo.lead_name}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-2 mt-1">
-                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-md">
+                                                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-50 rounded-md">
                                                                             <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: demo.calendar_color }} />
-                                                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tight">{demo.seller_name}</span>
+                                                                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tight">{demo.seller_name}</span>
                                                                         </div>
                                                                         {demo.status === 'confirmed' && (
                                                                             <span className="text-[8px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded uppercase">Confirmed</span>
@@ -2001,7 +2001,7 @@ const SalesAdmin = () => {
                                                                             setViewMode('personal');
                                                                         }
                                                                     }}
-                                                                    className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"
+                                                                    className="p-2 hover:bg-gray-50 rounded-lg text-gray-400 transition-colors"
                                                                     title="View Details"
                                                                 >
                                                                     <ChevronRight className="w-4 h-4" />
@@ -2019,11 +2019,11 @@ const SalesAdmin = () => {
                             selectedInquiry ? (
                                 <>
                                     {/* Compact Header */}
-                                    <div className="px-6 py-4 border-b border-slate-100 bg-white">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-white">
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex-1 min-w-0 mr-4">
                                                 <div className="flex items-center gap-2 mb-0.5">
-                                                    <h2 className="text-lg font-bold text-slate-800 truncate tracking-tight">{selectedInquiry.name}</h2>
+                                                    <h2 className="text-lg font-bold text-gray-800 truncate tracking-tight">{selectedInquiry.name}</h2>
                                                     {selectedInquiry.referral_code && (
                                                         <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/50 text-[10px] shadow-sm">
                                                             <Gift className="w-3 h-3" />
@@ -2031,16 +2031,16 @@ const SalesAdmin = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
+                                                <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
                                                     {selectedInquiry.practice_name && (
-                                                        <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
-                                                            <Building2 className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                                        <span className="flex items-center gap-1 min-w-0 bg-gray-50 px-1.5 py-0.5 rounded">
+                                                            <Building2 className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                                                             <span className="truncate">{selectedInquiry.practice_name}</span>
                                                         </span>
                                                     )}
                                                     {selectedInquiry.phone && (
-                                                        <span className="flex items-center gap-1 min-w-0 bg-slate-50 px-1.5 py-0.5 rounded">
-                                                            <Phone className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                                        <span className="flex items-center gap-1 min-w-0 bg-gray-50 px-1.5 py-0.5 rounded">
+                                                            <Phone className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                                                             <span className="truncate">{selectedInquiry.phone}</span>
                                                         </span>
                                                     )}
@@ -2051,14 +2051,14 @@ const SalesAdmin = () => {
                                                         </span>
                                                     )}
                                                     <span className="flex items-center gap-1 shrink-0 opacity-70">
-                                                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
                                                         {format(new Date(selectedInquiry.created_at), 'MMM d, h:mm a')}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <div className="relative group">
-                                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 transition-colors group-focus-within:text-blue-500">
+                                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 transition-colors group-focus-within:text-blue-500">
                                                         {selectedInquiry.status === 'converted' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <Filter className="w-3.5 h-3.5" />}
                                                     </div>
                                                     <select
@@ -2074,7 +2074,7 @@ const SalesAdmin = () => {
                                                         disabled={updating || selectedInquiry.status === 'converted'}
                                                         className={`appearance-none pl-8 pr-8 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg border cursor-pointer focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm ${selectedInquiry.status === 'converted'
                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                            : 'bg-white text-slate-700 border-slate-100 hover:border-slate-300'}`}
+                                                            : 'bg-white text-gray-700 border-gray-100 hover:border-gray-200'}`}
                                                     >
                                                         <option value="new">New</option>
                                                         <option value="contacted">Contacted</option>
@@ -2083,7 +2083,7 @@ const SalesAdmin = () => {
                                                         {selectedInquiry.status === 'converted' && <option value="converted">Converted</option>}
                                                         <option value="closed">Closed / Lost</option>
                                                     </select>
-                                                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                                                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                                                 </div>
                                             </div>
                                         </div>
@@ -2111,7 +2111,7 @@ const SalesAdmin = () => {
                                                         <>
                                                             <button
                                                                 onClick={() => setShowDemoModal(true)}
-                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-slate-900 transition-all shadow-md shadow-indigo-100 group"
+                                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold hover:bg-gray-50 transition-all shadow-md shadow-indigo-100 group"
                                                             >
                                                                 <CalendarCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                                                 Schedule Demo
@@ -2163,7 +2163,7 @@ const SalesAdmin = () => {
                                                     {(currentUser?.role === 'sales_manager' || currentUser?.username === 'admin') && (
                                                         <button
                                                             onClick={handleDeleteLead}
-                                                            className="px-4 py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-all shadow-md flex items-center gap-2"
+                                                            className="px-4 py-2 bg-gray-100 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-all shadow-md flex items-center gap-2"
                                                             title="Permanent Delete (Dead Lead)"
                                                         >
                                                             <XOctagon className="w-4 h-4" />
@@ -2184,11 +2184,11 @@ const SalesAdmin = () => {
                                                         <Ban className="w-4 h-4" />
                                                     </button>
                                                 )}
-                                                <a href={`mailto:${selectedInquiry.email}`} className="p-2 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-100 transition-all shadow-sm" title={selectedInquiry.email}>
+                                                <a href={`mailto:${selectedInquiry.email}`} className="p-2 bg-gray-50 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-gray-100 transition-all shadow-sm" title={selectedInquiry.email}>
                                                     <Mail className="w-4 h-4" />
                                                 </a>
                                                 {selectedInquiry.phone && (
-                                                    <a href={`tel:${selectedInquiry.phone}`} className="p-2 bg-slate-50 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-100 transition-all shadow-sm" title={selectedInquiry.phone}>
+                                                    <a href={`tel:${selectedInquiry.phone}`} className="p-2 bg-gray-50 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-gray-100 transition-all shadow-sm" title={selectedInquiry.phone}>
                                                         <Phone className="w-4 h-4" />
                                                     </a>
                                                 )}
@@ -2197,18 +2197,18 @@ const SalesAdmin = () => {
                                     </div>
 
                                     {/* Split Two-Column Layout */}
-                                    <div className="flex-1 flex overflow-hidden bg-slate-50/50">
+                                    <div className="flex-1 flex overflow-hidden bg-gray-50/50">
 
                                         {/* Column 1: Phone-Style Chat (Slimmer) */}
-                                        <div className="w-[55%] flex flex-col border-r border-slate-200 bg-white h-full shadow-[4px_0_24px_-10px_rgba(0,0,0,0.05)] z-10">
+                                        <div className="w-[55%] flex flex-col border-r border-gray-200 bg-white h-full shadow-[4px_0_24px_-10px_rgba(0,0,0,0.05)] z-10">
 
                                             {/* Chat Header & Filters */}
-                                            <div className="p-3 border-b border-slate-100 bg-white/95 backdrop-blur z-20 flex items-center justify-between shrink-0">
+                                            <div className="p-3 border-b border-gray-100 bg-white/95 backdrop-blur z-20 flex items-center justify-between shrink-0">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Live Chat</span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Live Chat</span>
                                                 </div>
-                                                <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                                                <div className="flex bg-gray-50 p-0.5 rounded-lg border border-gray-200">
                                                     {[
                                                         { id: 'all', icon: History },
                                                         { id: 'user', icon: User },
@@ -2219,7 +2219,7 @@ const SalesAdmin = () => {
                                                             onClick={() => setLogFilter(f.id)}
                                                             className={`p-1.5 rounded-md transition-all ${logFilter === f.id
                                                                 ? 'bg-white text-blue-600 shadow-sm'
-                                                                : 'text-slate-400 hover:text-slate-600'
+                                                                : 'text-gray-400 hover:text-gray-600'
                                                                 }`}
                                                             title={f.id}
                                                         >
@@ -2230,15 +2230,15 @@ const SalesAdmin = () => {
                                             </div>
 
                                             {/* Scrollable Chat Area */}
-                                            <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-slate-50 relative">
+                                            <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth bg-gray-50 relative">
 
                                                 {/* Initial Inquiry Message Bubble */}
                                                 {(logFilter === 'all' || logFilter === 'user') && selectedInquiry.message && (
                                                     <div className="flex flex-col items-start gap-1 max-w-[90%]">
                                                         <div className="flex items-center gap-1.5 px-1">
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{selectedInquiry.name}</span>
+                                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{selectedInquiry.name}</span>
                                                         </div>
-                                                        <div className="p-3.5 rounded-2xl rounded-tl-sm bg-white border border-slate-100 text-slate-600 text-xs shadow-sm shadow-slate-200/50 leading-relaxed">
+                                                        <div className="p-3.5 rounded-2xl rounded-tl-sm bg-white border border-gray-100 text-gray-600 text-xs shadow-sm shadow-slate-200/50 leading-relaxed">
                                                             {selectedInquiry.message}
                                                         </div>
                                                     </div>
@@ -2247,13 +2247,13 @@ const SalesAdmin = () => {
                                                 {/* Dynamic Logs */}
                                                 {logsLoading ? (
                                                     <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                                                        <RefreshCw className="w-5 h-5 animate-spin text-slate-400 mb-2" />
-                                                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Loading history...</span>
+                                                        <RefreshCw className="w-5 h-5 animate-spin text-gray-400 mb-2" />
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Loading history...</span>
                                                     </div>
                                                 ) : logs.length === 0 && !selectedInquiry.message ? (
                                                     <div className="py-12 text-center opacity-40">
-                                                        <MessageSquare className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">No messages yet</p>
+                                                        <MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">No messages yet</p>
                                                     </div>
                                                 ) : (
                                                     logs.filter(log => {
@@ -2285,8 +2285,8 @@ const SalesAdmin = () => {
                                                         if (isStatus) {
                                                             return (
                                                                 <div key={log.id} className="flex justify-center py-2">
-                                                                    <div className="bg-slate-100/50 px-3 py-1 rounded-full border border-slate-100 flex items-center gap-2 text-[9px] text-slate-400">
-                                                                        <span className="font-bold text-slate-500">{log.admin_name}</span>
+                                                                    <div className="bg-gray-50/50 px-3 py-1 rounded-full border border-gray-100 flex items-center gap-2 text-[9px] text-gray-400">
+                                                                        <span className="font-bold text-gray-500">{log.admin_name}</span>
                                                                         <span>changed status to</span>
                                                                         <span className="font-bold uppercase text-blue-500">{log.content?.split('to ')[1] || log.content}</span>
                                                                     </div>
@@ -2297,13 +2297,13 @@ const SalesAdmin = () => {
                                                         return (
                                                             <div key={log.id} className={`flex flex-col ${isUser ? 'items-start' : 'items-end'} gap-1 max-w-[90%] ${!isUser && 'ml-auto'}`}>
                                                                 <div className={`p-3 rounded-2xl text-xs shadow-sm border ${isUser
-                                                                    ? 'bg-white border-slate-100 text-slate-600 rounded-tl-sm'
+                                                                    ? 'bg-white border-gray-100 text-gray-600 rounded-tl-sm'
                                                                     : 'bg-blue-600 border-blue-600 text-white rounded-tr-sm shadow-blue-500/20'
                                                                     }`}>
                                                                     <div className="flex flex-col gap-1">
                                                                         <div className="font-bold mb-0.5">{log.content}</div>
                                                                         {log.metadata?.notes && (
-                                                                            <div className={`mt-1 pt-1 border-t ${isUser ? 'border-slate-100 text-slate-500' : 'border-blue-500/30 text-blue-50'} italic whitespace-pre-wrap`}>
+                                                                            <div className={`mt-1 pt-1 border-t ${isUser ? 'border-gray-100 text-gray-500' : 'border-blue-500/30 text-blue-50'} italic whitespace-pre-wrap`}>
                                                                                 "{log.metadata.notes}"
                                                                             </div>
                                                                         )}
@@ -2311,11 +2311,11 @@ const SalesAdmin = () => {
                                                                 </div>
                                                                 <div className="flex items-center gap-1.5 px-1 opacity-60">
                                                                     {log.type === 'demo_scheduled' && <CalendarCheck className="w-3 h-3 text-indigo-500" />}
-                                                                    <span className="text-[9px] font-bold text-slate-300 uppercase leading-none">
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase leading-none">
                                                                         {format(new Date(log.created_at), 'MMM d, h:mm a')}
                                                                     </span>
                                                                     {!isUser && log.admin_name && (
-                                                                        <span className="text-[9px] font-bold text-blue-400 uppercase leading-none border-l border-slate-200 pl-1.5 ml-0.5">
+                                                                        <span className="text-[9px] font-bold text-blue-400 uppercase leading-none border-l border-gray-200 pl-1.5 ml-0.5">
                                                                             — {log.admin_name}
                                                                         </span>
                                                                     )}
@@ -2328,7 +2328,7 @@ const SalesAdmin = () => {
                                             </div>
 
                                             {/* Chat Input Area */}
-                                            <div className="p-3 bg-white border-t border-slate-100 shrink-0 relative z-20">
+                                            <div className="p-3 bg-white border-t border-gray-100 shrink-0 relative z-20">
                                                 <form onSubmit={handleAddLog} className="relative flex items-end gap-2">
                                                     <textarea
                                                         value={newLogContent}
@@ -2340,14 +2340,14 @@ const SalesAdmin = () => {
                                                             }
                                                         }}
                                                         placeholder="Type a message..."
-                                                        className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white resize-none text-[13px] leading-relaxed transition-all placeholder:text-slate-400"
+                                                        className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white resize-none text-[13px] leading-relaxed transition-all placeholder:text-gray-400"
                                                         rows="1"
                                                         style={{ minHeight: '48px', maxHeight: '120px' }}
                                                     />
                                                     <button
                                                         type="submit"
                                                         disabled={!newLogContent.trim() || sendingLog}
-                                                        className="p-3 bg-slate-900 text-white rounded-xl hover:bg-blue-600 disabled:opacity-30 disabled:bg-slate-200 transition-all shadow-md shrink-0 mb-0.5"
+                                                        className="p-3 bg-gray-50 text-white rounded-xl hover:bg-blue-600 disabled:opacity-30 disabled:bg-gray-100 transition-all shadow-md shrink-0 mb-0.5"
                                                     >
                                                         {sendingLog ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                                     </button>
@@ -2356,15 +2356,15 @@ const SalesAdmin = () => {
                                         </div>
 
                                         {/* Column 2: Upcoming Demos List */}
-                                        <div className="flex-1 bg-slate-50/50 flex flex-col h-full border-l border-white/50 overflow-hidden">
-                                            <div className="p-3 border-b border-slate-100 bg-white/50 backdrop-blur sticky top-0 shrink-0 z-10 flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-slate-500">
+                                        <div className="flex-1 bg-gray-50/50 flex flex-col h-full border-l border-white/50 overflow-hidden">
+                                            <div className="p-3 border-b border-gray-100 bg-white/50 backdrop-blur sticky top-0 shrink-0 z-10 flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-gray-500">
                                                     <Calendar className="w-4 h-4" />
                                                     <h3 className="text-[10px] font-bold uppercase tracking-widest">Upcoming Demos</h3>
                                                 </div>
                                                 <button
                                                     onClick={() => setShowDemoModal(true)}
-                                                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-all"
+                                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-all"
                                                     title="View Full Calendar"
                                                 >
                                                     <CalendarDays className="w-4 h-4" />
@@ -2396,8 +2396,8 @@ const SalesAdmin = () => {
                                                     if (!currentLeadDemo && otherDemos.length === 0) {
                                                         return (
                                                             <div className="py-12 text-center opacity-40">
-                                                                <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">No upcoming demos</p>
+                                                                <Calendar className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">No upcoming demos</p>
                                                             </div>
                                                         );
                                                     }
@@ -2423,14 +2423,14 @@ const SalesAdmin = () => {
                                                                         <div className="flex items-start justify-between mb-2">
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentLeadDemo.calendar_color }} />
-                                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">{currentLeadDemo.seller_name}</span>
+                                                                                <span className="text-[10px] font-bold text-gray-500 uppercase">{currentLeadDemo.seller_name}</span>
                                                                             </div>
                                                                         </div>
                                                                         <div className="mb-1">
-                                                                            <h4 className={`font-bold ${currentLeadDemo.status === 'declined' ? 'text-slate-500 line-through' : 'text-slate-800'} text-sm leading-tight group-hover:text-blue-600 transition-colors`}>
+                                                                            <h4 className={`font-bold ${currentLeadDemo.status === 'declined' ? 'text-gray-500 line-through' : 'text-gray-800'} text-sm leading-tight group-hover:text-blue-600 transition-colors`}>
                                                                                 {currentLeadDemo.lead_name}
                                                                             </h4>
-                                                                            <p className="text-xs text-slate-500 font-medium">{currentLeadDemo.practice_name || 'Individual Practice'}</p>
+                                                                            <p className="text-xs text-gray-500 font-medium">{currentLeadDemo.practice_name || 'Individual Practice'}</p>
                                                                         </div>
                                                                         <div className={`flex items-center gap-2 mt-2 pt-2 border-t ${currentLeadDemo.status === 'declined' ? 'border-red-100' : currentLeadDemo.status === 'confirmed' ? 'border-emerald-100' : 'border-amber-100'}`}>
                                                                             <div className={`flex items-center gap-1.5 text-xs font-bold ${textClass}`}>
@@ -2449,9 +2449,9 @@ const SalesAdmin = () => {
                                                             {/* Divider if both exist */}
                                                             {currentLeadDemo && otherDemos.length > 0 && (
                                                                 <div className="flex items-center gap-2 py-2">
-                                                                    <div className="h-px bg-slate-200 flex-1"></div>
-                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Others</span>
-                                                                    <div className="h-px bg-slate-200 flex-1"></div>
+                                                                    <div className="h-px bg-gray-100 flex-1"></div>
+                                                                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Others</span>
+                                                                    <div className="h-px bg-gray-100 flex-1"></div>
                                                                 </div>
                                                             )}
 
@@ -2464,7 +2464,7 @@ const SalesAdmin = () => {
                                                                     <div
                                                                         key={demo.id}
                                                                         onClick={() => setSelectedDemo(demo)}
-                                                                        className={`bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] ${borderClass} ${demo.status === 'declined' ? 'opacity-70' : ''}`}
+                                                                        className={`bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] ${borderClass} ${demo.status === 'declined' ? 'opacity-70' : ''}`}
                                                                     >
                                                                         <div className="flex items-start justify-between mb-2">
                                                                             <div className="flex items-center gap-2">
@@ -2474,18 +2474,18 @@ const SalesAdmin = () => {
                                                                             </div>
                                                                         </div>
                                                                         <div className="mb-1">
-                                                                            <h4 className={`font-bold ${demo.status === 'declined' ? 'text-slate-500 line-through' : 'text-slate-700'} text-sm leading-tight group-hover:text-blue-600 transition-colors`}>
+                                                                            <h4 className={`font-bold ${demo.status === 'declined' ? 'text-gray-500 line-through' : 'text-gray-700'} text-sm leading-tight group-hover:text-blue-600 transition-colors`}>
                                                                                 {demo.lead_name}
                                                                             </h4>
-                                                                            <p className="text-xs text-slate-400">{demo.practice_name || 'Individual Practice'}</p>
+                                                                            <p className="text-xs text-gray-400">{demo.practice_name || 'Individual Practice'}</p>
                                                                         </div>
                                                                         <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-50">
-                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                                                                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                                                                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
                                                                                 {format(parseISO(demo.scheduled_at), 'MMM d')}
                                                                             </div>
-                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                                                                                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                                                            <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                                                                                <Clock className="w-3.5 h-3.5 text-gray-400" />
                                                                                 {format(parseISO(demo.scheduled_at), 'h:mm a')}
                                                                             </div>
                                                                         </div>
@@ -2500,13 +2500,13 @@ const SalesAdmin = () => {
                                     </div>
                                 </>
                             ) : (
-                                <div className="h-full flex flex-col items-center justify-center bg-slate-50/50 p-20 text-center">
-                                    <div className="w-24 h-24 bg-white rounded-[2.5rem] border border-slate-200 flex items-center justify-center mb-8 shadow-xl shadow-slate-200/50 relative">
-                                        <Inbox className="w-10 h-10 text-slate-200" />
+                                <div className="h-full flex flex-col items-center justify-center bg-gray-50/50 p-20 text-center">
+                                    <div className="w-24 h-24 bg-white rounded-[2.5rem] border border-gray-200 flex items-center justify-center mb-8 shadow-xl shadow-slate-200/50 relative">
+                                        <Inbox className="w-10 h-10 text-gray-300" />
                                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full border-4 border-white"></div>
                                     </div>
-                                    <h3 className="font-bold text-xl text-slate-800 mb-4 uppercase tracking-tight">Select an Inquiry</h3>
-                                    <p className="text-[15px] font-medium text-slate-400 max-w-[320px] leading-relaxed">
+                                    <h3 className="font-bold text-xl text-gray-800 mb-4 uppercase tracking-tight">Select an Inquiry</h3>
+                                    <p className="text-[15px] font-medium text-gray-400 max-w-[320px] leading-relaxed">
                                         Choose a lead from the list to manage their contact details, history, and conversion flow.
                                     </p>
                                 </div>
@@ -2519,19 +2519,19 @@ const SalesAdmin = () => {
             {/* Settings Modal */}
             {
                 showSettings && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 h-full min-h-screen">
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm p-4 h-full min-h-screen">
                         <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-                                <h2 className="text-xl font-bold text-slate-800">Settings & Team</h2>
-                                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-slate-100 rounded-full">
-                                    <XCircle className="w-6 h-6 text-slate-400" />
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
+                                <h2 className="text-xl font-bold text-gray-800">Settings & Team</h2>
+                                <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-gray-50 rounded-full">
+                                    <XCircle className="w-6 h-6 text-gray-400" />
                                 </button>
                             </div>
 
-                            <div className="flex border-b border-slate-100 shrink-0">
+                            <div className="flex border-b border-gray-100 shrink-0">
                                 <button
                                     onClick={() => setSettingsTab('profile')}
-                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'profile' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'profile' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
                                 >
                                     <div className="flex items-center justify-center gap-1.5">
                                         <User className="w-4 h-4" />
@@ -2540,7 +2540,7 @@ const SalesAdmin = () => {
                                 </button>
                                 <button
                                     onClick={() => setSettingsTab('password')}
-                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                    className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'password' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
                                 >
                                     <div className="flex items-center justify-center gap-1.5">
                                         <Key className="w-4 h-4" />
@@ -2550,7 +2550,7 @@ const SalesAdmin = () => {
                                 {(isAdmin) && (
                                     <button
                                         onClick={() => setSettingsTab('users')}
-                                        className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-500'}`}
+                                        className={`flex-1 py-3 text-sm font-bold tracking-tight ${settingsTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
                                     >
                                         <div className="flex items-center justify-center gap-1.5">
                                             <Users className="w-4 h-4" />
@@ -2579,23 +2579,23 @@ const SalesAdmin = () => {
 
                                         <div className="space-y-4">
                                             <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email Address</label>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Email Address</label>
                                                 <input
                                                     type="email"
                                                     value={profileForm.email}
                                                     onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
+                                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
                                                     placeholder="your@email.com"
                                                     required
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Personal Meeting Link (Optional)</label>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Personal Meeting Link (Optional)</label>
                                                 <input
                                                     type="url"
                                                     value={profileForm.meetingLink}
                                                     onChange={(e) => setProfileForm({ ...profileForm, meetingLink: e.target.value })}
-                                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
+                                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-sm font-medium"
                                                     placeholder="https://meet.jit.si/your-name"
                                                 />
                                             </div>
@@ -2611,7 +2611,7 @@ const SalesAdmin = () => {
                                         <button
                                             type="submit"
                                             disabled={profileLoading}
-                                            className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
+                                            className="w-full py-3 bg-gray-50 text-white font-bold rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
                                         >
                                             {profileLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
                                             Save Profile Changes
@@ -2621,33 +2621,33 @@ const SalesAdmin = () => {
                                 {settingsTab === 'password' && (
                                     <form onSubmit={handleChangePassword} className="max-w-md mx-auto space-y-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
                                             <input
                                                 type="password"
                                                 value={passForm.current}
                                                 onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg"
                                                 required
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
                                             <input
                                                 type="password"
                                                 value={passForm.new}
                                                 onChange={(e) => setPassForm({ ...passForm, new: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg"
                                                 required
                                                 minLength={8}
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
                                             <input
                                                 type="password"
                                                 value={passForm.confirm}
                                                 onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
-                                                className="w-full px-4 py-2 border border-slate-200 rounded-lg"
+                                                className="w-full px-4 py-2 border border-gray-200 rounded-lg"
                                                 required
                                             />
                                         </div>
@@ -2669,8 +2669,8 @@ const SalesAdmin = () => {
                                 {settingsTab === 'users' && (
                                     <div className="space-y-8">
                                         {/* Create User */}
-                                        <div className="bg-slate-50 p-5 rounded-xl">
-                                            <h3 className="font-medium text-slate-800 mb-4 flex items-center gap-2">
+                                        <div className="bg-gray-50 p-5 rounded-xl">
+                                            <h3 className="font-medium text-gray-800 mb-4 flex items-center gap-2">
                                                 <UserPlus className="w-4 h-4" />
                                                 Add New Team Member
                                             </h3>
@@ -2681,7 +2681,7 @@ const SalesAdmin = () => {
                                                         placeholder="Username"
                                                         value={userForm.username}
                                                         onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm"
                                                         required
                                                     />
                                                 </div>
@@ -2691,12 +2691,12 @@ const SalesAdmin = () => {
                                                         placeholder="Email"
                                                         value={userForm.email}
                                                         onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm"
                                                         required
                                                     />
                                                 </div>
                                                 <div className="col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Role & Access</label>
+                                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Role & Access</label>
                                                     <select
                                                         value={userForm.role}
                                                         onChange={(e) => setUserForm({
@@ -2704,19 +2704,19 @@ const SalesAdmin = () => {
                                                             role: e.target.value,
                                                             privileges: DEFAULT_PRIVILEGES[e.target.value] || []
                                                         })}
-                                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm mb-4"
+                                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm mb-4"
                                                     >
                                                         <option value="seller">Seller (Sales Rep)</option>
                                                         <option value="sales_manager">Sales Manager</option>
                                                         <option value="admin">Administrator</option>
                                                     </select>
 
-                                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Privileges for {userForm.role.replace('_', ' ')}</p>
+                                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Privileges for {userForm.role.replace('_', ' ')}</p>
                                                         <div className="grid grid-cols-2 gap-2">
                                                             {ALL_PRIVILEGES.map(priv => (
-                                                                <label key={priv.id} className="flex items-center gap-2 text-xs text-slate-600">
-                                                                    <div className={`w-4 h-4 rounded flex items-center justify-center ${userForm.privileges.includes(priv.id) ? 'bg-blue-600 text-white' : 'bg-slate-200'}`}>
+                                                                <label key={priv.id} className="flex items-center gap-2 text-xs text-gray-600">
+                                                                    <div className={`w-4 h-4 rounded flex items-center justify-center ${userForm.privileges.includes(priv.id) ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>
                                                                         {userForm.privileges.includes(priv.id) && <CheckCircle2 className="w-3 h-3" />}
                                                                     </div>
                                                                     {priv.label}
@@ -2734,7 +2734,7 @@ const SalesAdmin = () => {
                                                 <div className="col-span-2">
                                                     <button
                                                         type="submit"
-                                                        className="w-full py-2 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 text-sm"
+                                                        className="w-full py-2 bg-gray-50 text-white font-medium rounded-lg hover:bg-gray-100 text-sm"
                                                     >
                                                         Create User & Send Invite
                                                     </button>
@@ -2749,30 +2749,30 @@ const SalesAdmin = () => {
 
                                         {/* User List */}
                                         <div>
-                                            <h3 className="font-medium text-slate-800 mb-4 text-sm uppercase tracking-wider text-slate-500">
+                                            <h3 className="font-medium text-gray-800 mb-4 text-sm uppercase tracking-wider text-gray-500">
                                                 Existing Users
                                             </h3>
-                                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                                                <div className="divide-y divide-slate-100">
+                                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                                                <div className="divide-y divide-gray-100">
                                                     {teamUsers.map(user => (
-                                                        <div key={user.id} className="p-4 flex items-center justify-between group hover:bg-slate-50 transition-colors">
+                                                        <div key={user.id} className="p-4 flex items-center justify-between group hover:bg-gray-50 transition-colors">
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase ${user.role === 'admin' ? 'bg-purple-100 text-purple-600' : user.role === 'sales_manager' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase ${user.role === 'admin' ? 'bg-purple-100 text-purple-600' : user.role === 'sales_manager' ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-600'}`}>
                                                                     {user.username.substring(0, 2)}
                                                                 </div>
                                                                 <div>
                                                                     <div className="flex items-center gap-2">
-                                                                        <div className="font-medium text-slate-800">{user.username}</div>
-                                                                        <div className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${user.role === 'admin' ? 'bg-purple-50 text-purple-600' : user.role === 'sales_manager' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                                        <div className="font-medium text-gray-800">{user.username}</div>
+                                                                        <div className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${user.role === 'admin' ? 'bg-purple-50 text-purple-600' : user.role === 'sales_manager' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500'}`}>
                                                                             {user.role ? user.role.replace('_', ' ') : 'Seller'}
                                                                         </div>
                                                                         {!user.is_active && <div className="text-[9px] bg-red-50 text-red-600 px-1.5 py-0.5 rounded font-bold uppercase">Inactive</div>}
                                                                     </div>
-                                                                    <div className="text-xs text-slate-500">{user.email}</div>
+                                                                    <div className="text-xs text-gray-500">{user.email}</div>
                                                                 </div>
                                                             </div>
                                                             <div className="flex items-center gap-4">
-                                                                <div className="text-xs text-slate-400 hidden sm:block">
+                                                                <div className="text-xs text-gray-400 hidden sm:block">
                                                                     Last login: {user.last_login ? format(new Date(user.last_login), 'MMM d, h:mm a') : 'Never'}
                                                                 </div>
 
@@ -2786,7 +2786,7 @@ const SalesAdmin = () => {
                                                                             });
                                                                             setShowEditUserModal(true);
                                                                         }}
-                                                                        className="p-1.5 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
+                                                                        className="p-1.5 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-lg transition-colors"
                                                                         title="Edit Permissions"
                                                                     >
                                                                         <Settings className="w-4 h-4" />
@@ -2794,7 +2794,7 @@ const SalesAdmin = () => {
                                                                     {user.id !== currentUser.id && (
                                                                         <button
                                                                             onClick={() => handleDeleteUser(user.id)}
-                                                                            className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition-colors"
+                                                                            className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-lg transition-colors"
                                                                             title="Remove User"
                                                                         >
                                                                             <Trash2 className="w-4 h-4" />
@@ -2819,10 +2819,10 @@ const SalesAdmin = () => {
             {
                 showOnboardModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-slate-100">
+                        <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-8 relative my-8 border border-gray-100">
                             <button
                                 onClick={() => setShowOnboardModal(false)}
-                                className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <XCircle className="w-6 h-6" />
                             </button>
@@ -2832,8 +2832,8 @@ const SalesAdmin = () => {
                                     <Database className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl font-bold text-slate-800">Onboard New Clinic</h2>
-                                    <p className="text-slate-500 text-sm">
+                                    <h2 className="text-2xl font-bold text-gray-800">Onboard New Clinic</h2>
+                                    <p className="text-gray-500 text-sm">
                                         {selectedInquiry?.referral_code
                                             ? `This will activate referral credit for code: ${selectedInquiry.referral_code}`
                                             : 'Create a new clinic with dedicated database'
@@ -2851,25 +2851,25 @@ const SalesAdmin = () => {
                             <form onSubmit={handleOnboard} className="space-y-6">
                                 {/* Clinic Details */}
                                 <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                         <Building2 className="w-4 h-4" /> Clinic Details
                                     </h3>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="col-span-2">
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Display Name</label>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Display Name</label>
                                             <input
                                                 type="text"
                                                 required
                                                 placeholder="e.g. Heart Center of Nevada"
                                                 value={onboardForm.displayName}
                                                 onChange={e => setOnboardForm({ ...onboardForm, displayName: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Slug (Subdomain)</label>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Slug (Subdomain)</label>
                                             <input
                                                 type="text"
                                                 required
@@ -2879,19 +2879,19 @@ const SalesAdmin = () => {
                                                     ...onboardForm,
                                                     slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
                                                 })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 font-mono text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                             />
-                                            <p className="text-[10px] text-slate-400 mt-1">Unique URL identifier</p>
+                                            <p className="text-[10px] text-gray-400 mt-1">Unique URL identifier</p>
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Specialty</label>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Specialty</label>
                                             <input
                                                 type="text"
                                                 placeholder="e.g. Cardiology"
                                                 value={onboardForm.specialty}
                                                 onChange={e => setOnboardForm({ ...onboardForm, specialty: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
+                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all"
                                             />
                                         </div>
                                     </div>
@@ -2899,42 +2899,42 @@ const SalesAdmin = () => {
 
                                 {/* Initial Admin User */}
                                 <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
                                         <Shield className="w-4 h-4" /> Initial Admin User
                                     </h3>
-                                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-4">
+                                    <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 space-y-4">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">First Name</label>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">First Name</label>
                                                 <input
                                                     type="text"
                                                     required
                                                     value={onboardForm.adminFirstName}
                                                     onChange={e => setOnboardForm({ ...onboardForm, adminFirstName: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Last Name</label>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Last Name</label>
                                                 <input
                                                     type="text"
                                                     required
                                                     value={onboardForm.adminLastName}
                                                     onChange={e => setOnboardForm({ ...onboardForm, adminLastName: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                                 />
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs font-semibold text-slate-600 mb-1.5">Admin Email</label>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Admin Email</label>
                                             <input
                                                 type="email"
                                                 required
                                                 placeholder="admin@clinic.com"
                                                 value={onboardForm.adminEmail}
                                                 onChange={e => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
-                                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                             />
                                         </div>
 
@@ -2963,7 +2963,7 @@ const SalesAdmin = () => {
                                             </>
                                         )}
                                     </button>
-                                    <p className="text-center text-[10px] text-slate-400 mt-3">
+                                    <p className="text-center text-[10px] text-gray-400 mt-3">
                                         This will create a new dedicated database schema and initial admin account.
                                     </p>
                                 </div>
@@ -2977,14 +2977,14 @@ const SalesAdmin = () => {
             {
                 showStatusModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-slate-100">
+                        <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl p-6 relative border border-gray-100">
                             <button
                                 onClick={() => {
                                     setShowStatusModal(false);
                                     setPendingStatus(null);
                                     setStatusNote('');
                                 }}
-                                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <XCircle className="w-5 h-5" />
                             </button>
@@ -2998,20 +2998,20 @@ const SalesAdmin = () => {
                                     {pendingStatus === 'closed' && <XCircle className="w-5 h-5 text-red-600" />}
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold text-slate-800">
+                                    <h2 className="text-lg font-bold text-gray-800">
                                         {pendingStatus === 'contacted' && 'Log Contact'}
                                         {pendingStatus === 'demo_scheduled' && 'Schedule Demo'}
                                         {pendingStatus === 'follow_up' && 'Set Follow Up'}
                                         {pendingStatus === 'closed' && 'Close Inquiry'}
                                     </h2>
-                                    <p className="text-sm text-slate-500">
+                                    <p className="text-sm text-gray-500">
                                         {selectedInquiry?.name} • {selectedInquiry?.email}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="mb-4">
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     {pendingStatus === 'contacted' && 'Contact Notes *'}
                                     {pendingStatus === 'demo_scheduled' && 'Demo Details *'}
                                     {pendingStatus === 'follow_up' && 'Follow Up Notes *'}
@@ -3022,7 +3022,7 @@ const SalesAdmin = () => {
                                     onChange={(e) => setStatusNote(e.target.value)}
                                     placeholder={getStatusNotePlaceholder(pendingStatus)}
                                     rows={5}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all resize-none"
                                     autoFocus
                                 />
                             </div>
@@ -3034,7 +3034,7 @@ const SalesAdmin = () => {
                                         setPendingStatus(null);
                                         setStatusNote('');
                                     }}
-                                    className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
+                                    className="flex-1 py-3 bg-gray-50 text-gray-700 rounded-xl font-medium hover:bg-gray-100 transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -3062,18 +3062,18 @@ const SalesAdmin = () => {
             }
             {/* Dismiss Lead Modal */}
             {showDismissModal && selectedInquiry && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
                         {/* Header */}
-                        <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-amber-50">
+                        <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-rose-50 to-amber-50">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
                                         <AlertTriangle className="w-5 h-5 text-rose-600" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-800">Dismiss Lead</h3>
-                                        <p className="text-xs text-slate-500">{selectedInquiry.name}</p>
+                                        <h3 className="font-bold text-gray-800">Dismiss Lead</h3>
+                                        <p className="text-xs text-gray-500">{selectedInquiry.name}</p>
                                     </div>
                                 </div>
                                 <button
@@ -3084,7 +3084,7 @@ const SalesAdmin = () => {
                                     }}
                                     className="p-2 hover:bg-white/50 rounded-lg transition-colors"
                                 >
-                                    <X className="w-4 h-4 text-slate-400" />
+                                    <X className="w-4 h-4 text-gray-400" />
                                 </button>
                             </div>
                         </div>
@@ -3096,22 +3096,22 @@ const SalesAdmin = () => {
                                     { id: 'not_interested', label: 'Not Interested', icon: UserMinus, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100' },
                                     { id: 'bad_timing', label: 'Bad Timing', icon: Timer, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100' },
                                     { id: 'budget', label: 'Budget', icon: Wallet, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-100' },
-                                    { id: 'spam', label: 'Spam/Fake', icon: Ban, color: 'text-slate-400', bg: 'bg-slate-50', border: 'border-slate-100' },
+                                    { id: 'spam', label: 'Spam/Fake', icon: Ban, color: 'text-gray-400', bg: 'bg-gray-50', border: 'border-gray-100' },
                                     { id: 'competitor', label: 'Competitor', icon: Building2, color: 'text-indigo-500', bg: 'bg-indigo-50', border: 'border-indigo-100' },
-                                    { id: 'other', label: 'Other', icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-50', border: 'border-slate-100' }
+                                    { id: 'other', label: 'Other', icon: HelpCircle, color: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-100' }
                                 ].map((opt) => (
                                     <button
                                         key={opt.id}
                                         onClick={() => setDismissReason(opt.id)}
                                         className={`flex items-center gap-3 p-2.5 rounded-xl border text-left transition-all ${dismissReason === opt.id
                                             ? `${opt.bg} ${opt.border} ring-2 ring-rose-500/20 shadow-sm`
-                                            : 'bg-white border-slate-50 hover:bg-slate-50'
+                                            : 'bg-white border-slate-50 hover:bg-gray-50'
                                             }`}
                                     >
-                                        <div className={`p-1.5 rounded-lg ${dismissReason === opt.id ? 'bg-white' : 'bg-slate-50'}`}>
+                                        <div className={`p-1.5 rounded-lg ${dismissReason === opt.id ? 'bg-white' : 'bg-gray-50'}`}>
                                             <opt.icon className={`w-3.5 h-3.5 ${opt.color}`} />
                                         </div>
-                                        <span className={`text-[12px] font-bold ${dismissReason === opt.id ? 'text-slate-800' : 'text-slate-500'}`}>
+                                        <span className={`text-[12px] font-bold ${dismissReason === opt.id ? 'text-gray-800' : 'text-gray-500'}`}>
                                             {opt.label}
                                         </span>
                                     </button>
@@ -3119,7 +3119,7 @@ const SalesAdmin = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
                                     Notes *
                                 </label>
                                 <textarea
@@ -3129,35 +3129,35 @@ const SalesAdmin = () => {
                                     rows={2}
                                     className={`w-full px-3 py-2.5 bg-white border rounded-xl text-sm font-medium resize-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all ${dismissNotes.length === 0
                                         ? 'border-amber-300 bg-amber-50/50'
-                                        : 'border-slate-200'
+                                        : 'border-gray-200'
                                         }`}
                                 />
 
                             </div>
 
                             {/* Badge showing if verified or not */}
-                            <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
+                            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
                                 <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${selectedInquiry.email_verified || selectedInquiry.status === 'verified'
                                     ? 'bg-emerald-100 text-emerald-700'
                                     : 'bg-amber-100 text-amber-700'
                                     }`}>
                                     {selectedInquiry.email_verified || selectedInquiry.status === 'verified' ? '✓ Verified' : '⚠ Unverified'}
                                 </span>
-                                <span className="text-[10px] text-slate-500">
+                                <span className="text-[10px] text-gray-500">
                                     This lead will be moved to Salvage for potential recovery
                                 </span>
                             </div>
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-3">
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
                             <button
                                 onClick={() => {
                                     setShowDismissModal(false);
                                     setDismissReason('');
                                     setDismissNotes('');
                                 }}
-                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 transition-colors border border-slate-200"
+                                className="flex-1 py-3 bg-white text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors border border-gray-200"
                             >
                                 Cancel
                             </button>
@@ -3182,15 +3182,15 @@ const SalesAdmin = () => {
 
             {/* Reclaim Reason Modal */}
             {showReclaimModal && (
-                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-gray-50/60 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-emerald-50">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-emerald-50">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-emerald-100 rounded-xl">
                                     <RefreshCw className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800">Restore Lead</h3>
+                                    <h3 className="font-bold text-gray-800">Restore Lead</h3>
                                     <p className="text-xs text-emerald-600 font-medium tracking-tight">Recovering lead from salvage</p>
                                 </div>
                             </div>
@@ -3208,7 +3208,7 @@ const SalesAdmin = () => {
                             </div>
 
                             <div className="space-y-3">
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">Restoration Target</label>
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest">Restoration Target</label>
                                 <div className="space-y-2">
                                     {[
                                         { id: 'pool', label: 'Return to Lead Pool', desc: 'Allows anyone to claim' },
@@ -3231,15 +3231,15 @@ const SalesAdmin = () => {
                                                 onClick={() => setRestoreTarget(opt.id)}
                                                 className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${isDisabled ? 'opacity-40 grayscale cursor-not-allowed' : ''} ${restoreTarget === opt.id
                                                     ? 'bg-emerald-50 border-emerald-200 ring-2 ring-emerald-500/10'
-                                                    : 'bg-white border-slate-100 hover:bg-slate-50'
+                                                    : 'bg-white border-gray-100 hover:bg-gray-50'
                                                     }`}
                                             >
-                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${restoreTarget === opt.id ? 'border-emerald-500 bg-emerald-500' : 'border-slate-200'}`}>
+                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${restoreTarget === opt.id ? 'border-emerald-500 bg-emerald-500' : 'border-gray-200'}`}>
                                                     {restoreTarget === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                                                 </div>
                                                 <div>
-                                                    <div className={`text-xs font-bold ${restoreTarget === opt.id ? 'text-emerald-900' : 'text-slate-700'}`}>{opt.label}</div>
-                                                    <div className="text-[10px] text-slate-400">{opt.desc}</div>
+                                                    <div className={`text-xs font-bold ${restoreTarget === opt.id ? 'text-emerald-900' : 'text-gray-700'}`}>{opt.label}</div>
+                                                    <div className="text-[10px] text-gray-400">{opt.desc}</div>
                                                 </div>
                                             </button>
                                         );
@@ -3249,11 +3249,11 @@ const SalesAdmin = () => {
 
                             {restoreTarget === 'assign' && (
                                 <div className="animate-in slide-in-from-top-2 duration-300">
-                                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Select Team Member</label>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Team Member</label>
                                     <select
                                         value={restoreSellerId}
                                         onChange={(e) => setRestoreSellerId(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all font-bold text-sm"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all font-bold text-sm"
                                     >
                                         <option value="">Choose seller...</option>
                                         {teamUsers.map(u => (
@@ -3264,7 +3264,7 @@ const SalesAdmin = () => {
                             )}
 
                             <div>
-                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
                                     Contextual Internal Note *
                                 </label>
                                 <textarea
@@ -3272,20 +3272,20 @@ const SalesAdmin = () => {
                                     onChange={(e) => setReclaimNotes(e.target.value)}
                                     placeholder="Explain why this lead is being remanaged..."
                                     rows={3}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all resize-none font-medium text-sm"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition-all resize-none font-medium text-sm"
                                     autoFocus
                                 />
                             </div>
                         </div>
 
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
                             <button
                                 onClick={() => {
                                     setShowReclaimModal(false);
                                     setRestoreTarget('pool');
                                     setRestoreSellerId('');
                                 }}
-                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 border border-slate-200 transition-colors text-sm"
+                                className="flex-1 py-3 bg-white text-gray-700 rounded-xl font-medium hover:bg-gray-50 border border-gray-200 transition-colors text-sm"
                             >
                                 Cancel
                             </button>
@@ -3310,25 +3310,25 @@ const SalesAdmin = () => {
             {/* Demo Schedule Modal */}
             {
                 showDemoModal && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm p-4">
                         <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col md:flex-row h-[600px]">
                             {/* Interactive Calendar Side */}
-                            <div className="w-full md:w-1/2 border-r border-slate-100 bg-slate-50/50 p-6 flex flex-col">
+                            <div className="w-full md:w-1/2 border-r border-gray-100 bg-gray-50/50 p-6 flex flex-col">
                                 <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="font-bold text-slate-700">{format(demoModalMonth, 'MMMM yyyy')}</h3>
+                                    <h3 className="font-bold text-gray-700">{format(demoModalMonth, 'MMMM yyyy')}</h3>
                                     <div className="flex gap-1">
-                                        <button onClick={() => setDemoModalMonth(subMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
+                                        <button onClick={() => setDemoModalMonth(subMonths(demoModalMonth, 1))} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
                                             <ChevronLeft className="w-4 h-4" />
                                         </button>
-                                        <button onClick={() => setDemoModalMonth(addMonths(demoModalMonth, 1))} className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600">
+                                        <button onClick={() => setDemoModalMonth(addMonths(demoModalMonth, 1))} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
                                             <ChevronRight className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="p-4 grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-2xl overflow-hidden shadow-inner shrink-0 mb-6 bg-white">
+                                <div className="p-4 grid grid-cols-7 gap-px bg-gray-100 border border-gray-200 rounded-2xl overflow-hidden shadow-inner shrink-0 mb-6 bg-white">
                                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                                        <div key={day} className="bg-slate-50 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">{day}</div>
+                                        <div key={day} className="bg-gray-50 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">{day}</div>
                                     ))}
                                     {(() => {
                                         const start = startOfWeek(startOfMonth(demoModalMonth));
@@ -3352,13 +3352,13 @@ const SalesAdmin = () => {
                                                     onClick={() => setDemoForm({ ...demoForm, date: dateStr })}
                                                     className={`
                                                     relative h-12 flex flex-col items-center justify-center bg-white text-[12px] font-bold transition-all
-                                                    ${!isCurrentMonth ? 'text-slate-200' : 'text-slate-600'}
+                                                    ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-600'}
                                                     ${isSelected ? '!bg-blue-600 !text-white z-10 shadow-lg scale-[1.05] rounded-lg' : 'hover:bg-blue-50/50'}
                                                 `}
                                                 >
                                                     <span>{format(day, 'd')}</span>
                                                     {hasDemos && !isSelected && (
-                                                        <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-300' : 'bg-slate-300'}`} />
+                                                        <div className={`absolute bottom-2 w-1.5 h-1.5 rounded-full ${isCurrentMonth ? 'bg-blue-300' : 'bg-gray-200'}`} />
                                                     )}
                                                     {isTodayDate && !isSelected && (
                                                         <div className="absolute top-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
@@ -3370,7 +3370,7 @@ const SalesAdmin = () => {
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto">
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
                                         {demoForm.date ? `Schedule for ${format(parseISO(demoForm.date), 'MMM do')}` : 'Select a date'}
                                     </h4>
                                     {demoForm.date ? (
@@ -3389,10 +3389,10 @@ const SalesAdmin = () => {
                                                         if (isCancelled) barColor = '#ef4444'; // Red
 
                                                         return (
-                                                            <div key={demo.id} className={`p-3 bg-white border border-slate-100 rounded-xl flex items-center gap-3 ${isCancelled ? 'opacity-60 bg-slate-50' : ''}`}>
+                                                            <div key={demo.id} className={`p-3 bg-white border border-gray-100 rounded-xl flex items-center gap-3 ${isCancelled ? 'opacity-60 bg-gray-50' : ''}`}>
                                                                 <div className="w-1.5 h-8 rounded-full shrink-0" style={{ backgroundColor: barColor }} />
                                                                 <div className="min-w-0">
-                                                                    <div className={`text-xs font-bold ${isCancelled ? 'text-slate-400 line-through decoration-slate-400' : 'text-slate-700'} flex items-center gap-2`}>
+                                                                    <div className={`text-xs font-bold ${isCancelled ? 'text-gray-400 line-through decoration-slate-400' : 'text-gray-700'} flex items-center gap-2`}>
                                                                         {format(parseISO(demo.scheduled_at), 'h:mm a')}
                                                                         {isCancelled && (
                                                                             <span className="text-[9px] font-bold text-red-500 uppercase no-underline bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
@@ -3400,7 +3400,7 @@ const SalesAdmin = () => {
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                    <div className="text-[10px] text-slate-500 truncate">
+                                                                    <div className="text-[10px] text-gray-500 truncate">
                                                                         {demo.seller_name} w/ {demo.lead_name}
                                                                     </div>
                                                                 </div>
@@ -3408,13 +3408,13 @@ const SalesAdmin = () => {
                                                         );
                                                     })
                                             ) : (
-                                                <div className="p-4 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                                                <div className="p-4 text-center border border-dashed border-gray-200 rounded-xl text-gray-400 text-xs">
                                                     No existing demos. Day is wide open.
                                                 </div>
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="p-4 text-center text-slate-400 text-xs italic">
+                                        <div className="p-4 text-center text-gray-400 text-xs italic">
                                             Click a date on the calendar to check availability.
                                         </div>
                                     )}
@@ -3423,9 +3423,9 @@ const SalesAdmin = () => {
 
                             {/* Form Side */}
                             <div className="w-full md:w-1/2 flex flex-col h-full">
-                                <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-                                    <h3 className="text-lg font-bold text-slate-800">Schedule Demo</h3>
-                                    <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600">
+                                <div className="p-6 border-b border-gray-100 flex items-center justify-between shrink-0">
+                                    <h3 className="text-lg font-bold text-gray-800">Schedule Demo</h3>
+                                    <button onClick={() => setShowDemoModal(false)} className="p-2 hover:bg-gray-50 rounded-full text-gray-400 hover:text-gray-600">
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -3439,36 +3439,36 @@ const SalesAdmin = () => {
                                     <div className="space-y-5 flex-1">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date</label>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Date</label>
                                                 <input
                                                     type="date"
                                                     required
                                                     value={demoForm.date}
                                                     min={new Date().toISOString().split('T')[0]}
                                                     onChange={(e) => setDemoForm({ ...demoForm, date: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Time</label>
+                                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Time</label>
                                                 <input
                                                     type="time"
                                                     required
                                                     value={demoForm.time}
                                                     onChange={(e) => setDemoForm({ ...demoForm, time: e.target.value })}
-                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
+                                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm font-medium"
                                                 />
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Additional Notes / Agenda</label>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Additional Notes / Agenda</label>
                                             <textarea
                                                 rows="4"
                                                 value={demoForm.notes}
                                                 onChange={(e) => setDemoForm({ ...demoForm, notes: e.target.value })}
                                                 placeholder="e.g. Focus on billing integration..."
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
+                                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm resize-none"
                                             />
                                         </div>
                                     </div>
@@ -3477,7 +3477,7 @@ const SalesAdmin = () => {
                                         <button
                                             type="button"
                                             onClick={() => setShowDemoModal(false)}
-                                            className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 hover:text-slate-800 transition-all text-sm"
+                                            className="flex-1 px-4 py-3 bg-gray-50 text-gray-600 font-bold rounded-xl hover:bg-gray-100 hover:text-gray-800 transition-all text-sm"
                                         >
                                             Cancel
                                         </button>
@@ -3500,21 +3500,21 @@ const SalesAdmin = () => {
             {/* Appointment Details Modal */}
             {
                 selectedDemo && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm p-4">
                         <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-                            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2.5 bg-blue-100 text-blue-600 rounded-xl">
                                         <Video className="w-6 h-6" />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-slate-800 leading-tight">Appointment Details</h3>
-                                        <p className="text-xs text-slate-500 font-medium">
+                                        <h3 className="text-lg font-bold text-gray-800 leading-tight">Appointment Details</h3>
+                                        <p className="text-xs text-gray-500 font-medium">
                                             {format(parseISO(selectedDemo.scheduled_at), 'MMMM do, yyyy')} • {format(parseISO(selectedDemo.scheduled_at), 'h:mm a')}
                                         </p>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedDemo(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors">
+                                <button onClick={() => setSelectedDemo(null)} className="p-2 hover:bg-gray-50 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -3547,7 +3547,7 @@ const SalesAdmin = () => {
                                                     e.stopPropagation();
                                                     handleDeleteDemo(selectedDemo.id, false);
                                                 }}
-                                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
+                                                className="flex-1 flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 px-4 rounded-xl transition-all"
                                             >
                                                 <XCircle className="w-4 h-4" />
                                                 Dismiss
@@ -3583,7 +3583,7 @@ const SalesAdmin = () => {
                                                         setViewMode('personal');
                                                     }
                                                 }}
-                                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all"
+                                                className="flex-1 flex items-center justify-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold py-3 px-4 rounded-xl transition-all"
                                             >
                                                 <MessageSquare className="w-4 h-4" />
                                                 View Inquiry
@@ -3614,41 +3614,41 @@ const SalesAdmin = () => {
 
                                 {/* Lead Profile */}
                                 <div>
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Lead Profile</h4>
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Lead Profile</h4>
                                     <div className="grid grid-cols-2 gap-y-5 gap-x-4">
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Name</label>
-                                            <div className="font-bold text-slate-700">{selectedDemo.lead_name}</div>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Name</label>
+                                            <div className="font-bold text-gray-700">{selectedDemo.lead_name}</div>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Practice</label>
-                                            <div className="font-bold text-slate-700 flex items-center gap-1.5">
-                                                <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Practice</label>
+                                            <div className="font-bold text-gray-700 flex items-center gap-1.5">
+                                                <Building2 className="w-3.5 h-3.5 text-gray-400" />
                                                 {selectedDemo.practice_name || 'N/A'}
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Contact</label>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Contact</label>
                                             <div className="space-y-1">
-                                                <div className="text-sm text-slate-600 flex items-center gap-1.5">
-                                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                                <div className="text-sm text-gray-600 flex items-center gap-1.5">
+                                                    <Mail className="w-3.5 h-3.5 text-gray-400" />
                                                     <span className="truncate max-w-[140px]" title={selectedDemo.lead_email}>{selectedDemo.lead_email}</span>
                                                 </div>
                                                 {selectedDemo.lead_phone && (
-                                                    <div className="text-sm text-slate-600 flex items-center gap-1.5">
-                                                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                    <div className="text-sm text-gray-600 flex items-center gap-1.5">
+                                                        <Phone className="w-3.5 h-3.5 text-gray-400" />
                                                         {selectedDemo.lead_phone}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Details</label>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Details</label>
                                             <div className="space-y-1">
-                                                <div className="text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded inline-block">
+                                                <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded inline-block">
                                                     {selectedDemo.provider_count || '?'} Providers
                                                 </div>
-                                                <div className="text-xs text-slate-500 mt-1">
+                                                <div className="text-xs text-gray-500 mt-1">
                                                     Source: {selectedDemo.source || 'Direct'}
                                                 </div>
                                             </div>
@@ -3659,32 +3659,32 @@ const SalesAdmin = () => {
                                 {/* Internal Notes */}
                                 {selectedDemo.notes && (
                                     <div>
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Meeting Notes</h4>
-                                        <div className="p-3 bg-yellow-50/50 border border-yellow-100 rounded-xl text-sm text-slate-600 italic">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Meeting Notes</h4>
+                                        <div className="p-3 bg-yellow-50/50 border border-yellow-100 rounded-xl text-sm text-gray-600 italic">
                                             "{selectedDemo.notes}"
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Seller Info */}
-                                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                                <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-xs font-bold text-gray-600">
                                             {selectedDemo.seller_name?.substring(0, 2).toUpperCase()}
                                         </div>
                                         <div className="text-xs">
-                                            <div className="font-bold text-slate-700">{selectedDemo.seller_name}</div>
-                                            <div className="text-slate-400">Host</div>
+                                            <div className="font-bold text-gray-700">{selectedDemo.seller_name}</div>
+                                            <div className="text-gray-400">Host</div>
                                         </div>
                                     </div>
-                                    <div className="text-[10px] font-mono text-slate-300">
+                                    <div className="text-[10px] font-mono text-gray-400">
                                         ID: {selectedDemo.id}
                                     </div>
                                 </div>
 
                                 {/* Cancellation Section */}
                                 {selectedDemo.status !== 'cancelled' && selectedDemo.status !== 'declined' && (
-                                    <div className="pt-4 border-t border-slate-100">
+                                    <div className="pt-4 border-t border-gray-100">
                                         {!isCancelling ? (
                                             <button
                                                 type="button"
@@ -3731,15 +3731,15 @@ const SalesAdmin = () => {
 
             {/* Complete Demo Outcome Modal */}
             {showCompleteModal && (
-                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-gray-50/60 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-emerald-50">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-emerald-50">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-white rounded-xl shadow-sm">
                                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-slate-800">Complete Appointment</h3>
+                                    <h3 className="font-bold text-gray-800">Complete Appointment</h3>
                                     <p className="text-xs text-emerald-600 font-medium">Document the outcome of the demo</p>
                                 </div>
                             </div>
@@ -3751,7 +3751,7 @@ const SalesAdmin = () => {
                         <div className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-2">
                                 {[
-                                    { id: 'undecided', label: 'Undecided', icon: HelpCircle, color: 'text-slate-500', bg: 'bg-slate-50', border: 'border-slate-200' },
+                                    { id: 'undecided', label: 'Undecided', icon: HelpCircle, color: 'text-gray-500', bg: 'bg-gray-50', border: 'border-gray-200' },
                                     { id: 'asking_time', label: 'Needs Time', icon: Timer, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-200' },
                                     { id: 'converted', label: 'Converted', icon: Trophy, color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-200' },
                                     { id: 'budget', label: 'Budget', icon: Wallet, color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200' },
@@ -3762,13 +3762,13 @@ const SalesAdmin = () => {
                                         onClick={() => setOutcomeCategory(opt.id)}
                                         className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${outcomeCategory === opt.id
                                             ? `${opt.bg} ${opt.border} ring-2 ring-emerald-500/20`
-                                            : 'bg-white border-slate-100 hover:bg-slate-50'
+                                            : 'bg-white border-gray-100 hover:bg-gray-50'
                                             }`}
                                     >
-                                        <div className={`p-2 rounded-lg ${outcomeCategory === opt.id ? 'bg-white shadow-sm' : 'bg-slate-50'}`}>
+                                        <div className={`p-2 rounded-lg ${outcomeCategory === opt.id ? 'bg-white shadow-sm' : 'bg-gray-50'}`}>
                                             <opt.icon className={`w-4 h-4 ${opt.color}`} />
                                         </div>
-                                        <span className={`text-[13px] font-bold ${outcomeCategory === opt.id ? 'text-slate-800' : 'text-slate-500'}`}>
+                                        <span className={`text-[13px] font-bold ${outcomeCategory === opt.id ? 'text-gray-800' : 'text-gray-500'}`}>
                                             {opt.label}
                                         </span>
                                     </button>
@@ -3776,13 +3776,13 @@ const SalesAdmin = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Outcome Notes / Next Steps *</label>
+                                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Outcome Notes / Next Steps *</label>
                                 <textarea
                                     value={outcomeNotes}
                                     onChange={(e) => setOutcomeNotes(e.target.value)}
                                     placeholder="What happened during the demo? What are the next steps?"
                                     rows={4}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all resize-none font-medium"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all resize-none font-medium"
                                     autoFocus
                                 />
                             </div>
@@ -3797,10 +3797,10 @@ const SalesAdmin = () => {
                             )}
                         </div>
 
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+                        <div className="p-4 bg-gray-50 border-t border-gray-100 flex gap-3">
                             <button
                                 onClick={() => setShowCompleteModal(false)}
-                                className="flex-1 py-3 bg-white text-slate-700 rounded-xl font-medium hover:bg-slate-100 border border-slate-200 transition-colors"
+                                className="flex-1 py-3 bg-white text-gray-700 rounded-xl font-medium hover:bg-gray-50 border border-gray-200 transition-colors"
                             >
                                 Cancel
                             </button>
@@ -3877,7 +3877,7 @@ const SalesAdmin = () => {
                             </div>
 
                             {/* Header */}
-                            <h2 className="text-3xl font-black text-slate-800 mb-2 tracking-tight">
+                            <h2 className="text-3xl font-bold text-gray-800 mb-2 tracking-tight">
                                 DEAL CLOSED!
                             </h2>
 
@@ -3887,7 +3887,7 @@ const SalesAdmin = () => {
                             </div>
 
                             {/* Message */}
-                            <p className="text-slate-600 mb-6">
+                            <p className="text-gray-600 mb-6">
                                 {celebrationData?.message}
                             </p>
 
@@ -3904,13 +3904,13 @@ const SalesAdmin = () => {
                             {/* Stats */}
                             <div className="flex items-center justify-center gap-6 mb-6">
                                 <div className="text-center">
-                                    <div className="text-2xl font-black text-emerald-600">+1</div>
-                                    <div className="text-xs text-slate-500 uppercase tracking-wider">Conversion</div>
+                                    <div className="text-2xl font-bold text-emerald-600">+1</div>
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider">Conversion</div>
                                 </div>
-                                <div className="w-px h-8 bg-slate-200" />
+                                <div className="w-px h-8 bg-gray-100" />
                                 <div className="text-center">
-                                    <div className="text-2xl font-black text-blue-600">💰</div>
-                                    <div className="text-xs text-slate-500 uppercase tracking-wider">Commission</div>
+                                    <div className="text-2xl font-bold text-blue-600">💰</div>
+                                    <div className="text-xs text-gray-500 uppercase tracking-wider">Commission</div>
                                 </div>
                             </div>
 
@@ -3942,11 +3942,11 @@ const SalesAdmin = () => {
 
             {/* Edit User Modal */}
             {showEditUserModal && editingUser && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-50/60 backdrop-blur-sm">
                     <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl p-6 relative animate-in fade-in zoom-in duration-200">
                         <button
                             onClick={() => setShowEditUserModal(false)}
-                            className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
+                            className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
                         >
                             <XCircle className="w-6 h-6" />
                         </button>
@@ -3956,15 +3956,15 @@ const SalesAdmin = () => {
                                 <Users className="w-6 h-6" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-slate-800">Edit Team Member</h2>
-                                <p className="text-sm text-slate-500 font-medium">Manage permissions for {editingUser.username}</p>
+                                <h2 className="text-xl font-bold text-gray-800">Edit Team Member</h2>
+                                <p className="text-sm text-gray-500 font-medium">Manage permissions for {editingUser.username}</p>
                             </div>
                         </div>
 
                         <form onSubmit={handleUpdateUser} className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="col-span-2 sm:col-span-1">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Role</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Role</label>
                                     <select
                                         value={editingUser.role || 'seller'}
                                         onChange={(e) => setEditingUser({
@@ -3972,7 +3972,7 @@ const SalesAdmin = () => {
                                             role: e.target.value,
                                             privileges: DEFAULT_PRIVILEGES[e.target.value] || []
                                         })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm"
                                     >
                                         <option value="seller">Seller (Sales Rep)</option>
                                         <option value="sales_manager">Sales Manager</option>
@@ -3980,14 +3980,14 @@ const SalesAdmin = () => {
                                     </select>
                                 </div>
                                 <div className="col-span-2 sm:col-span-1">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Account Status</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Account Status</label>
                                     <select
                                         value={editingUser.is_active ? 'active' : 'inactive'}
                                         onChange={(e) => setEditingUser({
                                             ...editingUser,
                                             is_active: e.target.value === 'active'
                                         })}
-                                        className="w-full px-4 py-2 border border-slate-200 rounded-lg text-sm"
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm"
                                     >
                                         <option value="active">Active</option>
                                         <option value="inactive">Suspended</option>
@@ -3995,11 +3995,11 @@ const SalesAdmin = () => {
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Privileges & Permissions</h4>
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Privileges & Permissions</h4>
                                 <div className="grid grid-cols-2 gap-3">
                                     {ALL_PRIVILEGES.map(priv => (
-                                        <label key={priv.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-slate-100 hover:border-blue-200 cursor-pointer transition-colors">
+                                        <label key={priv.id} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-100 hover:border-blue-200 cursor-pointer transition-colors">
                                             <input
                                                 type="checkbox"
                                                 checked={(editingUser.privileges || []).includes(priv.id)}
@@ -4013,9 +4013,9 @@ const SalesAdmin = () => {
                                                     }
                                                     setEditingUser({ ...editingUser, privileges: newPrivs });
                                                 }}
-                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-gray-200 text-blue-600 focus:ring-blue-500"
                                             />
-                                            <span className="text-sm font-medium text-slate-600">{priv.label}</span>
+                                            <span className="text-sm font-medium text-gray-600">{priv.label}</span>
                                         </label>
                                     ))}
                                 </div>
@@ -4031,13 +4031,13 @@ const SalesAdmin = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowEditUserModal(false)}
-                                    className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm uppercase tracking-wider"
+                                    className="flex-1 py-3 px-4 bg-gray-50 text-gray-600 font-bold rounded-xl hover:bg-gray-100 transition-all text-sm uppercase tracking-wider"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-3 px-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all text-sm uppercase tracking-wider shadow-lg shadow-slate-200"
+                                    className="flex-1 py-3 px-4 bg-gray-50 text-white font-bold rounded-xl hover:bg-gray-100 transition-all text-sm uppercase tracking-wider shadow-lg shadow-slate-200"
                                 >
                                     Save Changes
                                 </button>

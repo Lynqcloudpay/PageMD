@@ -45,14 +45,14 @@ const HPISection = ({
             {/* Chief Complaint */}
             <div className="mb-5">
                 <div className="flex items-center gap-3 mb-2 px-1">
-                    <label className="text-sm font-black text-slate-800 uppercase tracking-widest">Chief Complaint</label>
+                    <label className="text-sm font-bold text-gray-800 uppercase tracking-widest">Chief Complaint</label>
                     {editedSections.has('chiefComplaint') && (
-                        <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-black uppercase rounded-full shadow-sm shadow-blue-200 flex items-center gap-1">
+                        <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-bold uppercase rounded-full shadow-sm shadow-blue-200 flex items-center gap-1">
                             <Sparkles className="w-2.5 h-2.5" /> Modified
                         </span>
                     )}
                 </div>
-                <div className={`vn-card p-4 bg-white/50 border ${editedSections.has('chiefComplaint') ? 'border-primary-200 ring-4 ring-primary-50/30' : 'border-slate-100'} transition-all`}>
+                <div className={`vn-card p-4 bg-white/50 border ${editedSections.has('chiefComplaint') ? 'border-primary-200 ring-4 ring-primary-50/30' : 'border-gray-100'} transition-all`}>
                     <input
                         type="text"
                         placeholder="Enter chief complaint..."
@@ -68,14 +68,14 @@ const HPISection = ({
             {/* HPI */}
             <div className="mb-5">
                 <div className="flex items-center gap-3 mb-2 px-1">
-                    <label className="text-sm font-black text-slate-800 uppercase tracking-widest">History of Present Illness</label>
+                    <label className="text-sm font-bold text-gray-800 uppercase tracking-widest">History of Present Illness</label>
                     {editedSections.has('hpi') && (
-                        <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-black uppercase rounded-full shadow-sm shadow-blue-200 flex items-center gap-1">
+                        <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-bold uppercase rounded-full shadow-sm shadow-blue-200 flex items-center gap-1">
                             <Sparkles className="w-2.5 h-2.5" /> Modified
                         </span>
                     )}
                 </div>
-                <div className={`vn-card p-4 bg-white/50 border ${editedSections.has('hpi') ? 'border-primary-200 ring-4 ring-primary-50/30' : 'border-slate-100'} transition-all`}>
+                <div className={`vn-card p-4 bg-white/50 border ${editedSections.has('hpi') ? 'border-primary-200 ring-4 ring-primary-50/30' : 'border-gray-100'} transition-all`}>
                     <textarea
                         id="hpi-textarea"
                         ref={hpiRef}
@@ -92,7 +92,7 @@ const HPISection = ({
                     />
                     {!isLocked && (
                         <div className="flex items-center gap-1 mt-2">
-                            <button onClick={openCarryForward} className="text-[10px] text-slate-500 hover:text-primary-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-primary-50 transition-all">
+                            <button onClick={openCarryForward} className="text-[10px] text-gray-500 hover:text-primary-600 flex items-center gap-1 px-2 py-1 rounded hover:bg-primary-50 transition-all">
                                 <Copy className="w-3 h-3" /> Pull from previous
                             </button>
                         </div>
@@ -106,26 +106,26 @@ const HPISection = ({
                     <div className="bg-white rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><History className="w-5 h-5" /> Previous HPI</h3>
                         {loadingPrevVisits ? (
-                            <div className="py-8 text-center text-slate-400">Loading...</div>
+                            <div className="py-8 text-center text-gray-400">Loading...</div>
                         ) : previousVisits.length === 0 ? (
-                            <div className="py-8 text-center text-slate-400">No previous visits found</div>
+                            <div className="py-8 text-center text-gray-400">No previous visits found</div>
                         ) : (
                             <div className="space-y-2">
                                 {previousVisits.map(v => {
                                     const parsed = parseNoteText(v.note_draft);
                                     return (
-                                        <button key={v.id} onClick={() => insertCarryForward(v)} className="w-full text-left p-3 border border-slate-100 rounded-xl hover:border-primary-200 hover:bg-primary-50/30 transition-all">
+                                        <button key={v.id} onClick={() => insertCarryForward(v)} className="w-full text-left p-3 border border-gray-100 rounded-xl hover:border-primary-200 hover:bg-primary-50/30 transition-all">
                                             <div className="flex justify-between mb-1">
-                                                <span className="text-xs font-bold text-slate-600">{new Date(v.visit_date).toLocaleDateString()}</span>
-                                                <span className="text-[10px] text-slate-400">{v.visit_type}</span>
+                                                <span className="text-xs font-bold text-gray-600">{new Date(v.visit_date).toLocaleDateString()}</span>
+                                                <span className="text-[10px] text-gray-400">{v.visit_type}</span>
                                             </div>
-                                            <p className="text-xs text-slate-500 line-clamp-2">{parsed.hpi ? parsed.hpi.substring(0, 150) + '...' : 'No HPI'}</p>
+                                            <p className="text-xs text-gray-500 line-clamp-2">{parsed.hpi ? parsed.hpi.substring(0, 150) + '...' : 'No HPI'}</p>
                                         </button>
                                     );
                                 })}
                             </div>
                         )}
-                        <button onClick={() => setShowCarryForward(false)} className="mt-4 w-full py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Close</button>
+                        <button onClick={() => setShowCarryForward(false)} className="mt-4 w-full py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Close</button>
                     </div>
                 </div>
             )}

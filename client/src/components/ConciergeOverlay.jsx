@@ -106,40 +106,40 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose} />
+            <div className="absolute inset-0 bg-gray-50/40 backdrop-blur-md" onClick={onClose} />
 
             <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in border border-white/20">
                 <div className="absolute top-4 right-4 z-10">
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
+                    <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-full transition-colors text-gray-400">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 <div className="grid md:grid-cols-5 h-full">
                     {/* Left: Greeting & Inquiry */}
-                    <div className="md:col-span-3 p-8 md:p-10 border-r border-slate-100">
+                    <div className="md:col-span-3 p-8 md:p-10 border-r border-gray-100">
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold tracking-widest uppercase mb-6">
                             <Zap className="w-3.5 h-3.5 fill-current" />
                             Premium Concierge Access
                         </div>
 
-                        <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
+                        <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
                             Welcome back, <br />
                             <span className="text-blue-600">{leadName?.split(' ')[0] || 'Doctor'}</span>
                         </h2>
 
-                        <p className="text-slate-500 text-sm mb-8">
+                        <p className="text-gray-500 text-sm mb-8">
                             Launching your persistent sandbox. All your previous data and progress have been preserved.
                         </p>
 
                         {!submitted ? (
                             <div className="space-y-4">
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">
                                     Quick Question for our Team?
                                 </label>
                                 <div className="relative">
                                     <textarea
-                                        className="w-full h-24 p-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm resize-none"
+                                        className="w-full h-24 p-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm resize-none"
                                         placeholder="Need help with a specific feature? Ask here..."
                                         value={message}
                                         onChange={(e) => setMessage(e.target.value)}
@@ -177,9 +177,9 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
                     </div>
 
                     {/* Right: Tips Carousel */}
-                    <div className="md:col-span-2 bg-slate-50 p-8 flex flex-col justify-between">
+                    <div className="md:col-span-2 bg-gray-50 p-8 flex flex-col justify-between">
                         <div>
-                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-8">
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">
                                 Power User Tips
                             </div>
 
@@ -187,8 +187,8 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
                                 <div className={`w-12 h-12 rounded-2xl bg-${TIPS[currentTip].color}-100 text-${TIPS[currentTip].color}-600 flex items-center justify-center mb-6 shadow-sm border border-white`}>
                                     <TipIcon className="w-6 h-6" />
                                 </div>
-                                <h4 className="text-lg font-bold text-slate-900 mb-3">{TIPS[currentTip].title}</h4>
-                                <p className="text-xs text-slate-500 leading-relaxed">
+                                <h4 className="text-lg font-bold text-gray-900 mb-3">{TIPS[currentTip].title}</h4>
+                                <p className="text-xs text-gray-500 leading-relaxed">
                                     {TIPS[currentTip].content}
                                 </p>
                             </div>
@@ -197,21 +197,21 @@ const ConciergeOverlay = ({ isOpen, onClose, leadName, onLaunch, isLaunching }) 
                         <div className="flex items-center justify-between pt-8">
                             <div className="flex gap-1.5">
                                 {TIPS.map((_, i) => (
-                                    <div key={i} className={`h-1 rounded-full transition-all ${i === currentTip ? 'w-6 bg-blue-600' : 'w-2 bg-slate-200'}`} />
+                                    <div key={i} className={`h-1 rounded-full transition-all ${i === currentTip ? 'w-6 bg-blue-600' : 'w-2 bg-gray-100'}`} />
                                 ))}
                             </div>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setCurrentTip((prev) => (prev - 1 + TIPS.length) % TIPS.length)}
-                                    className="p-2 bg-white rounded-lg shadow-sm border border-slate-100 hover:bg-slate-50 transition-colors"
+                                    className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors"
                                 >
-                                    <ChevronLeft className="w-4 h-4 text-slate-400" />
+                                    <ChevronLeft className="w-4 h-4 text-gray-400" />
                                 </button>
                                 <button
                                     onClick={() => setCurrentTip((prev) => (prev + 1) % TIPS.length)}
-                                    className="p-2 bg-white rounded-lg shadow-sm border border-slate-100 hover:bg-slate-50 transition-colors"
+                                    className="p-2 bg-white rounded-lg shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors"
                                 >
-                                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                                    <ChevronRight className="w-4 h-4 text-gray-400" />
                                 </button>
                             </div>
                         </div>

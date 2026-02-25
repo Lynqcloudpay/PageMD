@@ -49,7 +49,7 @@ const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow, value, onChang
             </button>
 
             {isOpen && (
-                <div className="absolute left-0 mt-1 w-28 bg-white border border-slate-100 rounded-lg shadow-xl z-[60] py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="absolute left-0 mt-1 w-28 bg-white border border-gray-100 rounded-lg shadow-xl z-[60] py-1 animate-in fade-in slide-in-from-top-1 duration-200">
                     {types.map((t) => (
                         <button
                             key={t.label}
@@ -72,7 +72,7 @@ const VisitTypeDropdown = ({ appt, onUpdate, isCancelledOrNoShow, value, onChang
                                     }
                                 }
                             }}
-                            className={`w-full text-left px-3 py-1.5 text-[9px] font-semibold hover:bg-slate-50 transition-colors ${t.label === 'Telehealth Visit' ? 'text-emerald-600' : 'text-slate-600'
+                            className={`w-full text-left px-3 py-1.5 text-[9px] font-semibold hover:bg-gray-50 transition-colors ${t.label === 'Telehealth Visit' ? 'text-emerald-600' : 'text-gray-600'
                                 }`}
                         >
                             {t.label}

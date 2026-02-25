@@ -60,7 +60,7 @@ export const NotificationProvider = ({ children }) => {
         if (severity === 'critical') return 'bg-red-50 border-red-200 text-red-900 shadow-red-100';
         if (severity === 'warn') return 'bg-orange-50 border-orange-200 text-orange-900 shadow-orange-100';
         if (type === 'success') return 'bg-emerald-50 border-emerald-200 text-emerald-900 shadow-emerald-100';
-        return 'bg-white border-slate-200 text-slate-900 shadow-slate-100';
+        return 'bg-white border-gray-200 text-gray-900 shadow-slate-100';
     };
 
     return (
@@ -84,7 +84,7 @@ export const NotificationProvider = ({ children }) => {
 
                         <div className="flex-1 min-w-0 pr-6">
                             {notification.title && (
-                                <h4 className="font-black text-xs uppercase tracking-widest mb-1 leading-none opacity-80">
+                                <h4 className="font-bold text-xs uppercase tracking-widest mb-1 leading-none opacity-80">
                                     {notification.title}
                                 </h4>
                             )}

@@ -55,18 +55,18 @@ export default function EkoRiskBadge({ patientId }) {
                 title="Elevated risk scores detected"
             >
                 <Activity className="w-3 h-3 text-amber-500 group-hover:animate-pulse" />
-                <span className="text-[9px] font-black text-amber-700 uppercase tracking-wider">
+                <span className="text-[9px] font-bold text-amber-700 uppercase tracking-wider">
                     {riskData.elevatedCount} Risk{riskData.elevatedCount !== 1 ? 's' : ''}
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             </button>
 
             {expanded && (
-                <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-200/60
+                <div className="absolute top-full right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-gray-200/60
                                 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="flex items-center gap-1.5 mb-2">
                         <AlertTriangle className="w-3 h-3 text-amber-500" />
-                        <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-gray-700 uppercase tracking-wider">
                             Risk Score Summary
                         </span>
                     </div>
@@ -76,14 +76,14 @@ export default function EkoRiskBadge({ patientId }) {
                             return (
                                 <div key={i} className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${getLevelColor(s)}`}>
                                     <span className="text-[10px] font-bold">{meta.label}</span>
-                                    <span className="text-[11px] font-black">
+                                    <span className="text-[11px] font-bold">
                                         {s.score} <small className="text-[8px] opacity-60">{meta.unit}</small>
                                     </span>
                                 </div>
                             );
                         })}
                     </div>
-                    <p className="text-[9px] text-slate-400 mt-2 text-center">
+                    <p className="text-[9px] text-gray-400 mt-2 text-center">
                         Powered by Eko AI
                     </p>
                 </div>

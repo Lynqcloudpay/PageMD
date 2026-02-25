@@ -73,7 +73,7 @@ const BreakTheGlassModal = () => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-50/40 backdrop-blur-md animate-in fade-in duration-300">
             <div className="w-full max-w-lg bg-white rounded-[2rem] shadow-2xl border border-red-50 overflow-hidden animate-in zoom-in-95 duration-300">
                 {/* Header - Alert Style */}
                 <div className="bg-gradient-to-r from-red-600 to-red-500 p-8 text-center text-white relative">
@@ -83,7 +83,7 @@ const BreakTheGlassModal = () => {
                     <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-2xl mb-6 backdrop-blur-sm border border-white/30">
                         <Lock className="w-10 h-10 text-white" />
                     </div>
-                    <h2 className="text-3xl font-black tracking-tight mb-2">RESTRICTED RECORD</h2>
+                    <h2 className="text-3xl font-bold tracking-tight mb-2">RESTRICTED RECORD</h2>
                     <p className="text-red-50 font-medium opacity-90 max-w-xs mx-auto">
                         This patient record is confidential. Access is limited to authorized personnel only.
                     </p>
@@ -105,14 +105,14 @@ const BreakTheGlassModal = () => {
 
                     <div className="space-y-5">
                         <div>
-                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
                                 Reason for Access (Required)
                             </label>
                             <select
                                 required
                                 value={reasonCode}
                                 onChange={(e) => setReasonCode(e.target.value)}
-                                className="w-full h-14 px-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
+                                className="w-full h-14 px-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-bold text-gray-700 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
                             >
                                 <option value="">Select a reason...</option>
                                 {reasonOptions.map(opt => (
@@ -123,7 +123,7 @@ const BreakTheGlassModal = () => {
 
                         {reasonCode === 'OTHER' && (
                             <div className="animate-in slide-in-from-top-4 duration-300">
-                                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 ml-1">
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
                                     Additional Details
                                 </label>
                                 <textarea
@@ -132,19 +132,19 @@ const BreakTheGlassModal = () => {
                                     value={reasonComment}
                                     onChange={(e) => setReasonComment(e.target.value)}
                                     placeholder="Provide details for compliance auditing..."
-                                    className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-xl font-medium text-slate-700 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
+                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 rounded-xl font-medium text-gray-700 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all outline-none"
                                 />
                             </div>
                         )}
 
-                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-center gap-3">
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center gap-3">
                             <input
                                 type="checkbox"
                                 required
                                 id="ack"
-                                className="w-5 h-5 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                                className="w-5 h-5 rounded border-gray-200 text-red-600 focus:ring-red-500"
                             />
-                            <label htmlFor="ack" className="text-xs font-bold text-slate-500 leading-tight">
+                            <label htmlFor="ack" className="text-xs font-bold text-gray-500 leading-tight">
                                 I confirm I am authorized to access this chart and understand this access will be logged.
                             </label>
                         </div>
@@ -162,7 +162,7 @@ const BreakTheGlassModal = () => {
                                     setIsOpen(false);
                                     window.history.back();
                                 }}
-                                className="flex-1 h-14 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-all"
+                                className="flex-1 h-14 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-all"
                             >
                                 Cancel
                             </button>
@@ -170,7 +170,7 @@ const BreakTheGlassModal = () => {
                                 type="button"
                                 onClick={handleBreakGlass}
                                 disabled={isSubmitting}
-                                className="flex-[2] h-14 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black shadow-lg shadow-red-200 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                                className="flex-[2] h-14 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-bold shadow-lg shadow-red-200 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                             >
                                 {isSubmitting ? (
                                     <span className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -186,9 +186,9 @@ const BreakTheGlassModal = () => {
                 </div>
 
                 {/* Footer info */}
-                <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-slate-400" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-gray-400" />
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                         Privacy Enforcement Active • Clinic ID: {localStorage.getItem('clinic_slug') || 'SYSTEM'}
                     </span>
                 </div>

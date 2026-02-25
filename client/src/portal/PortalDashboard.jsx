@@ -309,44 +309,44 @@ const PortalDashboard = () => {
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-50 transition-colors" />
 
                                 <div className="relative flex flex-col md:flex-row items-start md:items-center gap-8 mb-10">
-                                    <div className="w-20 h-20 bg-blue-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 ring-4 ring-slate-50">
+                                    <div className="w-20 h-20 bg-blue-600 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl shadow-blue-500/20 ring-4 ring-gray-50">
                                         <User className="w-8 h-8" />
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-3 mb-1">
-                                            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{patient?.first_name} {patient?.last_name}</h2>
+                                            <h2 className="text-3xl font-bold text-gray-800 tracking-tight">{patient?.first_name} {patient?.last_name}</h2>
                                             <div className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[9px] font-bold uppercase tracking-widest">Active</div>
                                         </div>
-                                        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Portal MRN: <span className="text-slate-600">{patient?.id?.slice(0, 8).toUpperCase()}</span></p>
+                                        <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Portal MRN: <span className="text-gray-600">{patient?.id?.slice(0, 8).toUpperCase()}</span></p>
                                     </div>
                                 </div>
 
                                 <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-10">
                                     <div className="space-y-1">
-                                        <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
+                                        <div className="flex items-center gap-2 text-gray-400 font-bold uppercase tracking-widest text-[9px]">
                                             <Calendar className="w-3 h-3" /> DOB
                                         </div>
-                                        <div className="text-lg font-bold text-slate-700">{patient?.dob || 'N/A'}</div>
+                                        <div className="text-lg font-bold text-gray-700">{patient?.dob || 'N/A'}</div>
                                     </div>
                                     <div className="space-y-1">
-                                        <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
+                                        <div className="flex items-center gap-2 text-gray-400 font-bold uppercase tracking-widest text-[9px]">
                                             <ShieldCheck className="w-3 h-3" /> Sex
                                         </div>
-                                        <div className="text-lg font-bold text-slate-700 capitalize">{patient?.sex || 'N/A'}</div>
+                                        <div className="text-lg font-bold text-gray-700 capitalize">{patient?.sex || 'N/A'}</div>
                                     </div>
                                     <div className="space-y-1">
-                                        <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-widest text-[9px]">
+                                        <div className="flex items-center gap-2 text-gray-400 font-bold uppercase tracking-widest text-[9px]">
                                             <Phone className="w-3 h-3" /> Contact
                                         </div>
-                                        <div className="text-lg font-bold text-slate-700">{patient?.phone || 'N/A'}</div>
+                                        <div className="text-lg font-bold text-gray-700">{patient?.phone || 'N/A'}</div>
                                     </div>
                                 </div>
 
                                 {/* Quick Glance Section - Only shows when there's something actionable */}
                                 {/* Quick Glance Section */}
-                                <div className="relative mt-8 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${activeNotifications.length > 0 || quickGlance.telehealthReady || quickGlance.unreadMessages > 0 || quickGlance.nextAppointment ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
+                                <div className="relative mt-8 pt-8 border-t border-gray-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
+                                        <span className={`w-2 h-2 rounded-full ${activeNotifications.length > 0 || quickGlance.telehealthReady || quickGlance.unreadMessages > 0 || quickGlance.nextAppointment ? 'bg-emerald-500 animate-pulse' : 'bg-gray-200'}`}></span>
                                         Overview
                                     </h3>
 
@@ -367,17 +367,17 @@ const PortalDashboard = () => {
                                                             ? 'bg-red-50 border-red-100 text-red-900 shadow-sm'
                                                             : notif.type === 'action'
                                                                 ? 'bg-blue-50 border-blue-100 text-blue-900 shadow-sm'
-                                                                : 'bg-slate-50 border-slate-100 text-slate-700'
+                                                                : 'bg-gray-50 border-gray-100 text-gray-700'
                                                             }`}
                                                     >
                                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${notif.priority === 'urgent' ? 'bg-red-500 text-white' :
-                                                            notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-500'
+                                                            notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'
                                                             }`}>
                                                             {notif.action === 'appointments' ? <Calendar className="w-5 h-5" /> :
                                                                 notif.action === 'messages' ? <MessageSquare className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
                                                         </div>
                                                         <div className="flex-1">
-                                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                                                            <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">
                                                                 {notif.priority === 'urgent' ? 'Important Notice' : 'Notification'}
                                                             </p>
                                                             <p className="text-base font-bold leading-tight">{notif.message}</p>
@@ -400,13 +400,13 @@ const PortalDashboard = () => {
                                                                             onClick={() => setActiveTab('appointments')}
                                                                         >
                                                                             <div className="flex items-center justify-between mb-1">
-                                                                                <p className="text-sm font-semibold text-slate-800">
+                                                                                <p className="text-sm font-semibold text-gray-800">
                                                                                     {req.preferred_date ? format(new Date(req.preferred_date), 'MMM d, yyyy') : 'Date not set'}
                                                                                     {req.preferred_time_range && ` - ${req.preferred_time_range}`}
                                                                                 </p>
                                                                                 <span className="px-2 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-lg">DENIED</span>
                                                                             </div>
-                                                                            <p className="text-xs text-slate-500 mb-2">
+                                                                            <p className="text-xs text-gray-500 mb-2">
                                                                                 {req.appointment_type || 'Appointment Request'}
                                                                             </p>
 
@@ -421,7 +421,7 @@ const PortalDashboard = () => {
 
                                                                         <button
                                                                             onClick={(e) => handleDismissDeniedRequest(e, req.id)}
-                                                                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                                             title="Dismiss this denial"
                                                                         >
                                                                             <X size={14} />
@@ -430,10 +430,10 @@ const PortalDashboard = () => {
                                                                 </div>
                                                             ))}
 
-                                                            <div className="flex gap-2 mt-3 pt-2 border-t border-slate-100">
+                                                            <div className="flex gap-2 mt-3 pt-2 border-t border-gray-100">
                                                                 <button
                                                                     onClick={(e) => handleDismiss(e, notif.id)}
-                                                                    className="flex-1 p-2 text-sm text-slate-500 font-medium hover:bg-slate-100 rounded-lg transition-colors text-center"
+                                                                    className="flex-1 p-2 text-sm text-gray-500 font-medium hover:bg-gray-50 rounded-lg transition-colors text-center"
                                                                 >
                                                                     Dismiss All
                                                                 </button>
@@ -449,7 +449,7 @@ const PortalDashboard = () => {
 
                                                     <button
                                                         onClick={(e) => handleDismiss(e, notif.id)}
-                                                        className="absolute -top-1 -right-1 w-6 h-6 bg-white border border-slate-100 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 shadow-sm opacity-0 group-hover/notif:opacity-100 transition-opacity z-10"
+                                                        className="absolute -top-1 -right-1 w-6 h-6 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 shadow-sm opacity-0 group-hover/notif:opacity-100 transition-opacity z-10"
                                                         title="Dismiss"
                                                     >
                                                         <X size={12} />
@@ -525,12 +525,12 @@ const PortalDashboard = () => {
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col items-center justify-center py-6 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                        <div className="flex flex-col items-center justify-center py-6 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
                                             <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
                                                 <CheckCircle2 className="w-6 h-6 text-emerald-500" />
                                             </div>
-                                            <p className="text-sm font-bold text-slate-700">You're all caught up!</p>
-                                            <p className="text-xs text-slate-400 mt-1">No new messages or upcoming visits.</p>
+                                            <p className="text-sm font-bold text-gray-700">You're all caught up!</p>
+                                            <p className="text-xs text-gray-400 mt-1">No new messages or upcoming visits.</p>
                                         </div>
                                     )}
                                 </div>
@@ -582,9 +582,9 @@ const PortalDashboard = () => {
                                             <div className="w-10 h-10 bg-blue-50 group-hover:bg-white/10 rounded-xl flex items-center justify-center mb-4 transition-colors">
                                                 <MessageSquare className="w-5 h-5 text-blue-600 group-hover:text-white" />
                                             </div>
-                                            <h3 className="text-xl font-bold text-slate-800 group-hover:text-white tracking-tight leading-tight">Secure<br />Messaging</h3>
+                                            <h3 className="text-xl font-bold text-gray-800 group-hover:text-white tracking-tight leading-tight">Secure<br />Messaging</h3>
                                         </div>
-                                        <div className="flex items-center gap-2 text-slate-400 group-hover:text-white/60 font-bold text-xs uppercase tracking-widest transition-colors">
+                                        <div className="flex items-center gap-2 text-gray-400 group-hover:text-white/60 font-bold text-xs uppercase tracking-widest transition-colors">
                                             Send message <ChevronRight className="w-4 h-4" />
                                         </div>
                                     </div>
@@ -642,31 +642,31 @@ const PortalDashboard = () => {
         return (
             <div className="space-y-6">
                 {/* Mobile Profile Card */}
-                <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
+                <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-blue-600">
                             <User className="w-7 h-7" />
                         </div>
                         <div className="flex-1">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold text-slate-800">{patient?.first_name} {patient?.last_name}</h2>
-                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-md text-[9px] font-black uppercase tracking-wider">Active</span>
+                                <h2 className="text-xl font-bold text-gray-800">{patient?.first_name} {patient?.last_name}</h2>
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 rounded-md text-[9px] font-bold uppercase tracking-wider">Active</span>
                             </div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Portal MRN: {patient?.id?.slice(0, 8).toUpperCase()}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Portal MRN: {patient?.id?.slice(0, 8).toUpperCase()}</p>
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-50">
                         <div className="text-center">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">DOB</p>
-                            <p className="text-[13px] font-bold text-slate-700">{patient?.dob || 'N/A'}</p>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">DOB</p>
+                            <p className="text-[13px] font-bold text-gray-700">{patient?.dob || 'N/A'}</p>
                         </div>
                         <div className="text-center">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Sex</p>
-                            <p className="text-[13px] font-bold text-slate-700">{patient?.sex || 'M'}</p>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Sex</p>
+                            <p className="text-[13px] font-bold text-gray-700">{patient?.sex || 'M'}</p>
                         </div>
                         <div className="text-center">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact</p>
-                            <p className="text-[13px] font-bold text-slate-700">{patient?.phone ? 'Verified' : 'N/A'}</p>
+                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Contact</p>
+                            <p className="text-[13px] font-bold text-gray-700">{patient?.phone ? 'Verified' : 'N/A'}</p>
                         </div>
                     </div>
                 </div>
@@ -682,20 +682,20 @@ const PortalDashboard = () => {
                                     ? 'bg-red-50 border-red-100 text-red-900'
                                     : notif.type === 'action'
                                         ? 'bg-blue-50 border-blue-100 text-blue-900'
-                                        : 'bg-white border-slate-100 text-slate-700'
+                                        : 'bg-white border-gray-100 text-gray-700'
                                     }`}
                             >
                                 <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${notif.priority === 'urgent' ? 'bg-red-500 text-white' :
-                                    notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'
+                                    notif.type === 'action' ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-500'
                                     }`}>
                                     {notif.action === 'appointments' ? <Calendar className="w-5 h-5" /> :
                                         notif.action === 'messages' ? <MessageSquare className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                                    <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">
                                         {notif.priority === 'urgent' ? 'Important Notice' : 'Update'}
                                     </p>
-                                    <p className="text-[15px] font-black leading-tight">{notif.message}</p>
+                                    <p className="text-[15px] font-bold leading-tight">{notif.message}</p>
                                 </div>
                                 <ChevronRight className="w-5 h-5 opacity-20" />
                             </button>
@@ -751,7 +751,7 @@ const PortalDashboard = () => {
                             <ChevronRight className="w-6 h-6 text-white/60 group-hover:translate-x-1 transition-transform" />
                         </button>
                     ) : (
-                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-[2rem] p-6 text-center text-slate-400">
+                        <div className="bg-gray-50 border border-dashed border-gray-200 rounded-[2rem] p-6 text-center text-gray-400">
                             <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
                             <p className="text-sm font-bold">No upcoming appointments</p>
                             <p className="text-xs mt-1">Tap below to schedule</p>
@@ -768,45 +768,45 @@ const PortalDashboard = () => {
                         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                             <Calendar className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-wider leading-tight">Schedule<br />Visit</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider leading-tight">Schedule<br />Visit</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('telehealth')}
                         className={`rounded-[1.5rem] p-4 text-white text-center flex flex-col items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform relative ${stats.telehealth > 0 ? 'bg-emerald-500 shadow-emerald-200/50 animate-pulse' : 'bg-emerald-500 shadow-emerald-200/50'}`}
                     >
                         {stats.telehealth > 0 && (
-                            <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full text-[10px] font-black flex items-center justify-center border-2 border-white">
+                            <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-white">
                                 {stats.telehealth}
                             </span>
                         )}
                         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                             <Video className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-wider leading-tight">Join<br />Telehealth</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider leading-tight">Join<br />Telehealth</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('messages')}
-                        className="bg-white border border-slate-100 rounded-[1.5rem] p-4 text-slate-800 text-center flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform relative"
+                        className="bg-white border border-gray-100 rounded-[1.5rem] p-4 text-gray-800 text-center flex flex-col items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform relative"
                     >
                         {stats.messages > 0 && (
-                            <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-white animate-bounce">
+                            <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-white animate-bounce">
                                 {stats.messages}
                             </span>
                         )}
                         <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
                             <MessageSquare className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black text-slate-800 uppercase tracking-wider leading-tight text-center">Secure<br />Messages</span>
+                        <span className="text-[9px] font-bold text-gray-800 uppercase tracking-wider leading-tight text-center">Secure<br />Messages</span>
                     </button>
                 </div>
 
                 {/* Health Records Horizontal Scroll */}
                 <div className="space-y-4 overflow-hidden">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Health Records</h3>
+                        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">Health Records</h3>
                         <div className="flex gap-1">
                             <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-gray-100" />
                         </div>
                     </div>
                     {/* Horizontal scrollable health cards */}
@@ -846,31 +846,31 @@ const PortalDashboard = () => {
                     <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-600">
                         <Phone className="w-5 h-5" />
                     </div>
-                    <p className="text-[10px] font-bold text-slate-500 leading-relaxed uppercase tracking-widest">Questions about your care? Contact your clinic representative.</p>
+                    <p className="text-[10px] font-bold text-gray-500 leading-relaxed uppercase tracking-widest">Questions about your care? Contact your clinic representative.</p>
                 </div>
             </div >
         );
     };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
             <div className="flex flex-col items-center gap-4">
                 <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                <div className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Accessing Secure Records...</div>
+                <div className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Accessing Secure Records...</div>
             </div>
         </div>
     );
 
     return (
-        <div className="h-screen w-full bg-[#F8FAFC] flex selection:bg-blue-100 overflow-hidden fixed inset-0">
+        <div className="h-screen w-full bg-white flex selection:bg-blue-100 overflow-hidden fixed inset-0">
             {/* Desktop Sidebar */}
-            <aside className="w-[260px] hidden lg:flex flex-col fixed inset-y-0 left-0 bg-white border-r border-slate-100 z-50">
+            <aside className="w-[260px] hidden lg:flex flex-col fixed inset-y-0 left-0 bg-white border-r border-gray-100 z-50">
                 <PremiumStyles />
                 <div className="p-8">
                     <div className="flex items-center gap-3 mb-10">
                         <img src="/logo.png" alt="PageMD Logo" className="h-8 object-contain" />
-                        <div className="h-4 w-px bg-slate-200" />
-                        <span className="font-bold text-slate-800 text-base tracking-tighter">PORTAL</span>
+                        <div className="h-4 w-px bg-gray-100" />
+                        <span className="font-bold text-gray-800 text-base tracking-tighter">PORTAL</span>
                     </div>
 
                     <nav className="space-y-1.5">
@@ -914,12 +914,12 @@ const PortalDashboard = () => {
                 </div>
 
                 <div className="mt-auto p-6 pt-0">
-                    <div className="bg-slate-50 rounded-2xl p-5 mb-4 border border-slate-100/50">
+                    <div className="bg-gray-50 rounded-2xl p-5 mb-4 border border-gray-100/50">
                         <div className="flex items-center gap-2 mb-2">
                             <Activity className="w-3.5 h-3.5 text-blue-600" />
-                            <span className="text-[10px] font-bold text-slate-800 uppercase tracking-widest">Support</span>
+                            <span className="text-[10px] font-bold text-gray-800 uppercase tracking-widest">Support</span>
                         </div>
-                        <p className="text-[9px] text-slate-500 font-bold leading-relaxed uppercase tracking-widest">Questions about your care? Contact your clinic representative.</p>
+                        <p className="text-[9px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest">Questions about your care? Contact your clinic representative.</p>
                     </div>
 
                     <button
@@ -927,7 +927,7 @@ const PortalDashboard = () => {
                             localStorage.removeItem('portalToken');
                             navigate('/portal/login');
                         }}
-                        className="w-full flex items-center gap-2.5 p-3.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all font-bold uppercase tracking-widest text-[10px]"
+                        className="w-full flex items-center gap-2.5 p-3.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all font-bold uppercase tracking-widest text-[10px]"
                     >
                         <LogOut className="w-3.5 h-3.5" /> Sign Out
                     </button>
@@ -935,16 +935,16 @@ const PortalDashboard = () => {
             </aside>
 
             {/* Mobile Nav Header - with iOS safe area padding */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-slate-100 px-6 z-[60] flex justify-between items-center" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', height: 'calc(60px + env(safe-area-inset-top, 0px))' }}>
+            <div className="lg:hidden fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-b border-gray-100 px-6 z-[60] flex justify-between items-center" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', height: 'calc(60px + env(safe-area-inset-top, 0px))' }}>
                 <button
                     onClick={() => { setActiveTab('overview'); setIsMobileMenuOpen(false); }}
                     className="flex items-center gap-2 active:scale-95 transition-transform"
                 >
                     <img src="/logo.png" alt="PageMD Logo" className="h-7 object-contain" />
-                    <span className="text-slate-300 text-sm">|</span>
-                    <span className="font-bold text-slate-500 text-xs uppercase tracking-widest">Portal</span>
+                    <span className="text-gray-400 text-sm">|</span>
+                    <span className="font-bold text-gray-500 text-xs uppercase tracking-widest">Portal</span>
                 </button>
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-800 hover:bg-slate-100 rounded-xl transition-colors">
+                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-gray-800 hover:bg-gray-50 rounded-xl transition-colors">
                     {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
                 </button>
             </div>
@@ -991,7 +991,7 @@ const PortalDashboard = () => {
                         />
 
                         {/* Divider and Logout */}
-                        <div className="border-t border-slate-100 mt-6 pt-6">
+                        <div className="border-t border-gray-100 mt-6 pt-6">
                             <button
                                 onClick={() => {
                                     localStorage.removeItem('portalToken');
@@ -1008,7 +1008,7 @@ const PortalDashboard = () => {
             )}
 
             {/* Main Content Area */}
-            <div className="flex-1 w-full lg:w-auto lg:ml-[260px] flex flex-col min-h-0 bg-[#F8FAFC] min-w-0 relative">
+            <div className="flex-1 w-full lg:w-auto lg:ml-[260px] flex flex-col min-h-0 bg-white min-w-0 relative">
                 {/* Mobile main content - uses header defined above */}
                 <main
                     className="lg:hidden flex-1 overflow-y-auto"
@@ -1029,7 +1029,7 @@ const PortalDashboard = () => {
             </div>
 
             {/* Sticky Bottom Navigation for Mobile - Always visible */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center z-50" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)', paddingTop: '10px' }}>
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex justify-around items-center z-50" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)', paddingTop: '10px' }}>
                 <BottomNavItem icon={<LayoutDashboard />} label="Home" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
                 <BottomNavItem icon={<FileText />} label="Records" active={activeTab === 'record'} onClick={() => setActiveTab('record')} />
                 <BottomNavItem icon={<MessageSquare />} label="Messages" active={activeTab === 'messages'} count={stats.messages} onClick={() => setActiveTab('messages')} />
@@ -1055,7 +1055,7 @@ const NavItem = ({ icon, label, active, onClick, badge, badgeColor = 'red' }) =>
             onClick={onClick}
             className={`w-full flex items-center justify-between p-3.5 rounded-xl transition-all duration-300 ${active
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                 }`}
         >
             <div className="flex items-center gap-3.5">
@@ -1063,7 +1063,7 @@ const NavItem = ({ icon, label, active, onClick, badge, badgeColor = 'red' }) =>
                 <span className="font-bold text-[11px] uppercase tracking-widest leading-none">{label}</span>
             </div>
             {badge > 0 && (
-                <span className={`min-w-[1.5rem] h-6 flex items-center justify-center px-1.5 rounded-full text-[10px] font-black transition-all duration-300 shadow-sm ${active ? 'bg-white text-blue-600' : `${badgeColorClasses[badgeColor]} animate-pulse`
+                <span className={`min-w-[1.5rem] h-6 flex items-center justify-center px-1.5 rounded-full text-[10px] font-bold transition-all duration-300 shadow-sm ${active ? 'bg-white text-blue-600' : `${badgeColorClasses[badgeColor]} animate-pulse`
                     }`}>
                     {badge}
                 </span>
@@ -1078,28 +1078,28 @@ const QuickCard = ({ title, icon, status, count, onClick }) => (
         className="bg-white p-6 rounded-[2rem] shadow-lg shadow-slate-200/40 border border-slate-50 hover:shadow-xl hover:shadow-blue-200/20 transition-all cursor-pointer group hover:-translate-y-1 relative overflow-hidden"
     >
         <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="w-12 h-12 mb-4 bg-slate-50 group-hover:bg-blue-600 group-hover:text-white rounded-2xl flex items-center justify-center transition-all duration-500">
+        <div className="w-12 h-12 mb-4 bg-gray-50 group-hover:bg-blue-600 group-hover:text-white rounded-2xl flex items-center justify-center transition-all duration-500">
             {icon}
         </div>
-        <h3 className="font-bold text-slate-800 text-sm mb-1 tracking-tight">{title}</h3>
+        <h3 className="font-bold text-gray-800 text-sm mb-1 tracking-tight">{title}</h3>
         <div className="flex flex-col gap-0.5">
             <span className="text-[9px] font-bold uppercase tracking-widest text-blue-600">{status}</span>
-            <span className="text-[10px] text-slate-400 font-bold">{count}</span>
+            <span className="text-[10px] text-gray-400 font-bold">{count}</span>
         </div>
     </div>
 );
 
 const BottomNavItem = ({ icon, label, active, onClick, count }) => (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${active ? 'text-blue-600' : 'text-slate-400'}`}>
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-all active:scale-90 ${active ? 'text-blue-600' : 'text-gray-400'}`}>
         <div className="relative">
             {React.cloneElement(icon, { size: 22, strokeWidth: active ? 2.5 : 2 })}
             {count > 0 && (
-                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-pulse shadow-lg shadow-red-200">
+                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse shadow-lg shadow-red-200">
                     {count > 9 ? '9+' : count}
                 </span>
             )}
         </div>
-        <span className={`text-[9px] font-bold uppercase tracking-wider ${active ? 'text-blue-600' : 'text-slate-400'}`}>{label}</span>
+        <span className={`text-[9px] font-bold uppercase tracking-wider ${active ? 'text-blue-600' : 'text-gray-400'}`}>{label}</span>
     </button>
 );
 
@@ -1108,20 +1108,20 @@ const MobileHealthCard = ({ title, status, desc, icon, color, onClick }) => {
         blue: 'bg-blue-50 text-blue-600',
         emerald: 'bg-emerald-50 text-emerald-600',
         cyan: 'bg-cyan-50 text-cyan-600',
-        slate: 'bg-slate-50 text-slate-600'
+        slate: 'bg-gray-50 text-gray-600'
     };
 
     return (
         <div
             onClick={onClick}
-            className="flex-shrink-0 w-44 bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm active:scale-95 transition-all"
+            className="flex-shrink-0 w-44 bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm active:scale-95 transition-all"
         >
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${colorClasses[color] || colorClasses.blue}`}>
                 {icon}
             </div>
-            <h4 className="text-[15px] font-bold text-slate-800 mb-1">{title}</h4>
-            <p className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${color === 'blue' ? 'text-blue-600' : 'text-slate-400'}`}>{status}</p>
-            <p className="text-[10px] text-slate-400 font-bold">{desc}</p>
+            <h4 className="text-[15px] font-bold text-gray-800 mb-1">{title}</h4>
+            <p className={`text-[10px] font-bold uppercase tracking-widest mb-0.5 ${color === 'blue' ? 'text-blue-600' : 'text-gray-400'}`}>{status}</p>
+            <p className="text-[10px] text-gray-400 font-bold">{desc}</p>
         </div>
     );
 };
@@ -1130,7 +1130,7 @@ const Notifications = ({ notifications, onAction }) => {
     if (notifications.length === 0) return null;
     return (
         <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-6">Pending Actions</h3>
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-6">Pending Actions</h3>
             <div className="space-y-3">
                 {notifications.map((n) => (
                     <div
@@ -1146,16 +1146,16 @@ const Notifications = ({ notifications, onAction }) => {
                                 <Bell className={`w-8 h-8 text-white`} />
                             </div>
                             <div>
-                                <h4 className={`font-black text-lg tracking-tight mb-1 ${n.type === 'action' ? 'text-red-950' : 'text-slate-900'}`}>{n.message}</h4>
+                                <h4 className={`font-bold text-lg tracking-tight mb-1 ${n.type === 'action' ? 'text-red-950' : 'text-gray-900'}`}>{n.message}</h4>
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2.5 h-2.5 rounded-full ${n.type === 'action' ? 'bg-red-600 animate-ping' : 'bg-blue-600'}`} />
-                                    <p className={`text-[12px] font-black uppercase tracking-[0.2em] ${n.type === 'action' ? 'text-red-600' : 'text-slate-500'}`}>
+                                    <p className={`text-[12px] font-bold uppercase tracking-[0.2em] ${n.type === 'action' ? 'text-red-600' : 'text-gray-500'}`}>
                                         {n.priority === 'urgent' ? 'Requires Immediate Action' : 'Urgent Notification'}
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${n.type === 'action' ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white shadow-inner' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${n.type === 'action' ? 'bg-red-100 text-red-600 group-hover:bg-red-600 group-hover:text-white shadow-inner' : 'bg-gray-50 text-gray-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
                             <ChevronRight className="w-7 h-7" />
                         </div>
                     </div>

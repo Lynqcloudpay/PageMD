@@ -18,8 +18,8 @@ const Login = () => {
     // Safety check
     if (!auth) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-                <div className="text-slate-500 animate-pulse">Loading secure environment...</div>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-gray-500 animate-pulse">Loading secure environment...</div>
             </div>
         );
     }
@@ -98,10 +98,10 @@ const Login = () => {
                         </div>
 
                         <div className="mt-4 text-center">
-                            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">
+                            <h2 className="text-3xl font-bold text-gray-800 tracking-tight">
                                 Welcome Back
                             </h2>
-                            <p className="text-slate-400 text-[10px] sm:text-xs mt-2 font-black uppercase tracking-[0.2em] opacity-80">
+                            <p className="text-gray-400 text-[10px] sm:text-xs mt-2 font-bold uppercase tracking-[0.2em] opacity-80">
                                 Secure Access for Professionals
                             </p>
                         </div>
@@ -116,15 +116,15 @@ const Login = () => {
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Email Address</label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-600 transition-colors">
                                     <Mail className="h-4 w-4" />
                                 </div>
                                 <input
                                     type="email"
                                     required
-                                    className="block w-full pl-11 pr-4 py-4 bg-white/30 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white/60 transition-all duration-300 font-medium"
+                                    className="block w-full pl-11 pr-4 py-4 bg-white/30 border border-gray-100 rounded-2xl text-gray-900 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white/60 transition-all duration-300 font-medium"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="doctor@pagemd.com"
@@ -133,15 +133,15 @@ const Login = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Password</label>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Password</label>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-600 transition-colors">
                                     <Lock className="h-4 w-4" />
                                 </div>
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     required
-                                    className="block w-full pl-11 pr-12 py-4 bg-white/30 border border-slate-100 rounded-2xl text-slate-900 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white/60 transition-all duration-300 font-medium"
+                                    className="block w-full pl-11 pr-12 py-4 bg-white/30 border border-gray-100 rounded-2xl text-gray-900 placeholder-slate-300 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white/60 transition-all duration-300 font-medium"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
@@ -149,7 +149,7 @@ const Login = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
+                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-blue-600 transition-colors"
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
@@ -167,11 +167,11 @@ const Login = () => {
                     </form>
 
                     <div className="mt-8 text-center text-sm">
-                        <p className="text-slate-400 font-medium">
+                        <p className="text-gray-400 font-medium">
                             Forgot your password?{' '}
                             <button
                                 onClick={() => navigate('/forgot-password')}
-                                className="text-blue-600 hover:text-blue-700 font-black transition-colors underline decoration-blue-500/20 hover:decoration-blue-500"
+                                className="text-blue-600 hover:text-blue-700 font-bold transition-colors underline decoration-blue-500/20 hover:decoration-blue-500"
                             >
                                 Reset it here
                             </button>
@@ -181,7 +181,7 @@ const Login = () => {
             </div>
 
             <div className="absolute bottom-10 text-center w-full">
-                <p className="text-slate-300 text-[10px] font-black tracking-[0.3em] uppercase">
+                <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase">
                     HIPAA Compliant & Secure • PageMD EMR v1.0
                 </p>
             </div>

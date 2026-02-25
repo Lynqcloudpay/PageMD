@@ -58,11 +58,11 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
     }, [roomUrl, userName, onLeave]);
 
     return (
-        <div className="w-full h-full bg-slate-900 relative">
+        <div className="w-full h-full bg-gray-50 relative">
             {isLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
                     <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
-                    <p className="text-slate-400">Connecting to video call...</p>
+                    <p className="text-gray-400">Connecting to video call...</p>
                 </div>
             )}
             <div ref={frameRef} className="w-full h-full" />
@@ -77,8 +77,8 @@ const StatusScreen = ({ icon: Icon, iconColor, title, message, children, clinicP
             <div className={`w-20 h-20 rounded-2xl ${iconColor} mx-auto mb-6 flex items-center justify-center shadow-lg`}>
                 <Icon size={36} className="text-white" />
             </div>
-            <h1 className="text-2xl font-black text-slate-800 mb-3">{title}</h1>
-            <p className="text-slate-500 mb-8 leading-relaxed">{message}</p>
+            <h1 className="text-2xl font-bold text-gray-800 mb-3">{title}</h1>
+            <p className="text-gray-500 mb-8 leading-relaxed">{message}</p>
             {children}
             {clinicPhone && (
                 <a
@@ -223,7 +223,7 @@ const GuestVisitPage = () => {
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
                 <div className="text-center">
                     <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-                    <p className="text-slate-500 font-medium">Verifying your access link...</p>
+                    <p className="text-gray-500 font-medium">Verifying your access link...</p>
                 </div>
             </div>
         );
@@ -239,7 +239,7 @@ const GuestVisitPage = () => {
                 message={`Thank you for attending your video visit with ${appointmentInfo?.providerName || 'your provider'}. Your session has successfully ended.`}
             >
                 <div className="space-y-4">
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm text-slate-600 italic">
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-sm text-gray-600 italic">
                         "Your care is our priority. You may re-join this session if it was ended by mistake, provided your doctor is still available. Once the physician finalizes the visit, this link will expire and you should call our office directly for further assistance."
                     </div>
                     {/* Only show re-join if we think it's still alive (not from server status) */}
@@ -254,7 +254,7 @@ const GuestVisitPage = () => {
                     )}
                     <a
                         href="/portal/login"
-                        className="block w-full py-3 text-slate-500 font-bold hover:text-blue-600 transition-colors text-sm"
+                        className="block w-full py-3 text-gray-500 font-bold hover:text-blue-600 transition-colors text-sm"
                     >
                         Go to Patient Portal
                     </a>
@@ -278,7 +278,7 @@ const GuestVisitPage = () => {
             >
                 <button
                     onClick={() => window.location.reload()}
-                    className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all"
+                    className="w-full py-4 bg-gray-100 hover:bg-gray-50 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all"
                 >
                     <RefreshCw size={20} />
                     Refresh Page
@@ -299,7 +299,7 @@ const GuestVisitPage = () => {
             >
                 <a
                     href="/portal/login"
-                    className="w-full py-3 border-2 border-slate-200 text-slate-600 font-semibold rounded-xl hover:bg-slate-50 flex items-center justify-center gap-2 transition-all mb-4"
+                    className="w-full py-3 border-2 border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 transition-all mb-4"
                 >
                     Return to Patient Portal Login
                 </a>
@@ -326,14 +326,14 @@ const GuestVisitPage = () => {
             <div className="fixed inset-0 bg-slate-950 z-[99999] flex flex-col items-stretch overflow-hidden">
                 {/* Header */}
                 <div
-                    className="bg-slate-900 border-b border-white/5 flex items-center justify-between px-6 shrink-0"
+                    className="bg-gray-50 border-b border-white/5 flex items-center justify-between px-6 shrink-0"
                     style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', height: 'calc(65px + env(safe-area-inset-top, 0px))' }}
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
                         <div className="flex flex-col">
                             <span className="text-white font-bold text-sm tracking-tight">Guest Video Visit</span>
-                            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-widest flex items-center gap-1.5">
                                 <Shield className="w-3 h-3 text-emerald-400" /> Secure • HIPAA Ready
                             </span>
                         </div>
@@ -388,41 +388,41 @@ const GuestVisitPage = () => {
 
                 {/* Appointment Info */}
                 {appointmentInfo && (
-                    <div className="bg-slate-50 rounded-2xl p-4 mb-6 text-center">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Your Appointment</p>
-                        <p className="text-lg font-bold text-slate-800">
+                    <div className="bg-gray-50 rounded-2xl p-4 mb-6 text-center">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Your Appointment</p>
+                        <p className="text-lg font-bold text-gray-800">
                             {appointmentInfo.appointmentTime
                                 ? format(new Date(appointmentInfo.appointmentTime), 'EEEE, MMMM d • h:mm a')
                                 : 'Today'}
                         </p>
                         {appointmentInfo.providerName && (
-                            <p className="text-sm text-slate-500">with {appointmentInfo.providerName}</p>
+                            <p className="text-sm text-gray-500">with {appointmentInfo.providerName}</p>
                         )}
                     </div>
                 )}
 
                 {/* DOB Verification Form */}
                 <div className="text-center mb-6">
-                    <h1 className="text-xl font-black text-slate-800 mb-2">Verify Your Identity</h1>
-                    <p className="text-sm text-slate-500">
+                    <h1 className="text-xl font-bold text-gray-800 mb-2">Verify Your Identity</h1>
+                    <p className="text-sm text-gray-500">
                         For your security, please confirm your date of birth to join the video visit.
                     </p>
                 </div>
 
                 <form onSubmit={handleVerifyDob} className="space-y-5">
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">
                             Date of Birth
                         </label>
                         <div className="relative group">
-                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
                                 <Calendar size={20} />
                             </div>
                             <input
                                 type="date"
                                 value={dob}
                                 onChange={(e) => setDob(e.target.value)}
-                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                                className="w-full pl-11 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                                 required
                             />
                         </div>
@@ -457,7 +457,7 @@ const GuestVisitPage = () => {
                 {/* Help Text */}
                 {appointmentInfo?.clinicPhone && (
                     <div className="mt-6 text-center">
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-gray-400">
                             Need help? Call us at{' '}
                             <a href={`tel:${appointmentInfo.clinicPhone.replace(/[^\d]/g, '')}`} className="text-blue-600 font-semibold hover:underline">
                                 {appointmentInfo.clinicPhone}
@@ -467,7 +467,7 @@ const GuestVisitPage = () => {
                 )}
 
                 <div className="mt-8 text-center">
-                    <p className="text-xs font-semibold text-slate-400">
+                    <p className="text-xs font-semibold text-gray-400">
                         Secure Patient Portal • HIPAA Compliant
                     </p>
                 </div>

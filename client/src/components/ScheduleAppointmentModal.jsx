@@ -178,15 +178,15 @@ const ScheduleAppointmentModal = ({
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[10001] p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-md flex items-center justify-center z-[10001] p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-200">
                 <div className="bg-indigo-50/50 border-b border-indigo-100 px-8 py-6 flex items-center justify-between">
                     <h2 className="text-xl font-bold text-indigo-900 tracking-tight">
                         {initialTime ? `Book at ${initialTime}` : 'New Appointment'}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-indigo-500 transition-all border border-transparent hover:border-slate-100"
+                        className="p-2 hover:bg-white rounded-xl text-gray-400 hover:text-indigo-500 transition-all border border-transparent hover:border-gray-100"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -199,7 +199,7 @@ const ScheduleAppointmentModal = ({
                             {/* Patient Search */}
                             <div ref={patientSearchRef} className="relative">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Patient</label>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Patient</label>
                                     {!initialPatient && (
                                         <button
                                             type="button"
@@ -211,10 +211,10 @@ const ScheduleAppointmentModal = ({
                                     )}
                                 </div>
                                 <div className="relative group">
-                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                                     <input
                                         type="text"
-                                        className="w-full pl-10 pr-10 py-3 text-sm bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-300 transition-all placeholder:text-slate-400"
+                                        className="w-full pl-10 pr-10 py-3 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-300 transition-all placeholder:text-gray-400"
                                         placeholder="Search by name or MRN..."
                                         value={patientSearch}
                                         onChange={(e) => {
@@ -228,19 +228,19 @@ const ScheduleAppointmentModal = ({
                                         <button
                                             type="button"
                                             onClick={() => { setPatientSearch(''); setNewAppt({ ...newAppt, patientId: '', patient: '' }); setShowPatientDropdown(false); }}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-500 transition-colors"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
                                     )}
                                 </div>
                                 {showPatientDropdown && patientSearchResults.length > 0 && (
-                                    <div className="absolute z-[10002] w-full mt-2 bg-white border border-slate-100 rounded-xl shadow-2xl max-h-48 overflow-y-auto ring-1 ring-black/5 animate-in slide-in-from-top-2">
+                                    <div className="absolute z-[10002] w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-48 overflow-y-auto ring-1 ring-black/5 animate-in slide-in-from-top-2">
                                         {patientSearchResults.map(patient => (
                                             <button
                                                 key={patient.id}
                                                 type="button"
-                                                className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors text-sm border-b border-slate-50 last:border-0"
+                                                className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors text-sm border-b border-slate-50 last:border-0"
                                                 onClick={() => {
                                                     const patientName = `${patient.first_name || ''} ${patient.last_name || ''}`.trim();
                                                     setPatientSearch(patientName + (patient.mrn ? ` (${patient.mrn})` : ''));
@@ -248,8 +248,8 @@ const ScheduleAppointmentModal = ({
                                                     setShowPatientDropdown(false);
                                                 }}
                                             >
-                                                <div className="font-bold text-slate-900">{patient.first_name} {patient.last_name}</div>
-                                                {patient.mrn && <div className="text-[10px] text-slate-500 font-medium uppercase tracking-tight">MRN: {patient.mrn}</div>}
+                                                <div className="font-bold text-gray-900">{patient.first_name} {patient.last_name}</div>
+                                                {patient.mrn && <div className="text-[10px] text-gray-500 font-medium uppercase tracking-tight">MRN: {patient.mrn}</div>}
                                             </button>
                                         ))}
                                     </div>
@@ -264,9 +264,9 @@ const ScheduleAppointmentModal = ({
                             {/* Provider & Date Row */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Provider</label>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Provider</label>
                                     <select
-                                        className="w-full py-3 px-4 text-sm bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all appearance-none font-medium text-slate-700"
+                                        className="w-full py-3 px-4 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all appearance-none font-medium text-gray-700"
                                         value={newAppt.providerId}
                                         onChange={(e) => setNewAppt({ ...newAppt, providerId: e.target.value })}
                                     >
@@ -277,10 +277,10 @@ const ScheduleAppointmentModal = ({
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Date</label>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Date</label>
                                     <input
                                         type="date"
-                                        className="w-full py-3 px-4 text-sm bg-slate-50 border border-slate-100 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all font-medium text-slate-700"
+                                        className="w-full py-3 px-4 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 transition-all font-medium text-gray-700"
                                         value={newAppt.date}
                                         onChange={(e) => setNewAppt({ ...newAppt, date: e.target.value })}
                                     />
@@ -290,21 +290,21 @@ const ScheduleAppointmentModal = ({
                             {/* Visit Type & Method Row */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Visit Type</label>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Visit Type</label>
                                     <VisitTypeDropdown
                                         value={newAppt.type}
                                         onChange={(type, method) => setNewAppt({ ...newAppt, type, visitMethod: method || newAppt.visitMethod })}
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Visit Method</label>
-                                    <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Visit Method</label>
+                                    <div className="flex bg-gray-50 p-1.5 rounded-xl border border-gray-100">
                                         <button
                                             type="button"
                                             onClick={() => setNewAppt({ ...newAppt, visitMethod: 'office', type: newAppt.type === 'Telehealth Visit' ? 'Follow-up' : newAppt.type })}
                                             className={`flex-1 py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${newAppt.visitMethod === 'office'
                                                 ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100/50'
-                                                : 'text-slate-400 hover:text-slate-600'
+                                                : 'text-gray-400 hover:text-gray-600'
                                                 }`}
                                         >
                                             Office
@@ -314,7 +314,7 @@ const ScheduleAppointmentModal = ({
                                             onClick={() => setNewAppt({ ...newAppt, visitMethod: 'telehealth', type: 'Telehealth Visit' })}
                                             className={`flex-1 py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${newAppt.visitMethod === 'telehealth'
                                                 ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100/50'
-                                                : 'text-slate-400 hover:text-slate-600'
+                                                : 'text-gray-400 hover:text-gray-600'
                                                 }`}
                                         >
                                             Telehealth
@@ -328,7 +328,7 @@ const ScheduleAppointmentModal = ({
                         <div className="space-y-4">
                             <div className="h-full flex flex-col">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Select Time Slot</label>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Select Time Slot</label>
                                     {newAppt.time && (
                                         <span className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg font-bold uppercase tracking-widest border border-indigo-100/50">
                                             {newAppt.time}
@@ -336,7 +336,7 @@ const ScheduleAppointmentModal = ({
                                     )}
                                 </div>
 
-                                <div className="flex-1 min-h-0 bg-slate-50/50 rounded-[2rem] p-4 border border-slate-100 flex flex-col">
+                                <div className="flex-1 min-h-0 bg-gray-50/50 rounded-[2rem] p-4 border border-gray-100 flex flex-col">
                                     {!newAppt.providerId ? (
                                         <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3">
                                             <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
@@ -349,7 +349,7 @@ const ScheduleAppointmentModal = ({
                                     ) : loadingModalAppts ? (
                                         <div className="flex-1 flex flex-col items-center justify-center space-y-3">
                                             <div className="w-8 h-8 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Scanning Schedule...</p>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Scanning Schedule...</p>
                                         </div>
                                     ) : (
                                         <div className="overflow-y-auto pr-2 custom-scrollbar">
@@ -388,7 +388,7 @@ const ScheduleAppointmentModal = ({
                                                                 ${isFullyBooked ? 'bg-red-50 cursor-not-allowed' :
                                                                     isSelected ? 'bg-indigo-500 text-white shadow-lg ring-2 ring-indigo-200' :
                                                                         hasSomeBooking ? 'bg-amber-50 hover:bg-amber-100 text-amber-700' :
-                                                                            'bg-white hover:bg-slate-50 border border-slate-100 text-slate-600'}
+                                                                            'bg-white hover:bg-gray-50 border border-gray-100 text-gray-600'}
                                                             `}
                                                             title={isFullyBooked ? `Slot Full (${bookingCount}/${maxSlots} booked: ${bookedPatients.join(', ')})` :
                                                                 bookedPatients.length > 0 ? `Booked: ${bookedPatients.join(', ')}` : 'Available'}
@@ -405,17 +405,17 @@ const ScheduleAppointmentModal = ({
                                                     );
                                                 })}
                                             </div>
-                                            <div className="mt-4 flex flex-wrap gap-4 px-2 py-3 border-t border-slate-100">
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                                                    <div className="w-2 h-2 bg-white border border-slate-200 rounded-sm" /> Available
+                                            <div className="mt-4 flex flex-wrap gap-4 px-2 py-3 border-t border-gray-100">
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+                                                    <div className="w-2 h-2 bg-white border border-gray-200 rounded-sm" /> Available
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                                                     <div className="w-2 h-2 bg-amber-100 rounded-sm" /> 1/2 Filled
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                                                     <div className="w-2 h-2 bg-red-100 rounded-sm" /> Full
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                                                     <div className="w-2 h-2 bg-indigo-500 rounded-full" /> Selected
                                                 </div>
                                             </div>
@@ -427,11 +427,11 @@ const ScheduleAppointmentModal = ({
                     </div>
                 </div>
 
-                <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-3">
+                <div className="px-8 py-6 bg-gray-50/50 border-t border-gray-100 flex justify-end gap-3">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl transition-all"
+                        className="px-6 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 hover:bg-white rounded-xl transition-all"
                     >
                         Cancel
                     </button>

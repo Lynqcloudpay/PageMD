@@ -75,7 +75,7 @@ const PlatformAdminProfile = () => {
                 <div className="grid gap-8">
                     {/* Profile Info */}
                     <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
-                        <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                             <div className="p-2 bg-blue-100 rounded-lg">
                                 <User className="w-5 h-5 text-blue-600" />
                             </div>
@@ -83,12 +83,12 @@ const PlatformAdminProfile = () => {
                         </h2>
 
                         <div className="flex items-center gap-6">
-                            <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-3xl shadow-lg shadow-blue-500/25">
+                            <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-lg shadow-blue-500/25">
                                 {admin?.first_name?.[0]}{admin?.last_name?.[0]}
                             </div>
                             <div className="space-y-1">
-                                <h3 className="text-2xl font-black text-slate-800 tracking-tight">{admin?.first_name} {admin?.last_name}</h3>
-                                <p className="text-slate-500 font-medium">{admin?.email}</p>
+                                <h3 className="text-2xl font-bold text-gray-800 tracking-tight">{admin?.first_name} {admin?.last_name}</h3>
+                                <p className="text-gray-500 font-medium">{admin?.email}</p>
                                 <div className="flex items-center gap-2 mt-3">
                                     <span className="px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-600 font-bold uppercase tracking-wider shadow-sm">
                                         {admin?.role?.replace('_', ' ')}
@@ -100,7 +100,7 @@ const PlatformAdminProfile = () => {
 
                     {/* Change Password */}
                     <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
-                        <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                             <div className="p-2 bg-purple-100 rounded-lg">
                                 <Lock className="w-5 h-5 text-purple-600" />
                             </div>
@@ -119,34 +119,34 @@ const PlatformAdminProfile = () => {
 
                         <form onSubmit={handleUpdatePassword} className="space-y-5 max-w-md">
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Current Password</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Current Password</label>
                                 <input
                                     type="password"
                                     required
                                     value={passwords.current}
                                     onChange={e => setPasswords({ ...passwords, current: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all placeholder-slate-400"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all placeholder-slate-400"
                                     placeholder="Enter current password"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">New Password</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">New Password</label>
                                 <input
                                     type="password"
                                     required
                                     minLength={8}
                                     value={passwords.new}
                                     onChange={e => setPasswords({ ...passwords, new: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all placeholder-slate-400"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all placeholder-slate-400"
                                     placeholder="Enter new password"
                                 />
 
-                                <div className="mt-3 grid grid-cols-1 gap-2 p-3 bg-slate-100/50 rounded-xl border border-slate-200/50">
+                                <div className="mt-3 grid grid-cols-1 gap-2 p-3 bg-gray-50/50 rounded-xl border border-gray-200/50">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                                         {getPasswordRequirements().map((req, idx) => (
-                                            <div key={idx} className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight transition-colors duration-200 ${req.met ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-emerald-500 scale-110 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-slate-300'}`} />
+                                            <div key={idx} className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight transition-colors duration-200 ${req.met ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-emerald-500 scale-110 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-gray-200'}`} />
                                                 {req.label}
                                             </div>
                                         ))}
@@ -155,13 +155,13 @@ const PlatformAdminProfile = () => {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Confirm New Password</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Confirm New Password</label>
                                 <input
                                     type="password"
                                     required
                                     value={passwords.confirm}
                                     onChange={e => setPasswords({ ...passwords, confirm: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all placeholder-slate-400"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all placeholder-slate-400"
                                     placeholder="Repeat new password"
                                 />
                             </div>

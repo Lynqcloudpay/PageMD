@@ -246,12 +246,12 @@ const Profile = () => {
           </div>
 
           {/* Password Requirements */}
-          <div className="bg-slate-50 p-4 rounded-xl space-y-1 mt-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Security Requirements</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] text-slate-600">
+          <div className="bg-gray-50 p-4 rounded-xl space-y-1 mt-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Security Requirements</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] text-gray-600">
               {getPasswordRequirements().map((req, idx) => (
-                <div key={idx} className={`flex items-center gap-1.5 font-medium transition-colors duration-200 ${req.met ? 'text-green-600' : 'text-slate-500'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-green-500 scale-110 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'}`} />
+                <div key={idx} className={`flex items-center gap-1.5 font-medium transition-colors duration-200 ${req.met ? 'text-green-600' : 'text-gray-500'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-green-500 scale-110 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-gray-200'}`} />
                   {req.label}
                 </div>
               ))}

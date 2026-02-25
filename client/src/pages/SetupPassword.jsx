@@ -120,7 +120,7 @@ const SetupPassword = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
         );
@@ -129,21 +129,21 @@ const SetupPassword = () => {
     const requirements = getPasswordRequirements();
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center mb-6">
                     <img src="/logo.png" alt="PageMD" className="h-12 w-auto" />
                 </div>
-                <h2 className="text-center text-3xl font-bold tracking-tight text-slate-900">
+                <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
                     {type === 'invite' ? 'Welcome to PageMD' : 'Reset Your Password'}
                 </h2>
-                <p className="mt-2 text-center text-sm text-slate-600">
+                <p className="mt-2 text-center text-sm text-gray-600">
                     {user ? `Setting password for ${user.firstName} ${user.lastName}` : 'Please set your secure password'}
                 </p>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-slate-100">
+                <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-2xl sm:px-10 border border-gray-100">
                     {success ? (
                         <div className="text-center space-y-4">
                             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-4">
@@ -151,8 +151,8 @@ const SetupPassword = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900">Password Set!</h3>
-                            <p className="text-slate-600">Your password has been successfully updated. Redirecting to login...</p>
+                            <h3 className="text-xl font-bold text-gray-900">Password Set!</h3>
+                            <p className="text-gray-600">Your password has been successfully updated. Redirecting to login...</p>
                         </div>
                     ) : (
                         <>
@@ -170,7 +170,7 @@ const SetupPassword = () => {
 
                             <form className="space-y-6" onSubmit={handleSubmit}>
                                 <div>
-                                    <label htmlFor="password" title="Required: 12+ characters, uppercase, lowercase, number, special character" className="block text-sm font-medium text-slate-700">
+                                    <label htmlFor="password" title="Required: 12+ characters, uppercase, lowercase, number, special character" className="block text-sm font-medium text-gray-700">
                                         New Password
                                     </label>
                                     <div className="mt-1 relative">
@@ -180,13 +180,13 @@ const SetupPassword = () => {
                                             required
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="block w-full appearance-none rounded-xl border border-slate-200 pl-4 pr-12 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
+                                            className="block w-full appearance-none rounded-xl border border-gray-200 pl-4 pr-12 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
                                             placeholder="••••••••"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                                         >
                                             {showPassword ? (
                                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +203,7 @@ const SetupPassword = () => {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="confirmPassword" title="Must match password" className="block text-sm font-medium text-slate-700">
+                                    <label htmlFor="confirmPassword" title="Must match password" className="block text-sm font-medium text-gray-700">
                                         Confirm Password
                                     </label>
                                     <div className="mt-1 relative">
@@ -213,13 +213,13 @@ const SetupPassword = () => {
                                             required
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="block w-full appearance-none rounded-xl border border-slate-200 pl-4 pr-12 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
+                                            className="block w-full appearance-none rounded-xl border border-gray-200 pl-4 pr-12 py-3 placeholder-slate-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm transition-all duration-200"
                                             placeholder="••••••••"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                                         >
                                             {showConfirmPassword ? (
                                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,12 +235,12 @@ const SetupPassword = () => {
                                     </div>
                                 </div>
 
-                                <div className="bg-slate-50 p-4 rounded-xl space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Security Requirements</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] text-slate-600">
+                                <div className="bg-gray-50 p-4 rounded-xl space-y-1">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Security Requirements</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-[11px] text-gray-600">
                                         {requirements.map((req, idx) => (
-                                            <div key={idx} className={`flex items-center gap-1.5 font-medium transition-colors duration-200 ${req.met ? 'text-green-600' : 'text-slate-500'}`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-green-500 scale-110 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-slate-300'}`} />
+                                            <div key={idx} className={`flex items-center gap-1.5 font-medium transition-colors duration-200 ${req.met ? 'text-green-600' : 'text-gray-500'}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${req.met ? 'bg-green-500 scale-110 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-gray-200'}`} />
                                                 {req.label}
                                             </div>
                                         ))}

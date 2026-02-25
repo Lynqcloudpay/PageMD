@@ -20,7 +20,7 @@ const PROVIDER_PALETTE = [
     { name: 'Indigo', bg: 'bg-indigo-50/40', border: 'border-indigo-200', text: 'text-indigo-700', accent: '#6366f1', light: 'bg-indigo-50' },
     { name: 'Teal', bg: 'bg-teal-50/40', border: 'border-teal-200', text: 'text-teal-700', accent: '#0d9488', light: 'bg-teal-50' },
     { name: 'Sky', bg: 'bg-sky-50/40', border: 'border-sky-200', text: 'text-sky-700', accent: '#0ea5e9', light: 'bg-sky-50' },
-    { name: 'Slate', bg: 'bg-slate-100/40', border: 'border-slate-300', text: 'text-slate-700', accent: '#334155', light: 'bg-slate-100' },
+    { name: 'Slate', bg: 'bg-gray-50/40', border: 'border-gray-200', text: 'text-gray-700', accent: '#334155', light: 'bg-gray-50' },
     { name: 'Cobalt', bg: 'bg-blue-100/30', border: 'border-blue-200', text: 'text-blue-800', accent: '#1e40af', light: 'bg-blue-100' },
     { name: 'Emerald', bg: 'bg-emerald-50/40', border: 'border-emerald-200', text: 'text-emerald-700', accent: '#059669', light: 'bg-emerald-50' },
     { name: 'Cyan', bg: 'bg-cyan-50/40', border: 'border-cyan-200', text: 'text-cyan-700', accent: '#0891b2', light: 'bg-cyan-50' },
@@ -160,7 +160,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                     }}
                 >
                     <div
-                        className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-100"
+                        className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-100"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="bg-gradient-to-r from-red-500 to-red-600 px-8 py-6">
@@ -171,14 +171,14 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
 
                         <div className="p-8">
                             <div className="mb-6">
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">
                                     Cancellation Reason <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     value={reasonInput}
                                     onChange={(e) => setReasonInput(e.target.value)}
                                     placeholder="Please provide a reason for cancellation..."
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-red-100 focus:border-red-400 text-sm resize-none transition-all"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-red-100 focus:border-red-400 text-sm resize-none transition-all"
                                     rows={4}
                                     autoFocus
                                 />
@@ -192,7 +192,7 @@ const NoShowCancelledButtons = ({ appointment, onStatusUpdate }) => {
                                         setReasonInput('');
                                         setPendingStatus(null);
                                     }}
-                                    className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                                    className="px-6 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all"
                                 >
                                     Cancel
                                 </button>
@@ -231,7 +231,7 @@ const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, se
         <div className="relative" ref={dropdownRef}>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all shadow-sm ${isSelected
                 ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100'
-                : 'bg-white border-slate-100 hover:border-slate-200'
+                : 'bg-white border-gray-100 hover:border-gray-200'
                 }`}>
                 {/* Color and Chevron Cluster */}
                 <div className="flex items-center gap-0.5">
@@ -252,7 +252,7 @@ const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, se
                             e.stopPropagation();
                             setIsOpen(!isOpen);
                         }}
-                        className={`p-0.5 rounded-full hover:bg-slate-100 transition-colors ${isOpen ? 'bg-slate-100 text-indigo-500' : 'text-slate-400'}`}
+                        className={`p-0.5 rounded-full hover:bg-gray-50 transition-colors ${isOpen ? 'bg-gray-50 text-indigo-500' : 'text-gray-400'}`}
                         title="Change Color"
                     >
                         <ChevronDown className={`w-2.5 h-2.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -267,15 +267,15 @@ const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, se
                             setSelectedProviderIds([providerGroup.providerId]);
                         }
                     }}
-                    className={`text-[10px] font-bold uppercase tracking-tight truncate max-w-[80px] ${isSelected ? 'text-amber-700' : 'text-slate-500'} cursor-pointer`}
+                    className={`text-[10px] font-bold uppercase tracking-tight truncate max-w-[80px] ${isSelected ? 'text-amber-700' : 'text-gray-500'} cursor-pointer`}
                 >
                     {providerGroup.providerName}
                 </button>
             </div>
 
             {isOpen && (
-                <div className="absolute top-full right-0 mt-2 p-3 bg-white border border-slate-100 rounded-xl shadow-2xl z-[100] min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">Choose Color</div>
+                <div className="absolute top-full right-0 mt-2 p-3 bg-white border border-gray-100 rounded-xl shadow-2xl z-[100] min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">Choose Color</div>
                     <div className="grid grid-cols-5 gap-2">
                         {palette.map((color, idx) => (
                             <button
@@ -284,7 +284,7 @@ const ProviderLegendItem = ({ providerGroup, isSelected, selectedProviderIds, se
                                     onUpdateColor(idx);
                                     setIsOpen(false);
                                 }}
-                                className="w-6 h-6 rounded-full border border-slate-100 hover:scale-110 transition-transform shadow-sm relative group"
+                                className="w-6 h-6 rounded-full border border-gray-100 hover:scale-110 transition-transform shadow-sm relative group"
                                 style={{ backgroundColor: color.accent }}
                                 title={color.name}
                             >
@@ -342,8 +342,8 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
     });
 
     return createPortal(
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[10001] p-4 animate-in fade-in duration-200" onClick={onClose}>
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-md flex items-center justify-center z-[10001] p-4 animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                 <div className="bg-indigo-50/50 border-b border-indigo-100 px-8 py-6">
                     <h2 className="text-xl font-bold text-indigo-900 tracking-tight">Change Provider</h2>
                     <p className="text-indigo-400 text-[10px] uppercase font-bold tracking-widest mt-1">Reassign Appointment</p>
@@ -351,23 +351,23 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
 
                 <div className="p-8">
                     <div className="mb-6">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
                             Current Provider
                         </label>
-                        <div className="px-5 py-4 bg-slate-50/80 rounded-2xl text-sm text-slate-600 border border-slate-100 font-medium italic">
+                        <div className="px-5 py-4 bg-gray-50/80 rounded-2xl text-sm text-gray-600 border border-gray-100 font-medium italic">
                             {currentProviderName || 'No provider assigned'}
                         </div>
                     </div>
 
                     <div className="mb-8">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">
                             Select New Provider
                         </label>
                         <div className="relative group">
                             <select
                                 value={selectedProviderId}
                                 onChange={(e) => setSelectedProviderId(e.target.value)}
-                                className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 text-sm appearance-none text-slate-700 transition-all font-bold"
+                                className="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-300 text-sm appearance-none text-gray-700 transition-all font-bold"
                             >
                                 <option value="">Select a provider...</option>
                                 {providerOptions.map(provider => (
@@ -376,7 +376,7 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
                                     </option>
                                 ))}
                             </select>
-                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                                 <ChevronDown className="w-4 h-4" />
                             </div>
                         </div>
@@ -389,7 +389,7 @@ const ProviderChangeModal = ({ isOpen, onClose, appointment, providers, currentP
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-6 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+                            className="px-6 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all"
                         >
                             Cancel
                         </button>
@@ -436,7 +436,7 @@ const ProviderSelector = ({ appointment, providers, currentProviderName, onProvi
                     e.stopPropagation();
                     setShowModal(true);
                 }}
-                className="text-[9px] font-medium text-slate-400 hover:text-indigo-500 cursor-pointer transition-colors truncate block w-full text-left"
+                className="text-[9px] font-medium text-gray-400 hover:text-indigo-500 cursor-pointer transition-colors truncate block w-full text-left"
                 title={currentProviderName || 'Provider'}
             >
                 {displayName}
@@ -666,7 +666,7 @@ const Schedule = () => {
 
     // Provider color helper
     const getProviderColor = (providerId, providerName) => {
-        if (!providerId) return { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', accent: '#64748b', light: 'bg-slate-100' };
+        if (!providerId) return { bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', accent: '#64748b', light: 'bg-gray-50' };
 
         if (providerColorOverrides[providerId] !== undefined) {
             return PROVIDER_PALETTE[providerColorOverrides[providerId]];
@@ -751,35 +751,35 @@ const Schedule = () => {
     const refreshAppointments = () => fetchAppointments(true);
 
     return (
-        <div className="h-screen flex flex-col bg-[#F8FAFC]">
+        <div className="h-screen flex flex-col bg-white">
             {/* Soft Modern Header */}
-            <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-slate-100 relative z-[40]">
+            <div className="flex-shrink-0 bg-white/80 backdrop-blur-xl border-b border-gray-100 relative z-[40]">
                 <div className="max-w-[1700px] mx-auto px-6 py-2.5">
                     <div className="flex items-center justify-between">
                         {/* Left: Title and Date Navigation */}
                         <div className="flex items-center gap-8">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
+                                <div className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
                                     <Calendar className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Schedule</h1>
-                                    <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Clinic Overview</p>
+                                    <h1 className="text-xl font-bold text-[#111827] tracking-tighter uppercase mb-0.5">Schedule</h1>
+                                    <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Clinic Overview</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-2xl p-1 shadow-sm">
+                                <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-2xl p-1 shadow-sm">
                                     <button
-                                        className="p-2 hover:bg-white text-slate-400 hover:text-blue-600 rounded-xl transition-all hover:shadow-sm active:scale-95"
+                                        className="p-2 hover:bg-white text-gray-400 hover:text-blue-600 rounded-xl transition-all hover:shadow-sm active:scale-95"
                                         onClick={() => setCurrentDate(addDays(currentDate, -1))}
                                     >
                                         <ChevronLeft className="w-4 h-4" />
                                     </button>
                                     <div className="relative group">
-                                        <div className="w-[320px] px-3 py-1.5 font-medium text-slate-600 group-hover:bg-white rounded-xl transition-all text-center cursor-pointer select-none flex items-center justify-center gap-2 whitespace-nowrap text-base">
+                                        <div className="w-[320px] px-3 py-1.5 font-medium text-gray-600 group-hover:bg-white rounded-xl transition-all text-center cursor-pointer select-none flex items-center justify-center gap-2 whitespace-nowrap text-base">
                                             {format(currentDate, 'EEEE, MMMM d, yyyy')}
-                                            <ChevronDown className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <ChevronDown className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </div>
                                         <input
                                             type="date"
@@ -794,7 +794,7 @@ const Schedule = () => {
                                         />
                                     </div>
                                     <button
-                                        className="p-2 hover:bg-white text-slate-400 hover:text-blue-600 rounded-xl transition-all hover:shadow-sm active:scale-95"
+                                        className="p-2 hover:bg-white text-gray-400 hover:text-blue-600 rounded-xl transition-all hover:shadow-sm active:scale-95"
                                         onClick={() => setCurrentDate(addDays(currentDate, 1))}
                                     >
                                         <ChevronRight className="w-4 h-4" />
@@ -803,7 +803,7 @@ const Schedule = () => {
                                 <button
                                     className={`px-4 py-2 text-xs font-medium rounded-xl transition-all shadow-sm active:scale-95 ${format(currentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
                                         ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                                        : 'text-slate-500 bg-white border border-slate-100 hover:bg-slate-50'
+                                        : 'text-gray-500 bg-white border border-gray-100 hover:bg-gray-50'
                                         }`}
                                     onClick={() => setCurrentDate(new Date())}
                                 >
@@ -817,34 +817,34 @@ const Schedule = () => {
                             <div className="relative" ref={providerMenuRef}>
                                 <button
                                     onClick={() => setShowProviderMenu(!showProviderMenu)}
-                                    className="flex items-center gap-2 bg-white hover:bg-slate-50 rounded-2xl px-4 py-2 transition-all border border-slate-100 shadow-sm active:scale-95"
+                                    className="flex items-center gap-2 bg-white hover:bg-gray-50 rounded-2xl px-4 py-2 transition-all border border-gray-100 shadow-sm active:scale-95"
                                 >
-                                    <Users className="w-3.5 h-3.5 text-slate-400" />
-                                    <span className="text-xs font-medium text-slate-600 whitespace-nowrap">
+                                    <Users className="w-3.5 h-3.5 text-gray-400" />
+                                    <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
                                         {selectedProviderIds.length === 0
                                             ? 'All Providers'
                                             : `${selectedProviderIds.length} Provider${selectedProviderIds.length === 1 ? '' : 's'}`}
                                     </span>
-                                    <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {showProviderMenu && (
-                                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 p-2 z-[9999] max-h-[400px] overflow-y-auto">
-                                        <div className="px-2 py-1.5 mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-2 z-[9999] max-h-[400px] overflow-y-auto">
+                                        <div className="px-2 py-1.5 mb-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                             Select Providers to View
                                         </div>
                                         {providers.map(p => (
                                             <label
                                                 key={p.id}
-                                                className="flex items-center gap-3 w-full p-2.5 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors"
+                                                className="flex items-center gap-3 w-full p-2.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
                                             >
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedProviderIds.includes(p.id)}
                                                     onChange={() => toggleProvider(p.id)}
-                                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                    className="w-4 h-4 rounded border-gray-200 text-blue-600 focus:ring-blue-500"
                                                 />
-                                                <span className="text-sm font-medium text-slate-700">{p.name}</span>
+                                                <span className="text-sm font-medium text-gray-700">{p.name}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -856,7 +856,7 @@ const Schedule = () => {
             </div>
 
             {/* Filter Bar */}
-            <div className="flex-shrink-0 bg-white border-b border-slate-100">
+            <div className="flex-shrink-0 bg-white border-b border-gray-100">
                 <div className="max-w-[1700px] mx-auto px-6 py-2 flex items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
                         <button
@@ -866,7 +866,7 @@ const Schedule = () => {
                                 if (nextValue) setDismissedAppointmentIds(new Set());
                             }}
                             className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl transition-all ${showCancelledAppointments
-                                ? 'bg-white border border-slate-200 text-slate-500 shadow-sm'
+                                ? 'bg-white border border-gray-200 text-gray-500 shadow-sm'
                                 : 'bg-indigo-50/50 border border-indigo-100/50 text-indigo-500'
                                 }`}
                         >
@@ -877,14 +877,14 @@ const Schedule = () => {
                             )}
                         </button>
 
-                        <div className="h-4 w-[1px] bg-slate-200"></div>
+                        <div className="h-4 w-[1px] bg-gray-100"></div>
 
-                        <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-1 bg-gray-50/50 p-1 rounded-xl border border-gray-100">
                             {['am', 'pm', 'both'].map((filter) => (
                                 <button
                                     key={filter}
                                     onClick={() => setTimeFilter(filter)}
-                                    className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all ${timeFilter === filter ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                                    className={`px-3 py-1 text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all ${timeFilter === filter ? 'bg-white text-indigo-600 shadow-sm border border-gray-200' : 'text-gray-400 hover:text-gray-600'}`}
                                 >
                                     {filter === 'both' ? 'Full Day' : filter.toUpperCase()}
                                 </button>
@@ -893,7 +893,7 @@ const Schedule = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-slate-400">
+                        <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-gray-400">
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-400"></span> Arrived</span>
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Checked In</span>
                             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400"></span> Provider</span>
@@ -906,11 +906,11 @@ const Schedule = () => {
             <div className="flex-1 overflow-auto" ref={scrollContainerRef}>
                 <div className="min-w-full inline-block">
                     {/* Grid Header */}
-                    <div className="sticky top-0 z-[35] bg-white/95 backdrop-blur-sm border-b border-slate-100">
+                    <div className="sticky top-0 z-[35] bg-white/95 backdrop-blur-sm border-b border-gray-100">
                         <div className="flex">
-                            <div className="w-20 flex-shrink-0 border-r border-slate-100 bg-slate-50/30"></div>
+                            <div className="w-20 flex-shrink-0 border-r border-gray-100 bg-gray-50/30"></div>
                             <div className="flex-1 px-4 py-2 flex items-center justify-between">
-                                <span className="font-semibold text-xs text-slate-700">Clinic Schedule</span>
+                                <span className="font-semibold text-xs text-gray-700">Clinic Schedule</span>
                                 <div className="flex items-center gap-1.5">
                                     {Object.values(appointmentsByProvider).map(group => (
                                         <ProviderLegendItem
@@ -933,11 +933,11 @@ const Schedule = () => {
                         {visibleTimeSlots.map((time) => (
                             <div
                                 key={time}
-                                className={`flex border-b border-slate-50 ${time.endsWith(':00') ? 'bg-white' : 'bg-slate-50/20'}`}
+                                className={`flex border-b border-slate-50 ${time.endsWith(':00') ? 'bg-white' : 'bg-gray-50/20'}`}
                                 style={{ height: `${getTimeSlotHeight(time)}px` }}
                             >
                                 <div className="w-20 flex-shrink-0 border-r border-slate-50 flex items-center justify-end pr-3">
-                                    <span className="text-[10px] font-bold text-slate-400">
+                                    <span className="text-[10px] font-bold text-gray-400">
                                         {time.endsWith(':00') ? format(new Date(`2000-01-01T${time}`), 'h a') : ':30'}
                                     </span>
                                 </div>
@@ -982,7 +982,7 @@ const Schedule = () => {
                                 return (
                                     <div
                                         key={appt.id}
-                                        className={`absolute border-l-[3px] rounded-lg shadow-sm transition-all overflow-visible flex items-center px-2 group ${isCancelled ? 'bg-slate-50 border-slate-300 opacity-60' : `${appt.providerGroup.color.bg} ${appt.providerGroup.color.border}`}`}
+                                        className={`absolute border-l-[3px] rounded-lg shadow-sm transition-all overflow-visible flex items-center px-2 group ${isCancelled ? 'bg-gray-50 border-gray-200 opacity-60' : `${appt.providerGroup.color.bg} ${appt.providerGroup.color.border}`}`}
                                         style={{
                                             top: `${cumulativeTop + idx * 25 + 2}px`,
                                             height: '24px',
@@ -994,7 +994,7 @@ const Schedule = () => {
                                     >
                                         <div className="flex items-center gap-3 w-full">
                                             <span
-                                                className={`text-[11px] font-bold truncate w-[180px] cursor-pointer hover:underline ${isCancelled ? 'text-slate-400 line-through' : 'text-slate-700'}`}
+                                                className={`text-[11px] font-bold truncate w-[180px] cursor-pointer hover:underline ${isCancelled ? 'text-gray-400 line-through' : 'text-gray-700'}`}
                                                 onClick={(e) => handlePatientNameClick(e, appt)}
                                             >
                                                 {appt.patientName}
@@ -1005,7 +1005,7 @@ const Schedule = () => {
                                                     onUpdate={refreshAppointments}
                                                     onOpenChange={(open) => setActiveDropdownApptId(open ? appt.id : null)}
                                                 />
-                                                <span className="text-[8px] font-bold text-slate-400">{appt.duration}m</span>
+                                                <span className="text-[8px] font-bold text-gray-400">{appt.duration}m</span>
                                             </div>
                                             <div className="w-[100px]">
                                                 <ProviderSelector

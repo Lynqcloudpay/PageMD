@@ -559,7 +559,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
     return (
         <div className={`fixed inset-0 z-[2000] flex ${side === 'left' ? 'justify-start' : 'justify-end'} ${backdrop ? '' : 'pointer-events-none'}`}>
             {backdrop && (
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={onClose} />
+                <div className="absolute inset-0 bg-gray-50/60 backdrop-blur-md transition-opacity" onClick={onClose} />
             )}
 
             <div className={`relative w-full max-w-[900px] bg-white h-full shadow-2xl flex flex-col md:flex-row overflow-hidden transform duration-300 ${backdrop ? '' : 'pointer-events-auto shadow-xl border-r border-gray-200'} ${side === 'left' ? 'animate-in slide-in-from-left' : 'animate-slide-in-right'}`}>
@@ -666,26 +666,26 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                         </div>
 
                                         {loadingAudit ? (
-                                            <div className="flex flex-col items-center justify-center p-20 text-slate-400">
-                                                <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                                            <div className="flex flex-col items-center justify-center p-20 text-gray-400">
+                                                <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
                                                 <p className="font-bold">Fetching activity log...</p>
                                             </div>
                                         ) : (
                                             <div className="space-y-3">
                                                 {auditActivity.map((event) => (
                                                     <div key={event.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
-                                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0">
-                                                            <User size={14} className="text-slate-400" />
+                                                        <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
+                                                            <User size={14} className="text-gray-400" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 mb-0.5">
-                                                                <span className="font-bold text-slate-900 text-xs">
+                                                                <span className="font-bold text-gray-900 text-xs">
                                                                     {event.actor_name}
                                                                 </span>
-                                                                <span className="px-1.5 py-0.5 bg-slate-100 text-[8px] font-black text-slate-400 uppercase rounded">
+                                                                <span className="px-1.5 py-0.5 bg-gray-50 text-[8px] font-bold text-gray-400 uppercase rounded">
                                                                     {event.actor_role}
                                                                 </span>
-                                                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase ml-auto">
+                                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase ml-auto">
                                                                     {event.action}
                                                                 </span>
                                                             </div>
@@ -697,7 +697,7 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                     </div>
                                                 ))}
                                                 {auditActivity.length === 0 && (
-                                                    <div className="text-center py-12 text-slate-400 italic">No activity recorded for this chart.</div>
+                                                    <div className="text-center py-12 text-gray-400 italic">No activity recorded for this chart.</div>
                                                 )}
                                             </div>
                                         )}
@@ -1521,14 +1521,14 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                                         const mets = tagsStr.match(/mets:([^,]+)/)?.[1];
                                                         const ef = tagsStr.match(/ef:([^,]+)/)?.[1];
                                                         return (
-                                                            <div key={study.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                                            <div key={study.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                                                                 <div className="flex justify-between items-start mb-1">
-                                                                    <div className="font-bold text-sm text-slate-900">{isStress ? 'Stress Test' : 'Cardiac Cath'}</div>
-                                                                    <div className="text-[10px] text-slate-500">{new Date(study.created_at).toLocaleDateString()}</div>
+                                                                    <div className="font-bold text-sm text-gray-900">{isStress ? 'Stress Test' : 'Cardiac Cath'}</div>
+                                                                    <div className="text-[10px] text-gray-500">{new Date(study.created_at).toLocaleDateString()}</div>
                                                                 </div>
-                                                                <div className="text-xs text-slate-600 flex gap-4">
-                                                                    {mets && <span>METS: <strong className="text-slate-900">{mets}</strong></span>}
-                                                                    {ef && <span>LVEF: <strong className="text-slate-900">{ef}</strong></span>}
+                                                                <div className="text-xs text-gray-600 flex gap-4">
+                                                                    {mets && <span>METS: <strong className="text-gray-900">{mets}</strong></span>}
+                                                                    {ef && <span>LVEF: <strong className="text-gray-900">{ef}</strong></span>}
                                                                 </div>
                                                                 <button
                                                                     onClick={() => window.open(`/api/documents/${study.id}/file`, '_blank')}
@@ -1936,22 +1936,22 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {/* Cardiology Quality Measures */}
-                                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-200 transition-all">
+                                            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:border-blue-200 transition-all">
                                                 <div className="flex items-center justify-between mb-4">
-                                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Cardiovascular Health</h4>
+                                                    <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest">Cardiovascular Health</h4>
                                                     <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">88% Compliant</span>
                                                 </div>
                                                 <div className="space-y-3">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-slate-500">Statin Therapy for ASCVD</span>
+                                                        <span className="text-[11px] text-gray-500">Statin Therapy for ASCVD</span>
                                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                                                     </div>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-slate-500">Antithrombotic Therapy (AFib)</span>
+                                                        <span className="text-[11px] text-gray-500">Antithrombotic Therapy (AFib)</span>
                                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                                                     </div>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-slate-500">LVEF Assessment post-MI</span>
+                                                        <span className="text-[11px] text-gray-500">LVEF Assessment post-MI</span>
                                                         <Clock className="w-3.5 h-3.5 text-amber-500" />
                                                     </div>
                                                 </div>
@@ -1961,22 +1961,22 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                             </div>
 
                                             {/* General Prevention (MIPS) */}
-                                            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all">
+                                            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:border-indigo-200 transition-all">
                                                 <div className="flex items-center justify-between mb-4">
-                                                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">General Prevention</h4>
+                                                    <h4 className="text-xs font-bold text-gray-800 uppercase tracking-widest">General Prevention</h4>
                                                     <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">Needs Action</span>
                                                 </div>
                                                 <div className="space-y-3">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-slate-500">Flu Immunization</span>
+                                                        <span className="text-[11px] text-gray-500">Flu Immunization</span>
                                                         <XCircle className="w-3.5 h-3.5 text-rose-500" />
                                                     </div>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-slate-500">Pneumococcal Vaccine</span>
+                                                        <span className="text-[11px] text-gray-500">Pneumococcal Vaccine</span>
                                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                                                     </div>
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] text-slate-500">Tobacco Screening/Cessation</span>
+                                                        <span className="text-[11px] text-gray-500">Tobacco Screening/Cessation</span>
                                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                                                     </div>
                                                 </div>
@@ -1986,20 +1986,20 @@ const PatientChartPanel = ({ patientId, isOpen, onClose, initialTab = 'overview'
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-900 rounded-2xl p-6 text-white overflow-hidden relative group">
+                                        <div className="bg-gray-50 rounded-2xl p-6 text-white overflow-hidden relative group">
                                             <div className="relative z-10">
                                                 <h4 className="text-sm font-bold mb-2">Automated Compliance Tracking</h4>
-                                                <p className="text-xs text-slate-400 leading-relaxed mb-4 max-w-[400px]">
+                                                <p className="text-xs text-gray-400 leading-relaxed mb-4 max-w-[400px]">
                                                     PageMD automatically calculates quality measures based on your clinical documentation.
                                                     Ensure "Problem List" and "Orders" are up-to-date for accurate reporting.
                                                 </p>
                                                 <div className="flex gap-3">
                                                     <div className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/10">
-                                                        <div className="text-[8px] font-black uppercase text-slate-500 mb-0.5">MIPS Score</div>
+                                                        <div className="text-[8px] font-bold uppercase text-gray-500 mb-0.5">MIPS Score</div>
                                                         <div className="text-lg font-bold">92.4</div>
                                                     </div>
                                                     <div className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/10">
-                                                        <div className="text-[8px] font-black uppercase text-slate-500 mb-0.5">CMS Category</div>
+                                                        <div className="text-[8px] font-bold uppercase text-gray-500 mb-0.5">CMS Category</div>
                                                         <div className="text-lg font-bold">Elite</div>
                                                     </div>
                                                 </div>

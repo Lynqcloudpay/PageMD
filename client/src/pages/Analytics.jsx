@@ -165,26 +165,26 @@ const Analytics = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
+          <div className="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
             <BarChart3 className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-black text-[#10141A] tracking-tighter uppercase mb-0.5">Practice Analytics</h1>
-            <p className="text-[11px] text-slate-500 font-medium uppercase tracking-wide">Performance metrics and insights</p>
+            <h1 className="text-xl font-bold text-[#111827] tracking-tighter uppercase mb-0.5">Practice Analytics</h1>
+            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wide">Performance metrics and insights</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
           <select
             value={dateRange}
             onChange={(e) => setDateRange(e.target.value)}
-            className="px-3 py-2 border border-slate-100 rounded-xl text-[11px] font-bold uppercase tracking-wider text-slate-600 focus:ring-4 focus:ring-blue-50 transition-all select-none outline-none appearance-none bg-white cursor-pointer"
+            className="px-3 py-2 border border-gray-100 rounded-xl text-[11px] font-bold uppercase tracking-wider text-gray-600 focus:ring-4 focus:ring-blue-50 transition-all select-none outline-none appearance-none bg-white cursor-pointer"
           >
             <option value="week">This Week</option>
             <option value="month">This Month</option>
             <option value="quarter">This Quarter</option>
             <option value="year">This Year</option>
           </select>
-          <button className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-200 hover:shadow-lg active:scale-95">
+          <button className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all duration-200 hover:shadow-lg active:scale-95">
             Export Report
           </button>
         </div>

@@ -17,13 +17,13 @@ const savePresetsToStorage = (presets) => localStorage.setItem(PRESET_KEY, JSON.
 const PillGrid = ({ title, findings, toggleState, isLocked, onChange, onAllNormal, onClearAll }) => (
     <div>
         <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest">{title}</h4>
+            <h4 className="text-xs font-bold text-gray-600 uppercase tracking-widest">{title}</h4>
             {!isLocked && (
                 <div className="flex items-center gap-1">
                     <button onClick={onAllNormal} className="px-2.5 py-1 text-[10px] font-bold bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 transition-all flex items-center gap-1" title="Set all to reviewed-normal">
                         <Zap className="w-3 h-3" /> All Normal
                     </button>
-                    <button onClick={onClearAll} className="px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-all" title="Clear all">
+                    <button onClick={onClearAll} className="px-2 py-1 text-[10px] font-bold text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-all" title="Clear all">
                         <RotateCcw className="w-3 h-3" />
                     </button>
                 </div>
@@ -35,7 +35,7 @@ const PillGrid = ({ title, findings, toggleState, isLocked, onChange, onAllNorma
                     key={key}
                     className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border ${toggleState[key]
                             ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
                         }`}
                     onClick={() => onChange(key)}
                     disabled={isLocked}
@@ -128,13 +128,13 @@ const ROSPESection = ({
             {/* NoteWriter Preset Bar */}
             {!isLocked && (
                 <div className="flex items-center gap-2 px-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">NoteWriter</span>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">NoteWriter</span>
                     {presetNames.length > 0 && (
                         <button onClick={() => setShowPresetLoad(!showPresetLoad)} className="text-[10px] text-primary-600 hover:bg-primary-50 px-2 py-0.5 rounded-full border border-primary-100 flex items-center gap-1">
                             <RotateCcw className="w-2.5 h-2.5" /> Load Preset ({presetNames.length})
                         </button>
                     )}
-                    <button onClick={() => setShowPresetSave(!showPresetSave)} className="text-[10px] text-slate-500 hover:bg-slate-100 px-2 py-0.5 rounded-full border border-slate-100 flex items-center gap-1">
+                    <button onClick={() => setShowPresetSave(!showPresetSave)} className="text-[10px] text-gray-500 hover:bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100 flex items-center gap-1">
                         <Save className="w-2.5 h-2.5" /> Save Current
                     </button>
                 </div>
@@ -143,19 +143,19 @@ const ROSPESection = ({
             {/* Preset Save Input */}
             {showPresetSave && (
                 <div className="flex items-center gap-2 px-1 pb-2">
-                    <input type="text" value={presetName} onChange={e => setPresetName(e.target.value)} onKeyDown={e => e.key === 'Enter' && savePreset()} placeholder="Preset name (e.g., 'Cardiology Annual')" className="flex-1 text-xs border-slate-200 rounded-lg px-3 py-1.5 focus:ring-primary-400 focus:border-primary-400" autoFocus />
+                    <input type="text" value={presetName} onChange={e => setPresetName(e.target.value)} onKeyDown={e => e.key === 'Enter' && savePreset()} placeholder="Preset name (e.g., 'Cardiology Annual')" className="flex-1 text-xs border-gray-200 rounded-lg px-3 py-1.5 focus:ring-primary-400 focus:border-primary-400" autoFocus />
                     <button onClick={savePreset} className="text-xs bg-primary-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-primary-700">Save</button>
-                    <button onClick={() => setShowPresetSave(false)} className="text-xs text-slate-500 px-2 py-1.5">Cancel</button>
+                    <button onClick={() => setShowPresetSave(false)} className="text-xs text-gray-500 px-2 py-1.5">Cancel</button>
                 </div>
             )}
 
             {/* Preset Load List */}
             {showPresetLoad && presetNames.length > 0 && (
                 <div className="px-1 pb-2">
-                    <div className="border border-slate-100 rounded-xl bg-white shadow-sm p-2 space-y-1">
+                    <div className="border border-gray-100 rounded-xl bg-white shadow-sm p-2 space-y-1">
                         {presetNames.map(name => (
                             <div key={name} className="flex items-center justify-between px-3 py-1.5 hover:bg-primary-50 rounded-lg transition-all group">
-                                <button onClick={() => loadPreset(name)} className="flex-1 text-left text-xs font-bold text-slate-700">{name}</button>
+                                <button onClick={() => loadPreset(name)} className="flex-1 text-left text-xs font-bold text-gray-700">{name}</button>
                                 <button onClick={() => deletePreset(name)} className="opacity-0 group-hover:opacity-100 text-[10px] text-red-400 hover:text-red-600 px-1">Delete</button>
                             </div>
                         ))}

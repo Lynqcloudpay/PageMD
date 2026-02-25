@@ -138,7 +138,7 @@ const ResultImage = ({ doc }) => {
                 <div className="grid grid-cols-2 gap-2 mt-1">
                     {metrics.map((m, i) => (
                         <div key={i} className="bg-gray-50 p-2 rounded-md border border-gray-100/50">
-                            <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest block leading-none mb-1">{m.label}</span>
+                            <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest block leading-none mb-1">{m.label}</span>
                             <span className="text-[11px] font-bold text-gray-800 tabular-nums">{m.value}</span>
                         </div>
                     ))}
@@ -146,7 +146,7 @@ const ResultImage = ({ doc }) => {
             )}
             {interpretation && (
                 <div className="bg-blue-50/30 border border-blue-100/50 p-3 rounded-lg mt-1">
-                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest block mb-1">Clinical Interpretation</span>
+                    <span className="text-[8px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Clinical Interpretation</span>
                     <div className="text-[12px] font-bold text-gray-700 leading-tight italic">"{interpretation}"</div>
                 </div>
             )}
@@ -685,7 +685,7 @@ const ChartingEngine = () => {
                         </select>
                         <div className="flex gap-2">
                             <button onClick={() => { setShowSignPrompt(false); handleSignClick(); }} disabled={!selectedAttendingId} className="flex-1 py-2 bg-primary-600 text-white rounded-lg font-bold disabled:opacity-50">Submit</button>
-                            <button onClick={() => setShowSignPrompt(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                            <button onClick={() => setShowSignPrompt(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
                         </div>
                     </div>
                 </div>

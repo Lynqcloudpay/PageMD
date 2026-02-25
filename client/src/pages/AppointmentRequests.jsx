@@ -56,24 +56,24 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
     }
 
     return (
-        <div className="flex flex-col h-full bg-slate-50">
-            <div className="flex items-center justify-between mb-3 bg-white p-2 rounded border border-slate-200 shadow-sm">
-                <button onClick={() => changeDay(-1)} className="p-1 hover:bg-slate-100 rounded transition-colors"><ChevronLeft className="w-4 h-4 text-slate-600" /></button>
-                <span className="font-bold text-xs text-slate-700">{format(currentDate, 'EEEE, MMM d, yyyy')}</span>
-                <button onClick={() => changeDay(1)} className="p-1 hover:bg-slate-100 rounded transition-colors"><ChevronRight className="w-4 h-4 text-slate-600" /></button>
+        <div className="flex flex-col h-full bg-gray-50">
+            <div className="flex items-center justify-between mb-3 bg-white p-2 rounded border border-gray-200 shadow-sm">
+                <button onClick={() => changeDay(-1)} className="p-1 hover:bg-gray-50 rounded transition-colors"><ChevronLeft className="w-4 h-4 text-gray-600" /></button>
+                <span className="font-bold text-xs text-gray-700">{format(currentDate, 'EEEE, MMM d, yyyy')}</span>
+                <button onClick={() => changeDay(1)} className="p-1 hover:bg-gray-50 rounded transition-colors"><ChevronRight className="w-4 h-4 text-gray-600" /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white rounded-lg border border-slate-200">
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white rounded-lg border border-gray-200">
                 {loading ? (
-                    <div className="text-xs text-slate-400 p-8 text-center flex items-center justify-center h-full">Loading schedule...</div>
+                    <div className="text-xs text-gray-400 p-8 text-center flex items-center justify-center h-full">Loading schedule...</div>
                 ) : (
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-gray-100">
                         {slots.map(slot => {
                             const appt = (schedule || []).find(a => (a.appointment_time || a.time || '').startsWith(slot));
                             const isSelected = selectedTime && selectedTime.startsWith(slot);
                             const isSuggested = suggestedSlots.some(s => s.date === currentDateStr && s.time === slot);
 
-                            let rowClass = "hover:bg-slate-50 transition-colors";
+                            let rowClass = "hover:bg-gray-50 transition-colors";
                             if (isSelected) rowClass = "bg-emerald-50 ring-1 ring-inset ring-emerald-200";
                             else if (isSuggested) rowClass = "bg-amber-50 ring-1 ring-inset ring-amber-200";
 
@@ -87,7 +87,7 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                                         }
                                     }}
                                 >
-                                    <span className={`font-semibold w-14 shrink-0 mt-0.5 ${isSuggested ? 'text-amber-700' : isSelected ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                    <span className={`font-semibold w-14 shrink-0 mt-0.5 ${isSuggested ? 'text-amber-700' : isSelected ? 'text-emerald-700' : 'text-gray-400'}`}>
                                         {slot}
                                     </span>
                                     <div className="flex-1 min-w-0">
@@ -96,7 +96,7 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                                                 {appt.patient_name || 'Booked'} ({appt.duration}m)
                                             </div>
                                         ) : (
-                                            <span className={`text-[10px] ${isSuggested ? 'text-amber-600 font-bold' : isSelected ? 'text-emerald-600 font-bold' : 'text-slate-300 italic'}`}>
+                                            <span className={`text-[10px] ${isSuggested ? 'text-amber-600 font-bold' : isSelected ? 'text-emerald-600 font-bold' : 'text-gray-400 italic'}`}>
                                                 {isSuggested ? 'Suggested Slot' : isSelected ? 'Selected' : 'Available'}
                                             </span>
                                         )}
@@ -109,7 +109,7 @@ const DaySchedulePreview = ({ date, providerId, selectedTime, duration, onDateCh
                     </div>
                 )}
             </div>
-            <div className="mt-2 text-[10px] text-slate-400 text-center italic">
+            <div className="mt-2 text-[10px] text-gray-400 text-center italic">
                 Click available slots to suggest alternatives
             </div>
         </div>
@@ -320,7 +320,7 @@ const AppointmentRequests = () => {
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             <CalendarPlus className="w-5 h-5 text-blue-600" />
-                            <h1 className="text-sm font-black text-[#10141A] uppercase tracking-tighter">Appt Requests</h1>
+                            <h1 className="text-sm font-bold text-[#111827] uppercase tracking-tighter">Appt Requests</h1>
                         </div>
                         <button
                             onClick={() => fetchData(true)}
@@ -344,19 +344,19 @@ const AppointmentRequests = () => {
                         <div className="flex p-1 bg-gray-200/50 rounded-lg">
                             <button
                                 onClick={() => setFilterStatus('new')}
-                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-[#111827]/50 hover:text-[#111827]/70'}`}
                             >
                                 New ({requests.filter(r => r.status === 'new' && !r.subject?.includes('DECLINED')).length})
                             </button>
                             <button
                                 onClick={() => setFilterStatus('declined')}
-                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'declined' ? 'bg-white text-[#CE6969] shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'declined' ? 'bg-white text-[#CE6969] shadow-sm' : 'text-[#111827]/50 hover:text-[#111827]/70'}`}
                             >
                                 Refusals ({requests.filter(r => r.subject?.includes('DECLINED')).length})
                             </button>
                             <button
                                 onClick={() => setFilterStatus('completed')}
-                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'completed' ? 'bg-white text-[#10141A]/70 shadow-sm' : 'text-[#10141A]/50 hover:text-[#10141A]/70'}`}
+                                className={`flex-1 py-1 px-3 text-xs font-medium rounded-md transition-all ${filterStatus === 'completed' ? 'bg-white text-[#111827]/70 shadow-sm' : 'text-[#111827]/50 hover:text-[#111827]/70'}`}
                             >
                                 History
                             </button>
@@ -413,18 +413,18 @@ const AppointmentRequests = () => {
                 {selectedRequest ? (
                     <div className="flex-1 flex flex-col overflow-hidden m-6 bg-white rounded-2xl shadow-sm border border-gray-200 ring-1 ring-black/5">
                         {/* Detail Header */}
-                        <div className="p-6 border-b border-[#E4E4E4] flex items-center justify-between">
+                        <div className="p-6 border-b border-[#E5E7EB] flex items-center justify-between">
                             <div>
-                                <h2 className="text-2xl font-semibold text-[#10141A] mb-1">{selectedRequest.subject || 'Appointment Request'}</h2>
+                                <h2 className="text-2xl font-semibold text-[#111827] mb-1">{selectedRequest.subject || 'Appointment Request'}</h2>
                                 <button
                                     onClick={() => openPatientChart(selectedRequest)}
                                     className="flex items-center gap-2 group"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-[#83A2DB]/15 text-[#83A2DB] flex items-center justify-center font-medium text-xs ring-2 ring-white">
+                                    <div className="w-8 h-8 rounded-full bg-[#2563EB]/15 text-[#2563EB] flex items-center justify-center font-medium text-xs ring-2 ring-white">
                                         {getPatientDisplayName(selectedRequest).charAt(0)}
                                     </div>
                                     <div className="text-left">
-                                        <div className="text-base font-medium text-[#10141A] group-hover:text-[#83A2DB] transition-colors flex items-center gap-1">
+                                        <div className="text-base font-medium text-[#111827] group-hover:text-[#2563EB] transition-colors flex items-center gap-1">
                                             {getPatientDisplayName(selectedRequest)}
                                             <ChevronRight className="w-4 h-4 translate-y-px" />
                                         </div>
@@ -520,7 +520,7 @@ const AppointmentRequests = () => {
                                                 </div>
                                                 <button
                                                     onClick={handleCloseRequest}
-                                                    className="w-full py-2.5 bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
+                                                    className="w-full py-2.5 bg-gray-100 text-gray-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-gray-200 transition-colors border border-gray-200"
                                                 >
                                                     Close Request - No Action Needed
                                                 </button>
@@ -583,7 +583,7 @@ const AppointmentRequests = () => {
                         <div className="w-24 h-24 bg-amber-50 rounded-3xl flex items-center justify-center mb-6">
                             <CalendarPlus className="w-12 h-12 text-amber-400" />
                         </div>
-                        <h2 className="text-2xl font-semibold text-[#10141A] mb-2">Manage Appointment Requests</h2>
+                        <h2 className="text-2xl font-semibold text-[#111827] mb-2">Manage Appointment Requests</h2>
                         <p className="text-gray-500 max-w-sm">Select a registration request from the list to approve, schedule, or deny the appointment.</p>
                     </div>
                 )}
@@ -696,10 +696,10 @@ const AppointmentRequests = () => {
                             </div>
 
                             {/* Right Column: Schedule Browser */}
-                            <div className="w-full md:w-[400px] bg-slate-50 border-t md:border-t-0 md:border-l border-slate-200 p-6 flex flex-col overflow-hidden">
+                            <div className="w-full md:w-[400px] bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 p-6 flex flex-col overflow-hidden">
                                 {approvalData.providerId ? (
                                     <div className="h-full flex flex-col">
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Live Provider Schedule</h4>
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Live Provider Schedule</h4>
                                         <div className="flex-1 overflow-hidden">
                                             <DaySchedulePreview
                                                 date={approvalData.appointmentDate}
@@ -719,12 +719,12 @@ const AppointmentRequests = () => {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 px-8 text-slate-400">
+                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 px-8 text-gray-400">
                                         <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                                             <User className="w-8 h-8 opacity-20" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-slate-500">No Provider Selected</p>
+                                            <p className="text-sm font-bold text-gray-500">No Provider Selected</p>
                                             <p className="text-xs">Choose a provider to check their availability on this date</p>
                                         </div>
                                     </div>
@@ -745,7 +745,7 @@ const AppointmentRequests = () => {
                                         Suggest {suggestedSlots.length} Alternative{suggestedSlots.length > 1 ? 's' : ''}
                                     </button>
                                 ) : (
-                                    <p className="text-xs text-slate-400 font-medium italic">
+                                    <p className="text-xs text-gray-400 font-medium italic">
                                         Select available slots in the calendar to suggest alternatives if the requested time is booked.
                                     </p>
                                 )}

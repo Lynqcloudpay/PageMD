@@ -520,7 +520,7 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                 <div className="p-6 bg-primary-50 border-b border-primary-100 flex justify-between items-center">
                   <div>
                     <p className="text-[10px] font-bold text-primary-400 uppercase tracking-widest mb-1">Medication & Strength</p>
-                    <p className="text-xl font-black text-primary-900">{selectedMedication?.name}</p>
+                    <p className="text-xl font-bold text-primary-900">{selectedMedication?.name}</p>
                   </div>
                   <Pill className="w-10 h-10 text-primary-200" />
                 </div>
@@ -542,11 +542,11 @@ const EPrescribeEnhanced = ({ isOpen, onClose, onSuccess, patientId, patientName
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Qty</p>
-                          <p className="text-lg font-black text-gray-900">{quantity}</p>
+                          <p className="text-lg font-bold text-gray-900">{quantity}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Refills</p>
-                          <p className="text-lg font-black text-gray-900">{refills}</p>
+                          <p className="text-lg font-bold text-gray-900">{refills}</p>
                         </div>
                       </div>
                       <div>

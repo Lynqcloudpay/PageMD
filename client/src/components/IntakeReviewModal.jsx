@@ -213,7 +213,7 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
                                     <div className="bg-gray-50 p-6 rounded-2xl space-y-6">
                                         {/* Allergies */}
                                         <div>
-                                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2">Allergies</h5>
+                                            <h5 className="text-[10px] font-bold text-blue-400 uppercase mb-2">Allergies</h5>
                                             {data.allergiesNone ? (
                                                 <div className="text-sm font-bold text-gray-400 italic">None Reported</div>
                                             ) : (data.allergyList || []).length > 0 ? (
@@ -229,7 +229,7 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
 
                                         {/* Medications */}
                                         <div>
-                                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2">Current Medications</h5>
+                                            <h5 className="text-[10px] font-bold text-blue-400 uppercase mb-2">Current Medications</h5>
                                             {data.medsNone ? (
                                                 <div className="text-sm font-bold text-gray-400 italic">None Reported</div>
                                             ) : (data.medsList || []).length > 0 ? (
@@ -250,7 +250,7 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
 
                                         {/* PMH */}
                                         <div>
-                                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2">Past Medical History</h5>
+                                            <h5 className="text-[10px] font-bold text-blue-400 uppercase mb-2">Past Medical History</h5>
                                             <div className="flex flex-wrap gap-2 mb-2">
                                                 {(data.pmhConditions || []).map(c => (
                                                     <span key={c} className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-900 shadow-sm">{c}</span>
@@ -264,12 +264,12 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
                                         {/* FHx / SHx */}
                                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
                                             <div>
-                                                <h5 className="text-[10px] font-black text-blue-400 uppercase mb-1">Social History</h5>
+                                                <h5 className="text-[10px] font-bold text-blue-400 uppercase mb-1">Social History</h5>
                                                 <div className="text-xs font-bold text-gray-800">Tobacco: {data.tobaccoUse || 'N/A'}</div>
                                                 <div className="text-xs font-bold text-gray-800">Alcohol: {data.alcoholUse || 'N/A'}</div>
                                             </div>
                                             <div>
-                                                <h5 className="text-[10px] font-black text-blue-400 uppercase mb-1">Family History</h5>
+                                                <h5 className="text-[10px] font-bold text-blue-400 uppercase mb-1">Family History</h5>
                                                 <div className="flex flex-wrap gap-1">
                                                     {data.fhxHeartDisease && <span className="text-[10px] font-bold text-emerald-600">Heart</span>}
                                                     {data.fhxDiabetes && <span className="text-[10px] font-bold text-emerald-600">Diabetes</span>}
@@ -329,11 +329,11 @@ const IntakeReviewModal = ({ isOpen, onClose, sessionId, onApproved }) => {
                                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Audit & Compliance</h4>
                                     <div className="bg-gray-100 p-4 rounded-xl space-y-2">
                                         <div className="flex justify-between">
-                                            <span className="text-[10px] text-gray-500 uppercase font-black">IP Address</span>
+                                            <span className="text-[10px] text-gray-500 uppercase font-bold">IP Address</span>
                                             <span className="text-[10px] font-mono font-bold text-gray-700">{session.ip_address || 'N/A'}</span>
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] text-gray-500 uppercase font-black mb-1">User Agent</span>
+                                            <span className="text-[10px] text-gray-500 uppercase font-bold mb-1">User Agent</span>
                                             <span className="text-[8px] font-mono text-gray-400 leading-tight truncate">{session.user_agent || 'N/A'}</span>
                                         </div>
                                     </div>

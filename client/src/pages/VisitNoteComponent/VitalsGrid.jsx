@@ -4,16 +4,16 @@ import { Activity, Thermometer, Wind, Droplets, Scale, MoveVertical } from 'luci
 const VitalInput = ({ label, value, unit, icon: Icon, onChange, onKeyDown, isAbnormal, disabled, refProp, placeholder = "--" }) => (
     <div className={`p-3 rounded-xl border transition-all ${isAbnormal
         ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
-        : 'bg-white border-slate-100 hover:border-blue-100/50'
+        : 'bg-white border-gray-100 hover:border-blue-100/50'
         }`}>
         <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-2">
-                <div className={`p-1 rounded-md ${isAbnormal ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
+                <div className={`p-1 rounded-md ${isAbnormal ? 'bg-red-100 text-red-600' : 'bg-gray-50 text-gray-400'}`}>
                     <Icon className="w-3 h-3" />
                 </div>
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
             </div>
-            {unit && <span className="text-[9px] font-bold text-slate-300">{unit}</span>}
+            {unit && <span className="text-[9px] font-bold text-gray-400">{unit}</span>}
         </div>
         <div className="flex items-baseline gap-1">
             <input
@@ -24,7 +24,7 @@ const VitalInput = ({ label, value, unit, icon: Icon, onChange, onKeyDown, isAbn
                 onChange={onChange}
                 onKeyDown={onKeyDown}
                 disabled={disabled}
-                className={`w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 ${isAbnormal ? 'text-red-600' : 'text-slate-700'
+                className={`w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 ${isAbnormal ? 'text-red-600' : 'text-gray-700'
                     } disabled:opacity-50`}
                 placeholder={placeholder}
             />
@@ -59,16 +59,16 @@ const VitalsGrid = ({
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             <div className={`p-3 rounded-xl border transition-all col-span-1 ${isAbnormalVital('systolic', vitals.systolic) || isAbnormalVital('diastolic', vitals.diastolic)
                 ? 'bg-red-50 border-red-100 ring-1 ring-red-100/50'
-                : 'bg-white border-slate-100 hover:border-blue-100/50'
+                : 'bg-white border-gray-100 hover:border-blue-100/50'
                 }`}>
                 <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                        <div className={`p-1 rounded-md ${isAbnormalVital('systolic', vitals.systolic) ? 'bg-red-100 text-red-600' : 'bg-slate-50 text-slate-400'}`}>
+                        <div className={`p-1 rounded-md ${isAbnormalVital('systolic', vitals.systolic) ? 'bg-red-100 text-red-600' : 'bg-gray-50 text-gray-400'}`}>
                             <Activity className="w-3 h-3" />
                         </div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">BP</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">BP</span>
                     </div>
-                    <span className="text-[9px] font-bold text-slate-300">mmHg</span>
+                    <span className="text-[9px] font-bold text-gray-400">mmHg</span>
                 </div>
                 <div className="flex items-center gap-1">
                     <input
@@ -81,11 +81,11 @@ const VitalsGrid = ({
                         }}
                         onKeyDown={(e) => handleEnter(e, diastolicRef)}
                         disabled={isLocked}
-                        className={`w-14 bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-right ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600' : 'text-slate-700'
+                        className={`w-14 bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-right ${isAbnormalVital('systolic', vitals.systolic) ? 'text-red-600' : 'text-gray-700'
                             }`}
                         placeholder="--"
                     />
-                    <span className="text-slate-300 font-light text-base">/</span>
+                    <span className="text-gray-400 font-light text-base">/</span>
                     <input
                         ref={diastolicRef}
                         type="number"
@@ -96,7 +96,7 @@ const VitalsGrid = ({
                         }}
                         onKeyDown={(e) => handleEnter(e, pulseRef)}
                         disabled={isLocked}
-                        className={`w-14 bg-transparent border-none p-0 text-base font-bold focus:ring-0 ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600' : 'text-slate-700'
+                        className={`w-14 bg-transparent border-none p-0 text-base font-bold focus:ring-0 ${isAbnormalVital('diastolic', vitals.diastolic) ? 'text-red-600' : 'text-gray-700'
                             }`}
                         placeholder="--"
                     />
@@ -127,13 +127,13 @@ const VitalsGrid = ({
                 disabled={isLocked} refProp={tempRef}
             />
 
-            <div className="p-3 rounded-xl bg-white border border-slate-100 hover:border-blue-100/50 transition-all">
+            <div className="p-3 rounded-xl bg-white border border-gray-100 hover:border-blue-100/50 transition-all">
                 <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                        <div className="p-1 rounded-md bg-slate-50 text-slate-400">
+                        <div className="p-1 rounded-md bg-gray-50 text-gray-400">
                             <Scale className="w-3 h-3" />
                         </div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Weight</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Weight</span>
                     </div>
                 </div>
                 <div className="flex items-baseline gap-2">
@@ -149,10 +149,10 @@ const VitalsGrid = ({
                         }}
                         onKeyDown={(e) => handleEnter(e, heightRef)}
                         disabled={isLocked}
-                        className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-slate-700"
+                        className="w-full bg-transparent border-none p-0 text-base font-bold focus:ring-0 text-gray-700"
                         placeholder="--"
                     />
-                    <span className="text-[9px] font-bold text-slate-300">{vitals.weightUnit}</span>
+                    <span className="text-[9px] font-bold text-gray-400">{vitals.weightUnit}</span>
                 </div>
                 {previousWeight && (() => {
                     const change = getWeightChange();

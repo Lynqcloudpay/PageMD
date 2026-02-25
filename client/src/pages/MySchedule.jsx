@@ -146,7 +146,7 @@ const MySchedule = () => {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'scheduled': return { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300' };
+            case 'scheduled': return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };
             case 'arrived': return { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-400' };
             case 'checked_in': return { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-400' };
             case 'in_room': return { bg: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-400' };
@@ -183,8 +183,8 @@ const MySchedule = () => {
                             <Calendar className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-slate-900">My Schedule</h1>
-                            <p className="text-xs text-slate-500">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</p>
+                            <h1 className="text-lg font-bold text-gray-900">My Schedule</h1>
+                            <p className="text-xs text-gray-500">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</p>
                         </div>
                     </div>
 
@@ -192,8 +192,8 @@ const MySchedule = () => {
                         <button
                             onClick={() => setShowCancelledAppointments(!showCancelledAppointments)}
                             className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded transition-colors ${showCancelledAppointments
-                                    ? 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                                 }`}
                             title={showCancelledAppointments ? 'Hide cancelled/no-show' : 'Show cancelled/no-show'}
                         >
@@ -209,24 +209,24 @@ const MySchedule = () => {
                                 </>
                             )}
                         </button>
-                        <div className="flex items-center gap-1 bg-white rounded-lg border border-slate-200 p-1">
+                        <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
                             <button
                                 onClick={() => setSelectedDate(addDays(selectedDate, -1))}
-                                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
+                                className="p-1.5 hover:bg-gray-50 rounded transition-colors"
                             >
-                                <ChevronLeft className="w-4 h-4 text-slate-600" />
+                                <ChevronLeft className="w-4 h-4 text-gray-600" />
                             </button>
                             <input
                                 type="date"
                                 value={format(selectedDate, 'yyyy-MM-dd')}
                                 onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                                className="border-none outline-none text-xs font-semibold text-slate-700 bg-transparent cursor-pointer w-28"
+                                className="border-none outline-none text-xs font-semibold text-gray-700 bg-transparent cursor-pointer w-28"
                             />
                             <button
                                 onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-                                className="p-1.5 hover:bg-slate-100 rounded transition-colors"
+                                className="p-1.5 hover:bg-gray-50 rounded transition-colors"
                             >
-                                <ChevronRight className="w-4 h-4 text-slate-600" />
+                                <ChevronRight className="w-4 h-4 text-gray-600" />
                             </button>
                         </div>
                         {!isToday(selectedDate) && (
@@ -249,12 +249,12 @@ const MySchedule = () => {
                         (apptData.checkedOut?.length || 0) +
                         (showCancelledAppointments ? (apptData.cancelledNoShow?.length || 0) : 0);
                     return totalCount > 0 ? (
-                        <div className="mb-3 px-3 py-2 bg-white rounded-lg border border-slate-200 shadow-sm">
+                        <div className="mb-3 px-3 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center">
                                     <Calendar className="w-3.5 h-3.5 text-blue-600" />
                                 </div>
-                                <span className="text-sm font-bold text-slate-900">
+                                <span className="text-sm font-bold text-gray-900">
                                     {totalCount} {totalCount === 1 ? 'Appointment' : 'Appointments'}
                                 </span>
                             </div>
@@ -281,10 +281,10 @@ const MySchedule = () => {
 
                     if (totalCount === 0) {
                         return (
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-                                <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                                <h3 className="text-base font-bold text-slate-700 mb-1">No Appointments</h3>
-                                <p className="text-xs text-slate-500">
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                                <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                                <h3 className="text-base font-bold text-gray-700 mb-1">No Appointments</h3>
+                                <p className="text-xs text-gray-500">
                                     {totalCount === 0 && (apptData.active?.length || 0) === 0 && (apptData.scheduled?.length || 0) === 0 && (apptData.checkedOut?.length || 0) === 0 && (apptData.cancelledNoShow?.length || 0) === 0
                                         ? `No appointments scheduled for ${format(selectedDate, 'MMMM d, yyyy')}`
                                         : 'No appointments match the current filter'}
@@ -301,7 +301,7 @@ const MySchedule = () => {
                             <div
                                 key={appt.id}
                                 onClick={() => handlePatientClick(appt)}
-                                className={`p-3 hover:bg-slate-50 cursor-pointer transition-all border-l-4 ${isCancelledOrNoShow
+                                className={`p-3 hover:bg-gray-50 cursor-pointer transition-all border-l-4 ${isCancelledOrNoShow
                                         ? 'bg-gray-50/50 opacity-70 border-gray-300'
                                         : `${statusColor.border} hover:${statusColor.bg}/20`
                                     }`}
@@ -320,7 +320,7 @@ const MySchedule = () => {
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className={`text-sm font-bold truncate ${isCancelledOrNoShow
                                                     ? 'text-gray-500 line-through'
-                                                    : 'text-slate-900'
+                                                    : 'text-gray-900'
                                                 }`}>
                                                 {appt.patientName}
                                             </span>
@@ -331,17 +331,17 @@ const MySchedule = () => {
                                             <span className="text-xs font-semibold text-blue-600">
                                                 {formatTime(appt.time)}
                                             </span>
-                                            <span className="text-slate-400">•</span>
-                                            <span className="text-xs text-slate-600">
+                                            <span className="text-gray-400">•</span>
+                                            <span className="text-xs text-gray-600">
                                                 {appt.type}
                                             </span>
-                                            <span className="text-slate-400">•</span>
-                                            <span className="text-xs text-slate-500">
+                                            <span className="text-gray-400">•</span>
+                                            <span className="text-xs text-gray-500">
                                                 {appt.duration} min
                                             </span>
                                             {appt.patient_status && appt.patient_status !== 'scheduled' && (
                                                 <>
-                                                    <span className="text-slate-400">•</span>
+                                                    <span className="text-gray-400">•</span>
                                                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${statusColor.bg} ${statusColor.text}`}>
                                                         {getStatusLabel(appt.patient_status, appt.current_room)}
                                                     </span>
@@ -351,7 +351,7 @@ const MySchedule = () => {
                                     </div>
 
                                     {/* Arrow */}
-                                    <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                    <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 </div>
                             </div>
                         );
@@ -363,14 +363,14 @@ const MySchedule = () => {
                         <div className="space-y-4">
                             {/* Active Patients Section */}
                             {apptData.active && apptData.active.length > 0 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                     <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-200">
                                         <h3 className="text-sm font-bold text-blue-900 flex items-center gap-2">
                                             <Clock className="w-4 h-4" />
                                             Active in Clinic ({apptData.active.length})
                                         </h3>
                                     </div>
-                                    <div className="divide-y divide-slate-100">
+                                    <div className="divide-y divide-gray-100">
                                         {apptData.active.map((appt) => {
                                             globalIndex++;
                                             return renderAppointment(appt, globalIndex - 1);
@@ -381,14 +381,14 @@ const MySchedule = () => {
 
                             {/* Scheduled Section */}
                             {apptData.scheduled && apptData.scheduled.length > 0 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                    <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200">
-                                        <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                                    <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                                        <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                                             <Calendar className="w-4 h-4" />
                                             Scheduled ({apptData.scheduled.length})
                                         </h3>
                                     </div>
-                                    <div className="divide-y divide-slate-100">
+                                    <div className="divide-y divide-gray-100">
                                         {apptData.scheduled.map((appt) => {
                                             globalIndex++;
                                             return renderAppointment(appt, globalIndex - 1);
@@ -399,14 +399,14 @@ const MySchedule = () => {
 
                             {/* Checked Out Section */}
                             {apptData.checkedOut && apptData.checkedOut.length > 0 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                     <div className="px-4 py-2.5 bg-rose-50 border-b border-rose-200">
                                         <h3 className="text-sm font-bold text-rose-700 flex items-center gap-2">
                                             <Clock className="w-4 h-4" />
                                             Checked Out ({apptData.checkedOut.length})
                                         </h3>
                                     </div>
-                                    <div className="divide-y divide-slate-100">
+                                    <div className="divide-y divide-gray-100">
                                         {apptData.checkedOut.map((appt) => {
                                             globalIndex++;
                                             return renderAppointment(appt, globalIndex - 1);
@@ -417,14 +417,14 @@ const MySchedule = () => {
 
                             {/* Cancelled/No Show Section */}
                             {showCancelledAppointments && apptData.cancelledNoShow && apptData.cancelledNoShow.length > 0 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                                     <div className="px-4 py-2.5 bg-gray-100 border-b border-gray-300">
                                         <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                                             <XCircle className="w-4 h-4" />
                                             Cancelled / No Show ({apptData.cancelledNoShow.length})
                                         </h3>
                                     </div>
-                                    <div className="divide-y divide-slate-100">
+                                    <div className="divide-y divide-gray-100">
                                         {apptData.cancelledNoShow.map((appt) => {
                                             globalIndex++;
                                             return renderAppointment(appt, globalIndex - 1);

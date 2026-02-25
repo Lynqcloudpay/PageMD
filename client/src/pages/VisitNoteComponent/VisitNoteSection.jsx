@@ -16,7 +16,7 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
                 <div className="flex items-center gap-3">
                     <h3 className="vn-title">{title}</h3>
                     {badge !== undefined && (
-                        <span className="px-2 py-0.5 bg-slate-100/50 text-slate-500 text-[10px] font-semibold rounded-full border border-slate-200/50">
+                        <span className="px-2 py-0.5 bg-gray-50/50 text-gray-500 text-[10px] font-semibold rounded-full border border-gray-200/50">
                             {badge}
                         </span>
                     )}
@@ -29,7 +29,7 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
                 </div>
                 <div className="flex items-center gap-2">
                     <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                        className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
                     />
                 </div>
             </button>

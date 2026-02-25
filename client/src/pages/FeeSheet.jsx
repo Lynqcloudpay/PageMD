@@ -219,10 +219,10 @@ const FeeSheet = () => {
     return (
         <div className="max-w-6xl mx-auto p-6 space-y-6">
             {/* Header */}
-            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+            <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Fee Sheet</h1>
-                    <p className="text-slate-500">
+                    <h1 className="text-2xl font-bold text-gray-900">Fee Sheet</h1>
+                    <p className="text-gray-500">
                         {patient?.first_name} {patient?.last_name} ({patient?.dob})
                         <span className="mx-2">•</span>
                         Encounter: {visit?.encounter_date || visit?.visit_date}
@@ -231,14 +231,14 @@ const FeeSheet = () => {
                 <div className="flex gap-2">
                     <button
                         onClick={() => navigate(-1)}
-                        className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                        className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={() => handleSave(true)}
                         disabled={saving}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg shadow-sm transition-all"
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg shadow-sm transition-all"
                     >
                         {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Save
@@ -257,9 +257,9 @@ const FeeSheet = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column: Diagnoses (ICD10) */}
                 <div className="lg:col-span-1 space-y-4">
-                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                 <Info className="w-5 h-5 text-blue-500" />
                                 Diagnoses
                             </h2>
@@ -273,12 +273,12 @@ const FeeSheet = () => {
 
                         <div className="space-y-2">
                             {diagnoses.filter(d => !d.del).map((dx, idx) => (
-                                <div key={idx} className="group relative p-3 bg-slate-50 border border-slate-100 rounded-lg">
+                                <div key={idx} className="group relative p-3 bg-gray-50 border border-gray-100 rounded-lg">
                                     <div className="flex items-start justify-between">
                                         <div>
-                                            <span className="text-xs font-bold text-slate-400 mr-2">#{idx + 1}</span>
+                                            <span className="text-xs font-bold text-gray-400 mr-2">#{idx + 1}</span>
                                             <span className="font-mono font-bold text-blue-700">{dx.code}</span>
-                                            <span className="block text-sm text-slate-600 mt-1">{dx.code_text}</span>
+                                            <span className="block text-sm text-gray-600 mt-1">{dx.code_text}</span>
                                         </div>
                                         <button
                                             onClick={() => removeDiagnosis(idx)}
@@ -290,7 +290,7 @@ const FeeSheet = () => {
                                 </div>
                             ))}
                             {diagnoses.filter(d => !d.del).length === 0 && (
-                                <div className="text-center py-6 text-slate-400 italic text-sm border-2 border-dashed border-slate-100 rounded-lg">
+                                <div className="text-center py-6 text-gray-400 italic text-sm border-2 border-dashed border-gray-100 rounded-lg">
                                     No diagnoses selected
                                 </div>
                             )}
@@ -298,17 +298,17 @@ const FeeSheet = () => {
                     </div>
 
                     {/* Quick Select Categories */}
-                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <TrendingUp className="w-5 h-5 text-green-500" />
                             Quick Select
                         </h2>
                         <div className="space-y-3">
                             {categories.map(cat => (
                                 <div key={cat.id} className="space-y-1">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">{cat.name}</label>
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">{cat.name}</label>
                                     <select
-                                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                                        className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm"
                                         onChange={(e) => {
                                             const codeStr = e.target.value;
                                             if (!codeStr) return;
@@ -332,9 +332,9 @@ const FeeSheet = () => {
 
                 {/* Right Column: Services (CPT/HCPCS) */}
                 <div className="lg:col-span-2 space-y-4">
-                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                 <FileText className="w-5 h-5 text-amber-500" />
                                 Services & Procedures
                             </h2>
@@ -348,7 +348,7 @@ const FeeSheet = () => {
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
                                     <tr>
                                         <th className="px-4 py-3">Code</th>
                                         <th className="px-4 py-3">Description</th>
@@ -359,14 +359,14 @@ const FeeSheet = () => {
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100">
+                                <tbody className="divide-y divide-gray-100">
                                     {bill.map((item, idx) => !item.del && (
-                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-4 py-4">
-                                                <span className="font-mono font-bold text-slate-700">{item.code}</span>
+                                                <span className="font-mono font-bold text-gray-700">{item.code}</span>
                                             </td>
                                             <td className="px-4 py-4">
-                                                <div className="text-sm text-slate-600 line-clamp-2 max-w-xs">{item.code_text}</div>
+                                                <div className="text-sm text-gray-600 line-clamp-2 max-w-xs">{item.code_text}</div>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="flex gap-1 justify-center">
@@ -375,7 +375,7 @@ const FeeSheet = () => {
                                                             key={num}
                                                             type="text"
                                                             maxLength="2"
-                                                            className="w-7 p-1 text-[10px] border border-slate-200 rounded uppercase text-center"
+                                                            className="w-7 p-1 text-[10px] border border-gray-200 rounded uppercase text-center"
                                                             placeholder={`M${num}`}
                                                             value={item[`modifier${num}`] || ''}
                                                             onChange={(e) => updateBillItem(idx, { [`modifier${num}`]: e.target.value })}
@@ -386,16 +386,16 @@ const FeeSheet = () => {
                                             <td className="px-4 py-4">
                                                 <input
                                                     type="number"
-                                                    className="w-12 p-1 text-xs border border-slate-200 rounded text-center"
+                                                    className="w-12 p-1 text-xs border border-gray-200 rounded text-center"
                                                     value={item.units}
                                                     onChange={(e) => updateBillItem(idx, { units: e.target.value })}
                                                 />
                                             </td>
                                             <td className="px-4 py-4">
-                                                <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
+                                                <div className="flex items-center gap-1 text-sm font-semibold text-gray-700">
                                                     $<input
                                                         type="number"
-                                                        className="w-20 p-1 border border-slate-200 rounded"
+                                                        className="w-20 p-1 border border-gray-200 rounded"
                                                         value={item.fee}
                                                         onChange={(e) => updateBillItem(idx, { fee: e.target.value })}
                                                     />
@@ -413,7 +413,7 @@ const FeeSheet = () => {
                                                                 title={dx.code_text}
                                                                 className={`w-6 h-6 flex items-center justify-center text-[10px] rounded-full border transition-all ${isSelected
                                                                     ? 'bg-blue-600 border-blue-600 text-white font-bold ring-2 ring-blue-100'
-                                                                    : 'bg-white border-slate-200 text-slate-400 hover:border-blue-300'
+                                                                    : 'bg-white border-gray-200 text-gray-400 hover:border-blue-300'
                                                                     }`}
                                                             >
                                                                 {dxNum}
@@ -421,14 +421,14 @@ const FeeSheet = () => {
                                                         );
                                                     })}
                                                     {diagnoses.filter(d => !d.del).length === 0 && (
-                                                        <span className="text-xs text-slate-400 italic">No Dx available</span>
+                                                        <span className="text-xs text-gray-400 italic">No Dx available</span>
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <button
                                                     onClick={() => removeBillItem(idx)}
-                                                    className="text-slate-300 hover:text-red-500 transition-colors"
+                                                    className="text-gray-400 hover:text-red-500 transition-colors"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -437,7 +437,7 @@ const FeeSheet = () => {
                                     ))}
                                     {bill.filter(item => !item.del).length === 0 && (
                                         <tr>
-                                            <td colSpan="7" className="px-4 py-12 text-center text-slate-400 italic">
+                                            <td colSpan="7" className="px-4 py-12 text-center text-gray-400 italic">
                                                 No services added yet
                                             </td>
                                         </tr>
@@ -448,9 +448,9 @@ const FeeSheet = () => {
                     </div>
 
                     {/* Products & Drug Sales */}
-                    <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                         <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                            <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                 <Pill className="w-5 h-5 text-emerald-500" />
                                 Products & Medications
                             </h2>
@@ -469,7 +469,7 @@ const FeeSheet = () => {
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
                                     <tr>
                                         <th className="px-4 py-3">Product</th>
                                         <th className="px-4 py-3 w-16">Qty</th>
@@ -478,14 +478,14 @@ const FeeSheet = () => {
                                         <th className="px-4 py-3 w-10"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100">
+                                <tbody className="divide-y divide-gray-100">
                                     {prod.map((item, idx) => !item.del && (
-                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-4 py-4 text-sm font-medium text-slate-700">{item.drug_name || item.drug_id}</td>
+                                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="px-4 py-4 text-sm font-medium text-gray-700">{item.drug_name || item.drug_id}</td>
                                             <td className="px-4 py-4">
                                                 <input
                                                     type="number"
-                                                    className="w-12 p-1 text-xs border border-slate-200 rounded text-center"
+                                                    className="w-12 p-1 text-xs border border-gray-200 rounded text-center"
                                                     value={item.units}
                                                     onChange={(e) => {
                                                         const newProd = [...prod];
@@ -495,10 +495,10 @@ const FeeSheet = () => {
                                                 />
                                             </td>
                                             <td className="px-4 py-4">
-                                                <div className="flex items-center gap-1 text-sm font-semibold text-slate-700">
+                                                <div className="flex items-center gap-1 text-sm font-semibold text-gray-700">
                                                     $<input
                                                         type="number"
-                                                        className="w-20 p-1 border border-slate-200 rounded"
+                                                        className="w-20 p-1 border border-gray-200 rounded"
                                                         value={item.fee}
                                                         onChange={(e) => {
                                                             const newProd = [...prod];
@@ -511,7 +511,7 @@ const FeeSheet = () => {
                                             <td className="px-4 py-4">
                                                 <input
                                                     type="text"
-                                                    className="w-full p-1 text-xs border border-slate-200 rounded"
+                                                    className="w-full p-1 text-xs border border-gray-200 rounded"
                                                     value={item.notes}
                                                     onChange={(e) => {
                                                         const newProd = [...prod];
@@ -531,7 +531,7 @@ const FeeSheet = () => {
                                                             setProd(prod.filter((_, i) => i !== idx));
                                                         }
                                                     }}
-                                                    className="text-slate-300 hover:text-red-500 transition-colors"
+                                                    className="text-gray-400 hover:text-red-500 transition-colors"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -540,7 +540,7 @@ const FeeSheet = () => {
                                     ))}
                                     {prod.filter(i => !i.del).length === 0 && (
                                         <tr>
-                                            <td colSpan="5" className="px-4 py-8 text-center text-slate-400 italic text-sm">No products added</td>
+                                            <td colSpan="5" className="px-4 py-8 text-center text-gray-400 italic text-sm">No products added</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -549,11 +549,11 @@ const FeeSheet = () => {
                     </div>
 
                     {/* Rendering Provider, Price Level & Copay */}
-                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-600">Rendering Provider</label>
+                            <label className="text-sm font-bold text-gray-600">Rendering Provider</label>
                             <select
-                                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
+                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
                                 value={renderingProviderId}
                                 onChange={(e) => setRenderingProviderId(e.target.value)}
                             >
@@ -563,9 +563,9 @@ const FeeSheet = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-600">Price Level</label>
+                            <label className="text-sm font-bold text-gray-600">Price Level</label>
                             <select
-                                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
+                                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
                                 value={priceLevel}
                                 onChange={(e) => handlePriceLevelChange(e.target.value)}
                             >
@@ -577,20 +577,20 @@ const FeeSheet = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-600">Copay Received</label>
+                            <label className="text-sm font-bold text-gray-600">Copay Received</label>
                             <div className="flex gap-2">
                                 <div className="relative flex-1">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                                     <input
                                         type="number"
-                                        className="w-full pl-7 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
+                                        className="w-full pl-7 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-100 outline-none"
                                         placeholder="0.00"
                                         value={copay}
                                         onChange={(e) => setCopay(e.target.value)}
                                     />
                                 </div>
                                 <select
-                                    className="w-24 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                                    className="w-24 p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                                     value={paymentMethod}
                                     onChange={(e) => setPaymentMethod(e.target.value)}
                                 >
@@ -619,17 +619,17 @@ const FeeSheet = () => {
             />
 
             {/* Total Footer */}
-            <div className="sticky bottom-6 bg-slate-900 text-white p-5 rounded-2xl shadow-2xl flex justify-between items-center">
+            <div className="sticky bottom-6 bg-gray-50 text-white p-5 rounded-2xl shadow-2xl flex justify-between items-center">
                 <div className="flex gap-8">
                     <div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Total Charges</div>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Total Charges</div>
                         <div className="text-2xl font-bold">
                             ${bill.filter(i => !i.del).reduce((acc, curr) => acc + (parseFloat(curr.fee) * (parseInt(curr.units) || 1)), 0).toFixed(2)}
                         </div>
                     </div>
-                    <div className="border-l border-slate-700 h-10 my-auto"></div>
+                    <div className="border-l border-gray-200 h-10 my-auto"></div>
                     <div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">Line Items</div>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Line Items</div>
                         <div className="text-2xl font-bold">{bill.filter(i => !i.del).length}</div>
                     </div>
                 </div>

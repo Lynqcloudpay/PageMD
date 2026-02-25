@@ -56,11 +56,11 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave }) => {
     }, [roomUrl, userName, onLeave]);
 
     return (
-        <div className="w-full h-full bg-slate-900 relative">
+        <div className="w-full h-full bg-gray-50 relative">
             {isLoading && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10">
                     <Loader2 className="w-12 h-12 animate-spin text-blue-500 mb-4" />
-                    <p className="text-slate-400">Connecting to video call...</p>
+                    <p className="text-gray-400">Connecting to video call...</p>
                 </div>
             )}
             <div ref={frameRef} className="w-full h-full" />
@@ -195,14 +195,14 @@ const PortalTelehealth = ({ onSchedule }) => {
             <div className="fixed inset-0 bg-slate-950 z-[99999] flex flex-col items-stretch overflow-hidden">
                 {/* Header with safe area padding */}
                 <div
-                    className="bg-slate-900 border-b border-white/5 flex items-center justify-between px-6 shrink-0"
+                    className="bg-gray-50 border-b border-white/5 flex items-center justify-between px-6 shrink-0"
                     style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)', height: 'calc(65px + env(safe-area-inset-top, 0px))' }}
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
                         <div className="flex flex-col">
                             <span className="text-white font-bold text-sm tracking-tight">Active Visit</span>
-                            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-widest flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-widest flex items-center gap-1.5">
                                 <Shield className="w-3 h-3 text-emerald-400" /> Secure • HIPAA Ready
                             </span>
                         </div>
@@ -237,8 +237,8 @@ const PortalTelehealth = ({ onSchedule }) => {
     return (
         <div className="pb-28 animate-in fade-in duration-500">
             <div className="mb-6">
-                <h1 className="text-xl font-bold text-slate-800 tracking-tight">Telehealth Center</h1>
-                <p className="text-slate-500 text-sm mt-1">Connect securely with your provider.</p>
+                <h1 className="text-xl font-bold text-gray-800 tracking-tight">Telehealth Center</h1>
+                <p className="text-gray-500 text-sm mt-1">Connect securely with your provider.</p>
             </div>
 
             {/* Security Badge */}
@@ -262,13 +262,13 @@ const PortalTelehealth = ({ onSchedule }) => {
             {loading ? (
                 <div className="text-center py-12">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
-                    <p className="text-slate-500 text-sm">Loading appointments...</p>
+                    <p className="text-gray-500 text-sm">Loading appointments...</p>
                 </div>
             ) : appointments.length === 0 ? (
-                <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-100">
-                    <Video className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                    <h3 className="text-lg font-bold text-slate-700 mb-1">No Telehealth Visits Today</h3>
-                    <p className="text-slate-500 text-sm mb-4">No virtual appointments for today.</p>
+                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
+                    <Video className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <h3 className="text-lg font-bold text-gray-700 mb-1">No Telehealth Visits Today</h3>
+                    <p className="text-gray-500 text-sm mb-4">No virtual appointments for today.</p>
                     <button
                         onClick={handleScheduleNavigation}
                         className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors"
@@ -278,19 +278,19 @@ const PortalTelehealth = ({ onSchedule }) => {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Today's Virtual Visits</h2>
+                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Today's Virtual Visits</h2>
                     {appointments.map(appt => (
                         <div
                             key={appt.id}
-                            className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm"
+                            className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm"
                         >
                             <div className="flex items-center gap-3 mb-3">
                                 <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
                                     <Video size={22} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-slate-800 text-sm truncate">{appt.appointment_type || 'Virtual Visit'}</h3>
-                                    <p className="text-xs text-slate-500">
+                                    <h3 className="font-bold text-gray-800 text-sm truncate">{appt.appointment_type || 'Virtual Visit'}</h3>
+                                    <p className="text-xs text-gray-500">
                                         {appt.appointment_time ? format(new Date(`2000-01-01T${appt.appointment_time}`), 'h:mm a') : 'Scheduled'}
                                         {appt.provider_name && ` • Dr. ${appt.provider_name}`}
                                     </p>
@@ -316,10 +316,10 @@ const PortalTelehealth = ({ onSchedule }) => {
             {/* PREP MODAL */}
             {prepAppt && (
                 <div className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
-                    <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-8 border-b border-slate-100 bg-slate-50/50 shrink-0">
-                            <h3 className="text-2xl font-bold text-slate-800 tracking-tight">Prepare for your visit</h3>
-                            <p className="text-slate-500 text-sm mt-2">
+                    <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 border-b border-gray-100 bg-gray-50/50 shrink-0">
+                            <h3 className="text-2xl font-bold text-gray-800 tracking-tight">Prepare for your visit</h3>
+                            <p className="text-gray-500 text-sm mt-2">
                                 Please complete this quick checklist for a smooth video experience.
                             </p>
                         </div>
@@ -331,8 +331,8 @@ const PortalTelehealth = ({ onSchedule }) => {
                                 ['privacy', 'I’m in a private place', 'Quiet environment for HIPAA privacy'],
                                 ['wifi', 'I have a stable connection', 'Strong Wi-Fi or LTE signal'],
                             ].map(([k, label, sub]) => (
-                                <label key={k} className="group flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all cursor-pointer">
-                                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${prepReady[k] ? 'bg-blue-600 border-blue-600' : 'border-slate-300 group-hover:border-blue-400'}`}>
+                                <label key={k} className="group flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:bg-white hover:shadow-md transition-all cursor-pointer">
+                                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${prepReady[k] ? 'bg-blue-600 border-blue-600' : 'border-gray-200 group-hover:border-blue-400'}`}>
                                         <input
                                             type="checkbox"
                                             className="sr-only"
@@ -342,8 +342,8 @@ const PortalTelehealth = ({ onSchedule }) => {
                                         {prepReady[k] && <Video size={14} className="text-white" />}
                                     </div>
                                     <div className="flex-1">
-                                        <span className="text-slate-700 font-bold block">{label}</span>
-                                        <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">{sub}</span>
+                                        <span className="text-gray-700 font-bold block">{label}</span>
+                                        <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">{sub}</span>
                                     </div>
                                 </label>
                             ))}
@@ -366,7 +366,7 @@ const PortalTelehealth = ({ onSchedule }) => {
                             <div className="flex gap-4 pt-4 sticky bottom-0 bg-white pb-2 mt-2">
                                 <button
                                     onClick={() => setPrepAppt(null)}
-                                    className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                                    className="flex-1 py-4 rounded-xl border border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -382,7 +382,7 @@ const PortalTelehealth = ({ onSchedule }) => {
                                 </button>
                             </div>
 
-                            <p className="text-center text-[11px] text-slate-400 font-medium">
+                            <p className="text-center text-[11px] text-gray-400 font-medium">
                                 Technical support: If video fails, your provider may contact you via phone.
                             </p>
                         </div>

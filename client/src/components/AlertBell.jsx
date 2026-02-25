@@ -121,7 +121,7 @@ const AlertBell = () => {
                 onClick={() => setShowDropdown(!showDropdown)}
                 className={`relative p-2 rounded-lg transition-all ${alertCount > 0
                     ? 'text-amber-600 hover:bg-amber-50'
-                    : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+                    : 'text-gray-400 hover:bg-gray-50 hover:text-gray-600'
                     }`}
             >
                 <Bell className="w-5 h-5" />
@@ -134,10 +134,10 @@ const AlertBell = () => {
             </button>
 
             {showDropdown && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
                         <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-slate-800 text-sm">Notifications</h3>
+                            <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
                             {alertCount > 0 && (
                                 <button
                                     onClick={handleDismissAll}
@@ -149,7 +149,7 @@ const AlertBell = () => {
                         </div>
                         <button
                             onClick={() => setShowDropdown(false)}
-                            className="text-slate-400 hover:text-slate-600 transition-colors"
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -157,28 +157,28 @@ const AlertBell = () => {
 
                     <div className="max-h-80 overflow-y-auto">
                         {loading && alerts.length === 0 ? (
-                            <div className="p-6 text-center text-slate-400 text-sm">
+                            <div className="p-6 text-center text-gray-400 text-sm">
                                 Loading...
                             </div>
                         ) : alerts.length === 0 ? (
                             <div className="p-6 text-center">
-                                <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                <p className="text-slate-500 text-sm">No notifications</p>
-                                <p className="text-slate-400 text-xs mt-1">You're all caught up!</p>
+                                <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                <p className="text-gray-500 text-sm">No notifications</p>
+                                <p className="text-gray-400 text-xs mt-1">You're all caught up!</p>
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-100">
+                            <div className="divide-y divide-gray-100">
                                 {alerts.map((alert) => (
                                     <div
                                         key={alert.id}
-                                        className="w-full p-4 text-left hover:bg-slate-50 transition-colors group relative"
+                                        className="w-full p-4 text-left hover:bg-gray-50 transition-colors group relative"
                                         onClick={() => handleAlertClick(alert)}
                                     >
                                         <div className="absolute top-2 right-2 flex items-center gap-1">
                                             {alert.dismissible !== false && (
                                                 <button
                                                     onClick={(e) => handleDismiss(e, alert.id)}
-                                                    className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                                                    className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
                                                     title="Dismiss"
                                                 >
                                                     <X className="w-3.5 h-3.5" />
@@ -190,10 +190,10 @@ const AlertBell = () => {
                                                 {getAlertIcon(alert.type)}
                                             </div>
                                             <div className="flex-1 min-w-0 pr-4">
-                                                <p className="font-semibold text-slate-800 text-sm mb-0.5">
+                                                <p className="font-semibold text-gray-800 text-sm mb-0.5">
                                                     {alert.title}
                                                 </p>
-                                                <p className="text-slate-500 text-xs leading-relaxed">
+                                                <p className="text-gray-500 text-xs leading-relaxed">
                                                     {alert.message}
                                                 </p>
                                                 {alert.actionLabel && (

@@ -56,19 +56,19 @@ const PortalResetPasswordModal = ({ isOpen, onClose, patient }) => {
                         <Lock size={32} />
                     </div>
                     <div className="space-y-2">
-                        <h3 className="text-xl font-bold text-slate-900">Password Updated</h3>
-                        <p className="text-slate-500 text-sm max-w-xs mx-auto">
-                            The portal password for <span className="font-semibold text-slate-800">{patient.first_name} {patient.last_name}</span> has been updated.
+                        <h3 className="text-xl font-bold text-gray-900">Password Updated</h3>
+                        <p className="text-gray-500 text-sm max-w-xs mx-auto">
+                            The portal password for <span className="font-semibold text-gray-800">{patient.first_name} {patient.last_name}</span> has been updated.
                         </p>
                     </div>
-                    <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl max-w-xs mx-auto">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Password</div>
-                        <div className="text-lg font-mono font-bold text-slate-900 select-all">{password}</div>
+                    <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl max-w-xs mx-auto">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">New Password</div>
+                        <div className="text-lg font-mono font-bold text-gray-900 select-all">{password}</div>
                         <p className="text-[10px] text-amber-600 font-bold mt-2 uppercase tracking-tight">Please provide this to the patient securely.</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-full py-3.5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all"
+                        className="w-full py-3.5 bg-gray-50 text-white rounded-2xl font-bold hover:bg-gray-100 transition-all"
                     >
                         Close
                     </button>
@@ -90,7 +90,7 @@ const PortalResetPasswordModal = ({ isOpen, onClose, patient }) => {
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">New Password</label>
+                                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">New Password</label>
                                 <button
                                     type="button"
                                     onClick={generateRandomPassword}
@@ -103,7 +103,7 @@ const PortalResetPasswordModal = ({ isOpen, onClose, patient }) => {
                                 type="text"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all outline-none"
+                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-2xl font-bold text-gray-900 focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all outline-none"
                                 placeholder="Enter at least 8 characters..."
                                 required
                                 minLength={8}
@@ -122,7 +122,7 @@ const PortalResetPasswordModal = ({ isOpen, onClose, patient }) => {
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+                            className="flex-1 py-3.5 bg-white border border-gray-200 text-gray-700 rounded-2xl font-bold hover:bg-gray-50 transition-all"
                         >
                             Cancel
                         </button>

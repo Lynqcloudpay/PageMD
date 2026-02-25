@@ -316,7 +316,7 @@ const Compliance = ({ inline = false }) => {
     ];
 
     return (
-        <div className={cn("min-h-screen", !inline ? "bg-slate-50/50 p-8 pt-20" : "bg-transparent")}>
+        <div className={cn("min-h-screen", !inline ? "bg-gray-50/50 p-8 pt-20" : "bg-transparent")}>
             {/* Header - Only if NOT inline */}
             {!inline && (
                 <div className="max-w-7xl mx-auto mb-10">
@@ -326,13 +326,13 @@ const Compliance = ({ inline = false }) => {
                                 <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
                                     <Shield className="text-white w-5 h-5" />
                                 </div>
-                                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Compliance & Audit</h1>
+                                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Compliance & Audit</h1>
                             </div>
-                            <p className="text-slate-400 text-xs font-medium ml-1 uppercase tracking-widest">System Integrity & Patient Privacy</p>
+                            <p className="text-gray-400 text-xs font-medium ml-1 uppercase tracking-widest">System Integrity & Patient Privacy</p>
                         </div>
                         <button
                             onClick={exportCSV}
-                            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest"
+                            className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-50 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest"
                         >
                             <Download size={16} />
                             Export Audit Data
@@ -349,7 +349,7 @@ const Compliance = ({ inline = false }) => {
                     { label: 'Break Glass Events', value: stats.breakGlasses, icon: AlertTriangle, color: 'rose' },
                     { label: 'Pending Alerts', value: stats.activeAlerts, icon: Activity, color: 'indigo' }
                 ].map((stat, i) => (
-                    <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4 group hover:border-indigo-100 transition-all">
+                    <div key={i} className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 group hover:border-indigo-100 transition-all">
                         <div className={cn(
                             "w-11 h-11 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110",
                             stat.color === 'indigo' ? "bg-indigo-50 text-indigo-600" :
@@ -359,8 +359,8 @@ const Compliance = ({ inline = false }) => {
                             <stat.icon className="w-5 h-5" />
                         </div>
                         <div>
-                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none mb-1.5">{stat.label}</div>
-                            <div className="text-xl font-black text-slate-900 leading-none tracking-tight">{stat.value}</div>
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] leading-none mb-1.5">{stat.label}</div>
+                            <div className="text-xl font-bold text-gray-900 leading-none tracking-tight">{stat.value}</div>
                         </div>
                     </div>
                 ))}
@@ -368,20 +368,20 @@ const Compliance = ({ inline = false }) => {
 
             {/* Main Content Card */}
             <div className={cn(
-                "bg-white rounded-[2rem] border border-slate-100 overflow-hidden flex flex-col",
+                "bg-white rounded-[2rem] border border-gray-100 overflow-hidden flex flex-col",
                 !inline ? "max-w-7xl mx-auto shadow-xl shadow-slate-200/50 min-h-[600px]" : "border-none"
             )}>
                 {/* Navigation Tabs */}
-                <div className="flex border-b border-slate-100 px-6 bg-slate-50/30">
+                <div className="flex border-b border-gray-100 px-6 bg-gray-50/30">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={cn(
-                                "flex items-center gap-2 px-6 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 relative",
+                                "flex items-center gap-2 px-6 py-4 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 relative",
                                 activeTab === tab.id
                                     ? 'border-indigo-600 text-indigo-600'
-                                    : 'border-transparent text-slate-400 hover:text-slate-600'
+                                    : 'border-transparent text-gray-400 hover:text-gray-600'
                             )}
                         >
                             <tab.icon className="w-4 h-4" />
@@ -396,7 +396,7 @@ const Compliance = ({ inline = false }) => {
                     {inline && (
                         <button
                             onClick={exportCSV}
-                            className="ml-auto flex items-center gap-2 px-4 py-2 my-2 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all"
+                            className="ml-auto flex items-center gap-2 px-4 py-2 my-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all"
                         >
                             <Download size={14} />
                             Export
@@ -406,27 +406,27 @@ const Compliance = ({ inline = false }) => {
 
                 {/* Filters Bar */}
                 <div className="p-6 border-b border-slate-50 bg-white flex flex-wrap gap-4 items-center">
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-xl border border-slate-200">
-                        <Calendar size={14} className="text-slate-400" />
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-200">
+                        <Calendar size={14} className="text-gray-400" />
                         <input
                             type="date"
-                            className="bg-transparent border-none text-xs font-bold text-slate-700 outline-none"
+                            className="bg-transparent border-none text-xs font-bold text-gray-700 outline-none"
                             value={filters.startDate}
                             onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
                         />
-                        <span className="text-slate-300 mx-1">-</span>
+                        <span className="text-gray-400 mx-1">-</span>
                         <input
                             type="date"
-                            className="bg-transparent border-none text-xs font-bold text-slate-700 outline-none"
+                            className="bg-transparent border-none text-xs font-bold text-gray-700 outline-none"
                             value={filters.endDate}
                             onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-xl border border-slate-200">
-                        <User size={14} className="text-slate-400" />
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-200">
+                        <User size={14} className="text-gray-400" />
                         <select
-                            className="bg-transparent border-none text-xs font-bold text-slate-700 outline-none min-w-[120px]"
+                            className="bg-transparent border-none text-xs font-bold text-gray-700 outline-none min-w-[120px]"
                             value={filters.userId}
                             onChange={(e) => setFilters({ ...filters, userId: e.target.value })}
                         >
@@ -435,10 +435,10 @@ const Compliance = ({ inline = false }) => {
                         </select>
                     </div>
 
-                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-xl border border-slate-200">
-                        <Eye size={14} className="text-slate-400" />
+                    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-200">
+                        <Eye size={14} className="text-gray-400" />
                         <select
-                            className="bg-transparent border-none text-xs font-bold text-slate-700 outline-none min-w-[120px]"
+                            className="bg-transparent border-none text-xs font-bold text-gray-700 outline-none min-w-[120px]"
                             value={filters.accessType}
                             onChange={(e) => setFilters({ ...filters, accessType: e.target.value })}
                         >
@@ -451,12 +451,12 @@ const Compliance = ({ inline = false }) => {
                     </div>
 
                     <div className="relative flex-1 max-w-sm">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-xl border border-slate-200">
-                            <Search size={14} className={isPatientSearching ? "text-blue-500 animate-pulse" : "text-slate-400"} />
+                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-200">
+                            <Search size={14} className={isPatientSearching ? "text-blue-500 animate-pulse" : "text-gray-400"} />
                             <input
                                 type="text"
                                 placeholder="Search patient name or MRN..."
-                                className="bg-transparent border-none text-xs font-bold text-slate-700 outline-none w-full"
+                                className="bg-transparent border-none text-xs font-bold text-gray-700 outline-none w-full"
                                 value={patientSearchQuery}
                                 onFocus={() => setShowPatientResults(true)}
                                 onChange={(e) => {
@@ -472,15 +472,15 @@ const Compliance = ({ inline = false }) => {
                                         setPatientSearchQuery('');
                                         setFilters({ ...filters, patientId: '', patientSearch: '' });
                                     }}
-                                    className="p-1 hover:bg-slate-200 rounded-full"
+                                    className="p-1 hover:bg-gray-100 rounded-full"
                                 >
-                                    <X size={12} className="text-slate-400" />
+                                    <X size={12} className="text-gray-400" />
                                 </button>
                             )}
                         </div>
 
                         {showPatientResults && patientSearchResults.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 z-[60] max-h-60 overflow-y-auto">
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 z-[60] max-h-60 overflow-y-auto">
                                 {patientSearchResults.map(p => (
                                     <button
                                         key={p.id}
@@ -489,17 +489,17 @@ const Compliance = ({ inline = false }) => {
                                             setPatientSearchQuery(`${p.first_name} ${p.last_name}`);
                                             setShowPatientResults(false);
                                         }}
-                                        className="w-full text-left px-4 py-2 hover:bg-slate-50 border-b border-slate-50 last:border-none flex justify-between items-center group"
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b border-slate-50 last:border-none flex justify-between items-center group"
                                     >
                                         <div className="min-w-0">
-                                            <div className="text-xs font-black text-slate-900 group-hover:text-blue-600 truncate">
+                                            <div className="text-xs font-bold text-gray-900 group-hover:text-blue-600 truncate">
                                                 {p.first_name} {p.last_name}
                                             </div>
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
                                                 MRN: {p.mrn} • {p.dob || p.date_of_birth}
                                             </div>
                                         </div>
-                                        <ChevronRight size={14} className="text-slate-200 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                                        <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
                                     </button>
                                 ))}
                             </div>
@@ -512,9 +512,9 @@ const Compliance = ({ inline = false }) => {
                                 type="checkbox"
                                 checked={filters.isRestricted}
                                 onChange={(e) => setFilters({ ...filters, isRestricted: e.target.checked })}
-                                className="w-4 h-4 rounded border-slate-300 text-orange-600"
+                                className="w-4 h-4 rounded border-gray-200 text-orange-600"
                             />
-                            <span className="text-xs font-bold text-slate-600">Restricted Only</span>
+                            <span className="text-xs font-bold text-gray-600">Restricted Only</span>
                         </label>
                     )}
 
@@ -524,9 +524,9 @@ const Compliance = ({ inline = false }) => {
                                 type="checkbox"
                                 checked={filters.unresolvedOnly}
                                 onChange={(e) => setFilters({ ...filters, unresolvedOnly: e.target.checked })}
-                                className="w-4 h-4 rounded border-slate-300 text-blue-600"
+                                className="w-4 h-4 rounded border-gray-200 text-blue-600"
                             />
-                            <span className="text-xs font-bold text-slate-600">Unresolved Only</span>
+                            <span className="text-xs font-bold text-gray-600">Unresolved Only</span>
                         </label>
                     )}
                 </div>
@@ -534,58 +534,58 @@ const Compliance = ({ inline = false }) => {
                 {/* Data List */}
                 <div className="flex-1 overflow-y-auto p-4">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-                            <div className="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                        <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-400">
+                            <div className="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
                             <p className="font-bold">Loading compliance data...</p>
                         </div>
                     ) : activeTab === 'global_audit' ? (
                         <div className="space-y-3">
                             {data.map((event) => (
-                                <div key={event.id} className="group hover:bg-slate-50 border border-slate-100 rounded-xl p-3 transition-all flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
+                                <div key={event.id} className="group hover:bg-gray-50 border border-gray-100 rounded-xl p-3 transition-all flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
                                         <Activity className="w-4 h-4 text-blue-500" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="font-black text-slate-900 truncate text-sm">
+                                            <span className="font-bold text-gray-900 truncate text-sm">
                                                 {event.actor_name || 'System'}
                                             </span>
-                                            <span className="px-2 py-0.5 bg-slate-100 text-[8px] font-black text-slate-400 uppercase rounded tracking-wider">
+                                            <span className="px-2 py-0.5 bg-gray-50 text-[8px] font-bold text-gray-400 uppercase rounded tracking-wider">
                                                 {event.actor_role || 'API'}
                                             </span>
-                                            <span className="text-slate-300 font-light mx-1">•</span>
-                                            <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-tighter">
+                                            <span className="text-gray-400 font-light mx-1">•</span>
+                                            <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-tighter">
                                                 {event.action}
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-400">
+                                            <span className="text-[10px] font-bold text-gray-400">
                                                 on {event.entity_type}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-4 text-[11px] text-slate-500 font-medium">
+                                        <div className="flex items-center gap-4 text-[11px] text-gray-500 font-medium">
                                             {event.patient_id && (
                                                 <span className="flex items-center gap-1.5 min-w-[180px]">
-                                                    <User size={10} className="text-slate-300" />
-                                                    Chart: <span className="text-slate-700 font-bold">{event.patient_name}</span>
-                                                    <span className="text-[9px] text-slate-400 font-black ml-1 uppercase">(MRN: {event.patient_mrn})</span>
+                                                    <User size={10} className="text-gray-400" />
+                                                    Chart: <span className="text-gray-700 font-bold">{event.patient_name}</span>
+                                                    <span className="text-[9px] text-gray-400 font-bold ml-1 uppercase">(MRN: {event.patient_mrn})</span>
                                                 </span>
                                             )}
                                             <span className="flex items-center gap-1.5">
-                                                <Clock size={10} className="text-slate-300" />
+                                                <Clock size={10} className="text-gray-400" />
                                                 {event.occurred_at ? format(new Date(event.occurred_at), 'MMM d, h:mm:ss a') : 'N/A'}
                                             </span>
                                             <span className="flex items-center gap-1.5 ml-auto">
-                                                <Activity size={10} className="text-slate-300" />
+                                                <Activity size={10} className="text-gray-400" />
                                                 {event.ip_address}
                                             </span>
                                         </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
-                                        <div className="text-[8px] font-black text-slate-300 uppercase truncate max-w-[100px]" title={event.request_id}>
+                                        <div className="text-[8px] font-bold text-gray-400 uppercase truncate max-w-[100px]" title={event.request_id}>
                                             REQ: {event.request_id ? event.request_id.substring(0, 8) : 'N/A'}
                                         </div>
                                         {Object.keys(event.details || {}).length > 0 && (
                                             <button
-                                                className="px-2 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-bold text-slate-500 hover:bg-slate-100"
+                                                className="px-2 py-0.5 bg-gray-50 border border-gray-100 rounded text-[9px] font-bold text-gray-500 hover:bg-gray-50"
                                                 onClick={() => alert(JSON.stringify(event.details, null, 2))}
                                             >
                                                 Metadata
@@ -595,46 +595,46 @@ const Compliance = ({ inline = false }) => {
                                 </div>
                             ))}
                             {!data.length && (
-                                <div className="p-12 text-center text-slate-400 font-bold italic">No commercial audit logs found.</div>
+                                <div className="p-12 text-center text-gray-400 font-bold italic">No commercial audit logs found.</div>
                             )}
                         </div>
                     ) : activeTab === 'logs' ? (
                         <div className="space-y-3">
                             {data.map((log) => (
-                                <div key={log.id} className="group hover:bg-slate-50 border border-slate-100 rounded-xl p-3 transition-all flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
-                                        {log.is_restricted ? <Lock className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                                <div key={log.id} className="group hover:bg-gray-50 border border-gray-100 rounded-xl p-3 transition-all flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
+                                        {log.is_restricted ? <Lock className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4 text-gray-400" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="font-black text-slate-900 truncate text-sm">
+                                            <span className="font-bold text-gray-900 truncate text-sm">
                                                 {log.user_first_name} {log.user_last_name}
                                             </span>
-                                            <span className="px-2 py-0.5 bg-slate-100 text-[8px] font-black text-slate-400 uppercase rounded tracking-wider">
+                                            <span className="px-2 py-0.5 bg-gray-50 text-[8px] font-bold text-gray-400 uppercase rounded tracking-wider">
                                                 {log.user_role}
                                             </span>
-                                            <span className="text-slate-300 font-light mx-1">•</span>
+                                            <span className="text-gray-400 font-light mx-1">•</span>
                                             <span className="text-[11px] font-bold text-blue-600/80">
                                                 {log.access_type.replace('_', ' ')}
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-4 text-[11px] text-slate-500 font-medium">
+                                        <div className="flex items-center gap-4 text-[11px] text-gray-500 font-medium">
                                             <span className="flex items-center gap-1.5 min-w-[180px]">
-                                                <User size={10} className="text-slate-300" />
-                                                Patient: <span className="text-slate-700 font-bold">{log.patient_first_name} {log.patient_last_name}</span>
+                                                <User size={10} className="text-gray-400" />
+                                                Patient: <span className="text-gray-700 font-bold">{log.patient_first_name} {log.patient_last_name}</span>
                                             </span>
                                             <span className="flex items-center gap-1.5">
-                                                <Clock size={10} className="text-slate-300" />
+                                                <Clock size={10} className="text-gray-400" />
                                                 {log.created_at ? format(new Date(log.created_at), 'MMM d, h:mm a') : 'N/A'}
                                             </span>
                                             <span className="flex items-center gap-1.5 ml-auto">
-                                                <Activity size={10} className="text-slate-300" />
+                                                <Activity size={10} className="text-gray-400" />
                                                 {log.ip_address}
                                             </span>
                                         </div>
                                     </div>
                                     {log.break_glass_used && (
-                                        <div className="px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[9px] font-black flex items-center gap-1 border border-red-100">
+                                        <div className="px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[9px] font-bold flex items-center gap-1 border border-red-100">
                                             <AlertTriangle size={10} />
                                             BREAK GLASS
                                         </div>
@@ -642,13 +642,13 @@ const Compliance = ({ inline = false }) => {
                                 </div>
                             ))}
                             {!data.length && (
-                                <div className="p-12 text-center text-slate-400 font-bold">No access logs found matching filters.</div>
+                                <div className="p-12 text-center text-gray-400 font-bold">No access logs found matching filters.</div>
                             )}
                         </div>
                     ) : activeTab === 'alerts' ? (
                         <div className="space-y-4">
                             {alerts.map((alert) => (
-                                <div key={alert.id} className={`bg-white border rounded-xl p-3 transition-all shadow-sm ${alert.severity === 'high' ? 'border-red-100 bg-red-50/10' : 'border-slate-100'
+                                <div key={alert.id} className={`bg-white border rounded-xl p-3 transition-all shadow-sm ${alert.severity === 'high' ? 'border-red-100 bg-red-50/10' : 'border-gray-100'
                                     }`}>
                                     <div className="flex gap-3">
                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-600 shadow-lg shadow-red-200' : 'bg-amber-500 shadow-lg shadow-amber-100'
@@ -659,37 +659,37 @@ const Compliance = ({ inline = false }) => {
                                             <div className="flex justify-between items-start mb-1">
                                                 <div>
                                                     <div className="flex items-center gap-1.5 mb-0.5">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${alert.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest ${alert.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
                                                             }`}>
                                                             {alert.severity}
                                                         </span>
-                                                        <span className="text-[10px] font-black text-slate-400 capitalize">
+                                                        <span className="text-[10px] font-bold text-gray-400 capitalize">
                                                             {alert.alert_type.replace(/_/g, ' ')}
                                                         </span>
                                                     </div>
-                                                    <h3 className="text-sm font-black text-slate-900 leading-tight truncate">
+                                                    <h3 className="text-sm font-bold text-gray-900 leading-tight truncate">
                                                         {alert.user_first_name} {alert.user_last_name}
                                                     </h3>
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
-                                                    <div className="text-[9px] font-bold text-slate-400">{alert.created_at ? format(new Date(alert.created_at), 'MMM d, h:mm a') : 'N/A'}</div>
+                                                    <div className="text-[9px] font-bold text-gray-400">{alert.created_at ? format(new Date(alert.created_at), 'MMM d, h:mm a') : 'N/A'}</div>
                                                     {alert.break_glass_used && (
-                                                        <span className="mt-0.5 px-1 py-0.5 bg-red-600 text-white text-[7px] font-black rounded uppercase">Break Glass</span>
+                                                        <span className="mt-0.5 px-1 py-0.5 bg-red-600 text-white text-[7px] font-bold rounded uppercase">Break Glass</span>
                                                     )}
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center justify-between gap-4">
-                                                <div className="flex-1 bg-slate-50/80 px-2 py-1.5 rounded-lg border border-slate-100">
-                                                    <div className="text-[10px] font-mono text-slate-600 truncate">
+                                                <div className="flex-1 bg-gray-50/80 px-2 py-1.5 rounded-lg border border-gray-100">
+                                                    <div className="text-[10px] font-mono text-gray-600 truncate">
                                                         {JSON.stringify(alert.details_json).substring(0, 100)}...
                                                     </div>
                                                 </div>
 
                                                 <div className="flex items-center gap-4 flex-shrink-0">
                                                     {alert.patient_id && (
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
-                                                            <User size={12} className="text-slate-300" />
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
+                                                            <User size={12} className="text-gray-400" />
                                                             {alert.patient_first_name} {alert.patient_last_name}
                                                         </div>
                                                     )}
@@ -697,12 +697,12 @@ const Compliance = ({ inline = false }) => {
                                                     {alert.resolved_at ? (
                                                         <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 border border-green-100 rounded-lg">
                                                             <CheckCircle size={12} />
-                                                            <span className="text-[9px] font-black uppercase">RESOLVED</span>
+                                                            <span className="text-[9px] font-bold uppercase">RESOLVED</span>
                                                         </div>
                                                     ) : (
                                                         <button
                                                             onClick={() => handleResolveAlert(alert.id)}
-                                                            className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black hover:bg-slate-800 transition-all active:scale-95"
+                                                            className="px-4 py-1.5 bg-gray-50 text-white rounded-lg text-[10px] font-bold hover:bg-gray-100 transition-all active:scale-95"
                                                         >
                                                             Resolve
                                                         </button>
@@ -719,7 +719,7 @@ const Compliance = ({ inline = false }) => {
                             <div className="flex justify-between items-center mb-6">
                                 <div className="flex items-center gap-3">
                                     <AlertTriangle className="text-orange-500 w-5 h-5" />
-                                    <h3 className="text-lg font-black text-slate-900">Restricted Patient Inventory</h3>
+                                    <h3 className="text-lg font-bold text-gray-900">Restricted Patient Inventory</h3>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
@@ -732,13 +732,13 @@ const Compliance = ({ inline = false }) => {
                                             link.setAttribute("download", `restricted_patients_${format(new Date(), 'yyyyMMdd')}.csv`);
                                             link.click();
                                         }}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
                                     >
                                         <Download size={14} /> Export List
                                     </button>
                                     <button
                                         onClick={() => setReportView(null)}
-                                        className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all flex items-center gap-2"
+                                        className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-100 transition-all flex items-center gap-2"
                                     >
                                         <ChevronRight className="rotate-180 w-4 h-4" /> Back to Dashboard
                                     </button>
@@ -748,29 +748,29 @@ const Compliance = ({ inline = false }) => {
                             {loadingReport ? (
                                 <div className="p-20 text-center">
                                     <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-                                    <p className="text-slate-400 font-bold">Scanning for restricted charts...</p>
+                                    <p className="text-gray-400 font-bold">Scanning for restricted charts...</p>
                                 </div>
                             ) : (
-                                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                                     <table className="w-full text-left text-sm border-collapse">
-                                        <thead className="bg-slate-50 border-b border-slate-200">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
                                             <tr>
-                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">Patient Name</th>
-                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">MRN</th>
-                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">DOB</th>
-                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px]">Restricted Since</th>
-                                                <th className="px-6 py-4 font-black text-slate-600 uppercase tracking-widest text-[10px] text-right">Actions</th>
+                                                <th className="px-6 py-4 font-bold text-gray-600 uppercase tracking-widest text-[10px]">Patient Name</th>
+                                                <th className="px-6 py-4 font-bold text-gray-600 uppercase tracking-widest text-[10px]">MRN</th>
+                                                <th className="px-6 py-4 font-bold text-gray-600 uppercase tracking-widest text-[10px]">DOB</th>
+                                                <th className="px-6 py-4 font-bold text-gray-600 uppercase tracking-widest text-[10px]">Restricted Since</th>
+                                                <th className="px-6 py-4 font-bold text-gray-600 uppercase tracking-widest text-[10px] text-right">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100">
+                                        <tbody className="divide-y divide-gray-100">
                                             {restrictedPatients.map(p => (
-                                                <tr key={p.id} className="hover:bg-slate-50/50 group transition-colors">
+                                                <tr key={p.id} className="hover:bg-gray-50/50 group transition-colors">
                                                     <td className="px-6 py-4">
-                                                        <span className="font-black text-slate-900">{p.first_name} {p.last_name}</span>
+                                                        <span className="font-bold text-gray-900">{p.first_name} {p.last_name}</span>
                                                     </td>
-                                                    <td className="px-6 py-4 font-mono text-slate-500 text-xs">{p.mrn}</td>
-                                                    <td className="px-6 py-4 text-slate-600 font-medium">{p.dob}</td>
-                                                    <td className="px-6 py-4 text-slate-600 font-medium">{p.restricted_at ? format(new Date(p.restricted_at), 'MMM d, yyyy') : 'N/A'}</td>
+                                                    <td className="px-6 py-4 font-mono text-gray-500 text-xs">{p.mrn}</td>
+                                                    <td className="px-6 py-4 text-gray-600 font-medium">{p.dob}</td>
+                                                    <td className="px-6 py-4 text-gray-600 font-medium">{p.restricted_at ? format(new Date(p.restricted_at), 'MMM d, yyyy') : 'N/A'}</td>
                                                     <td className="px-6 py-4 text-right">
                                                         <button
                                                             onClick={() => {
@@ -778,7 +778,7 @@ const Compliance = ({ inline = false }) => {
                                                                 setFilters({ ...filters, patientSearch: p.mrn, userId: '', accessType: '', breakGlass: '' });
                                                                 setReportView(null);
                                                             }}
-                                                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-black text-[10px] uppercase hover:bg-blue-100 transition-all"
+                                                            className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-bold text-[10px] uppercase hover:bg-blue-100 transition-all"
                                                         >
                                                             View Logs
                                                         </button>
@@ -787,7 +787,7 @@ const Compliance = ({ inline = false }) => {
                                             ))}
                                             {restrictedPatients.length === 0 && (
                                                 <tr>
-                                                    <td colSpan="5" className="px-6 py-20 text-center text-slate-300 font-bold italic">
+                                                    <td colSpan="5" className="px-6 py-20 text-center text-gray-400 font-bold italic">
                                                         No restricted patients found.
                                                     </td>
                                                 </tr>
@@ -804,22 +804,22 @@ const Compliance = ({ inline = false }) => {
                                     <div className="space-y-6" >
                                         <div className="flex justify-between items-center mb-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+                                                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center">
                                                     <FileText className="text-blue-600" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                                                    <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight">
                                                         {reportView === 'patient' ? 'Patient Access Report' :
                                                             reportView === 'user' ? 'User Access Report' :
                                                                 reportView === 'break-glass' ? 'Break-Glass Summary' : 'Compliance Report'}
                                                     </h3>
-                                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Interactive Audit Visualization</p>
+                                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Interactive Audit Visualization</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => downloadCSV(data, `report_${reportView}_${format(new Date(), 'yyyyMMdd')}`)}
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
                                                 >
                                                     <Download size={14} /> Export CSV
                                                 </button>
@@ -828,64 +828,64 @@ const Compliance = ({ inline = false }) => {
                                                         setReportView(null);
                                                         setData([]);
                                                     }}
-                                                    className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all"
+                                                    className="px-4 py-2 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-100 transition-all"
                                                 >
                                                     Back to Reports
                                                 </button>
                                             </div>
                                         </div>
 
-                                        <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
+                                        <div className="bg-gray-50/50 p-6 rounded-[2rem] border border-gray-100">
                                             {loading ? (
                                                 <div className="p-20 text-center">
                                                     <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-                                                    <p className="text-slate-400 font-bold">Generating report data...</p>
+                                                    <p className="text-gray-400 font-bold">Generating report data...</p>
                                                 </div>
                                             ) : data.length > 0 ? (
                                                 <div className="space-y-4">
                                                     {data.slice(0, 50).map(log => (
-                                                        <div key={log.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center gap-6">
+                                                        <div key={log.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex items-center gap-6">
                                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${log.break_glass_used ? 'bg-red-50 text-red-500' : 'bg-blue-50 text-blue-500'
                                                                 }`}>
                                                                 {log.break_glass_used ? <AlertTriangle size={20} /> : <Eye size={20} />}
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2 mb-1">
-                                                                    <span className="font-black text-slate-900">{log.user_first_name} {log.user_last_name}</span>
-                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 py-0.5 bg-slate-100 rounded">{log.user_role}</span>
-                                                                    <span className="text-slate-300 mx-1">•</span>
-                                                                    <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{log.access_type.replace(/_/g, ' ')}</span>
+                                                                    <span className="font-bold text-gray-900">{log.user_first_name} {log.user_last_name}</span>
+                                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 py-0.5 bg-gray-50 rounded">{log.user_role}</span>
+                                                                    <span className="text-gray-400 mx-1">•</span>
+                                                                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{log.access_type.replace(/_/g, ' ')}</span>
                                                                 </div>
-                                                                <div className="flex items-center gap-6 text-[11px] text-slate-500 font-medium">
+                                                                <div className="flex items-center gap-6 text-[11px] text-gray-500 font-medium">
                                                                     <span className="flex items-center gap-1.5">
-                                                                        <User size={12} className="text-slate-300" />
-                                                                        Patient: <span className="font-bold text-slate-700">{log.patient_first_name} {log.patient_last_name}</span>
+                                                                        <User size={12} className="text-gray-400" />
+                                                                        Patient: <span className="font-bold text-gray-700">{log.patient_first_name} {log.patient_last_name}</span>
                                                                     </span>
                                                                     <span className="flex items-center gap-1.5">
-                                                                        <Clock size={12} className="text-slate-300" />
+                                                                        <Clock size={12} className="text-gray-400" />
                                                                         {log.created_at ? format(new Date(log.created_at), 'MMM d, yyyy h:mm a') : 'N/A'}
                                                                     </span>
                                                                     <span className="flex items-center gap-1.5">
-                                                                        <Activity size={12} className="text-slate-300" />
+                                                                        <Activity size={12} className="text-gray-400" />
                                                                         IP: {log.ip_address}
                                                                     </span>
                                                                 </div>
                                                             </div>
                                                             {log.break_glass_used && (
-                                                                <div className="px-3 py-1 bg-red-600 text-white rounded-lg text-[10px] font-black shadow-lg shadow-red-200 uppercase tracking-widest">
+                                                                <div className="px-3 py-1 bg-red-600 text-white rounded-lg text-[10px] font-bold shadow-lg shadow-red-200 uppercase tracking-widest">
                                                                     Break Glass
                                                                 </div>
                                                             )}
                                                         </div>
                                                     ))}
                                                     {data.length > 50 && (
-                                                        <div className="text-center p-4 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-xs font-bold">
+                                                        <div className="text-center p-4 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400 text-xs font-bold">
                                                             Showing first 50 results. Export CSV for full audit trail.
                                                         </div>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <div className="p-20 text-center text-slate-400 font-bold italic">No data found for this report criteria.</div>
+                                                <div className="p-20 text-center text-gray-400 font-bold italic">No data found for this report criteria.</div>
                                             )}
                                         </div>
                                     </div>
@@ -895,8 +895,8 @@ const Compliance = ({ inline = false }) => {
                                             <div className="w-20 h-20 bg-blue-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-50 border-4 border-white">
                                                 <ShieldCheck className="w-10 h-10 text-blue-600" />
                                             </div>
-                                            <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">HIPAA Compliance Center</h2>
-                                            <p className="text-slate-400 text-sm font-medium">Select a module to generate certified access reports.</p>
+                                            <h2 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">HIPAA Compliance Center</h2>
+                                            <p className="text-gray-400 text-sm font-medium">Select a module to generate certified access reports.</p>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
@@ -939,16 +939,16 @@ const Compliance = ({ inline = false }) => {
                                                 <div
                                                     key={i}
                                                     onClick={rpt.action}
-                                                    className="group relative bg-white border border-slate-100 rounded-[2.5rem] p-8 hover:border-slate-200 hover:shadow-2xl hover:shadow-slate-200/50 transition-all cursor-pointer overflow-hidden"
+                                                    className="group relative bg-white border border-gray-100 rounded-[2.5rem] p-8 hover:border-gray-200 hover:shadow-2xl hover:shadow-slate-200/50 transition-all cursor-pointer overflow-hidden"
                                                 >
                                                     <div className={`w-14 h-14 rounded-2xl bg-${rpt.color}-50 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
                                                         <rpt.icon className={`text-${rpt.color}-600`} size={28} />
                                                     </div>
-                                                    <h4 className="text-lg font-black text-slate-900 mb-2">{rpt.title}</h4>
-                                                    <p className="text-[11px] font-bold text-slate-400 leading-relaxed uppercase tracking-widest">{rpt.desc}</p>
+                                                    <h4 className="text-lg font-bold text-gray-900 mb-2">{rpt.title}</h4>
+                                                    <p className="text-[11px] font-bold text-gray-400 leading-relaxed uppercase tracking-widest">{rpt.desc}</p>
 
                                                     <div className="mt-8 flex items-center justify-between">
-                                                        <span className={`text-xs font-black text-${rpt.color}-600 uppercase tracking-widest`}>Initialize</span>
+                                                        <span className={`text-xs font-bold text-${rpt.color}-600 uppercase tracking-widest`}>Initialize</span>
                                                         <div className={`w-8 h-8 rounded-full bg-${rpt.color}-100 flex items-center justify-center group-hover:bg-${rpt.color}-600 transition-colors`}>
                                                             <ChevronRight size={16} className={`text-${rpt.color}-600 group-hover:text-white transition-colors`} />
                                                         </div>
@@ -969,38 +969,38 @@ const Compliance = ({ inline = false }) => {
             {/* Picker Modal for Reports */}
             {
                 reportParams.showPicker && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+                    <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-200">
                             <div className="p-8 border-b border-slate-50 flex justify-between items-center">
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                         <Search className="text-blue-600" />
                                         Select {reportParams.type === 'patient' ? 'Patient' : 'Staff Member'}
                                     </h3>
-                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Generate full access audit history</p>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Generate full access audit history</p>
                                 </div>
                                 <button
                                     onClick={() => setReportParams({ ...reportParams, showPicker: false })}
-                                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                                    className="p-2 hover:bg-gray-50 rounded-full transition-colors"
                                 >
-                                    <X size={24} className="text-slate-400" />
+                                    <X size={24} className="text-gray-400" />
                                 </button>
                             </div>
 
                             <div className="p-8 space-y-6">
                                 <div className="relative">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                     <input
                                         autoFocus
                                         type="text"
-                                        className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:ring-0 text-slate-900 font-bold transition-all"
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-500 focus:ring-0 text-gray-900 font-bold transition-all"
                                         placeholder={reportParams.type === 'patient' ? "Search name or MRN..." : "Search staff name..."}
                                         value={reportParams.query}
                                         onChange={(e) => handlePickerSearch(e.target.value)}
                                     />
                                     {reportParams.searching && (
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                            <div className="w-4 h-4 border-2 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                                            <div className="w-4 h-4 border-2 border-gray-200 border-t-blue-600 rounded-full animate-spin"></div>
                                         </div>
                                     )}
                                 </div>
@@ -1013,23 +1013,23 @@ const Compliance = ({ inline = false }) => {
                                             className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:bg-blue-50 hover:border-blue-100 transition-all group"
                                         >
                                             <div className="text-left">
-                                                <div className="font-black text-slate-900 group-hover:text-blue-700">
+                                                <div className="font-bold text-gray-900 group-hover:text-blue-700">
                                                     {item.first_name} {item.last_name}
                                                 </div>
-                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                                     {reportParams.type === 'patient' ? `MRN: ${item.mrn}` : (item.role_name || item.role)}
                                                 </div>
                                             </div>
-                                            <ChevronRight size={16} className="text-slate-200 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
+                                            <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
                                         </button>
                                     ))}
                                     {reportParams.query && !reportParams.results.length && !reportParams.searching && (
-                                        <div className="p-8 text-center text-slate-400 font-bold italic">
+                                        <div className="p-8 text-center text-gray-400 font-bold italic">
                                             No matches found.
                                         </div>
                                     )}
                                     {!reportParams.query && (
-                                        <div className="p-12 text-center text-slate-300 font-black uppercase tracking-widest text-[10px]">
+                                        <div className="p-12 text-center text-gray-400 font-bold uppercase tracking-widest text-[10px]">
                                             Start typing to search...
                                         </div>
                                     )}

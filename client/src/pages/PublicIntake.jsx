@@ -225,23 +225,23 @@ const PublicIntake = () => {
 
     if (view === 'landing') {
         return (
-            <div className="min-h-screen bg-slate-50/50 flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-fadeIn relative">
+            <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-fadeIn relative">
                 {/* Responsive Fixed Language Toggle */}
                 <div className="fixed top-4 right-4 sm:top-8 sm:right-8 z-50 flex items-center gap-1.5 sm:gap-2 bg-white/95 backdrop-blur-md p-1 sm:p-1.5 rounded-2xl border border-blue-100 shadow-xl shadow-blue-900/5 transition-all hover:shadow-2xl">
                     <div className="flex items-center gap-1.5 px-2 sm:px-3 text-blue-500">
                         <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-pulse-slow" />
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest hidden md:block">{t('select_lang_title')}</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest hidden md:block">{t('select_lang_title')}</span>
                     </div>
-                    <div className="flex gap-0.5 sm:gap-1 bg-slate-50 p-0.5 sm:p-1 rounded-xl border border-slate-100">
+                    <div className="flex gap-0.5 sm:gap-1 bg-gray-50 p-0.5 sm:p-1 rounded-xl border border-gray-100">
                         <button
                             onClick={() => setLanguage('en')}
-                            className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-md sm:shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
+                            className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-md sm:shadow-lg shadow-blue-200' : 'text-gray-400 hover:text-blue-600 hover:bg-white'}`}
                         >
                             {language === 'es' ? 'EN' : 'English'}
                         </button>
                         <button
                             onClick={() => setLanguage('es')}
-                            className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-black rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-md sm:shadow-lg shadow-blue-200' : 'text-slate-400 hover:text-blue-600 hover:bg-white'}`}
+                            className={`px-3 sm:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all ${language === 'es' ? 'bg-blue-600 text-white shadow-md sm:shadow-lg shadow-blue-200' : 'text-gray-400 hover:text-blue-600 hover:bg-white'}`}
                         >
                             {language === 'es' ? 'Español' : 'ES'}
                         </button>
@@ -265,13 +265,13 @@ const PublicIntake = () => {
                         )}
                     </div>
 
-                    <h1 className="text-3xl font-black text-blue-900 tracking-tight text-center leading-tight mb-4">
+                    <h1 className="text-3xl font-bold text-blue-900 tracking-tight text-center leading-tight mb-4">
                         {clinicInfo?.name || t('registration')}
                     </h1>
 
                     <div className="flex flex-col items-center gap-2 text-center">
                         {clinicInfo?.address && (
-                            <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+                            <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
                                 <span className="max-w-[250px] whitespace-pre-wrap">{clinicInfo.address}</span>
                             </div>
                         )}
@@ -305,11 +305,11 @@ const PublicIntake = () => {
                 <div className="mt-16 flex items-center gap-3 text-blue-400">
                     <div className="flex items-center gap-1.5 bg-blue-50/50 px-4 py-2 rounded-full border border-blue-100">
                         <Shield className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Azure Secure Encryption</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Azure Secure Encryption</span>
                     </div>
                     <div className="flex items-center gap-1.5 bg-blue-50/50 px-4 py-2 rounded-full border border-blue-100">
                         <Lock className="w-4 h-4 text-emerald-500" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">HIPAA Compliant</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">HIPAA Compliant</span>
                     </div>
                 </div>
             </div>
@@ -422,7 +422,7 @@ const PublicIntake = () => {
             <div className="min-h-screen bg-blue-50/30 flex flex-col items-center p-6 animate-fadeIn">
                 <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8 space-y-6 mt-12 border border-blue-50">
                     <div className="text-center space-y-2">
-                        <h2 className="text-2xl font-black text-blue-900 leading-tight">{t('multiple_matches')}</h2>
+                        <h2 className="text-2xl font-bold text-blue-900 leading-tight">{t('multiple_matches')}</h2>
                         <p className="text-blue-600/70 font-medium">{t('multiple_matches_msg')}</p>
                     </div>
 
@@ -472,7 +472,7 @@ const PublicIntake = () => {
                     </div>
                     <h1 className="text-3xl font-extrabold text-blue-900 mb-4 tracking-tighter">{t('reg_submitted')}</h1>
                     <p className="text-blue-700 text-lg mb-8 max-w-md">{t('reg_received_msg')}</p>
-                    <button onClick={() => window.location.reload()} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-100">{t('finish')}</button>
+                    <button onClick={() => window.location.reload()} className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-100">{t('finish')}</button>
                 </div>
             );
         }
@@ -613,7 +613,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                         </div>
 
                         <div className="space-y-4 pt-4 border-t border-blue-50">
-                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Dirección de Casa *' : 'Home Address *'}</h3>
+                            <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Dirección de Casa *' : 'Home Address *'}</h3>
                             <input type="text" placeholder={language === 'es' ? 'Calle y Número' : 'Street Address'} value={formData.addressLine1 || ''} onChange={e => setFormData({ ...formData, addressLine1: e.target.value })} className={`w-full p-4 bg-white border ${errors.addressLine1 ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
                             <input type="text" placeholder={language === 'es' ? 'Apto / Suite (Opcional)' : 'Apt / Suite (Optional)'} value={formData.addressLine2 || ''} onChange={e => setFormData({ ...formData, addressLine2: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
                             <div className="grid grid-cols-2 gap-4">
@@ -626,7 +626,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                         </div>
 
                         <div className="space-y-4 pt-4 border-t border-blue-50">
-                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Contacto de Emergencia *' : 'Emergency Contact *'}</h3>
+                            <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Contacto de Emergencia *' : 'Emergency Contact *'}</h3>
                             <input type="text" placeholder={language === 'es' ? 'Nombre Completo' : 'Full Name'} value={formData.ecName || ''} onChange={e => setFormData({ ...formData, ecName: e.target.value })} className={`w-full p-4 bg-white border ${errors.ecName ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
                             <div className="grid grid-cols-2 gap-4">
                                 <input type="text" placeholder={language === 'es' ? 'Parentesco' : 'Relationship'} value={formData.ecRelationship || ''} onChange={e => setFormData({ ...formData, ecRelationship: e.target.value })} className={`w-full p-4 bg-white border ${errors.ecRelationship ? 'border-rose-300' : 'border-blue-50'} rounded-2xl font-bold`} />
@@ -648,7 +648,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
 
                         {formData.isGuarantor === 'no' && (
                             <div className="space-y-4 animate-fadeIn">
-                                <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Detalles del Garante' : 'Guarantor Details'}</h3>
+                                <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Detalles del Garante' : 'Guarantor Details'}</h3>
                                 <input type="text" placeholder={language === 'es' ? 'Nombre Completo del Garante' : 'Guarantor Full Name'} value={formData.guarantorName || ''} onChange={e => setFormData({ ...formData, guarantorName: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl font-bold" />
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
@@ -681,7 +681,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                     className="w-6 h-6 rounded-lg text-blue-600 focus:ring-blue-500"
                                 />
                                 <div>
-                                    <div className="font-black text-blue-900">{language === 'es' ? 'Paciente sin Seguro (Pago Propio)' : 'Patient is Self-Pay'}</div>
+                                    <div className="font-bold text-blue-900">{language === 'es' ? 'Paciente sin Seguro (Pago Propio)' : 'Patient is Self-Pay'}</div>
                                     <div className="text-xs text-blue-500 font-bold uppercase">{language === 'es' ? 'No se facturará a ningún seguro por esta visita' : 'No insurance will be billed for this visit'}</div>
                                 </div>
                             </label>
@@ -689,7 +689,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
 
                         {!formData.isSelfPay && (
                             <div className="space-y-4 animate-fadeIn">
-                                <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Seguro Primario *' : 'Primary Insurance *'}</h3>
+                                <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Seguro Primario *' : 'Primary Insurance *'}</h3>
                                 <input
                                     type="text"
                                     placeholder={language === 'es' ? 'Compañía de Seguro (Ej: Aetna)' : 'Insurance Carrier (e.g. Aetna)'}
@@ -726,7 +726,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                     <div className="space-y-6">
                         <label className="flex items-center gap-3 p-6 bg-white border border-blue-50 rounded-3xl shadow-sm cursor-pointer transition-all active:scale-95">
                             <input type="checkbox" checked={formData.allergiesNone || false} onChange={e => setFormData({ ...formData, allergiesNone: e.target.checked, allergyList: e.target.checked ? [] : formData.allergyList })} className="w-6 h-6 rounded-lg text-blue-600 focus:ring-blue-500" />
-                            <span className="font-black text-blue-900">{language === 'es' ? 'No tengo alergias conocidas' : 'No Known Allergies'}</span>
+                            <span className="font-bold text-blue-900">{language === 'es' ? 'No tengo alergias conocidas' : 'No Known Allergies'}</span>
                         </label>
 
                         {!formData.allergiesNone && (
@@ -734,7 +734,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                 {(formData.allergyList || []).map((a, i) => (
                                     <div key={i} className="p-4 bg-white border border-blue-50 rounded-2xl shadow-sm flex justify-between items-center group">
                                         <div>
-                                            <div className="font-black text-blue-900">{a.allergen}</div>
+                                            <div className="font-bold text-blue-900">{a.allergen}</div>
                                             <div className="text-xs text-blue-400 font-bold uppercase">{a.reaction} • {a.severity}</div>
                                         </div>
                                         <button onClick={() => removeItem('allergyList', i)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><X className="w-5 h-5" /></button>
@@ -762,7 +762,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                     <div className="space-y-6">
                         <label className="flex items-center gap-3 p-6 bg-white border border-blue-50 rounded-3xl shadow-sm cursor-pointer transition-all active:scale-95">
                             <input type="checkbox" checked={formData.medsNone || false} onChange={e => setFormData({ ...formData, medsNone: e.target.checked, medsList: e.target.checked ? [] : formData.medsList })} className="w-6 h-6 rounded-lg text-blue-600 focus:ring-blue-500" />
-                            <span className="font-black text-blue-900">{language === 'es' ? 'No tomo medicamentos actualmente' : 'No Current Medications'}</span>
+                            <span className="font-bold text-blue-900">{language === 'es' ? 'No tomo medicamentos actualmente' : 'No Current Medications'}</span>
                         </label>
 
                         {!formData.medsNone && (
@@ -770,7 +770,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                 {(formData.medsList || []).map((m, i) => (
                                     <div key={i} className="p-4 bg-white border border-blue-50 rounded-2xl shadow-sm flex justify-between items-center">
                                         <div>
-                                            <div className="font-black text-blue-900">{m.name}</div>
+                                            <div className="font-bold text-blue-900">{m.name}</div>
                                             <div className="text-xs text-blue-400 font-bold uppercase">{m.dose} • {m.frequency}</div>
                                         </div>
                                         <button onClick={() => removeItem('medsList', i)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><X className="w-5 h-5" /></button>
@@ -806,7 +806,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                 return (
                     <div className="space-y-8 pb-12">
                         <div className="space-y-4">
-                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Condiciones Médicas Actuales' : 'Ongoing Medical Conditions'}</h3>
+                            <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Condiciones Médicas Actuales' : 'Ongoing Medical Conditions'}</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 {[
                                     { en: 'Diabetes', es: 'Diabetes' },
@@ -833,12 +833,12 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Antecedentes Quirúrgicos' : 'Surgical History'}</h3>
+                            <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Antecedentes Quirúrgicos' : 'Surgical History'}</h3>
                             <textarea placeholder={language === 'es' ? 'Lista de cirugías mayores y años estimados...' : 'List major surgeries and estimated years...'} value={formData.surgeriesList || ''} onChange={e => setFormData({ ...formData, surgeriesList: e.target.value })} className="w-full p-4 bg-white border border-blue-50 rounded-2xl min-h-[100px] font-bold" />
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Antecedentes Familiares' : 'Family History'}</h3>
+                            <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Antecedentes Familiares' : 'Family History'}</h3>
                             <div className="space-y-2">
                                 {[
                                     ['fhxHeartDisease', language === 'es' ? 'Enf. Cardiaca' : 'Heart Disease'],
@@ -855,7 +855,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-sm font-black text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Historia Social' : 'Social History'}</h3>
+                            <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest">{language === 'es' ? 'Historia Social' : 'Social History'}</h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-[10px] font-bold text-blue-400 uppercase mb-2 block">{language === 'es' ? 'TABAQUISMO' : 'Tobacco Use'}</label>
@@ -895,7 +895,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                         <button
                                             type="button"
                                             onClick={() => setViewingPolicy(c)}
-                                            className="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1 rounded-full"
+                                            className="text-[10px] font-bold text-blue-500 uppercase tracking-widest hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1 rounded-full"
                                         >
                                             {language === 'es' ? 'LEER COMPLETO' : 'Click to Read Full'}
                                         </button>
@@ -938,14 +938,14 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                     )}
                                     <label className="flex items-center gap-3 cursor-pointer group">
                                         <input type="checkbox" checked={formData[c.key] || false} onChange={e => setFormData({ ...formData, [c.key]: e.target.checked })} className="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-500 shadow-sm" />
-                                        <span className="text-sm font-black text-blue-900">{language === 'es' ? 'Acepto y reconozco' : 'I acknowledge and agree'}</span>
+                                        <span className="text-sm font-bold text-blue-900">{language === 'es' ? 'Acepto y reconozco' : 'I acknowledge and agree'}</span>
                                     </label>
                                 </div>
                             ))}
                         </div>
 
                         <div className="bg-white border-2 border-dashed border-blue-100 rounded-3xl p-8 space-y-4">
-                            <h3 className="text-center font-black text-blue-900 uppercase tracking-widest text-xs">{language === 'es' ? 'Firma Electrónica *' : 'E-Signature *'}</h3>
+                            <h3 className="text-center font-bold text-blue-900 uppercase tracking-widest text-xs">{language === 'es' ? 'Firma Electrónica *' : 'E-Signature *'}</h3>
                             <input
                                 type="text"
                                 placeholder={language === 'es' ? 'Escriba su Nombre Completo para Firmar' : 'Type Full Legal Name to Sign'}
@@ -991,9 +991,9 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                     <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center">
                         <Heart className="w-4 h-4 text-white fill-current" />
                     </div>
-                    <span className="font-black text-blue-600 tracking-tight">Public Intake</span>
+                    <span className="font-bold text-blue-600 tracking-tight">Public Intake</span>
                 </div>
-                <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest outline outline-1 outline-blue-100">
+                <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-widest outline outline-1 outline-blue-100">
                     Step {step + 1} of {STEPS.length}
                 </div>
             </div>
@@ -1019,7 +1019,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                 {(() => {
                     const StepIcon = STEPS[step].icon;
                     return (
-                        <h2 className="text-3xl font-black text-blue-900 flex items-center gap-3">
+                        <h2 className="text-3xl font-bold text-blue-900 flex items-center gap-3">
                             <StepIcon className="w-8 h-8 text-blue-600" />
                             {STEPS[step].title}
                         </h2>
@@ -1030,11 +1030,11 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                 {/* Navigation & Progress */}
                 {/* Policy Viewing Modal */}
                 {viewingPolicy && (
-                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-fadeIn">
+                    <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 animate-fadeIn">
                         <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden animate-slideUp">
                             <div className="p-8 border-b border-blue-50 flex justify-between items-center shrink-0 bg-blue-50/30">
                                 <div>
-                                    <h2 className="text-xl font-black text-blue-900 leading-tight">{viewingPolicy.label}</h2>
+                                    <h2 className="text-xl font-bold text-blue-900 leading-tight">{viewingPolicy.label}</h2>
                                     <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mt-1">{language === 'es' ? 'Documento Legal' : 'Legal Document'}</p>
                                 </div>
                                 <button onClick={() => setViewingPolicy(null)} className="p-3 bg-white text-blue-900 rounded-2xl shadow-sm hover:bg-blue-50 transition-colors">
@@ -1042,11 +1042,11 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                                 </button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                                <div className="text-slate-700 leading-relaxed text-[15px] whitespace-pre-wrap font-medium">
+                                <div className="text-gray-700 leading-relaxed text-[15px] whitespace-pre-wrap font-medium">
                                     {processTemplate(viewingPolicy.policy) || (language === 'es' ? `Cargando el documento...` : `Standard ${viewingPolicy.label} text...`)}
                                 </div>
                             </div>
-                            <div className="p-8 border-t border-blue-50 bg-slate-50/50">
+                            <div className="p-8 border-t border-blue-50 bg-gray-50/50">
                                 <button
                                     onClick={() => {
                                         setFormData({ ...formData, [viewingPolicy.key]: true });
@@ -1064,7 +1064,7 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                 <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-blue-50 to-transparent pointer-events-none">
                     <div className="max-w-xl mx-auto flex gap-4 pointer-events-auto">
                         {step > 0 ? (
-                            <button onClick={back} className="flex-1 py-5 bg-white border-2 border-blue-100 text-blue-600 rounded-3xl font-black active:scale-95 transition-all shadow-lg pointer-events-auto">
+                            <button onClick={back} className="flex-1 py-5 bg-white border-2 border-blue-100 text-blue-600 rounded-3xl font-bold active:scale-95 transition-all shadow-lg pointer-events-auto">
                                 {language === 'es' ? 'Atrás' : 'Back'}
                             </button>
                         ) : (
@@ -1072,14 +1072,14 @@ const IntakeEditor = ({ session, formData, setFormData, onSave, onSubmit, submit
                         )}
 
                         {step < STEPS.length - 1 ? (
-                            <button onClick={next} className="flex-1 py-5 bg-blue-600 text-white rounded-3xl font-black active:scale-95 transition-all shadow-xl shadow-blue-100 pointer-events-auto">
+                            <button onClick={next} className="flex-1 py-5 bg-blue-600 text-white rounded-3xl font-bold active:scale-95 transition-all shadow-xl shadow-blue-100 pointer-events-auto">
                                 {language === 'es' ? 'Siguiente' : 'Next Step'}
                             </button>
                         ) : (
                             <button
                                 onClick={() => onSubmit({ signed: true, timestamp: new Date() })}
                                 disabled={submitting}
-                                className="flex-1 py-5 bg-emerald-600 text-white rounded-3xl font-black active:scale-95 transition-all shadow-xl shadow-emerald-100 disabled:opacity-50 pointer-events-auto"
+                                className="flex-1 py-5 bg-emerald-600 text-white rounded-3xl font-bold active:scale-95 transition-all shadow-xl shadow-emerald-100 disabled:opacity-50 pointer-events-auto"
                             >
                                 {submitting ? (language === 'es' ? 'Enviando...' : 'Submitting...') : (language === 'es' ? 'Confirmar y Enviar' : 'Confirm & Submit')}
                             </button>

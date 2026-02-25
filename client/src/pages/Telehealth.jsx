@@ -107,32 +107,32 @@ const DailyVideoCall = ({ roomUrl, userName, onLeave, isSandbox }) => {
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4">
           <div className="bg-blue-600/90 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-2xl shadow-2xl flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse" />
-            <span className="text-xs font-black tracking-widest uppercase">Video Connected</span>
+            <span className="text-xs font-bold tracking-widest uppercase">Video Connected</span>
           </div>
         </div>
       )}
 
       {isSandbox ? (
-        <div className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center relative">
-          <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[2px] z-10" />
+        <div className="w-full h-full bg-gray-50 rounded-2xl overflow-hidden flex items-center justify-center relative">
+          <div className="absolute inset-0 bg-gray-50/5 backdrop-blur-[2px] z-10" />
           <div className="flex flex-col items-center gap-4 z-20">
             <div className="w-24 h-24 rounded-full bg-white shadow-xl flex items-center justify-center animate-pulse">
-              <User className="w-10 h-10 text-slate-300" />
+              <User className="w-10 h-10 text-gray-400" />
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-700">Simulated Patient</h3>
-              <p className="text-slate-500 text-sm">Video feed simulated for sandbox</p>
+              <h3 className="text-lg font-bold text-gray-700">Simulated Patient</h3>
+              <p className="text-gray-500 text-sm">Video feed simulated for sandbox</p>
             </div>
           </div>
         </div>
       ) : (
-        <div ref={frameRef} className="w-full h-full bg-slate-100 rounded-2xl overflow-hidden" />
+        <div ref={frameRef} className="w-full h-full bg-gray-50 rounded-2xl overflow-hidden" />
       )}
 
       {isSandbox && (
         <div className="absolute inset-0 pointer-events-none border-4 border-blue-500/20 rounded-2xl z-50">
           <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] select-none pointer-events-none rotate-[-45deg] scale-150">
-            <span className="text-9xl font-black text-white">SIMULATED</span>
+            <span className="text-9xl font-bold text-white">SIMULATED</span>
           </div>
         </div>
       )}
@@ -157,27 +157,27 @@ const GuestLinkModal = ({ isOpen, onClose, appt, onSend, isSending }) => {
             <User size={24} />
           </div>
           <div>
-            <h4 className="font-bold text-slate-800">{appt?.patientName || 'Patient'}</h4>
-            <p className="text-sm text-slate-500">Telehealth Visit • {appt?.time || 'Scheduled Time'}</p>
+            <h4 className="font-bold text-gray-800">{appt?.patientName || 'Patient'}</h4>
+            <p className="text-sm text-gray-500">Telehealth Visit • {appt?.time || 'Scheduled Time'}</p>
           </div>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">
+            <label className="block text-sm font-bold text-gray-700 mb-2 ml-1">
               Send Magic Link To:
             </label>
             <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="patient@email.com"
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-800"
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-gray-800"
               />
             </div>
-            <p className="mt-2 text-[11px] text-slate-400 ml-1 uppercase tracking-wider font-bold">
+            <p className="mt-2 text-[11px] text-gray-400 ml-1 uppercase tracking-wider font-bold">
               This will send a secure, one-time link for direct video access.
             </p>
           </div>
@@ -186,7 +186,7 @@ const GuestLinkModal = ({ isOpen, onClose, appt, onSend, isSending }) => {
             <Button
               variant="ghost"
               onClick={onClose}
-              className="flex-1 py-4 rounded-2xl font-bold text-slate-600 hover:bg-slate-100"
+              className="flex-1 py-4 rounded-2xl font-bold text-gray-600 hover:bg-gray-50"
             >
               Cancel
             </Button>
@@ -242,13 +242,13 @@ const Telehealth = () => {
         <div className="p-4 bg-orange-50 rounded-full mb-6 text-orange-500">
           <Zap className="w-12 h-12" />
         </div>
-        <h1 className="text-2xl font-black text-slate-800 mb-2">Telehealth Disabled</h1>
-        <p className="text-slate-500 max-w-md">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Telehealth Disabled</h1>
+        <p className="text-gray-500 max-w-md">
           This feature is currently disabled for your clinic. Please contact your platform administrator to enable video conferencing.
         </p>
         <button
           onClick={() => navigate('/dashboard')}
-          className="mt-8 px-6 py-2 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all shadow-lg"
+          className="mt-8 px-6 py-2 bg-gray-50 text-white font-bold rounded-xl hover:bg-gray-100 transition-all shadow-lg"
         >
           Back to Dashboard
         </button>
@@ -935,7 +935,7 @@ const Telehealth = () => {
   // --- ACTIVE CALL VIEW ---
   if (activeCall) {
     return (
-      <div className="flex h-full bg-slate-50 overflow-hidden relative">
+      <div className="flex h-full bg-gray-50 overflow-hidden relative">
         {/* Main Video Stage OR Placeholder */}
         <div className={`flex-1 flex flex-col relative transition-all duration-300`}>
 
@@ -944,7 +944,7 @@ const Telehealth = () => {
           {/* Daily.co Video or Call Ended Placeholder */}
           <div className="flex-1 flex items-center justify-center p-4">
             {roomUrl ? (
-              <div className="relative w-full h-full bg-slate-100 rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+              <div className="relative w-full h-full bg-gray-50 rounded-2xl overflow-hidden shadow-sm border border-gray-200">
                 <DailyVideoCall
                   roomUrl={roomUrl}
                   userName={providerName}
@@ -953,13 +953,13 @@ const Telehealth = () => {
                 />
               </div>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100/50 rounded-2xl border border-dashed border-slate-200 p-8 text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
-                  <PhoneOff className="w-8 h-8 text-slate-400" />
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 p-8 text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center">
+                  <PhoneOff className="w-8 h-8 text-gray-400" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-slate-700">Call Ended</h3>
-                  <p className="text-slate-500 max-w-sm mx-auto">The video connection has been terminated. You can simply continue documenting and finalize the visit when ready.</p>
+                  <h3 className="text-xl font-bold text-gray-700">Call Ended</h3>
+                  <p className="text-gray-500 max-w-sm mx-auto">The video connection has been terminated. You can simply continue documenting and finalize the visit when ready.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -974,7 +974,7 @@ const Telehealth = () => {
                     onClick={handleCheckoutOnly}
                     disabled={activeCall?.patient_status === 'checked_out'}
                     className={`px-6 py-2 rounded-lg font-semibold transition-colors shadow-sm ${activeCall?.patient_status === 'checked_out'
-                      ? 'bg-slate-100 text-slate-500 cursor-default border border-slate-200'
+                      ? 'bg-gray-50 text-gray-500 cursor-default border border-gray-200'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700'
                       }`}
                   >
@@ -986,7 +986,7 @@ const Telehealth = () => {
           </div>
 
           {/* Control Bar */}
-          <div className="h-20 bg-white border-t border-slate-200 flex items-center justify-center gap-6 px-8 z-20 shadow-sm">
+          <div className="h-20 bg-white border-t border-gray-200 flex items-center justify-center gap-6 px-8 z-20 shadow-sm">
             {roomUrl ? (
               <button
                 onClick={handleEndCall}
@@ -998,7 +998,7 @@ const Telehealth = () => {
             ) : (
               <button
                 onClick={handleCloseWorkspace}
-                className="p-4 rounded-full bg-slate-800 text-white hover:bg-slate-700 shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
+                className="p-4 rounded-full bg-gray-100 text-white hover:bg-gray-100 shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2 px-8"
               >
                 <X className="w-5 h-5" />
                 <span className="font-bold text-sm">Close Workspace</span>
@@ -1009,7 +1009,7 @@ const Telehealth = () => {
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className={`p-4 rounded-full transition-all duration-200 border shadow-sm ${isSidebarOpen
                 ? 'bg-blue-50 text-blue-600 border-blue-200'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                 }`}
             >
               <Layout className="w-5 h-5" />
@@ -1019,15 +1019,15 @@ const Telehealth = () => {
 
         {/* Sidebar */}
         {isSidebarOpen && (
-          <div className="w-96 bg-white border-l border-slate-200 flex flex-col shadow-xl">
+          <div className="w-96 bg-white border-l border-gray-200 flex flex-col shadow-xl">
             {/* Tabs */}
-            <div className="flex border-b border-slate-100 bg-slate-50/50">
+            <div className="flex border-b border-gray-100 bg-gray-50/50">
               {WORKSPACE_TABS.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-[0.15em] transition-all
-                    ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                    ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-white' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
                 >
                   {tab}
                 </button>
@@ -1039,7 +1039,7 @@ const Telehealth = () => {
               {activeTab === 'chart' && (
                 <div className="space-y-5 text-left">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-slate-900 font-bold text-xs uppercase tracking-widest">PATIENT CHART</h3>
+                    <h3 className="text-gray-900 font-bold text-xs uppercase tracking-widest">PATIENT CHART</h3>
                     <button
                       onClick={fetchPatientSnapshot}
                       className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
@@ -1049,9 +1049,9 @@ const Telehealth = () => {
                     </button>
                   </div>
 
-                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl shadow-sm">
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl shadow-sm">
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Patient</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Patient</p>
                       <button
                         onClick={() => window.open(`/patient/${activeCall?.patient_id || activeCall?.patientId || activeCall?.pid}/snapshot`, '_blank')}
                         className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:text-blue-800 transition-colors flex items-center gap-1"
@@ -1060,9 +1060,9 @@ const Telehealth = () => {
                         Chart Snapshot <ExternalLink className="w-3 h-3" />
                       </button>
                     </div>
-                    <p className="text-slate-900 font-bold text-lg leading-tight">{activeCall.patientName || activeCall.name}</p>
+                    <p className="text-gray-900 font-bold text-lg leading-tight">{activeCall.patientName || activeCall.name}</p>
                     <div className="mt-3 flex items-center gap-2">
-                      <div className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-medium text-slate-600 shadow-sm">
+                      <div className="px-2 py-1 bg-white border border-gray-200 rounded-lg text-[11px] font-medium text-gray-600 shadow-sm">
                         {patientSnapshot?.dob ? `DOB: ${patientSnapshot.dob}` : 'Loading...'}
                       </div>
                     </div>
@@ -1073,7 +1073,7 @@ const Telehealth = () => {
                       setShowFullChart(true);
                       setPatientChartTab('overview');
                     }}
-                    className="w-full group flex items-center justify-between p-4 bg-[#83A2DB] text-white rounded-2xl shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:shadow-[0_4px_16px_rgba(131,162,219,0.3)] transition-all hover:-translate-y-0.5"
+                    className="w-full group flex items-center justify-between p-4 bg-[#2563EB] text-white rounded-2xl shadow-[0_2px_8px_rgba(131,162,219,0.2)] hover:shadow-[0_4px_16px_rgba(131,162,219,0.3)] transition-all hover:-translate-y-0.5"
                   >
                     <div className="flex items-center gap-4">
                       <div className="bg-white/10 p-2.5 rounded-xl">
@@ -1096,7 +1096,7 @@ const Telehealth = () => {
                     ].map(x => (
                       <button
                         key={x.id}
-                        className="p-4 bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md rounded-2xl text-left transition-all group"
+                        className="p-4 bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md rounded-2xl text-left transition-all group"
                         onClick={() => {
                           setPatientChartTab(x.id);
                           setShowFullChart(true);
@@ -1105,7 +1105,7 @@ const Telehealth = () => {
                         <div className={`${x.bg} p-2 rounded-xl w-fit mb-3 transition-colors`}>
                           <x.icon className={`w-4 h-4 ${x.color}`} />
                         </div>
-                        <p className="text-slate-900 text-[10px] font-bold uppercase tracking-wider">{x.label}</p>
+                        <p className="text-gray-900 text-[10px] font-bold uppercase tracking-wider">{x.label}</p>
                       </button>
                     ))}
                   </div>
@@ -1115,7 +1115,7 @@ const Telehealth = () => {
               {activeTab === 'note' && (
                 <div className="space-y-6 text-left">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-slate-900 font-bold text-xs uppercase tracking-widest">Encounter Note</h3>
+                    <h3 className="text-gray-900 font-bold text-xs uppercase tracking-widest">Encounter Note</h3>
                     <button
                       onClick={() => setShowFullChart(true)}
                       className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
@@ -1128,54 +1128,54 @@ const Telehealth = () => {
 
                   <div className="space-y-4">
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Chief Complaint</label>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5 ml-1">Chief Complaint</label>
                       <input
                         value={note.chiefComplaint}
                         onChange={(e) => setNote(n => ({ ...n, chiefComplaint: e.target.value }))}
                         placeholder="Reason for visit..."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
                         readOnly={isLocked}
                       />
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">HPI</label>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5 ml-1">HPI</label>
                       <textarea
                         value={note.hpi}
                         onChange={(e) => setNote(n => ({ ...n, hpi: e.target.value }))}
                         placeholder="History of Present Illness..."
-                        className="w-full h-40 bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none leading-relaxed shadow-sm"
+                        className="w-full h-40 bg-gray-50 border border-gray-200 rounded-xl p-4 text-gray-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none leading-relaxed shadow-sm"
                         readOnly={isLocked}
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">ROS</label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5 ml-1">ROS</label>
                         <textarea
                           value={note.rosNotes}
                           onChange={(e) => setNote(n => ({ ...n, rosNotes: e.target.value }))}
                           placeholder="Review of Systems..."
-                          className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
+                          className="w-full h-24 bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
                           readOnly={isLocked}
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Exam</label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5 ml-1">Exam</label>
                         <textarea
                           value={note.peNotes}
                           onChange={(e) => setNote(n => ({ ...n, peNotes: e.target.value }))}
                           placeholder="Objective findings..."
-                          className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
+                          className="w-full h-24 bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-900 text-sm resize-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none shadow-sm"
                           readOnly={isLocked}
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 ml-1">Assessments (Diagnoses)</label>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5 ml-1">Assessments (Diagnoses)</label>
                       <div className="relative mb-3">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
                           value={icd10Search}
@@ -1184,18 +1184,18 @@ const Telehealth = () => {
                             setShowIcd10Search(true);
                           }}
                           placeholder="Search diagnosis code..."
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-slate-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none shadow-sm"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-gray-900 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none shadow-sm"
                         />
                         {showIcd10Search && icd10Results.length > 0 && (
-                          <div className="absolute z-30 left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto py-1">
+                          <div className="absolute z-30 left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto py-1">
                             {icd10Results.map(res => (
                               <button
                                 key={res.code}
                                 onClick={() => handleAddDiagnosis(res)}
-                                className="w-full text-left px-4 py-2.5 border-b border-slate-50 hover:bg-slate-50 transition-colors last:border-0"
+                                className="w-full text-left px-4 py-2.5 border-b border-slate-50 hover:bg-gray-50 transition-colors last:border-0"
                               >
                                 <p className="text-blue-600 text-xs font-bold mb-0.5">{res.code}</p>
-                                <p className="text-slate-600 text-xs line-clamp-1">{res.description}</p>
+                                <p className="text-gray-600 text-xs line-clamp-1">{res.description}</p>
                               </button>
                             ))}
                           </div>
@@ -1203,16 +1203,16 @@ const Telehealth = () => {
                       </div>
 
                       {note.dx ? (
-                        <div className="bg-white border border-slate-200 rounded-xl divide-y divide-slate-100 shadow-sm overflow-hidden text-left">
+                        <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 shadow-sm overflow-hidden text-left">
                           {note.dx.split(',').filter(Boolean).map((d, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 group hover:bg-slate-50 transition-colors">
-                              <span className="text-sm text-slate-700 font-medium">{d.trim()}</span>
+                            <div key={i} className="flex items-center justify-between p-3 group hover:bg-gray-50 transition-colors">
+                              <span className="text-sm text-gray-700 font-medium">{d.trim()}</span>
                               <button
                                 onClick={() => {
                                   const current = note.dx.split(',').filter(Boolean).map(c => c.trim());
                                   setNote(n => ({ ...n, dx: current.filter((_, idx) => idx !== i).join(', ') }));
                                 }}
-                                className="text-slate-300 hover:text-red-500 transition-colors"
+                                className="text-gray-400 hover:text-red-500 transition-colors"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -1220,15 +1220,15 @@ const Telehealth = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="p-10 text-center border-2 border-dashed border-slate-100 rounded-xl">
-                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No diagnoses added</p>
+                        <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-xl">
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">No diagnoses added</p>
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-6 border-t border-slate-100 text-left">
+                    <div className="pt-6 border-t border-gray-100 text-left">
                       <div className="flex items-center justify-between mb-4">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Clinical Plan</label>
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Clinical Plan</label>
                         <button
                           onClick={() => { setOrderModalTab('labs'); setShowOrderModal(true); }}
                           className="text-[10px] bg-blue-600 text-white px-4 py-2 rounded-xl font-bold uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md shadow-blue-500/10 active:scale-95"
@@ -1241,11 +1241,11 @@ const Telehealth = () => {
                       {note.planStructured && note.planStructured.length > 0 ? (
                         <div className="space-y-4">
                           {note.planStructured.map((group, idx) => (
-                            <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left shadow-sm">
+                            <div key={idx} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-left shadow-sm">
                               <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3 border-b border-blue-100 pb-2">{group.diagnosis}</p>
                               <div className="space-y-2">
                                 {group.orders.map((order, oIdx) => (
-                                  <div key={oIdx} className="flex items-start gap-3 text-xs text-slate-700 leading-relaxed group">
+                                  <div key={oIdx} className="flex items-start gap-3 text-xs text-gray-700 leading-relaxed group">
                                     <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0 group-hover:scale-125 transition-transform" />
                                     {order}
                                   </div>
@@ -1255,20 +1255,20 @@ const Telehealth = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="p-8 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center">
-                          <p className="text-[11px] text-slate-400 font-medium italic">No clinical orders for this visit yet</p>
+                        <div className="p-8 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-center">
+                          <p className="text-[11px] text-gray-400 font-medium italic">No clinical orders for this visit yet</p>
                         </div>
                       )}
                     </div>
 
                     {/* Narrative Plan */}
                     <div className="mt-6 space-y-2">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Plan of Care (Narrative)</label>
+                      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Plan of Care (Narrative)</label>
                       <textarea
                         value={note.planNarrative || ''}
                         onChange={(e) => setNote(prev => ({ ...prev, planNarrative: e.target.value }))}
                         placeholder="Free text details, patient instructions, rationale..."
-                        className="w-full h-32 p-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none resize-none shadow-sm placeholder:text-slate-300"
+                        className="w-full h-32 p-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none resize-none shadow-sm placeholder:text-gray-400"
                       />
                     </div>
                   </div>
@@ -1278,7 +1278,7 @@ const Telehealth = () => {
               {activeTab === 'orders' && (
                 <div className="space-y-5 text-left">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-slate-900 font-bold text-xs uppercase tracking-widest">Clinical Orders</h3>
+                    <h3 className="text-gray-900 font-bold text-xs uppercase tracking-widest">Clinical Orders</h3>
                     <div className="flex gap-2">
                       <button
                         onClick={() => { setOrderModalTab('labs'); setShowOrderModal(true); }}
@@ -1294,11 +1294,11 @@ const Telehealth = () => {
                       { id: 'labs', label: 'Labs', icon: Activity, tab: 'labs', color: 'text-purple-600', bg: 'bg-purple-50' },
                       { id: 'meds', label: 'Meds', icon: Pill, tab: 'medications', color: 'text-emerald-600', bg: 'bg-emerald-50' },
                       { id: 'referrals', label: 'Referrals', icon: User, tab: 'referrals', color: 'text-blue-600', bg: 'bg-blue-50' },
-                      { id: 'procs', label: 'Procs', icon: Settings, tab: 'procedures', color: 'text-slate-600', bg: 'bg-slate-50' },
+                      { id: 'procs', label: 'Procs', icon: Settings, tab: 'procedures', color: 'text-gray-600', bg: 'bg-gray-50' },
                     ].map(x => (
                       <button
                         key={x.id}
-                        className="p-4 bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md rounded-2xl text-left transition-all group"
+                        className="p-4 bg-white border border-gray-200 hover:border-blue-400 hover:shadow-md rounded-2xl text-left transition-all group"
                         onClick={() => {
                           setOrderModalTab(x.tab);
                           setShowOrderModal(true);
@@ -1307,30 +1307,30 @@ const Telehealth = () => {
                         <div className={`${x.bg} p-2 rounded-xl w-fit mb-3 transition-colors`}>
                           <x.icon className={`w-4 h-4 ${x.color}`} />
                         </div>
-                        <p className="text-slate-900 text-[10px] font-bold uppercase tracking-[1px]">{x.label}</p>
+                        <p className="text-gray-900 text-[10px] font-bold uppercase tracking-[1px]">{x.label}</p>
                       </button>
                     ))}
                   </div>
 
                   <div className="space-y-3 mt-4">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[2px] ml-1">Pended Items</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[2px] ml-1">Pended Items</p>
                     {pendedOrders.length === 0 ? (
-                      <div className="p-10 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center">
-                        <p className="text-[11px] text-slate-400 font-medium">No orders pended yet.</p>
+                      <div className="p-10 bg-gray-50 border border-dashed border-gray-200 rounded-2xl text-center">
+                        <p className="text-[11px] text-gray-400 font-medium">No orders pended yet.</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         {pendedOrders.map(o => (
-                          <div key={o.id} className="p-4 bg-white border border-slate-200 rounded-2xl flex items-start justify-between gap-3 group hover:border-slate-300 transition-all">
+                          <div key={o.id} className="p-4 bg-white border border-gray-200 rounded-2xl flex items-start justify-between gap-3 group hover:border-gray-200 transition-all">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className={`w-2 h-2 rounded-full ${o.status === 'signed' ? 'bg-green-500' : 'bg-amber-500 animate-pulse'}`} />
-                                <p className="text-slate-900 text-xs font-bold capitalize">{o.type}</p>
+                                <p className="text-gray-900 text-xs font-bold capitalize">{o.type}</p>
                               </div>
-                              <p className="text-slate-500 text-[11px] leading-relaxed">{o.text}</p>
+                              <p className="text-gray-500 text-[11px] leading-relaxed">{o.text}</p>
                             </div>
                             <button
-                              className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                              className="text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
                               onClick={() => setPendedOrders(prev => prev.filter(x => x.id !== o.id))}
                               disabled={isLocked}
                             >
@@ -1422,17 +1422,17 @@ const Telehealth = () => {
 
               {activeTab === 'info' && (
                 <div className="space-y-4 text-sm">
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Patient</p>
-                    <p className="text-slate-900 font-bold text-base">{activeCall.patientName || activeCall.name}</p>
+                  <div className="p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Patient</p>
+                    <p className="text-gray-900 font-bold text-base">{activeCall.patientName || activeCall.name}</p>
                   </div>
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Appointment Type</p>
-                    <p className="text-slate-900 font-bold text-base">{activeCall.type || activeCall.appointment_type || 'Telehealth Visit'}</p>
+                  <div className="p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Appointment Type</p>
+                    <p className="text-gray-900 font-bold text-base">{activeCall.type || activeCall.appointment_type || 'Telehealth Visit'}</p>
                   </div>
-                  <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Duration</p>
-                    <p className="text-slate-900 font-bold text-base">{formatTime(duration)}</p>
+                  <div className="p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-wider mb-1">Duration</p>
+                    <p className="text-gray-900 font-bold text-base">{formatTime(duration)}</p>
                   </div>
 
                   <div className="p-3 bg-blue-50 text-blue-800 rounded-xl border border-blue-100">
@@ -1445,10 +1445,10 @@ const Telehealth = () => {
             </div>
 
             {/* Sidebar Footer Actions */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 space-y-2">
+            <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2">
               <button
                 onClick={handleSaveDraft}
-                className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-semibold transition-colors border border-slate-200 shadow-sm disabled:opacity-50"
+                className="w-full py-3 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-semibold transition-colors border border-gray-200 shadow-sm disabled:opacity-50"
               >
                 Save Draft
               </button>
@@ -1476,7 +1476,7 @@ const Telehealth = () => {
         />
 
         {showDiagnosisPicker && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-50/60 backdrop-blur-md">
             <DiagnosisPicker
               onSelect={(code) => {
                 const current = note.dx.split(',').filter(Boolean).map(c => c.trim());
@@ -1575,16 +1575,16 @@ const Telehealth = () => {
       <div className="mb-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-end justify-between mb-4 px-1">
           <div>
-            <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em]">{title}</h2>
-            <p className="text-[10px] text-slate-300 font-medium uppercase tracking-wider mt-0.5">{subtitle}</p>
+            <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em]">{title}</h2>
+            <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider mt-0.5">{subtitle}</p>
           </div>
-          <div className="px-2.5 py-0.5 bg-slate-50 border border-slate-100 rounded-full">
-            <span className="text-[10px] font-bold text-slate-400">{apptList.length}</span>
+          <div className="px-2.5 py-0.5 bg-gray-50 border border-gray-100 rounded-full">
+            <span className="text-[10px] font-bold text-gray-400">{apptList.length}</span>
           </div>
         </div>
         <div className="grid gap-3">
           {apptList.map(appt => (
-            <Card key={appt.id} className="py-3 px-4 hover:shadow-lg transition-all border-slate-200/60 hover:border-blue-200 group">
+            <Card key={appt.id} className="py-3 px-4 hover:shadow-lg transition-all border-gray-200/60 hover:border-blue-200 group">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-xl ${iconColor} flex items-center justify-center transition-transform group-hover:scale-105 duration-300`}>
@@ -1593,27 +1593,27 @@ const Telehealth = () => {
                   <div>
                     <h3
                       onClick={() => navigate(`/patient/${appt.patient_id || appt.patientId}/snapshot`)}
-                      className="font-bold text-slate-700 hover:text-blue-600 cursor-pointer transition-colors text-sm"
+                      className="font-bold text-gray-700 hover:text-blue-600 cursor-pointer transition-colors text-sm"
                     >
                       {appt.patientName || appt.name}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide">
+                      <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">
                         {appt.time || appt.appointment_time}
                       </p>
-                      <span className="w-1 h-1 rounded-full bg-slate-200" />
-                      <p className="text-[11px] text-slate-400 font-medium">
+                      <span className="w-1 h-1 rounded-full bg-gray-100" />
+                      <p className="text-[11px] text-gray-400 font-medium">
                         {appt.type || appt.appointment_type || 'Telehealth Visit'}
                       </p>
                       {appt.patient_mrn && (
                         <>
-                          <span className="w-1 h-1 rounded-full bg-slate-200" />
-                          <p className="text-[10px] text-slate-300 font-mono tracking-tighter">#{appt.patient_mrn}</p>
+                          <span className="w-1 h-1 rounded-full bg-gray-100" />
+                          <p className="text-[10px] text-gray-400 font-mono tracking-tighter">#{appt.patient_mrn}</p>
                         </>
                       )}
                       {getApptDate(appt) !== todayStr && (
                         <>
-                          <span className="w-1 h-1 rounded-full bg-slate-200" />
+                          <span className="w-1 h-1 rounded-full bg-gray-100" />
                           <p className="text-[11px] text-amber-500/80 font-bold uppercase">
                             {format(new Date(getApptDate(appt) + 'T12:00:00'), 'MMM d')}
                           </p>
@@ -1629,7 +1629,7 @@ const Telehealth = () => {
                     const status = (appt.status || '').toLowerCase();
                     const encounterStatus = (appt.encounter_status || '').toLowerCase();
 
-                    let badge = { label: 'Scheduled', color: 'bg-slate-50 text-slate-500 border-slate-100', icon: Calendar };
+                    let badge = { label: 'Scheduled', color: 'bg-gray-50 text-gray-500 border-gray-100', icon: Calendar };
 
                     // 1. Visit Docs Signed (Complete)
                     if (encounterStatus === 'signed') {
@@ -1694,21 +1694,21 @@ const Telehealth = () => {
                   {activeDropdown === appt.id && (
                     <div
                       data-dropdown-menu="true"
-                      className="absolute right-0 mt-3 w-64 bg-white border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300"
+                      className="absolute right-0 mt-3 w-64 bg-white border border-gray-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300"
                     >
                       <button
                         onClick={() => {
                           handleStartCall(appt, { video: true });
                           setActiveDropdown(null);
                         }}
-                        className="w-full px-4 py-3 text-left hover:bg-blue-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                        className="w-full px-4 py-3 text-left hover:bg-blue-50 text-gray-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
                       >
                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                           <Video size={16} />
                         </div>
                         <div>
                           <p className="font-bold text-sm">Join Video Call</p>
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">With Patient</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">With Patient</p>
                         </div>
                       </button>
 
@@ -1717,14 +1717,14 @@ const Telehealth = () => {
                           handleStartCall(appt, { video: false });
                           setActiveDropdown(null);
                         }}
-                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-slate-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
+                        className="w-full px-4 py-3 text-left hover:bg-emerald-50 text-gray-700 flex items-center gap-3 transition-colors border-b border-slate-50 group"
                       >
                         <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                           <FileText size={16} />
                         </div>
                         <div>
                           <p className="font-bold text-sm">Resume Note</p>
-                          <p className="text-[10px] text-slate-500 uppercase tracking-wider">Documentation Only</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Documentation Only</p>
                         </div>
                       </button>
 
@@ -1732,7 +1732,7 @@ const Telehealth = () => {
                         <button
                           onClick={() => setGuestLinkModalAppt(appt)}
                           disabled={sendingGuestLink === appt.id}
-                          className="w-full px-4 py-3 text-left hover:bg-amber-50 text-slate-700 flex items-center gap-3 transition-colors group disabled:opacity-50"
+                          className="w-full px-4 py-3 text-left hover:bg-amber-50 text-gray-700 flex items-center gap-3 transition-colors group disabled:opacity-50"
                         >
                           <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
                             {sendingGuestLink === appt.id ? (
@@ -1743,7 +1743,7 @@ const Telehealth = () => {
                           </div>
                           <div>
                             <p className="font-bold text-sm">Send Guest Link</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Direct Access</p>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Direct Access</p>
                           </div>
                         </button>
                       )}
@@ -1776,22 +1776,22 @@ const Telehealth = () => {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto bg-slate-50/30 min-h-screen">
+    <div className="p-8 max-w-6xl mx-auto bg-gray-50/30 min-h-screen">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-800 tracking-tight">Telehealth Command</h1>
-          <p className="text-slate-400 font-medium text-[11px] mt-0.5 uppercase tracking-widest">Virtual visit management</p>
+          <h1 className="text-xl font-bold text-gray-800 tracking-tight">Telehealth Command</h1>
+          <p className="text-gray-400 font-medium text-[11px] mt-0.5 uppercase tracking-widest">Virtual visit management</p>
         </div>
 
         {/* Quick Stats */}
         <div className="flex gap-3">
-          <div className="px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pending</p>
-            <p className="text-lg font-bold text-slate-700 leading-none">{appointments.length}</p>
+          <div className="px-4 py-2 bg-white rounded-xl border border-gray-200 shadow-sm flex items-center gap-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Pending</p>
+            <p className="text-lg font-bold text-gray-700 leading-none">{appointments.length}</p>
           </div>
           <button
             onClick={fetchSchedule}
-            className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all hover:border-blue-200"
+            className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all hover:border-blue-200"
           >
             <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -1799,35 +1799,35 @@ const Telehealth = () => {
       </div>
 
       {/* Friendly Security Badge */}
-      <div className="mb-6 p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 relative overflow-hidden group">
-        <div className="absolute right-0 top-0 w-32 h-full bg-[#83A2DB]/5 translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
+      <div className="mb-6 p-3 bg-white rounded-xl border border-gray-100 shadow-sm flex items-center gap-4 relative overflow-hidden group">
+        <div className="absolute right-0 top-0 w-32 h-full bg-[#2563EB]/5 translate-x-10 group-hover:translate-x-0 transition-transform duration-700" />
         <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-400 relative z-10 border border-blue-100/30">
           <Shield size={18} />
         </div>
         <div className="relative z-10">
-          <h3 className="font-bold text-slate-600 text-[11px] uppercase tracking-wider">Secure & Private Video Enabled</h3>
-          <p className="text-[10px] text-slate-400 font-medium">End-to-end encryption for full peace of mind.</p>
+          <h3 className="font-bold text-gray-600 text-[11px] uppercase tracking-wider">Secure & Private Video Enabled</h3>
+          <p className="text-[10px] text-gray-400 font-medium">End-to-end encryption for full peace of mind.</p>
         </div>
       </div>
 
       {loading && appointments.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-3xl border border-slate-100">
+        <div className="text-center py-24 bg-white rounded-3xl border border-gray-100">
           <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-[11px]">Syncing Schedule...</p>
+          <p className="text-gray-400 font-bold uppercase tracking-widest text-[11px]">Syncing Schedule...</p>
         </div>
       ) : appointments.length === 0 ? (
-        <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200">
-          <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-200 mx-auto mb-6">
+        <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-gray-200">
+          <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center text-gray-300 mx-auto mb-6">
             <Video size={40} />
           </div>
-          <h3 className="text-xl font-black text-slate-800 mb-2">Queue is Empty</h3>
-          <p className="text-slate-500 font-medium">No pending virtual appointments or notes.</p>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">Queue is Empty</h3>
+          <p className="text-gray-500 font-medium">No pending virtual appointments or notes.</p>
         </div>
       ) : (
         <div className="pb-20">
           {renderAppointmentGroup("Today's Queue", "Scheduled virtual visits", todayScheduled, "bg-blue-100 text-blue-600")}
           {renderAppointmentGroup("Completed Visits", "Patient checked out - Note pending", todayFinished, "bg-emerald-100 text-emerald-600")}
-          {renderAppointmentGroup("Prior Pending Notes", "Unfinished clinical documentation", pastPending, "bg-slate-100 text-slate-500")}
+          {renderAppointmentGroup("Prior Pending Notes", "Unfinished clinical documentation", pastPending, "bg-gray-50 text-gray-500")}
         </div>
       )}
 

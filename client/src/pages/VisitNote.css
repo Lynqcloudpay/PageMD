@@ -1,26 +1,25 @@
 /* VisitNote Redesign - Modern Soft UI Design System (Refined & Compact) */
 
 :root {
-  --vn-bg-base: #F9FBFC;
-  --vn-bg-card: rgba(255, 255, 255, 0.9);
-  --vn-border-soft: rgba(226, 232, 240, 0.6);
-  --vn-text-main: #475569;
-  --vn-text-muted: #94A3B8;
-  --vn-accent: #3B82F6;
-  --vn-accent-soft: rgba(59, 130, 246, 0.05);
+  --vn-bg-base: #FFFFFF;
+  --vn-bg-card: rgba(255, 255, 255, 0.95);
+  --vn-border-soft: rgba(229, 231, 235, 0.6);
+  --vn-text-main: #374151;
+  --vn-text-muted: #9CA3AF;
+  --vn-accent: #2563EB;
+  --vn-accent-soft: rgba(37, 99, 235, 0.06);
   --vn-success: #10B981;
-  --vn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
-  --vn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+  --vn-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+  --vn-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   --vn-radius-lg: 0.75rem;
   --vn-radius-xl: 1rem;
 }
 
 .vn-soft-ui {
-  font-family: 'Figtree', 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   color: var(--vn-text-main);
   background-color: var(--vn-bg-base);
   font-size: 0.8125rem;
-  /* Base font size reduced */
 }
 
 /* Glassmorphism Cards */

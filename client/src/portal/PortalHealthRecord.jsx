@@ -72,7 +72,7 @@ const PortalHealthRecord = () => {
         return (
             <div className="flex flex-col items-center justify-center p-20">
                 <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Loading Health Records...</p>
+                <p className="text-gray-400 font-bold uppercase tracking-widest text-[9px]">Loading Health Records...</p>
             </div>
         );
     }
@@ -81,10 +81,10 @@ const PortalHealthRecord = () => {
         <div className="space-y-5 animate-in fade-in duration-700">
             {/* Header */}
             <div className="flex justify-between items-center">
-                <h1 className="text-xl font-bold text-slate-800">Health Record</h1>
+                <h1 className="text-xl font-bold text-gray-800">Health Record</h1>
                 <button
                     onClick={fetchAllData}
-                    className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                    className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                     title="Refresh"
                 >
                     <RefreshCw className="w-5 h-5" />
@@ -105,14 +105,14 @@ const PortalHealthRecord = () => {
                             onClick={() => setActiveSection(section.id)}
                             className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${isActive
                                 ? 'text-white shadow-lg'
-                                : 'bg-white text-slate-600 border border-slate-100 hover:border-slate-300 active:scale-95'
+                                : 'bg-white text-gray-600 border border-gray-100 hover:border-gray-200 active:scale-95'
                                 }`}
                             style={isActive ? { backgroundColor: getColorHex(section.color), boxShadow: `0 4px 14px ${getColorHex(section.color)}40` } : {}}
                         >
                             <Icon className="w-4 h-4" />
                             <span>{section.label}</span>
                             {section.count > 0 && (
-                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-white/25' : 'bg-slate-100'}`}>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-white/25' : 'bg-gray-50'}`}>
                                     {section.count}
                                 </span>
                             )}
@@ -122,7 +122,7 @@ const PortalHealthRecord = () => {
             </div>
 
             {/* Content */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {activeSection === 'medications' && <MedicationsSection data={data.medications} />}
                 {activeSection === 'allergies' && <AllergiesSection data={data.allergies} />}
                 {activeSection === 'problems' && <ProblemsSection data={data.problems} />}
@@ -148,21 +148,21 @@ const getColorHex = (color) => {
 
 const EmptyState = ({ message }) => (
     <div className="p-12 text-center">
-        <p className="text-slate-400 text-sm">{message}</p>
+        <p className="text-gray-400 text-sm">{message}</p>
     </div>
 );
 
 const MedicationsSection = ({ data }) => {
     if (data.length === 0) return <EmptyState message="No active medications on file" />;
     return (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-gray-50">
             {data.map(med => (
-                <div key={med.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                <div key={med.id} className="p-4 hover:bg-gray-50/50 transition-colors">
                     <div className="flex items-start justify-between">
                         <div>
-                            <h4 className="font-bold text-slate-800">{med.medication_name}</h4>
-                            <p className="text-sm text-slate-500">{med.dosage} • {med.frequency}</p>
-                            {med.instructions && <p className="text-xs text-slate-400 mt-1">{med.instructions}</p>}
+                            <h4 className="font-bold text-gray-800">{med.medication_name}</h4>
+                            <p className="text-sm text-gray-500">{med.dosage} • {med.frequency}</p>
+                            {med.instructions && <p className="text-xs text-gray-400 mt-1">{med.instructions}</p>}
                         </div>
                         <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-bold uppercase">Active</span>
                     </div>
@@ -175,16 +175,16 @@ const MedicationsSection = ({ data }) => {
 const AllergiesSection = ({ data }) => {
     if (data.length === 0) return <EmptyState message="No known allergies on file" />;
     return (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-gray-50">
             {data.map(allergy => (
-                <div key={allergy.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                <div key={allergy.id} className="p-4 hover:bg-gray-50/50 transition-colors">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                             <AlertCircle className="w-4 h-4 text-red-500" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-slate-800">{allergy.allergen}</h4>
-                            <p className="text-sm text-slate-500">
+                            <h4 className="font-bold text-gray-800">{allergy.allergen}</h4>
+                            <p className="text-sm text-gray-500">
                                 {allergy.reaction}
                                 {allergy.severity && <span className="ml-2 text-red-500">• {allergy.severity}</span>}
                             </p>
@@ -199,16 +199,16 @@ const AllergiesSection = ({ data }) => {
 const ProblemsSection = ({ data }) => {
     if (data.length === 0) return <EmptyState message="No active conditions on file" />;
     return (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-gray-50">
             {data.map(problem => (
-                <div key={problem.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                <div key={problem.id} className="p-4 hover:bg-gray-50/50 transition-colors">
                     <div className="flex items-start justify-between">
                         <div>
-                            <h4 className="font-bold text-slate-800">{problem.problem_name}</h4>
-                            {problem.icd10_code && <p className="text-xs text-slate-400">ICD-10: {problem.icd10_code}</p>}
+                            <h4 className="font-bold text-gray-800">{problem.problem_name}</h4>
+                            {problem.icd10_code && <p className="text-xs text-gray-400">ICD-10: {problem.icd10_code}</p>}
                         </div>
                         {problem.onset_date && (
-                            <span className="text-xs text-slate-400">Since {format(new Date(problem.onset_date), 'MMM yyyy')}</span>
+                            <span className="text-xs text-gray-400">Since {format(new Date(problem.onset_date), 'MMM yyyy')}</span>
                         )}
                     </div>
                 </div>
@@ -220,21 +220,21 @@ const ProblemsSection = ({ data }) => {
 const LabsSection = ({ data }) => {
     if (data.length === 0) return <EmptyState message="No lab results available" />;
     return (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-gray-50">
             {data.map(lab => (
-                <div key={lab.id} className="p-4 hover:bg-slate-50/50 transition-colors">
+                <div key={lab.id} className="p-4 hover:bg-gray-50/50 transition-colors">
                     <div className="flex items-start justify-between">
                         <div>
-                            <h4 className="font-bold text-slate-800">{lab.test_name}</h4>
+                            <h4 className="font-bold text-gray-800">{lab.test_name}</h4>
                             <p className="text-sm">
                                 <span className={`font-bold ${lab.abnormal_flags ? 'text-red-600' : 'text-emerald-600'}`}>
                                     {lab.result_value} {lab.result_units}
                                 </span>
-                                {lab.reference_range && <span className="text-slate-400 ml-2">Ref: {lab.reference_range}</span>}
+                                {lab.reference_range && <span className="text-gray-400 ml-2">Ref: {lab.reference_range}</span>}
                             </p>
                         </div>
                         {lab.completed_at && (
-                            <span className="text-xs text-slate-400">{format(new Date(lab.completed_at), 'MMM d, yyyy')}</span>
+                            <span className="text-xs text-gray-400">{format(new Date(lab.completed_at), 'MMM d, yyyy')}</span>
                         )}
                     </div>
                 </div>
@@ -246,13 +246,13 @@ const LabsSection = ({ data }) => {
 const VitalsSection = ({ data }) => {
     if (data.length === 0) return <EmptyState message="No vital signs recorded" />;
     return (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-gray-50">
             {data.slice(0, 10).map((visit, idx) => {
                 const vitals = typeof visit.vitals === 'string' ? JSON.parse(visit.vitals) : visit.vitals;
                 return (
-                    <div key={idx} className="p-4 hover:bg-slate-50/50 transition-colors">
+                    <div key={idx} className="p-4 hover:bg-gray-50/50 transition-colors">
                         <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-bold text-slate-400">{format(new Date(visit.visit_date), 'MMMM d, yyyy')}</span>
+                            <span className="text-xs font-bold text-gray-400">{format(new Date(visit.visit_date), 'MMMM d, yyyy')}</span>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {vitals?.bp && <VitalItem label="Blood Pressure" value={vitals.bp} unit="mmHg" />}
@@ -268,28 +268,28 @@ const VitalsSection = ({ data }) => {
 };
 
 const VitalItem = ({ label, value, unit }) => (
-    <div className="bg-slate-50 rounded-lg p-2">
-        <div className="text-[9px] font-bold text-slate-400 uppercase">{label}</div>
-        <div className="text-sm font-bold text-slate-800">{value} <span className="text-slate-400 text-xs">{unit}</span></div>
+    <div className="bg-gray-50 rounded-lg p-2">
+        <div className="text-[9px] font-bold text-gray-400 uppercase">{label}</div>
+        <div className="text-sm font-bold text-gray-800">{value} <span className="text-gray-400 text-xs">{unit}</span></div>
     </div>
 );
 
 const DocumentsSection = ({ data }) => {
     if (data.length === 0) return <EmptyState message="No documents available" />;
     return (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-gray-50">
             {data.map(doc => (
-                <div key={doc.id} className="p-4 hover:bg-slate-50/50 transition-colors flex items-center justify-between group">
+                <div key={doc.id} className="p-4 hover:bg-gray-50/50 transition-colors flex items-center justify-between group">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
                             <FileText className="w-5 h-5 text-blue-500" />
                         </div>
                         <div>
-                            <h4 className="font-bold text-slate-800">{doc.filename || doc.doc_type}</h4>
-                            <p className="text-xs text-slate-400">{format(new Date(doc.created_at), 'MMM d, yyyy')}</p>
+                            <h4 className="font-bold text-gray-800">{doc.filename || doc.doc_type}</h4>
+                            <p className="text-xs text-gray-400">{format(new Date(doc.created_at), 'MMM d, yyyy')}</p>
                         </div>
                     </div>
-                    <button className="p-2 text-slate-300 group-hover:text-blue-600 transition-colors">
+                    <button className="p-2 text-gray-400 group-hover:text-blue-600 transition-colors">
                         <ArrowUpRight className="w-4 h-4" />
                     </button>
                 </div>

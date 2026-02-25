@@ -212,9 +212,9 @@ const parseDateSafe = (dateStr) => {
 
 // ============== MINI SPARKLINE COMPONENT ==============
 const MiniSparkline = ({ data, color = 'blue', width = 50, height = 16 }) => {
-    if (!data || data.length < 2) return <div className="w-[50px] h-[16px] border-b border-slate-100 opacity-30" />;
+    if (!data || data.length < 2) return <div className="w-[50px] h-[16px] border-b border-gray-100 opacity-30" />;
     const values = data.map(d => parseFloat(d.value) || 0).filter(v => !isNaN(v) && v !== 0);
-    if (values.length < 2) return <div className="w-[50px] h-[16px] border-b border-slate-100 opacity-30" />;
+    if (values.length < 2) return <div className="w-[50px] h-[16px] border-b border-gray-100 opacity-30" />;
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = max - min || 1;
@@ -290,10 +290,10 @@ const TrendCard = ({ trend, data, onClick, onRemove, editable, onDragStart, onDr
     }
 
     const colorMap = {
-        rose: { bg: 'bg-rose-50/20', border: 'border-rose-100', text: 'text-rose-600', value: 'text-slate-900', spark: 'rose', indicator: 'bg-rose-400' },
-        amber: { bg: 'bg-amber-50/20', border: 'border-amber-100', text: 'text-amber-600', value: 'text-slate-900', spark: 'amber', indicator: 'bg-amber-400' },
-        emerald: { bg: 'bg-emerald-50/20', border: 'border-emerald-100', text: 'text-emerald-600', value: 'text-slate-900', spark: 'emerald', indicator: 'bg-emerald-400' },
-        slate: { bg: 'bg-slate-50/20', border: 'border-slate-100', text: 'text-slate-400', value: 'text-slate-900', spark: 'slate', indicator: 'bg-slate-200' },
+        rose: { bg: 'bg-rose-50/20', border: 'border-rose-100', text: 'text-rose-600', value: 'text-gray-900', spark: 'rose', indicator: 'bg-rose-400' },
+        amber: { bg: 'bg-amber-50/20', border: 'border-amber-100', text: 'text-amber-600', value: 'text-gray-900', spark: 'amber', indicator: 'bg-amber-400' },
+        emerald: { bg: 'bg-emerald-50/20', border: 'border-emerald-100', text: 'text-emerald-600', value: 'text-gray-900', spark: 'emerald', indicator: 'bg-emerald-400' },
+        slate: { bg: 'bg-gray-50/20', border: 'border-gray-100', text: 'text-gray-400', value: 'text-gray-900', spark: 'slate', indicator: 'bg-gray-100' },
     };
     const colors = colorMap[statusColor];
     const displayValue = value != null ? (typeof value === 'number' ? (Number.isInteger(value) ? value : value.toFixed(1)) : value) : '--';
@@ -305,34 +305,34 @@ const TrendCard = ({ trend, data, onClick, onRemove, editable, onDragStart, onDr
             onDragStart={onDragStart}
             onDragOver={onDragOver}
             onDrop={onDrop}
-            className={`${colors.bg} ${colors.border} border rounded-xl p-3 text-left hover:shadow-md hover:border-slate-200 transition-all group w-full relative ${editable ? 'cursor-move ring-2 ring-blue-500/10 shadow-sm border-blue-200' : ''}`}
+            className={`${colors.bg} ${colors.border} border rounded-xl p-3 text-left hover:shadow-md hover:border-gray-200 transition-all group w-full relative ${editable ? 'cursor-move ring-2 ring-blue-500/10 shadow-sm border-blue-200' : ''}`}
         >
             <div className={`absolute top-3 left-0 w-0.5 h-4 rounded-r-full ${colors.indicator}`} />
 
             {editable && (
                 <div className="absolute top-1 left-2 opacity-30 group-hover:opacity-100 transition-opacity">
                     <div className="grid grid-cols-2 gap-0.5">
-                        {[1, 2, 3, 4].map(i => <div key={i} className="w-0.5 h-0.5 rounded-full bg-slate-300" />)}
+                        {[1, 2, 3, 4].map(i => <div key={i} className="w-0.5 h-0.5 rounded-full bg-gray-200" />)}
                     </div>
                 </div>
             )}
             {editable && onRemove && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onRemove(trend.id); }}
-                    className="absolute -top-1.5 -right-1.5 p-1 bg-white border border-slate-100 text-slate-400 rounded-full shadow-sm hover:bg-rose-500 hover:text-white transition-colors z-10"
+                    className="absolute -top-1.5 -right-1.5 p-1 bg-white border border-gray-100 text-gray-400 rounded-full shadow-sm hover:bg-rose-500 hover:text-white transition-colors z-10"
                 >
                     <X className="w-2.5 h-2.5" />
                 </button>
             )}
             <button onClick={onClick} className="w-full text-left">
                 <div className="flex justify-between items-start mb-0.5 overflow-hidden">
-                    <span className={`text-[9.5px] font-black text-slate-500 uppercase tracking-tighter truncate leading-none mr-2 ${editable ? 'ml-4' : 'ml-1'}`}>{trend.label}</span>
-                    {trend.goal && <span className="text-[7.5px] font-black text-slate-300 uppercase tracking-widest shrink-0 mt-0.5">Goal {trend.goal}</span>}
+                    <span className={`text-[9.5px] font-bold text-gray-500 uppercase tracking-tighter truncate leading-none mr-2 ${editable ? 'ml-4' : 'ml-1'}`}>{trend.label}</span>
+                    {trend.goal && <span className="text-[7.5px] font-bold text-gray-400 uppercase tracking-widest shrink-0 mt-0.5">Goal {trend.goal}</span>}
                 </div>
                 <div className="flex items-end justify-between min-w-0">
                     <div className="min-w-0 flex-1">
-                        <div className={`text-xl font-black ${colors.value} tabular-nums leading-none tracking-tighter flex items-baseline gap-0.5`}>
-                            {displayValue}<span className="text-[9px] font-black text-slate-400 leading-none uppercase tracking-tighter">{trend.unit}</span>
+                        <div className={`text-xl font-bold ${colors.value} tabular-nums leading-none tracking-tighter flex items-baseline gap-0.5`}>
+                            {displayValue}<span className="text-[9px] font-bold text-gray-400 leading-none uppercase tracking-tighter">{trend.unit}</span>
                         </div>
                         {delta && (
                             <div className={`flex items-center gap-0.5 text-[10px] font-semibold mt-1.5 ${deltaType === 'up' ? 'text-rose-500' : 'text-emerald-500'}`}>
@@ -344,7 +344,7 @@ const TrendCard = ({ trend, data, onClick, onRemove, editable, onDragStart, onDr
                     </div>
                     <div className="flex flex-col items-end shrink-0 pointer-events-none mb-0.5">
                         <MiniSparkline data={data} color={colors.spark} />
-                        {parsedDate && <span className="text-[9px] font-medium text-slate-300 mt-1 uppercase tracking-tighter">{format(parsedDate, 'M/d')}</span>}
+                        {parsedDate && <span className="text-[9px] font-medium text-gray-400 mt-1 uppercase tracking-tighter">{format(parsedDate, 'M/d')}</span>}
                     </div>
                 </div>
             </button>
@@ -401,22 +401,22 @@ const TrackerPickerModal = ({ isOpen, onClose, currentTrackerIds, onSave }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-gray-50/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={onClose}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">Customize Trackers</h3>
-                        <p className="text-xs text-slate-500">Select which metrics to display ({selected.size} selected)</p>
+                        <h3 className="text-lg font-bold text-gray-900">Customize Trackers</h3>
+                        <p className="text-xs text-gray-500">Select which metrics to display ({selected.size} selected)</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg">
-                        <X className="w-5 h-5 text-slate-400" />
+                    <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-lg">
+                        <X className="w-5 h-5 text-gray-400" />
                     </button>
                 </div>
 
                 <div className="p-4 max-h-[50vh] overflow-y-auto">
                     {Object.entries(grouped).map(([category, trackers]) => (
                         <div key={category} className="mb-4">
-                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{category}</h4>
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{category}</h4>
                             <div className="grid grid-cols-2 gap-2">
                                 {trackers.map(t => (
                                     <button
@@ -424,15 +424,15 @@ const TrackerPickerModal = ({ isOpen, onClose, currentTrackerIds, onSave }) => {
                                         onClick={() => toggleTracker(t.id)}
                                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all ${selected.has(t.id)
                                             ? 'bg-blue-50 border-blue-300 text-blue-700'
-                                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-200'
                                             }`}
                                     >
-                                        <div className={`w-4 h-4 rounded flex items-center justify-center ${selected.has(t.id) ? 'bg-blue-500' : 'border border-slate-300'}`}>
+                                        <div className={`w-4 h-4 rounded flex items-center justify-center ${selected.has(t.id) ? 'bg-blue-500' : 'border border-gray-200'}`}>
                                             {selected.has(t.id) && <Check className="w-3 h-3 text-white" />}
                                         </div>
                                         <div>
                                             <div className="text-xs font-medium">{t.label}</div>
-                                            <div className="text-[10px] text-slate-400">{t.unit}</div>
+                                            <div className="text-[10px] text-gray-400">{t.unit}</div>
                                         </div>
                                     </button>
                                 ))}
@@ -441,8 +441,8 @@ const TrackerPickerModal = ({ isOpen, onClose, currentTrackerIds, onSave }) => {
                     ))}
                 </div>
 
-                <div className="p-4 border-t border-slate-200 flex justify-end gap-2">
-                    <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+                <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                    <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">Cancel</button>
                     <button onClick={handleSave} className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-1.5">
                         <Save className="w-4 h-4" /> Save Changes
                     </button>
@@ -456,22 +456,22 @@ const TrackerPickerModal = ({ isOpen, onClose, currentTrackerIds, onSave }) => {
 const TrendDetailView = ({ trend, data, onClose }) => {
     if (!trend) return null;
     return (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
-            <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-300 border border-slate-200" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-white">
+        <div className="fixed inset-0 bg-gray-50/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={onClose}>
+            <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-300 border border-gray-200" onClick={e => e.stopPropagation()}>
+                <div className="p-6 border-b border-gray-100 flex justify-between items-start bg-white">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1.5">
                             <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-bold uppercase tracking-wider rounded border border-blue-100">
                                 {trend.category || 'Specialty'}
                             </span>
                         </div>
-                        <h2 className="text-xl font-bold text-slate-900 tracking-tight">{trend.label}</h2>
+                        <h2 className="text-xl font-bold text-gray-900 tracking-tight">{trend.label}</h2>
                         <div className="flex items-center gap-2 mt-1.5">
                             <Activity className="w-3.5 h-3.5 text-blue-500" />
-                            <p className="text-[11px] font-semibold text-slate-500">{data.length} measurements analyzed</p>
+                            <p className="text-[11px] font-semibold text-gray-500">{data.length} measurements analyzed</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-xl transition-all"><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-xl transition-all"><X className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>
                 </div>
                 <div className="p-4 max-h-[60vh] overflow-y-auto">
                     {data.length > 0 && (() => {
@@ -514,7 +514,7 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                         }
 
                         return (
-                            <div className="bg-slate-50/50 border-y border-slate-100 p-6 flex flex-col gap-6">
+                            <div className="bg-gray-50/50 border-y border-gray-100 p-6 flex flex-col gap-6">
                                 <div className="h-32 w-full relative">
                                     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible" preserveAspectRatio="none">
                                         <defs>
@@ -536,10 +536,10 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                                         const parsedDate = parseDateSafe(d.date);
                                         return (
                                             <div key={i} className={`flex flex-col items-center gap-1 transition-opacity ${showLabel ? 'opacity-100' : 'opacity-0'}`}>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                                                     {parsedDate ? format(parsedDate, 'M/d') : ''}
                                                 </span>
-                                                <span className="text-[11px] font-bold text-slate-800 tabular-nums">
+                                                <span className="text-[11px] font-bold text-gray-800 tabular-nums">
                                                     {d.value}
                                                 </span>
                                             </div>
@@ -554,17 +554,17 @@ const TrendDetailView = ({ trend, data, onClose }) => {
                             {data.length > 0 ? data.map((d, i) => {
                                 const parsedDate = parseDateSafe(d.date);
                                 return (
-                                    <div key={i} className="flex items-center justify-between p-2.5 bg-slate-50/80 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
+                                    <div key={i} className="flex items-center justify-between p-2.5 bg-gray-50/80 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
                                         <div className="flex flex-col gap-0.5">
-                                            <span className="text-[11px] font-black text-slate-900 tabular-nums leading-tight">
-                                                {d.value} <span className="text-slate-400 font-bold">{trend.unit}</span>
+                                            <span className="text-[11px] font-bold text-gray-900 tabular-nums leading-tight">
+                                                {d.value} <span className="text-gray-400 font-bold">{trend.unit}</span>
                                             </span>
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">{parsedDate ? format(parsedDate, 'MMM d, yyyy') : '--'}</span>
+                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">{parsedDate ? format(parsedDate, 'MMM d, yyyy') : '--'}</span>
                                         </div>
-                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-white px-1.5 py-0.5 rounded border border-slate-100">{d.source || 'Chart'}</span>
+                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-white px-1.5 py-0.5 rounded border border-gray-100">{d.source || 'Chart'}</span>
                                     </div>
                                 );
-                            }) : <div className="text-center text-slate-400 py-4">No data available</div>}
+                            }) : <div className="text-center text-gray-400 py-4">No data available</div>}
                         </div>
                     </div>
                 </div>
@@ -830,37 +830,37 @@ const SpecialtyTracker = ({
 
     return (
         <>
-            <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[80]" onClick={onClose} />
+            <div className="fixed inset-0 bg-gray-50/30 backdrop-blur-sm z-[80]" onClick={onClose} />
             <div className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-2xl z-[90] flex flex-col animate-slide-left">
                 {/* Header */}
-                <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-slate-50 to-white">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                             <div className="p-2 rounded-xl bg-rose-100"><Icon className="w-5 h-5 text-rose-600" /></div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-900">Specialty Tracker</h2>
-                                <p className="text-[10px] text-slate-500 uppercase tracking-wider">At-a-glance trends</p>
+                                <h2 className="text-lg font-bold text-gray-900">Specialty Tracker</h2>
+                                <p className="text-[10px] text-gray-500 uppercase tracking-wider">At-a-glance trends</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
                             {loadingLabs && <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />}
-                            <button onClick={() => setEditMode(!editMode)} className={`p-2 rounded-lg transition-colors ${editMode ? 'bg-amber-100 text-amber-600' : 'hover:bg-slate-100 text-slate-400'}`} title="Edit mode">
+                            <button onClick={() => setEditMode(!editMode)} className={`p-2 rounded-lg transition-colors ${editMode ? 'bg-amber-100 text-amber-600' : 'hover:bg-gray-50 text-gray-400'}`} title="Edit mode">
                                 <Edit3 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setIsPinned(!isPinned)} className={`p-2 rounded-lg transition-colors ${isPinned ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-400'}`}>
+                            <button onClick={() => setIsPinned(!isPinned)} className={`p-2 rounded-lg transition-colors ${isPinned ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-50 text-gray-400'}`}>
                                 {isPinned ? <Pin className="w-4 h-4" /> : <PinOff className="w-4 h-4" />}
                             </button>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
+                            <button onClick={onClose} className="p-2 hover:bg-gray-50 rounded-lg"><X className="w-5 h-5 text-gray-400" /></button>
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <select value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 transition-all outline-none">
+                        <select value={selectedSpecialty} onChange={(e) => setSelectedSpecialty(e.target.value)} className="flex-1 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 transition-all outline-none">
                             {Object.values(DEFAULT_SPECIALTY_TEMPLATES).map(s => (
                                 <option key={s.id} value={s.id}>{s.label}</option>
                             ))}
                         </select>
-                        <button onClick={() => setShowTrackerPicker(true)} className="px-3 py-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 rounded-lg transition-colors" title="Customize trackers">
-                            <Settings className="w-4 h-4 text-slate-400" />
+                        <button onClick={() => setShowTrackerPicker(true)} className="px-3 py-2 bg-gray-50 border border-gray-100 hover:bg-gray-50 rounded-lg transition-colors" title="Customize trackers">
+                            <Settings className="w-4 h-4 text-gray-400" />
                         </button>
                     </div>
                     {isCustomized && (
@@ -891,7 +891,7 @@ const SpecialtyTracker = ({
                     {/* Trends */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                                 <TrendingUp className="w-3.5 h-3.5" /> Top Trends
                             </h3>
                             <div className="flex items-center gap-2">
@@ -901,7 +901,7 @@ const SpecialtyTracker = ({
                                         <ChevronDown className={`w-3 h-3 transition-transform ${showMore ? 'rotate-180' : ''}`} />
                                     </button>
                                 )}
-                                <button onClick={() => setShowTrackerPicker(true)} className="text-[10px] font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-0.5">
+                                <button onClick={() => setShowTrackerPicker(true)} className="text-[10px] font-semibold text-gray-500 hover:text-blue-600 flex items-center gap-0.5">
                                     <Plus className="w-3 h-3" /> Add
                                 </button>
                             </div>
@@ -926,8 +926,8 @@ const SpecialtyTracker = ({
                                 />
                             ))}
                             {activeTrackers.length === 0 && (
-                                <div className="col-span-2 text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                                    <p className="text-sm text-slate-500 mb-2">No trackers configured</p>
+                                <div className="col-span-2 text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                    <p className="text-sm text-gray-500 mb-2">No trackers configured</p>
                                     <button onClick={() => setShowTrackerPicker(true)} className="text-xs text-blue-600 font-semibold hover:underline">
                                         + Add Trackers
                                     </button>
@@ -940,17 +940,17 @@ const SpecialtyTracker = ({
                     {specialty?.status?.length > 0 && (
                         <div>
                             <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5"><Pill className="w-3.5 h-3.5" /> Therapy Status</h3>
+                                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><Pill className="w-3.5 h-3.5" /> Therapy Status</h3>
                                 <button onClick={handleEditMedications} className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"><Edit3 className="w-3 h-3" /> Edit</button>
                             </div>
                             <div className="space-y-2">
                                 {specialty.status.map(s => {
                                     const status = medicationStatus[s.id];
                                     return (
-                                        <div key={s.id} onClick={handleEditMedications} className={`rounded-lg cursor-pointer hover:shadow-sm transition-all ${status?.active ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200'}`}>
+                                        <div key={s.id} onClick={handleEditMedications} className={`rounded-lg cursor-pointer hover:shadow-sm transition-all ${status?.active ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-200'}`}>
                                             <div className="flex items-center justify-between px-3 py-2">
-                                                <span className={`text-xs font-semibold ${status?.active ? 'text-emerald-700' : 'text-slate-500'}`}>{s.label}</span>
-                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status?.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
+                                                <span className={`text-xs font-semibold ${status?.active ? 'text-emerald-700' : 'text-gray-500'}`}>{s.label}</span>
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${status?.active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                                                     {status?.active ? '✓ ACTIVE' : 'NOT ON'}
                                                 </span>
                                             </div>
@@ -982,23 +982,23 @@ const SpecialtyTracker = ({
                     {/* Due Items */}
                     {dueItems.length > 0 && (
                         <div>
-                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mb-3"><Clock className="w-3.5 h-3.5" /> Due Soon / Overdue</h3>
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mb-3"><Clock className="w-3.5 h-3.5" /> Due Soon / Overdue</h3>
                             <div className="space-y-2">{dueItems.map(item => <DueItem key={item.id} item={item} lastDate={item.lastDate} overdue={item.overdue} />)}</div>
                         </div>
                     )}
 
                     {dataCount === 0 && activeTrackers.length > 0 && !loadingLabs && (
                         <div className="text-center py-8">
-                            <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                            <p className="text-sm text-slate-500">No trend data available</p>
+                            <AlertCircle className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500">No trend data available</p>
                             <button onClick={handleEditVitals} className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg"><Plus className="w-3.5 h-3.5 inline mr-1" />Add Vitals</button>
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-slate-200 bg-slate-50/50">
-                    <div className="text-[10px] text-slate-400 text-center">
+                <div className="p-3 border-t border-gray-200 bg-gray-50/50">
+                    <div className="text-[10px] text-gray-400 text-center">
                         {vitals.length} vitals, {labResults.length} labs • {activeTrackers.length} trackers active
                     </div>
                 </div>

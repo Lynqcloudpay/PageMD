@@ -54,10 +54,10 @@ const PlatformAdminLogin = () => {
                         </div>
 
                         {/* Title */}
-                        <h1 className="text-3xl font-bold text-slate-800 text-center mb-2">
+                        <h1 className="text-3xl font-bold text-gray-800 text-center mb-2">
                             Platform Admin
                         </h1>
-                        <p className="text-slate-500 text-center mb-8 text-sm">
+                        <p className="text-gray-500 text-center mb-8 text-sm">
                             PageMD IT Team Access
                         </p>
 
@@ -72,15 +72,15 @@ const PlatformAdminLogin = () => {
                         {/* Form */}
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Email Address
                                 </label>
                                 <div className="relative">
-                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="email"
                                         required
-                                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+                                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-gray-800 placeholder:text-gray-400"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         placeholder="your.email@pagemd.com"
@@ -90,15 +90,15 @@ const PlatformAdminLogin = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Password
                                 </label>
                                 <div className="relative">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type={showPassword ? "text" : "password"}
                                         required
-                                        className="w-full pl-12 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+                                        className="w-full pl-12 pr-12 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all text-gray-800 placeholder:text-gray-400"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         placeholder="Enter your password"
@@ -106,7 +106,7 @@ const PlatformAdminLogin = () => {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-blue-600 transition-colors"
+                                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-blue-600 transition-colors"
                                     >
                                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </button>
@@ -134,8 +134,8 @@ const PlatformAdminLogin = () => {
                         </form>
 
                         {/* Footer */}
-                        <div className="mt-8 pt-6 border-t border-slate-100">
-                            <p className="text-center text-xs text-slate-400">
+                        <div className="mt-8 pt-6 border-t border-gray-100">
+                            <p className="text-center text-xs text-gray-400">
                                 PageMD Platform Management System
                                 <br />
                                 All access is audited and logged

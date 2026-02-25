@@ -135,21 +135,21 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
     };
 
     return createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-gray-50/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <div>
-                        <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                             <Camera size={20} className="text-blue-600" />
                             Update Profile Photo
                         </h3>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
                             {patient.first_name} {patient.last_name}
                         </p>
                     </div>
-                    <button onClick={handleClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                        <X size={20} className="text-slate-400" />
+                    <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                        <X size={20} className="text-gray-400" />
                     </button>
                 </div>
 
@@ -157,7 +157,7 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                     {/* Preview Area */}
                     <div className="flex flex-col items-center justify-center mb-8">
                         <div className="relative group">
-                            <div className="w-48 h-48 rounded-full border-4 border-slate-100 shadow-inner overflow-hidden bg-slate-50 flex items-center justify-center">
+                            <div className="w-48 h-48 rounded-full border-4 border-gray-100 shadow-inner overflow-hidden bg-gray-50 flex items-center justify-center">
                                 {isWebcamActive ? (
                                     <video
                                         ref={videoRef}
@@ -172,9 +172,9 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="text-slate-300 flex flex-col items-center gap-2">
+                                    <div className="text-gray-400 flex flex-col items-center gap-2">
                                         <Upload size={48} />
-                                        <span className="text-[10px] font-black uppercase tracking-tighter">No Image</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-tighter">No Image</span>
                                     </div>
                                 )}
                             </div>
@@ -241,17 +241,17 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all group flex flex-col items-center justify-center gap-1"
+                                    className="p-4 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all group flex flex-col items-center justify-center gap-1"
                                 >
                                     <Upload size={20} className="mb-1" />
-                                    <span className="text-xs font-black uppercase">Upload File</span>
+                                    <span className="text-xs font-bold uppercase">Upload File</span>
                                 </button>
                                 <button
                                     onClick={startWebcam}
-                                    className="p-4 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all group flex flex-col items-center justify-center gap-1"
+                                    className="p-4 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 hover:border-emerald-400 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all group flex flex-col items-center justify-center gap-1"
                                 >
                                     <Camera size={20} className="mb-1" />
-                                    <span className="text-xs font-black uppercase">Webcam</span>
+                                    <span className="text-xs font-bold uppercase">Webcam</span>
                                 </button>
                             </div>
                         )}
@@ -261,7 +261,7 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                                 <button
                                     onClick={handleRemove}
                                     disabled={loading}
-                                    className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition-all flex items-center justify-center gap-2"
+                                    className="flex-1 py-3 px-4 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-red-50 hover:text-red-600 transition-all flex items-center justify-center gap-2"
                                 >
                                     <Trash2 size={14} /> Remove Photo
                                 </button>
@@ -272,14 +272,14 @@ const PatientPhotoModal = ({ isOpen, onClose, patient, onUpdate }) => {
                                     <button
                                         onClick={() => { setFile(null); setPreview(null); }}
                                         disabled={loading}
-                                        className="flex-1 py-3 px-4 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                        className="flex-1 py-3 px-4 bg-gray-50 text-gray-600 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gray-100 transition-all"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleSave}
                                         disabled={loading}
-                                        className="flex-[2] py-3 px-4 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                                        className="flex-[2] py-3 px-4 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
                                     >
                                         {loading ? (
                                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

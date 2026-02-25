@@ -126,7 +126,7 @@ const ResultImage = ({ doc }) => {
                 <div className="grid grid-cols-2 gap-2 mt-1">
                     {metrics.map((m, i) => (
                         <div key={i} className="bg-gray-50 p-2 rounded-md border border-gray-100/50">
-                            <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest block leading-none mb-1">{m.label}</span>
+                            <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest block leading-none mb-1">{m.label}</span>
                             <span className="text-[11px] font-bold text-gray-800 tabular-nums">{m.value}</span>
                         </div>
                     ))}
@@ -135,7 +135,7 @@ const ResultImage = ({ doc }) => {
 
             {interpretation && (
                 <div className="bg-blue-50/30 border border-blue-100/50 p-3 rounded-lg mt-1">
-                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest block mb-1">Clinical Interpretation</span>
+                    <span className="text-[8px] font-bold text-blue-400 uppercase tracking-widest block mb-1">Clinical Interpretation</span>
                     <div className="text-[12px] font-bold text-gray-700 leading-tight italic">"{interpretation}"</div>
                 </div>
             )}
@@ -147,15 +147,15 @@ const ResultImage = ({ doc }) => {
 const SectionLegacy = ({ title, children, defaultOpen = true, isEdited = false, id, badge }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
-        <div id={id} className={`scroll-mt-20 border ${isEdited ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-200/80'} rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm shadow-slate-100/50 mb-4 overflow-hidden transition-all duration-200`}>
+        <div id={id} className={`scroll-mt-20 border ${isEdited ? 'border-blue-200 ring-1 ring-blue-100' : 'border-gray-200/80'} rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm shadow-slate-100/50 mb-4 overflow-hidden transition-all duration-200`}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`w-full px-4 py-2.5 ${isEdited ? 'bg-blue-50/30' : 'bg-gradient-to-r from-slate-50/80 to-white'} border-b ${isEdited ? 'border-blue-100/50' : 'border-slate-100'} flex items-center justify-between hover:bg-slate-50/80 transition-colors group`}
+                className={`w-full px-4 py-2.5 ${isEdited ? 'bg-blue-50/30' : 'bg-gradient-to-r from-slate-50/80 to-white'} border-b ${isEdited ? 'border-blue-100/50' : 'border-gray-100'} flex items-center justify-between hover:bg-gray-50/80 transition-colors group`}
             >
                 <div className="flex items-center gap-2">
-                    <h3 className="text-xs font-semibold text-slate-700 tracking-wide">{title}</h3>
+                    <h3 className="text-xs font-semibold text-gray-700 tracking-wide">{title}</h3>
                     {badge !== undefined && (
-                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-full">{badge}</span>
+                        <span className="px-1.5 py-0.5 bg-gray-50 text-gray-500 text-[10px] font-medium rounded-full">{badge}</span>
                     )}
                     {isEdited && (
                         <span className="px-2 py-0.5 bg-blue-500 text-white text-[9px] font-medium rounded-full flex items-center gap-1">
@@ -164,7 +164,7 @@ const SectionLegacy = ({ title, children, defaultOpen = true, isEdited = false, 
                         </span>
                     )}
                 </div>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             <div className={`transition-all duration-200 ${isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                 <div className="p-4 bg-white/50">{children}</div>
@@ -221,7 +221,7 @@ const RetractionModal = ({ isOpen, onClose, onConfirm, data, setData }) => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900 leading-tight">Retract Signed Note</h2>
-                            <p className="text-[11px] font-black text-red-500 uppercase tracking-widest mt-0.5">Entered in Error</p>
+                            <p className="text-[11px] font-bold text-red-500 uppercase tracking-widest mt-0.5">Entered in Error</p>
                         </div>
                     </div>
 
@@ -231,7 +231,7 @@ const RetractionModal = ({ isOpen, onClose, onConfirm, data, setData }) => {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Primary Reason</label>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Primary Reason</label>
                             <select
                                 value={data.reason_code}
                                 onChange={(e) => setData({ ...data, reason_code: e.target.value })}
@@ -247,7 +247,7 @@ const RetractionModal = ({ isOpen, onClose, onConfirm, data, setData }) => {
                         </div>
 
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Explanation / Audit Journal</label>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Explanation / Audit Journal</label>
                             <textarea
                                 value={data.reason_text}
                                 onChange={(e) => setData({ ...data, reason_text: e.target.value })}
@@ -292,7 +292,7 @@ const SignPromptModal = ({ isOpen, onClose, onConfirm, attendings, selectedAtten
                         </div>
                         <div>
                             <h2 className="text-xl font-bold text-gray-900 leading-tight">Electronic Signature</h2>
-                            <p className="text-[11px] font-black text-amber-500 uppercase tracking-widest mt-0.5">Workflow Routing Required</p>
+                            <p className="text-[11px] font-bold text-amber-500 uppercase tracking-widest mt-0.5">Workflow Routing Required</p>
                         </div>
                     </div>
 
@@ -307,7 +307,7 @@ const SignPromptModal = ({ isOpen, onClose, onConfirm, attendings, selectedAtten
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 flex items-center justify-between">
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 flex items-center justify-between">
                                 Assign Attending Physician
                                 <span className="text-amber-600">(Required)</span>
                             </label>
@@ -2856,9 +2856,9 @@ const VisitNote = () => {
                             <AlertTriangle className="w-5 h-5" />
                         </div>
                         <div className="flex-1">
-                            <h3 className="text-[11px] font-black text-amber-900 uppercase tracking-widest leading-none mb-1">Concurrent Session Alert</h3>
+                            <h3 className="text-[11px] font-bold text-amber-900 uppercase tracking-widest leading-none mb-1">Concurrent Session Alert</h3>
                             <p className="text-xs text-amber-800 font-medium tracking-tight">
-                                <span className="font-black underline">{othersOnNote.join(', ')}</span> {othersOnNote.length === 1 ? 'is' : 'are'} currently working on this note. Your data may be compromised if you save simultaneously.
+                                <span className="font-bold underline">{othersOnNote.join(', ')}</span> {othersOnNote.length === 1 ? 'is' : 'are'} currently working on this note. Your data may be compromised if you save simultaneously.
                             </p>
                         </div>
                     </div>
@@ -2914,15 +2914,15 @@ const VisitNote = () => {
                         {/* Chief Complaint */}
                         <div className="mb-5">
                             <div className="flex items-center gap-3 mb-2 px-1">
-                                <label className="text-sm font-black text-slate-800 uppercase tracking-widest">Chief Complaint</label>
+                                <label className="text-sm font-bold text-gray-800 uppercase tracking-widest">Chief Complaint</label>
                                 {editedSections.has('chiefComplaint') && (
-                                    <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-black uppercase rounded-full shadow-sm shadow-blue-200 flex items-center gap-1">
+                                    <span className="px-2.5 py-1 bg-blue-500 text-white text-[10px] font-bold uppercase rounded-full shadow-sm shadow-blue-200 flex items-center gap-1">
                                         <Sparkles className="w-2.5 h-2.5" />
                                         Modified
                                     </span>
                                 )}
                             </div>
-                            <div className={`vn-card p-4 bg-white/50 border ${editedSections.has('chiefComplaint') ? 'border-primary-200 ring-4 ring-primary-50/30' : 'border-slate-100'} transition-all duration-300`}>
+                            <div className={`vn-card p-4 bg-white/50 border ${editedSections.has('chiefComplaint') ? 'border-primary-200 ring-4 ring-primary-50/30' : 'border-gray-100'} transition-all duration-300`}>
                                 <input
                                     type="text"
                                     placeholder="Enter chief complaint..."
@@ -2943,7 +2943,7 @@ const VisitNote = () => {
                         {/* HPI */}
                         <VisitNoteSection title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')} id="hpi">
                             <div className="relative">
-                                <span className="absolute -top-1.5 right-4 z-10 text-[9px] font-black text-slate-300 bg-white px-2 py-0.5 rounded-full border border-slate-50 uppercase tracking-widest group-focus-within:text-primary-400 transition-colors">F2 for placeholders</span>
+                                <span className="absolute -top-1.5 right-4 z-10 text-[9px] font-bold text-gray-400 bg-white px-2 py-0.5 rounded-full border border-slate-50 uppercase tracking-widest group-focus-within:text-primary-400 transition-colors">F2 for placeholders</span>
                                 <textarea
                                     ref={hpiRef}
                                     value={noteData.hpi}
@@ -2980,16 +2980,16 @@ const VisitNote = () => {
                                     placeholder="Describe the clinical history..."
                                 />
                                 {autocompleteState.show && autocompleteState.field === 'hpi' && autocompleteState.suggestions.length > 0 && (
-                                    <div className="absolute z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto mt-2 w-72" style={{ top: `${autocompleteState.position.top}px` }}>
+                                    <div className="absolute z-50 bg-white/95 backdrop-blur-md border border-gray-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto mt-2 w-72" style={{ top: `${autocompleteState.position.top}px` }}>
                                         {autocompleteState.suggestions.map((item, index) => (
                                             <button
                                                 key={item.key}
                                                 type="button"
                                                 onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                                className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-50/50' : ''}`}
+                                                className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-gray-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-50/50' : ''}`}
                                             >
-                                                <div className="font-bold text-slate-900 text-xs tracking-tight mb-0.5">.{item.key}</div>
-                                                <div className="text-[10px] text-slate-500 truncate font-medium">{item.template}</div>
+                                                <div className="font-bold text-gray-900 text-xs tracking-tight mb-0.5">.{item.key}</div>
+                                                <div className="text-[10px] text-gray-500 truncate font-medium">{item.template}</div>
                                             </button>
                                         ))}
                                     </div>
@@ -2998,7 +2998,7 @@ const VisitNote = () => {
                             <div className="mt-4 flex items-center gap-4">
                                 <button
                                     onClick={() => { setActiveTextArea('hpi'); setShowDotPhraseModal(true); }}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 text-primary-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-50 transition-all border border-slate-100 hover:border-primary-100"
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-primary-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-primary-50 transition-all border border-gray-100 hover:border-primary-100"
                                 >
                                     <Zap className="w-4 h-4" />
                                     Templates
@@ -3006,7 +3006,7 @@ const VisitNote = () => {
                                 {!isLocked && (
                                     <button
                                         onClick={() => openCarryForward('hpi')}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-slate-500 hover:text-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                        className="flex items-center gap-2 px-3 py-1.5 text-gray-500 hover:text-gray-800 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all"
                                     >
                                         <History className="w-4 h-4" />
                                         Pull Prior
@@ -3046,7 +3046,7 @@ const VisitNote = () => {
                                                     relative px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5
                                                     ${isSelected
                                                         ? 'bg-blue-500 text-white border-blue-400 shadow-md shadow-blue-100 translate-y-[-1px]'
-                                                        : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200 hover:text-blue-600 hover:shadow-sm'
+                                                        : 'bg-white text-gray-400 border-gray-100 hover:border-blue-200 hover:text-blue-600 hover:shadow-sm'
                                                     }
                                                 `}
                                             >
@@ -3084,7 +3084,7 @@ const VisitNote = () => {
                                     {!isLocked && (
                                         <button
                                             onClick={() => openCarryForward('ros')}
-                                            className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all text-[10px] font-bold uppercase tracking-wider"
+                                            className="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-50 transition-all text-[10px] font-bold uppercase tracking-wider"
                                         >
                                             Pull Prior
                                         </button>
@@ -3121,7 +3121,7 @@ const VisitNote = () => {
                                                     relative px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all border flex items-center gap-1.5
                                                     ${isSelected
                                                         ? 'bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-100 translate-y-[-1px]'
-                                                        : 'bg-white text-slate-400 border-slate-100 hover:border-emerald-200 hover:text-emerald-600 hover:shadow-sm'
+                                                        : 'bg-white text-gray-400 border-gray-100 hover:border-emerald-200 hover:text-emerald-600 hover:shadow-sm'
                                                     }
                                                 `}
                                             >
@@ -3159,7 +3159,7 @@ const VisitNote = () => {
                                     {!isLocked && (
                                         <button
                                             onClick={() => openCarryForward('pe')}
-                                            className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all text-[10px] font-bold uppercase tracking-wider"
+                                            className="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-50 transition-all text-[10px] font-bold uppercase tracking-wider"
                                         >
                                             Pull Prior
                                         </button>
@@ -3186,16 +3186,16 @@ const VisitNote = () => {
                                     renderItem={(problem) => (
                                         <div className="flex justify-between items-start w-full group/item">
                                             <div className="flex flex-col gap-0.5">
-                                                <span className="font-bold text-slate-800 text-sm leading-tight">
+                                                <span className="font-bold text-gray-800 text-sm leading-tight">
                                                     {(problem.problem_name || '')
                                                         .replace(/^(\d+(\.\d+)*\.?\s*)+/, '')
                                                         .replace(/&amp;/g, '&')
                                                         .replace(/&#x2f;/gi, '/')
                                                         .replace(/&#x([0-9a-f]+);/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16)))}
                                                 </span>
-                                                {problem.icd10_code && <span className="text-[10px] font-black text-slate-400 tracking-wider">ICD-10: {problem.icd10_code}</span>}
+                                                {problem.icd10_code && <span className="text-[10px] font-bold text-gray-400 tracking-wider">ICD-10: {problem.icd10_code}</span>}
                                             </div>
-                                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border ${problem.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'
+                                            <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border ${problem.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-gray-50 text-gray-400 border-gray-100'
                                                 }`}>
                                                 {problem.status}
                                             </span>
@@ -3243,10 +3243,10 @@ const VisitNote = () => {
                                         <div className="flex justify-between items-start w-full">
                                             <div className="flex flex-col gap-0.5">
                                                 <span className="font-bold text-red-600 text-sm leading-tight">{allergy.allergen}</span>
-                                                {allergy.reaction && <span className="text-[10px] text-slate-500 font-medium">Reaction: {allergy.reaction}</span>}
+                                                {allergy.reaction && <span className="text-[10px] text-gray-500 font-medium">Reaction: {allergy.reaction}</span>}
                                             </div>
                                             {allergy.severity && allergy.severity !== 'unknown' && (
-                                                <span className="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
+                                                <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest bg-red-50 text-red-600 border border-red-100">
                                                     {allergy.severity}
                                                 </span>
                                             )}
@@ -3301,8 +3301,8 @@ const VisitNote = () => {
                                         return (
                                             <div className="flex justify-between items-start w-full">
                                                 <div className="flex flex-col gap-0.5">
-                                                    <span className="font-bold text-slate-800 text-sm leading-tight">{decodedName}</span>
-                                                    <span className="text-[10px] text-slate-500 font-medium italic">
+                                                    <span className="font-bold text-gray-800 text-sm leading-tight">{decodedName}</span>
+                                                    <span className="text-[10px] text-gray-500 font-medium italic">
                                                         {[med.dosage, med.frequency, med.route].filter(Boolean).join(' • ')}
                                                     </span>
                                                 </div>
@@ -3337,8 +3337,8 @@ const VisitNote = () => {
                                     emptyMessage="No family history recorded"
                                     renderItem={(hist) => (
                                         <div className="flex justify-between items-start w-full">
-                                            <span className="font-bold text-slate-800 text-sm">{hist.condition}</span>
-                                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{hist.relationship}</span>
+                                            <span className="font-bold text-gray-800 text-sm">{hist.condition}</span>
+                                            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{hist.relationship}</span>
                                         </div>
                                     )}
                                     renderInput={(props) => <FamilyHistoryInput {...props} />}
@@ -3370,14 +3370,14 @@ const VisitNote = () => {
                                     renderItem={(surg) => (
                                         <div className="flex justify-between items-start w-full">
                                             <div>
-                                                <span className="font-bold text-slate-800 text-sm">{surg.procedure_name}</span>
+                                                <span className="font-bold text-gray-800 text-sm">{surg.procedure_name}</span>
                                                 {surg.date && (
-                                                    <span className="text-slate-400 text-[10px] ml-2 font-medium">
+                                                    <span className="text-gray-400 text-[10px] ml-2 font-medium">
                                                         ({format(new Date(surg.date), 'MM/dd/yyyy')})
                                                     </span>
                                                 )}
                                             </div>
-                                            {surg.surgeon && <span className="text-[10px] text-slate-500 font-medium italic">{surg.surgeon}</span>}
+                                            {surg.surgeon && <span className="text-[10px] text-gray-500 font-medium italic">{surg.surgeon}</span>}
                                         </div>
                                     )}
                                     renderInput={(props) => <SurgicalHistoryInput {...props} />}
@@ -3402,9 +3402,9 @@ const VisitNote = () => {
 
                                 {/* O/S - Social History */}
                                 <div className="vn-card overflow-hidden">
-                                    <div className="flex items-center gap-2 px-5 py-3 bg-slate-50/50 border-b border-slate-100">
+                                    <div className="flex items-center gap-2 px-5 py-3 bg-gray-50/50 border-b border-gray-100">
                                         <UserCircle className="w-4 h-4 text-teal-600" />
-                                        <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Social History</h4>
+                                        <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Social History</h4>
                                     </div>
                                     <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                                         {/* Helper to transform and save social history */}
@@ -3435,9 +3435,9 @@ const VisitNote = () => {
                                             return (
                                                 <>
                                                     <div className="space-y-1">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Smoking Status</label>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Smoking Status</label>
                                                         <select
-                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-gray-50 border-none rounded-xl"
                                                             value={socialHistory?.smoking_status || ''}
                                                             onChange={(e) => saveSocialHistory({ smoking_status: e.target.value })}
                                                         >
@@ -3448,9 +3448,9 @@ const VisitNote = () => {
                                                         </select>
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Alcohol Use</label>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Alcohol Use</label>
                                                         <select
-                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-gray-50 border-none rounded-xl"
                                                             value={socialHistory?.alcohol_use || ''}
                                                             onChange={(e) => saveSocialHistory({ alcohol_use: e.target.value })}
                                                         >
@@ -3462,9 +3462,9 @@ const VisitNote = () => {
                                                         </select>
                                                     </div>
                                                     <div className="space-y-1">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Occupation</label>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Occupation</label>
                                                         <input
-                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-gray-50 border-none rounded-xl"
                                                             value={socialHistory?.occupation || ''}
                                                             placeholder="Occupation"
                                                             onBlur={(e) => saveSocialHistory({ occupation: e.target.value })}
@@ -3472,9 +3472,9 @@ const VisitNote = () => {
                                                         />
                                                     </div>
                                                     <div className="space-y-1 md:col-span-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Exercise & Diet</label>
+                                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Exercise & Diet</label>
                                                         <input
-                                                            className="vn-input px-3 !py-2 !text-xs !bg-slate-50 border-none rounded-xl"
+                                                            className="vn-input px-3 !py-2 !text-xs !bg-gray-50 border-none rounded-xl"
                                                             value={socialHistory?.exercise_frequency || ''}
                                                             placeholder="Exercise & Diet Details"
                                                             onBlur={(e) => saveSocialHistory({ exercise_frequency: e.target.value })}
@@ -3492,23 +3492,23 @@ const VisitNote = () => {
                         {/* Results / Data Section */}
                         <VisitNoteSection title="Results / Data" defaultOpen={true} id="results" badge={visitDocuments.length}>
                             {visitDocuments.length === 0 && (
-                                <div className="py-12 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center text-slate-300 bg-slate-50/30">
+                                <div className="py-12 border-2 border-dashed border-gray-100 rounded-3xl flex flex-col items-center justify-center text-gray-400 bg-gray-50/30">
                                     <FilePlus className="w-10 h-10 mb-3 opacity-20" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">No Results Linked</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">No Results Linked</p>
                                 </div>
                             )}
 
                             {visitDocuments.length > 0 && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                     {visitDocuments.map(doc => (
-                                        <div key={doc.id} className="relative group bg-white border border-slate-100 p-2.5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
+                                        <div key={doc.id} className="relative group bg-white border border-gray-100 p-2.5 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
                                             <div className="rounded-xl overflow-hidden border border-slate-50/50">
                                                 <ResultImage doc={doc} />
                                             </div>
                                             <div className="flex justify-between items-center mt-3 px-1">
                                                 <div className="flex flex-col min-w-0">
-                                                    <p className="text-xs font-bold text-slate-700 truncate">{doc.filename}</p>
-                                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
+                                                    <p className="text-xs font-bold text-gray-700 truncate">{doc.filename}</p>
+                                                    <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
                                                         {format(new Date(doc.created_at || new Date()), 'MMM d, yyyy')}
                                                     </p>
                                                 </div>
@@ -3544,7 +3544,7 @@ const VisitNote = () => {
                             {hasPrivilege('search_icd10') && (
                                 <div className="mb-3 relative">
                                     <div className="relative group">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary-500 transition-colors" />
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
                                         <input
                                             id="icd10-quick-search"
                                             type="text"
@@ -3565,7 +3565,7 @@ const VisitNote = () => {
                                         />
                                         <button
                                             onClick={() => setShowICD10Modal(true)}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
                                             title="Advanced Search"
                                         >
                                             <Search className="w-4 h-4" />
@@ -3573,7 +3573,7 @@ const VisitNote = () => {
                                     </div>
 
                                     {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
-                                        <div className="absolute z-[100] mt-2 w-full border border-slate-200 rounded-2xl bg-white shadow-2xl max-h-80 overflow-y-auto py-2">
+                                        <div className="absolute z-[100] mt-2 w-full border border-gray-200 rounded-2xl bg-white shadow-2xl max-h-80 overflow-y-auto py-2">
                                             {icd10Results.map((code) => (
                                                 <button
                                                     key={code.id || code.code}
@@ -3583,34 +3583,34 @@ const VisitNote = () => {
                                                         setIcd10Results([]);
                                                         setShowIcd10Search(false);
                                                     }}
-                                                    className="w-full text-left px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors group"
+                                                    className="w-full text-left px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-gray-50 transition-colors group"
                                                 >
                                                     <div className="flex items-center justify-between mb-1">
                                                         <span className="font-bold text-primary-600 text-xs tracking-tight">{code.code}</span>
                                                         {!code.is_billable && (
-                                                            <span className="text-[9px] font-black bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-widest">Non-Billable</span>
+                                                            <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-widest">Non-Billable</span>
                                                         )}
                                                     </div>
-                                                    <div className="text-xs text-slate-600 leading-relaxed line-clamp-2 font-medium">{code.description}</div>
+                                                    <div className="text-xs text-gray-600 leading-relaxed line-clamp-2 font-medium">{code.description}</div>
                                                 </button>
                                             ))}
                                         </div>
                                     )}
 
                                     {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
-                                        <div className="mt-2 border border-slate-100 rounded-2xl bg-white p-4 text-center">
-                                            <p className="text-xs text-slate-400 font-medium italic">No codes found for "{icd10Search}"</p>
+                                        <div className="mt-2 border border-gray-100 rounded-2xl bg-white p-4 text-center">
+                                            <p className="text-xs text-gray-400 font-medium italic">No codes found for "{icd10Search}"</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
                             {!isSigned && diagnoses.length > 0 && (
-                                <div className="mt-2 divide-y divide-slate-100/50">
+                                <div className="mt-2 divide-y divide-gray-100/50">
                                     {diagnoses.map((diag, idx) => (
                                         <div key={idx} className="vn-list-item-compact group">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-bold text-slate-400 w-4">{idx + 1}.</span>
+                                                <span className="text-[10px] font-bold text-gray-400 w-4">{idx + 1}.</span>
                                                 <button
                                                     onClick={() => {
                                                         setEditingDiagnosisIndex(idx);
@@ -3624,7 +3624,7 @@ const VisitNote = () => {
                                             {!isLocked && (
                                                 <button
                                                     onClick={() => removeDiagnosisFromAssessment(idx)}
-                                                    className="p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                    className="p-1 text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
                                                 >
                                                     <Trash2 className="w-3 h-3" />
                                                 </button>
@@ -3651,7 +3651,7 @@ const VisitNote = () => {
                                                 {/* Diagnosis Link Row */}
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-1.5">
-                                                        <span className="text-[10px] font-bold text-slate-300 w-4">{index + 1}.</span>
+                                                        <span className="text-[10px] font-bold text-gray-400 w-4">{index + 1}.</span>
                                                         <span
                                                             className="vn-link-diagnosis cursor-pointer"
                                                             onClick={() => {
@@ -3675,7 +3675,7 @@ const VisitNote = () => {
                                                     {!isLocked && (
                                                         <button
                                                             onClick={() => removeFromPlan(index)}
-                                                            className="p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                            className="p-1 text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
                                                             title="Remove Diagnosis"
                                                         >
                                                             <Trash2 className="w-3 h-3" />
@@ -3686,7 +3686,7 @@ const VisitNote = () => {
                                                 {/* Orders List beneath the diagnosis */}
                                                 <div className="mt-1">
                                                     {item.orders.length === 0 ? (
-                                                        <p className="vn-order-item-compact border-dashed border-l border-slate-100 text-slate-300 italic">No orders pending</p>
+                                                        <p className="vn-order-item-compact border-dashed border-l border-gray-100 text-gray-400 italic">No orders pending</p>
                                                     ) : (
                                                         <div className="space-y-0.5">
                                                             {item.orders.flatMap((order, orderIdx) => {
@@ -3697,7 +3697,7 @@ const VisitNote = () => {
                                                                         {!isLocked && (
                                                                             <button
                                                                                 onClick={() => removeFromPlan(index, orderIdx)}
-                                                                                className="opacity-0 group-hover/order:opacity-100 p-0.5 text-slate-300 hover:text-rose-500 transition-all"
+                                                                                className="opacity-0 group-hover/order:opacity-100 p-0.5 text-gray-400 hover:text-rose-500 transition-all"
                                                                             >
                                                                                 <X className="w-3 h-3" />
                                                                             </button>
@@ -3714,22 +3714,22 @@ const VisitNote = () => {
                                 )}
 
                                 {isSigned && (
-                                    <div className="vn-card p-5 bg-slate-50/50 text-sm leading-relaxed text-slate-700 font-medium">
+                                    <div className="vn-card p-5 bg-gray-50/50 text-sm leading-relaxed text-gray-700 font-medium">
                                         <PlanDisplayLegacy plan={noteData.plan} />
                                     </div>
                                 )}
 
                                 {autocompleteState.show && autocompleteState.field === 'plan' && autocompleteState.suggestions.length > 0 && (
-                                    <div className="absolute z-50 bg-white/95 backdrop-blur-md border border-slate-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto mt-2 w-72" style={{ top: `${autocompleteState.position.top}px` }}>
+                                    <div className="absolute z-50 bg-white/95 backdrop-blur-md border border-gray-100 rounded-2xl shadow-xl max-h-48 overflow-y-auto mt-2 w-72" style={{ top: `${autocompleteState.position.top}px` }}>
                                         {autocompleteState.suggestions.map((item, index) => (
                                             <button
                                                 key={item.key}
                                                 type="button"
                                                 onClick={() => insertDotPhrase(item.key, autocompleteState)}
-                                                className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-50/50' : ''}`}
+                                                className={`w-full text-left px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-gray-50 transition-colors ${index === autocompleteState.selectedIndex ? 'bg-primary-50/50' : ''}`}
                                             >
-                                                <div className="font-bold text-slate-900 text-xs tracking-tight mb-0.5">.{item.key}</div>
-                                                <div className="text-[10px] text-slate-500 truncate font-medium">{item.template}</div>
+                                                <div className="font-bold text-gray-900 text-xs tracking-tight mb-0.5">.{item.key}</div>
+                                                <div className="text-[10px] text-gray-500 truncate font-medium">{item.template}</div>
                                             </button>
                                         ))}
                                     </div>
@@ -3737,14 +3737,14 @@ const VisitNote = () => {
                             </div>
 
                             {!isLocked && (
-                                <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-slate-100">
+                                <div className="mt-8 flex flex-wrap gap-3 pt-6 border-t border-gray-100">
                                     {hasPrivilege('order_labs') && (
                                         <button
                                             onClick={() => {
                                                 setOrderModalTab('labs');
                                                 setShowOrderModal(true);
                                             }}
-                                            className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2"
+                                            className="px-4 py-2.5 bg-gray-50 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2"
                                         >
                                             <FlaskConical className="w-4 h-4" />
                                             Order Labs
@@ -3755,7 +3755,7 @@ const VisitNote = () => {
                                             setOrderModalTab('medications');
                                             setShowOrderModal(true);
                                         }}
-                                        className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                                        className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
                                     >
                                         <Pill className="w-4 h-4 text-blue-500" />
                                         Prescribe Rx
@@ -3766,7 +3766,7 @@ const VisitNote = () => {
                                                 setOrderModalTab('referrals');
                                                 setShowOrderModal(true);
                                             }}
-                                            className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                                            className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
                                         >
                                             <Share2 className="w-4 h-4 text-purple-500" />
                                             Referral
@@ -3790,7 +3790,7 @@ const VisitNote = () => {
                                     />
                                     {!isSigned && (
                                         <div className="space-y-2">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Quick Templates</p>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Quick Templates</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {[
                                                     'CTS: Wound Care Education (15 min)',
@@ -3801,7 +3801,7 @@ const VisitNote = () => {
                                                     <button
                                                         key={template}
                                                         onClick={() => handleTextChange(noteData.cts ? `${noteData.cts}\n${template}` : template, 'cts')}
-                                                        className="px-3 py-1.5 bg-white border border-slate-100 hover:border-primary-200 text-slate-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                                                        className="px-3 py-1.5 bg-white border border-gray-100 hover:border-primary-200 text-gray-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
                                                     >
                                                         {template}
                                                     </button>
@@ -3824,13 +3824,13 @@ const VisitNote = () => {
                                     />
                                     {!isSigned && (
                                         <div className="space-y-2">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Risk Categories</p>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Risk Categories</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {['Low Risk (<5%)', 'Borderline (5-7.4%)', 'Intermediate (7.5-19.9%)', 'High Risk (≥20%)'].map((risk) => (
                                                     <button
                                                         key={risk}
                                                         onClick={() => handleTextChange(noteData.ascvd ? `${noteData.ascvd}\nRisk Category: ${risk}` : `Risk Category: ${risk}`, 'ascvd')}
-                                                        className="px-3 py-1.5 bg-white border border-slate-100 hover:border-primary-200 text-slate-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                                                        className="px-3 py-1.5 bg-white border border-gray-100 hover:border-primary-200 text-gray-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
                                                     >
                                                         {risk}
                                                     </button>
@@ -3855,13 +3855,13 @@ const VisitNote = () => {
                                     />
                                     {!isSigned && (
                                         <div className="space-y-2">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Section Headers</p>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Section Headers</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {['Warning Signs', 'Coping Strategies', 'Social Contacts', 'Professional Contacts'].map((comp) => (
                                                     <button
                                                         key={comp}
                                                         onClick={() => handleTextChange(noteData.safetyPlan ? `${noteData.safetyPlan}\n${comp}: ` : `${comp}: `, 'safetyPlan')}
-                                                        className="px-3 py-1.5 bg-white border border-slate-100 hover:border-primary-200 text-slate-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                                                        className="px-3 py-1.5 bg-white border border-gray-100 hover:border-primary-200 text-gray-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
                                                     >
                                                         {comp}
                                                     </button>
@@ -3900,7 +3900,7 @@ const VisitNote = () => {
                                             <button
                                                 key={duration}
                                                 onClick={() => setNoteData({ ...noteData, followUp: duration })}
-                                                className="px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100"
+                                                className="px-4 py-2 bg-gray-50 hover:bg-gray-50 text-gray-600 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all border border-gray-100"
                                             >
                                                 {duration}
                                             </button>
@@ -3935,25 +3935,25 @@ const VisitNote = () => {
 
                         {/* Bottom Action Buttons */}
                         {!isSigned && !isPreliminary && (
-                            <div className="mt-10 pt-8 border-t border-slate-100 flex items-center justify-between">
+                            <div className="mt-10 pt-8 border-t border-gray-100 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <button
                                         onClick={handleSave}
                                         disabled={isSaving}
-                                        className="px-5 py-2.5 bg-primary-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-700 transition-all shadow-md shadow-primary-200 flex items-center gap-2 min-w-[120px] justify-center"
+                                        className="px-5 py-2.5 bg-primary-600 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-primary-700 transition-all shadow-md shadow-primary-200 flex items-center gap-2 min-w-[120px] justify-center"
                                     >
                                         <Save className="w-4 h-4" />
                                         <span>{isSaving ? 'Saving...' : 'Save Progress'}</span>
                                     </button>
                                     <button
                                         onClick={handleSign}
-                                        className="px-5 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2 min-w-[120px] justify-center"
+                                        className="px-5 py-2.5 bg-gray-50 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2 min-w-[120px] justify-center"
                                     >
                                         <Lock className="w-4 h-4" />
                                         <span>Sign Note</span>
                                     </button>
                                     {lastSaved && (
-                                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest px-2">
+                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">
                                             Saved {lastSaved.toLocaleTimeString()}
                                         </span>
                                     )}
@@ -3961,7 +3961,7 @@ const VisitNote = () => {
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={handleCreateSuperbill}
-                                        className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                                        className="px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-all shadow-sm flex items-center gap-2"
                                         title="Create/Open Commercial Superbill"
                                     >
                                         <DollarSign className="w-4 h-4" />
@@ -3969,14 +3969,14 @@ const VisitNote = () => {
                                     </button>
                                     <button
                                         onClick={() => navigate(`/patient/${id}/snapshot`)}
-                                        className="p-2.5 bg-white border border-slate-200 text-slate-500 hover:text-slate-800 rounded-2xl transition-all shadow-sm"
+                                        className="p-2.5 bg-white border border-gray-200 text-gray-500 hover:text-gray-800 rounded-2xl transition-all shadow-sm"
                                         title="Back to Patient Chart"
                                     >
                                         <ArrowLeft className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={() => setShowPrintModal(true)}
-                                        className="p-2.5 bg-white border border-slate-200 text-slate-500 hover:text-slate-800 rounded-2xl transition-all shadow-sm"
+                                        className="p-2.5 bg-white border border-gray-200 text-gray-500 hover:text-gray-800 rounded-2xl transition-all shadow-sm"
                                         title="Print"
                                     >
                                         <Printer className="w-4 h-4" />
@@ -3996,7 +3996,7 @@ const VisitNote = () => {
                                 <div className="flex items-center space-x-1.5">
                                     <button
                                         onClick={handleCreateSuperbill}
-                                        className="px-2.5 py-1.5 bg-slate-800 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-slate-900 text-xs font-medium"
+                                        className="px-2.5 py-1.5 bg-gray-100 text-white rounded-md shadow-sm flex items-center space-x-1.5 transition-all duration-200 hover:bg-gray-50 text-xs font-medium"
                                         title="Create/Open Commercial Superbill"
                                     >
                                         <DollarSign className="w-3.5 h-3.5" />
@@ -4021,28 +4021,28 @@ const VisitNote = () => {
                     {
                         showQuickActions && !isSigned && (
                             <div className="w-72 flex-shrink-0 sticky top-4 h-fit z-10">
-                                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                                <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                                     {/* Sidebar Header */}
-                                    <div className="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Quick Actions</span>
-                                        <button onClick={() => setShowQuickActions(false)} className="p-1 hover:bg-slate-200 rounded transition-colors">
-                                            <X className="w-3.5 h-3.5 text-slate-500" />
+                                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                                        <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Quick Actions</span>
+                                        <button onClick={() => setShowQuickActions(false)} className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                            <X className="w-3.5 h-3.5 text-gray-500" />
                                         </button>
                                     </div>
 
                                     {/* Problem List Section */}
-                                    <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
+                                    <div className="border-b border-gray-100">
+                                        <div className="px-3 py-2 bg-gray-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
-                                                <AlertCircle className="w-3.5 h-3.5 text-slate-500" />
-                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Problem List</span>
+                                                <AlertCircle className="w-3.5 h-3.5 text-gray-500" />
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase">Problem List</span>
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     setIsAddingProblemFromSidebar(true);
                                                     setShowICD10Modal(true);
                                                 }}
-                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-primary-600 transition-colors"
+                                                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-primary-600 transition-colors"
                                                 title="Add New Problem to Chart"
                                             >
                                                 <Plus className="w-3 h-3" />
@@ -4069,20 +4069,20 @@ const VisitNote = () => {
                                                                 <div key={idx} className="flex items-center gap-1 group/item">
                                                                     <button
                                                                         onClick={() => addProblemToAssessment(p)}
-                                                                        className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-slate-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
+                                                                        className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-primary-50 rounded border border-gray-100 hover:border-primary-200 transition-all flex items-center gap-1.5 group"
                                                                     >
-                                                                        <Plus className="w-3 h-3 text-slate-400 group-hover:text-primary-600" />
-                                                                        <span className="truncate flex-1 text-slate-700 group-hover:text-primary-700">
+                                                                        <Plus className="w-3 h-3 text-gray-400 group-hover:text-primary-600" />
+                                                                        <span className="truncate flex-1 text-gray-700 group-hover:text-primary-700">
                                                                             {(p.problem_name || '').replace(/^[\d.\s]+/, '')}
                                                                         </span>
-                                                                        {p.icd10_code && <span className="text-[9px] text-slate-400 font-mono">{p.icd10_code}</span>}
+                                                                        {p.icd10_code && <span className="text-[9px] text-gray-400 font-mono">{p.icd10_code}</span>}
                                                                     </button>
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
                                                                             deleteProblemFromChart(p.id);
                                                                         }}
-                                                                        className="p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover/item:opacity-100 transition-all"
+                                                                        className="p-1 text-gray-400 hover:text-rose-500 opacity-0 group-hover/item:opacity-100 transition-all"
                                                                         title="Delete Problem from Chart"
                                                                     >
                                                                         <Trash2 className="w-3 h-3" />
@@ -4092,17 +4092,17 @@ const VisitNote = () => {
                                                     })()}
                                                 </div>
                                             ) : (
-                                                <div className="text-[10px] text-slate-400 italic text-center py-2">No active problems</div>
+                                                <div className="text-[10px] text-gray-400 italic text-center py-2">No active problems</div>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Medications Section */}
-                                    <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
+                                    <div className="border-b border-gray-100">
+                                        <div className="px-3 py-2 bg-gray-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
                                                 <Pill className="w-3.5 h-3.5 text-emerald-500" />
-                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Medications</span>
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase">Medications</span>
                                             </div>
                                             <button
                                                 onClick={() => {
@@ -4110,7 +4110,7 @@ const VisitNote = () => {
                                                     setOrderModalTab('medications');
                                                     setShowOrderModal(true);
                                                 }}
-                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-emerald-600 transition-colors"
+                                                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-emerald-600 transition-colors"
                                                 title="Add New Medication to Chart"
                                             >
                                                 <Plus className="w-3 h-3" />
@@ -4120,9 +4120,9 @@ const VisitNote = () => {
                                             {(patientData?.medications || []).filter(m => m.active !== false).length > 0 ? (
                                                 <div className="space-y-1.5">
                                                     {(patientData?.medications || []).filter(m => m.active !== false).slice(0, 8).map((m, idx) => (
-                                                        <div key={idx} className="group/med border border-slate-100 rounded overflow-hidden">
+                                                        <div key={idx} className="group/med border border-gray-100 rounded overflow-hidden">
                                                             <div className="p-2 bg-white relative">
-                                                                <div className="text-[11px] font-medium text-slate-800 pr-5">
+                                                                <div className="text-[11px] font-medium text-gray-800 pr-5">
                                                                     {(m.medication_name || '')
                                                                         .replace(/&amp;/g, '&')
                                                                         .replace(/&#x2f;/gi, '/')
@@ -4132,11 +4132,11 @@ const VisitNote = () => {
                                                                 </div>
                                                                 <button
                                                                     onClick={() => deleteMedicationFromChart(m.id)}
-                                                                    className="absolute top-1.5 right-1.5 p-1 text-slate-300 hover:text-rose-500 opacity-0 group-hover/med:opacity-100 transition-all"
+                                                                    className="absolute top-1.5 right-1.5 p-1 text-gray-400 hover:text-rose-500 opacity-0 group-hover/med:opacity-100 transition-all"
                                                                 >
                                                                     <Trash2 className="w-2.5 h-2.5" />
                                                                 </button>
-                                                                <div className="text-[9px] text-slate-500">{m.dosage} {m.frequency}</div>
+                                                                <div className="text-[9px] text-gray-500">{m.dosage} {m.frequency}</div>
                                                                 <div className="flex gap-1 mt-1.5">
                                                                     <button onClick={() => addMedicationToPlan(m, 'continue')} className="flex-1 py-0.5 text-[9px] bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition-colors font-bold">
                                                                         Cont.
@@ -4153,24 +4153,24 @@ const VisitNote = () => {
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <div className="text-[10px] text-slate-400 italic text-center py-2">No medications</div>
+                                                <div className="text-[10px] text-gray-400 italic text-center py-2">No medications</div>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Quick Orders Section */}
-                                    <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
+                                    <div className="border-b border-gray-100">
+                                        <div className="px-3 py-2 bg-gray-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
                                                 <ClipboardList className="w-3.5 h-3.5 text-blue-500" />
-                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Quick Orders</span>
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase">Quick Orders</span>
                                             </div>
                                             <button
                                                 onClick={() => {
                                                     setOrderPickerType('ALL');
                                                     setShowOrderPicker(true);
                                                 }}
-                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-blue-600 transition-colors"
+                                                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-blue-600 transition-colors"
                                                 title="Browse & Add to Favorites"
                                             >
                                                 <Plus className="w-3 h-3" />
@@ -4182,14 +4182,14 @@ const VisitNote = () => {
                                                     <div key={idx} className="flex items-center gap-1 group/qorder">
                                                         <button
                                                             onClick={() => handleQuickOrderClick(o)}
-                                                            className="flex-1 text-left px-2 py-1.5 bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex items-center justify-between group"
+                                                            className="flex-1 text-left px-2 py-1.5 bg-white hover:bg-blue-50 rounded border border-gray-100 hover:border-blue-200 transition-all flex items-center justify-between group"
                                                         >
-                                                            <span className="text-[11px] text-slate-700 font-medium truncate">{o.name}</span>
-                                                            <Plus className="w-3 h-3 text-slate-300 group-hover:text-blue-500" />
+                                                            <span className="text-[11px] text-gray-700 font-medium truncate">{o.name}</span>
+                                                            <Plus className="w-3 h-3 text-gray-400 group-hover:text-blue-500" />
                                                         </button>
                                                         <button
                                                             onClick={() => deleteFavoriteOrder(o)}
-                                                            className="px-1 text-slate-200 hover:text-rose-400 opacity-0 group-hover/qorder:opacity-100 transition-all"
+                                                            className="px-1 text-gray-300 hover:text-rose-400 opacity-0 group-hover/qorder:opacity-100 transition-all"
                                                         >
                                                             <X className="w-3 h-3" />
                                                         </button>
@@ -4200,15 +4200,15 @@ const VisitNote = () => {
                                     </div>
 
                                     {/* Macros Section */}
-                                    <div className="border-b border-slate-100">
-                                        <div className="px-3 py-2 bg-slate-50/50 flex items-center justify-between">
+                                    <div className="border-b border-gray-100">
+                                        <div className="px-3 py-2 bg-gray-50/50 flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
                                                 <Zap className="w-3.5 h-3.5 text-amber-500" />
-                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Macros</span>
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase">Macros</span>
                                             </div>
                                             <button
                                                 onClick={() => setShowMacroAddModal(true)}
-                                                className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-amber-600 transition-colors"
+                                                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-amber-600 transition-colors"
                                                 title="Create New Macro"
                                             >
                                                 <Plus className="w-3 h-3" />
@@ -4220,16 +4220,16 @@ const VisitNote = () => {
                                                     <div key={idx} className="flex items-center gap-1 group/macro">
                                                         <button
                                                             onClick={() => handleQuickMacroClick(m)}
-                                                            className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-amber-50 rounded border border-slate-100 hover:border-amber-200 transition-all flex items-center gap-1.5 group"
+                                                            className="flex-1 text-left px-2 py-1.5 text-[11px] bg-white hover:bg-amber-50 rounded border border-gray-100 hover:border-amber-200 transition-all flex items-center gap-1.5 group"
                                                         >
-                                                            <Sparkles className="w-3 h-3 text-slate-400 group-hover:text-amber-500" />
-                                                            <span className="text-slate-700 group-hover:text-amber-700 font-medium">
+                                                            <Sparkles className="w-3 h-3 text-gray-400 group-hover:text-amber-500" />
+                                                            <span className="text-gray-700 group-hover:text-amber-700 font-medium">
                                                                 {m.shortcut_code || m.key}
                                                             </span>
                                                         </button>
                                                         <button
                                                             onClick={() => deleteSidebarMacro(m.id)}
-                                                            className="px-1 text-slate-200 hover:text-rose-400 opacity-0 group-hover/macro:opacity-100 transition-all"
+                                                            className="px-1 text-gray-300 hover:text-rose-400 opacity-0 group-hover/macro:opacity-100 transition-all"
                                                         >
                                                             <X className="w-3 h-3" />
                                                         </button>
@@ -4241,55 +4241,55 @@ const VisitNote = () => {
 
                                     {/* Results Import Section */}
                                     <div>
-                                        <div className="px-3 py-2 bg-slate-50/50">
+                                        <div className="px-3 py-2 bg-gray-50/50">
                                             <div className="flex items-center gap-1.5">
                                                 <FlaskConical className="w-3.5 h-3.5 text-purple-500" />
-                                                <span className="text-[10px] font-bold text-slate-600 uppercase">Results</span>
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase">Results</span>
                                             </div>
                                         </div>
                                         <div className="p-2">
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 <button
                                                     onClick={() => openResultImport('Labs')}
-                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-slate-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-purple-50 rounded border border-gray-100 hover:border-purple-200 transition-all flex flex-col items-center gap-1"
                                                 >
                                                     <FlaskConical className="w-4 h-4 text-purple-500" />
-                                                    <span className="text-slate-600">Labs</span>
+                                                    <span className="text-gray-600">Labs</span>
                                                 </button>
                                                 <button
                                                     onClick={() => openResultImport('Imaging')}
-                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-blue-50 rounded border border-slate-100 hover:border-blue-200 transition-all flex flex-col items-center gap-1"
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-blue-50 rounded border border-gray-100 hover:border-blue-200 transition-all flex flex-col items-center gap-1"
                                                 >
                                                     <FileImage className="w-4 h-4 text-blue-500" />
-                                                    <span className="text-slate-600">Image</span>
+                                                    <span className="text-gray-600">Image</span>
                                                 </button>
                                                 <button
                                                     onClick={() => openResultImport('Echo')}
-                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-gray-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
                                                 >
                                                     <Heart className="w-4 h-4 text-rose-500" />
-                                                    <span className="text-slate-600">Echo</span>
+                                                    <span className="text-gray-600">Echo</span>
                                                 </button>
                                                 <button
                                                     onClick={() => openResultImport('EKG')}
-                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-slate-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-rose-50 rounded border border-gray-100 hover:border-rose-200 transition-all flex flex-col items-center gap-1"
                                                 >
                                                     <Waves className="w-4 h-4 text-rose-500" />
-                                                    <span className="text-slate-600">EKG</span>
+                                                    <span className="text-gray-600">EKG</span>
                                                 </button>
                                                 <button
                                                     onClick={() => openResultImport('Cath')}
-                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-red-50 rounded border border-slate-100 hover:border-red-200 transition-all flex flex-col items-center gap-1"
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-red-50 rounded border border-gray-100 hover:border-red-200 transition-all flex flex-col items-center gap-1"
                                                 >
                                                     <Stethoscope className="w-4 h-4 text-red-500" />
-                                                    <span className="text-slate-600">Cath</span>
+                                                    <span className="text-gray-600">Cath</span>
                                                 </button>
                                                 <button
                                                     onClick={() => openResultImport('Stress')}
-                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-orange-50 rounded border border-slate-100 hover:border-orange-200 transition-all flex flex-col items-center gap-1"
+                                                    className="px-2 py-2 text-[10px] bg-white hover:bg-orange-50 rounded border border-gray-100 hover:border-orange-200 transition-all flex flex-col items-center gap-1"
                                                 >
                                                     <Activity className="w-4 h-4 text-orange-500" />
-                                                    <span className="text-slate-600">Stress</span>
+                                                    <span className="text-gray-600">Stress</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -4469,22 +4469,22 @@ const VisitNote = () => {
                 }
                 {
                     showQuickActionDxModal && (
-                        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
-                                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                                    <h3 className="text-sm font-bold text-slate-700">Link to Diagnosis</h3>
-                                    <button onClick={() => setShowQuickActionDxModal(false)} className="text-slate-400 hover:text-slate-600">
+                        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-gray-50/40 backdrop-blur-sm">
+                            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden border border-gray-200">
+                                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                                    <h3 className="text-sm font-bold text-gray-700">Link to Diagnosis</h3>
+                                    <button onClick={() => setShowQuickActionDxModal(false)} className="text-gray-400 hover:text-gray-600">
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
                                 <div className="p-4">
-                                    <p className="text-xs text-slate-500 mb-4">Select a diagnosis to link this {pendingQuickAction?.type} to:</p>
+                                    <p className="text-xs text-gray-500 mb-4">Select a diagnosis to link this {pendingQuickAction?.type} to:</p>
                                     <div className="space-y-2">
                                         {diagnoses.map((dx, i) => (
                                             <button
                                                 key={i}
                                                 onClick={() => handleQuickActionDxSelect(dx)}
-                                                className="w-full text-left px-3 py-2.5 rounded-lg border border-slate-200 hover:border-primary-500 hover:bg-primary-50 transition-all text-xs font-medium text-slate-700"
+                                                className="w-full text-left px-3 py-2.5 rounded-lg border border-gray-200 hover:border-primary-500 hover:bg-primary-50 transition-all text-xs font-medium text-gray-700"
                                             >
                                                 {dx}
                                             </button>
@@ -4497,50 +4497,50 @@ const VisitNote = () => {
                 }
                 {
                     showMacroAddModal && (
-                        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
-                                <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between">
+                        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-gray-50/40 backdrop-blur-sm">
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
+                                <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-lg font-bold text-slate-800">Create New Sidebar Macro</h3>
-                                        <p className="text-xs text-slate-500">Add a custom dot-phrase to your quick actions</p>
+                                        <h3 className="text-lg font-bold text-gray-800">Create New Sidebar Macro</h3>
+                                        <p className="text-xs text-gray-500">Add a custom dot-phrase to your quick actions</p>
                                     </div>
-                                    <button onClick={() => setShowMacroAddModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                                        <X className="w-5 h-5 text-slate-400" />
+                                    <button onClick={() => setShowMacroAddModal(false)} className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+                                        <X className="w-5 h-5 text-gray-400" />
                                     </button>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Shortcut Code</label>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Shortcut Code</label>
                                         <input
                                             type="text"
                                             value={newMacroData.shortcut_code}
                                             onChange={(e) => setNewMacroData(prev => ({ ...prev, shortcut_code: e.target.value }))}
                                             placeholder=".htn_fup"
-                                            className="w-full px-4 py-2.5 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium"
+                                            className="w-full px-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Template Text Content</label>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Template Text Content</label>
                                         <textarea
                                             rows={6}
                                             value={newMacroData.template_text}
                                             onChange={(e) => setNewMacroData(prev => ({ ...prev, template_text: e.target.value }))}
                                             placeholder="Patient presents for follow-up of hypertension..."
-                                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium resize-none"
+                                            className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium resize-none"
                                         />
                                     </div>
                                 </div>
-                                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+                                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
                                     <button
                                         onClick={() => setShowMacroAddModal(false)}
-                                        className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                                        className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800 transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={() => addSidebarMacro(newMacroData)}
                                         disabled={!newMacroData.shortcut_code || !newMacroData.template_text}
-                                        className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-300 text-white text-sm font-bold rounded-xl shadow-lg shadow-primary-600/20 transition-all"
+                                        className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-gray-200 text-white text-sm font-bold rounded-xl shadow-lg shadow-primary-600/20 transition-all"
                                     >
                                         Save Macro
                                     </button>
@@ -4585,14 +4585,14 @@ const VisitNote = () => {
                 {/* Carry Forward Modal */}
                 {
                     showCarryForward && (
-                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowCarryForward(false)}>
+                        <div className="fixed inset-0 bg-gray-50/60 backdrop-blur-sm flex items-center justify-center z-[60]" onClick={() => setShowCarryForward(false)}>
                             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
                                 {/* Header */}
                                 <div className="px-6 py-4 bg-gradient-to-r from-slate-700 to-slate-600 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <History className="w-5 h-5 text-white" />
                                         <h2 className="text-lg font-bold text-white">Pull from Previous Visit</h2>
-                                        <span className="text-[11px] font-bold uppercase text-slate-300 bg-slate-500 px-2 py-0.5 rounded">
+                                        <span className="text-[11px] font-bold uppercase text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
                                             {carryForwardField?.toUpperCase()}
                                         </span>
                                     </div>
@@ -4608,13 +4608,13 @@ const VisitNote = () => {
                                             <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
                                         </div>
                                     ) : previousVisits.length === 0 ? (
-                                        <div className="text-center py-12 text-slate-400">
+                                        <div className="text-center py-12 text-gray-400">
                                             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                             <p className="text-sm font-medium">No previous visits with notes found</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-4">
-                                            <p className="text-xs text-slate-500 mb-4">
+                                            <p className="text-xs text-gray-500 mb-4">
                                                 Select a visit below to pull its <strong>{carryForwardField?.toUpperCase()}</strong> content into the current note.
                                             </p>
                                             {previousVisits.map((visit) => {
@@ -4622,16 +4622,16 @@ const VisitNote = () => {
                                                 const hasContent = sectionContent && sectionContent.trim().length > 0;
 
                                                 return (
-                                                    <div key={visit.id} className={`p-4 rounded-xl border transition-all ${hasContent ? 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md cursor-pointer' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+                                                    <div key={visit.id} className={`p-4 rounded-xl border transition-all ${hasContent ? 'bg-white border-gray-200 hover:border-primary-300 hover:shadow-md cursor-pointer' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
                                                         <div className="flex items-start justify-between mb-2">
                                                             <div>
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-sm font-bold text-slate-900">
+                                                                    <span className="text-sm font-bold text-gray-900">
                                                                         {format(new Date(visit.visit_date), 'MMM d, yyyy')}
                                                                     </span>
-                                                                    {visit.locked && <Lock className="w-3 h-3 text-slate-400" />}
+                                                                    {visit.locked && <Lock className="w-3 h-3 text-gray-400" />}
                                                                 </div>
-                                                                <div className="text-[11px] text-slate-500 uppercase font-medium">
+                                                                <div className="text-[11px] text-gray-500 uppercase font-medium">
                                                                     {visit.visit_type?.replace('_', ' ') || 'Office Visit'} • {visit.provider_last_name || 'Provider'}
                                                                 </div>
                                                             </div>
@@ -4647,16 +4647,16 @@ const VisitNote = () => {
                                                         </div>
 
                                                         {hasContent ? (
-                                                            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                                                <div className="text-[10px] font-bold uppercase text-slate-400 mb-1">
+                                                            <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                                <div className="text-[10px] font-bold uppercase text-gray-400 mb-1">
                                                                     {carryForwardField?.toUpperCase()} Content
                                                                 </div>
-                                                                <div className="text-xs text-slate-700 whitespace-pre-wrap line-clamp-4">
+                                                                <div className="text-xs text-gray-700 whitespace-pre-wrap line-clamp-4">
                                                                     {sectionContent}
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <div className="mt-2 text-xs text-slate-400 italic">
+                                                            <div className="mt-2 text-xs text-gray-400 italic">
                                                                 No {carryForwardField?.toUpperCase()} content found in this visit
                                                             </div>
                                                         )}
@@ -4668,8 +4668,8 @@ const VisitNote = () => {
                                 </div>
 
                                 {/* Footer */}
-                                <div className="px-6 py-3 bg-slate-50 border-t border-slate-200">
-                                    <div className="text-xs text-slate-500">
+                                <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                                    <div className="text-xs text-gray-500">
                                         Content will replace the current {carryForwardField?.toUpperCase()} field
                                     </div>
                                 </div>

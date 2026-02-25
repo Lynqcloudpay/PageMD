@@ -168,7 +168,7 @@ const ResultImportModal = ({ isOpen, onClose, onImport, patientId, resultType })
             case 'EKG': return <Waves className="w-5 h-5 text-rose-500" />;
             case 'Cath': return <Stethoscope className="w-5 h-5 text-red-500" />;
             case 'Stress': return <Activity className="w-5 h-5 text-orange-500" />;
-            default: return <FileText className="w-5 h-5 text-slate-500" />;
+            default: return <FileText className="w-5 h-5 text-gray-500" />;
         }
     };
 
