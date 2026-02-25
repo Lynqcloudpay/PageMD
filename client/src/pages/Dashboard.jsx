@@ -236,7 +236,7 @@ const Dashboard = () => {
                                                         <div className="flex flex-col">
                                                             <span className="text-sm font-medium text-gray-900 group-hover:text-blue-600">{appt.patientName}</span>
                                                             <span className="text-[10px] text-gray-500 flex items-center gap-1">
-                                                                #{appt.patientId?.substring(0, 8).toUpperCase()} • {appt.patient_dob ? format(new Date(appt.patient_dob), 'MM/dd/yyyy') : 'DOB: Unknown'}
+                                                                #{appt.patientId?.substring(0, 8).toUpperCase()} • {appt.patient_dob ? format(new Date(appt.patient_dob + 'T12:00:00'), 'MM/dd/yyyy') : 'DOB: Unknown'}
                                                             </span>
                                                         </div>
                                                     </td>

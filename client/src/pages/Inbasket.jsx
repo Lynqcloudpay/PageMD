@@ -1392,7 +1392,7 @@ const Inbasket = () => {
                                                 type="date"
                                                 value={approvalData.appointmentDate}
                                                 onChange={e => setApprovalData({ ...approvalData, appointmentDate: e.target.value })}
-                                                min={new Date().toISOString().split('T')[0]}
+                                                min={format(new Date(), 'yyyy-MM-dd')}
                                                 className="w-full border border-gray-300 rounded-lg p-2 text-sm"
                                             />
                                         </div>

@@ -408,7 +408,7 @@ const formatDate = (dateString) => {
     try {
         const date = typeof dateString === 'string' && dateString.includes('T')
             ? parseISO(dateString)
-            : new Date(dateString);
+            : new Date(dateString + (dateString.includes('-') ? 'T12:00:00' : ''));
         return format(date, 'MMM d, yyyy');
     } catch {
         return dateString;

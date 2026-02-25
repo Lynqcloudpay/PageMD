@@ -980,130 +980,129 @@ export default function EchoPanel({ patientId, patientName }) {
     const quickActions = isPatientMode ? patientActions : globalActions;
 
     // ─── Render ─────────────────────────────────────────────────────────
-
-    // Floating toggle button
     if (!isOpen) {
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-[9999] w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 
-                           rounded-full shadow-lg shadow-blue-500/25 flex items-center justify-center 
-                           hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 
-                           transition-all duration-200 group border-2 border-white/20"
+                className="fixed bottom-8 right-8 z-[9999] w-14 h-14 bg-gradient-to-br from-indigo-500 to-blue-600 
+                           rounded-2xl shadow-[0_8px_30px_rgb(79,70,229,0.3)] flex items-center justify-center 
+                           hover:shadow-[0_8px_30px_rgb(79,70,229,0.5)] hover:scale-110 hover:-translate-y-1
+                           transition-all duration-300 group border-2 border-white/20"
                 title="Open Eko AI Assistant"
             >
-                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-10 h-10 rounded-full object-cover group-hover:scale-110 transition-transform shadow-sm" />
-                {isPatientMode && proactiveGaps && (
-                    <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-amber-500 border-2 border-white rounded-full 
-                                     animate-pulse shadow-sm" />
-                )}
+                <div className="relative">
+                    <img src="/echo-mascot.png?v=1" alt="Eko" className="w-11 h-11 rounded-xl object-cover group-hover:scale-110 transition-transform shadow-sm" />
+                    {isPatientMode && proactiveGaps && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 border-2 border-white rounded-full 
+                                         animate-pulse shadow-sm" />
+                    )}
+                </div>
             </button>
         );
     }
 
     return (
-        <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-h-[650px] flex flex-col
-                        bg-white rounded-2xl shadow-2xl shadow-slate-900/10 border border-gray-200/60
-                        overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+        <div className="fixed bottom-8 right-8 z-[9999] w-[420px] max-h-[700px] flex flex-col
+                        bg-white/95 backdrop-blur-xl rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] 
+                        border border-slate-200/50 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-300">
 
-            {/* Header */}
-            <div className={`flex items-center justify-between px-4 py-3 text-white sticky top-0 z-20 backdrop-blur-xl border-b
+            {/* Premium Header */}
+            <div className={`p-5 sticky top-0 z-20 border-b transition-colors duration-500
                             ${isPatientMode
-                    ? 'bg-blue-600/90 border-blue-400/20'
-                    : 'bg-gray-100/95 border-gray-300/30'}`}>
-                <div className="flex items-center gap-2.5">
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-white/20 rounded-xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <div className="relative w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 overflow-hidden shadow-inner">
-                            <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110 group-hover:scale-125 transition-transform duration-500" />
+                    ? 'bg-indigo-600 border-indigo-400/20'
+                    : 'bg-slate-900 border-slate-700/50'}`}>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3.5">
+                        <div className="relative">
+                            <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 p-0.5 overflow-hidden shadow-2xl">
+                                <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover rounded-xl" />
+                            </div>
+                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-[3px] shadow-sm
+                                          ${isPatientMode ? 'bg-indigo-400 border-indigo-600' : 'bg-green-400 border-slate-900'}`} />
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 border-2 border-blue-600 rounded-full shadow-sm" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-1.5">
-                            <h3 className="text-[13px] font-bold tracking-tight uppercase">Eko</h3>
-                            <span className="text-[7px] font-bold bg-white/20 px-1 rounded-[4px] tracking-widest h-3 flex items-center">PRO</span>
-                        </div>
-                        <p className="text-[10px] opacity-70 font-medium leading-none mt-0.5">
-                            {patientName
-                                ? `Viewing ${patientName}`
-                                : isPatientMode
-                                    ? 'Patient Chart Mode'
-                                    : 'Global Mode'}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1">
-                    {/* Mode indicator badge */}
-                    <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full mr-1 tracking-wider border
-                                   ${isPatientMode
-                            ? 'bg-blue-400/20 text-blue-50 border-blue-300/30'
-                            : 'bg-gray-100/20 text-slate-100 border-slate-400/30'}`}>
-                        {isPatientMode ? 'CHART' : 'GLOBAL'}
-                    </span>
 
-                    {/* Proactive Insight Badge */}
-                    {isPatientMode && proactiveGaps && (
-                        <button
-                            onClick={() => sendMessage('Check for any clinical gaps or missing preventive care for this patient.')}
-                            className="group flex items-center gap-1.5 px-2 py-0.5 bg-amber-400/20 hover:bg-amber-400/30 text-amber-100 rounded-full border border-amber-400/30 transition-all duration-200 animate-in fade-in zoom-in"
-                        >
-                            <Zap className="w-2.5 h-2.5 text-amber-300 group-hover:scale-110 transition-transform" />
-                            <span className="text-[9px] font-bold">Insight</span>
-                        </button>
-                    )}
-                    {conversationId && (
-                        <button onClick={clearConversation}
-                            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
-                            title="New conversation">
-                            <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                    )}
-                    <button onClick={() => setIsOpen(false)}
-                        className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                        <X className="w-4 h-4" />
-                    </button>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-[15px] font-black text-white tracking-tight uppercase leading-none">Eko</h3>
+                                <div className="px-1.5 py-0.5 rounded-md bg-white/20 backdrop-blur-sm self-center">
+                                    <span className="text-[8px] font-black text-white tracking-[0.1em] leading-none block">PRO</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                                <div className={`w-1.5 h-1.5 rounded-full ${isPatientMode ? 'bg-indigo-300' : 'bg-slate-400'}`} />
+                                <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest leading-none">
+                                    {patientName ? patientName : isPatientMode ? 'Chart Mode' : 'Practice AI'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {isPatientMode && proactiveGaps && (
+                            <button
+                                onClick={() => sendMessage('Check for any clinical gaps or missing preventive care for this patient.')}
+                                className="h-8 px-3 bg-amber-400 hover:bg-amber-300 text-amber-950 rounded-xl transition-all duration-200 
+                                           flex items-center gap-1.5 shadow-lg shadow-amber-900/20 active:scale-95"
+                            >
+                                <Zap className="w-3.5 h-3.5 fill-current" />
+                                <span className="text-[10px] font-black uppercase tracking-wider">Insight</span>
+                            </button>
+                        )}
+
+                        <div className="flex gap-1 bg-black/10 p-1 rounded-xl backdrop-blur-sm border border-white/5">
+                            {conversationId && (
+                                <button onClick={clearConversation}
+                                    className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                    title="New conversation">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                            <button onClick={() => setIsOpen(false)}
+                                className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-[200px] max-h-[440px]
-                            scrollbar-thin scrollbar-thumb-slate-200">
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 min-h-[300px] max-h-[480px]
+                            scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300 transition-all">
 
-                {/* Welcome state */}
+                {/* Welcome State - Redesigned */}
                 {messages.length === 0 && (
-                    <div className="text-center py-8 space-y-4">
-                        <div className="relative inline-block">
-                            <div className="absolute -inset-1 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-3xl blur opacity-25 animate-pulse" />
-                            <div className="relative w-24 h-24 overflow-hidden rounded-3xl border-2 border-white shadow-2xl shadow-blue-500/10">
-                                <img src="/echo-mascot.png?v=1" alt="Eko Mascot"
-                                    className="w-full h-full object-cover scale-[1.12]" />
+                    <div className="flex flex-col h-full py-4">
+                        <div className="text-center mb-8">
+                            <div className="relative inline-block mb-4">
+                                <div className="absolute -inset-4 bg-indigo-500/10 rounded-full blur-2xl animate-pulse" />
+                                <div className="relative w-28 h-28 overflow-hidden rounded-[2rem] border-4 border-white shadow-2xl">
+                                    <img src="/echo-mascot.png?v=1" alt="Eko Mascot"
+                                        className="w-full h-full object-cover scale-[1.12]" />
+                                </div>
                             </div>
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-4 border-white rounded-full shadow-sm z-10" />
-                        </div>
-                        <div>
-                            <p className="text-base font-bold text-gray-800 tracking-tight">
-                                {isPatientMode ? "Hi, I'm Eko" : "Hi, I'm Eko — Global Mode"}
+                            <p className="text-xl font-black text-slate-800 tracking-tighter mb-2">
+                                {isPatientMode ? `Analyzing ${patientName}...` : "Welcome back, Provider."}
                             </p>
-                            <p className="text-[11px] text-gray-500 leading-relaxed max-w-[240px] mx-auto mt-2">
+                            <p className="text-[12px] text-slate-500 font-medium max-w-[280px] mx-auto leading-relaxed">
                                 {isPatientMode
-                                    ? 'Ask me anything about this chart. I can analyze trends, draft HPIs, and stage medical orders.'
-                                    : 'I can help you navigate the EMR, check your schedule, or manage your clinical inbox.'}
+                                    ? 'I have full access to this patient chart. How can I assist with clinical decision support today?'
+                                    : 'I am ready to help you navigate PageMD, manage your schedule, and optimize clinical workflows.'}
                             </p>
                         </div>
-                        <div className={`grid gap-2 px-2 ${isPatientMode ? 'grid-cols-2' : 'grid-cols-2'}`}>
-                            {quickActions.map((action, i) => (
+
+                        <div className="grid grid-cols-2 gap-3">
+                            {quickActions.slice(0, 4).map((action, i) => (
                                 <button key={i}
                                     onClick={() => sendMessage(action.prompt)}
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] 
-                                                   font-semibold text-gray-600 bg-white border border-gray-200
-                                                   hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200
-                                                   hover:shadow-md hover:shadow-blue-500/5
-                                                   transition-all duration-200 group active:scale-[0.98]">
-                                    <div className="p-1.5 rounded-lg bg-gray-50 group-hover:bg-blue-100 transition-colors">
-                                        <action.icon className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                                    className="flex flex-col items-start gap-3 p-4 rounded-3xl text-left 
+                                                   bg-slate-50/50 border border-slate-100 hover:bg-white
+                                                   hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5
+                                                   transition-all duration-300 group active:scale-[0.97]">
+                                    <div className="p-2.5 rounded-2xl bg-white shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
+                                        <action.icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                                     </div>
-                                    <span className="truncate">{action.label}</span>
+                                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{action.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -1112,26 +1111,33 @@ export default function EchoPanel({ patientId, patientName }) {
 
                 {/* Message list */}
                 {messages.map((msg, i) => (
-                    <div key={i} className={`flex gap-3 animate-in fade-in slide-in-from-bottom-3 duration-300 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                    <div key={i} className={`flex gap-3.5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                         {msg.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 mt-0.5 border border-blue-100 shadow-sm bg-white ring-2 ring-blue-50/50">
+                            <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 mt-0.5 border-2 border-slate-100 shadow-sm bg-white ring-4 ring-slate-100/50">
                                 <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
                             </div>
                         )}
                         <div className={`max-w-[85%] group relative ${msg.role === 'user'
-                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-tr-md px-4 py-2.5 shadow-lg shadow-blue-500/10'
+                            ? 'bg-gradient-to-br from-indigo-600 to-blue-700 text-white rounded-3xl rounded-tr-lg px-5 py-3.5 shadow-xl shadow-indigo-600/20 shadow-blue-600/10'
                             : msg.isError
-                                ? 'bg-red-50 text-red-700 rounded-2xl rounded-tl-md px-4 py-2.5 border border-red-100 shadow-sm'
-                                : 'bg-white text-gray-700 rounded-2xl rounded-tl-md px-4 py-2.5 border border-gray-200/60 shadow-sm'
+                                ? 'bg-rose-50 text-rose-700 rounded-3xl rounded-tl-lg px-5 py-3.5 border border-rose-100'
+                                : 'bg-white text-slate-700 rounded-3xl rounded-tl-lg px-5 py-3.5 border border-slate-100 shadow-sm'
                             }`}>
-                            <div className="text-[12px] leading-relaxed whitespace-pre-wrap">
+
+                            {msg.role === 'assistant' && !msg.isError && (
+                                <div className="absolute -top-6 left-0 text-[10px] font-black text-slate-300 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Eko AI Assistant
+                                </div>
+                            )}
+
+                            <div className="text-[13px] leading-relaxed whitespace-pre-wrap font-medium">
                                 {msg.role === 'assistant' ? (
                                     (msg.content || '').split(/(\*\*.*?\*\*|!!.*?!!)/g).map((part, index) => {
                                         if (part.startsWith('**') && part.endsWith('**')) {
-                                            return <strong key={index} className="font-bold text-gray-900">{part.slice(2, -2)}</strong>;
+                                            return <strong key={index} className="font-extrabold text-slate-900">{part.slice(2, -2)}</strong>;
                                         }
                                         if (part.startsWith('!!') && part.endsWith('!!')) {
-                                            return <span key={index} className="font-bold text-red-600">{part.slice(2, -2)}</span>;
+                                            return <span key={index} className="font-black text-rose-500">{part.slice(2, -2)}</span>;
                                         }
                                         return part;
                                     })
@@ -1140,74 +1146,73 @@ export default function EchoPanel({ patientId, patientName }) {
                                 )}
                             </div>
 
-                            {/* Visualizations */}
-                            {msg.visualizations?.map((viz, vi) => (
-                                <div key={vi}>
-                                    {viz.type === 'vital_trend' && <EchoTrendChart visualization={viz} />}
-                                    {viz.type === 'note_draft' && <NoteDraftCard visualization={viz} />}
-                                    {viz.type === 'diagnosis_suggestions' && <DiagnosisSuggestionsCard visualization={viz} />}
-                                    {(viz.type === 'lab_analysis' || viz.type === 'lab_interpretation') && <LabResultsCard visualization={viz} />}
-                                    {viz.type === 'clinical_gaps' && <ClinicalGapsCard visualization={viz} />}
-                                    {viz.action_id && (
-                                        <StagedActionCard
-                                            visualization={viz}
-                                            onApprove={(v) => handleApproveAction(v, i)}
-                                            onReject={(v) => handleRejectAction(v, i)}
-                                        />
-                                    )}
-                                    {viz.type === 'risk_assessment' && (
-                                        <RiskAssessmentCard visualization={viz} />
-                                    )}
-                                    {viz.type === 'document_analysis' && (
-                                        <DocumentAnalysisCard visualization={viz} />
-                                    )}
-                                    {viz.type === 'guideline_evidence' && (
-                                        <EvidenceCard visualization={viz} />
-                                    )}
-                                    {viz.type === 'navigation' && (
-                                        <div className="mt-2 bg-blue-50 rounded-lg p-2 border border-blue-100">
-                                            <div className="flex items-center gap-1.5">
-                                                <Navigation className="w-3.5 h-3.5 text-blue-500" />
-                                                <span className="text-[11px] font-medium text-blue-700">
-                                                    Navigate to {viz.label}
-                                                </span>
+                            {/* Visualizations Container */}
+                            <div className="space-y-4">
+                                {msg.visualizations?.map((viz, vi) => (
+                                    <div key={vi} className="animate-in fade-in slide-in-from-top-2 duration-500 delay-150">
+                                        {viz.type === 'vital_trend' && <EchoTrendChart visualization={viz} />}
+                                        {viz.type === 'note_draft' && <NoteDraftCard visualization={viz} />}
+                                        {viz.type === 'diagnosis_suggestions' && <DiagnosisSuggestionsCard visualization={viz} />}
+                                        {(viz.type === 'lab_analysis' || viz.type === 'lab_interpretation') && <LabResultsCard visualization={viz} />}
+                                        {viz.type === 'clinical_gaps' && <ClinicalGapsCard visualization={viz} />}
+                                        {viz.action_id && (
+                                            <StagedActionCard
+                                                visualization={viz}
+                                                onApprove={(v) => handleApproveAction(v, i)}
+                                                onReject={(v) => handleRejectAction(v, i)}
+                                            />
+                                        )}
+                                        {viz.type === 'risk_assessment' && <RiskAssessmentCard visualization={viz} />}
+                                        {viz.type === 'document_analysis' && <DocumentAnalysisCard visualization={viz} />}
+                                        {viz.type === 'guideline_evidence' && <EvidenceCard visualization={viz} />}
+                                        {viz.type === 'navigation' && (
+                                            <div className="mt-3 bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between group/nav cursor-pointer hover:bg-indigo-100/50 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-200">
+                                                        <Navigation className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[12px] font-black text-indigo-900 uppercase tracking-tight">
+                                                            Navigate: {viz.label}
+                                                        </span>
+                                                        <p className="text-[10px] text-indigo-500 font-bold mt-0.5">{viz.instructions}</p>
+                                                    </div>
+                                                </div>
+                                                <ChevronRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform" />
                                             </div>
-                                            <p className="text-[10px] text-blue-500 mt-0.5">{viz.instructions}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
 
-
-
-                            {/* Tool call indicators */}
-                            {msg.toolCalls?.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-3">
+                            {/* System Status Indicators */}
+                            {msg.role === 'assistant' && msg.toolCalls?.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-50">
                                     {msg.toolCalls.map((tc, ti) => (
-                                        <span key={ti} className="inline-flex items-center gap-1 px-2 py-1 
-                                                                    rounded-lg bg-gray-50 border border-gray-100 text-[9px] font-bold text-gray-400 uppercase tracking-tight">
-                                            {tc.name.includes('add_') || tc.name.includes('create_') || tc.name.includes('draft_') ? (
-                                                <Zap className="w-2.5 h-2.5 text-amber-500" />
+                                        <div key={ti} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 
+                                                                    rounded-xl bg-slate-50 border border-slate-100 text-[9px] font-black text-slate-400 bg-white/50 uppercase tracking-widest shadow-sm">
+                                            {tc.name.includes('add_') || tc.name.includes('create_') ? (
+                                                <Zap className="w-3 h-3 text-amber-500 fill-amber-500/20" />
                                             ) : (
-                                                <Search className="w-2.5 h-2.5 text-blue-400" />
+                                                <Search className="w-3 h-3 text-indigo-400" />
                                             )}
                                             {tc.name.replace(/_/g, ' ')}
-                                        </span>
+                                        </div>
                                     ))}
                                 </div>
                             )}
 
-                            {/* Batch Approval Action */}
+                            {/* Batch Approval */}
                             {(() => {
-                                const pending = (msg.visualizations || []).filter(v => v.type === 'staged_action' && !v.status);
+                                const pending = (msg.visualizations || []).filter(v => v.action_id && !v.status);
                                 if (pending.length > 1) {
                                     return (
-                                        <div className="mt-3 pt-3 border-t border-gray-200/60 flex justify-end">
+                                        <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end">
                                             <button
                                                 onClick={() => handleApproveAction(pending, i)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold shadow-sm hover:bg-blue-700 transition-all"
+                                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all active:translate-y-0"
                                             >
-                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                <CheckCircle2 className="w-4 h-4" />
                                                 Approve All ({pending.length})
                                             </button>
                                         </div>
@@ -1216,31 +1221,23 @@ export default function EchoPanel({ patientId, patientName }) {
                                 return null;
                             })()}
                         </div>
-                        {
-                            msg.role === 'user' && (
-                                <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center 
-                                            flex-shrink-0 mt-0.5">
-                                    <User className="w-3.5 h-3.5 text-blue-600" />
-                                </div>
-                            )
-                        }
                     </div>
                 ))}
 
-                {/* Loading */}
-                {isGlobalLoading && ( // Changed 'loading' to 'isGlobalLoading'
-                    <div className="flex gap-3 animate-pulse duration-1000">
-                        <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 border border-blue-200 shadow-sm bg-white ring-2 ring-blue-50 animate-bounce transition-all duration-1000">
+                {/* Eko is Working State */}
+                {isGlobalLoading && (
+                    <div className="flex gap-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <div className="w-9 h-9 rounded-2xl overflow-hidden flex-shrink-0 mt-0.5 border-2 border-slate-100 shadow-sm bg-white ring-4 ring-slate-50/50">
                             <img src="/echo-mascot.png?v=1" alt="Eko" className="w-full h-full object-cover scale-110" />
                         </div>
-                        <div className="bg-white rounded-2xl rounded-bl-md px-4 py-2.5 border border-gray-200/60 shadow-sm">
-                            <div className="flex items-center gap-2">
-                                <div className="flex gap-1">
-                                    <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" />
+                        <div className="bg-slate-900 text-white rounded-3xl rounded-tl-lg px-5 py-3.5 shadow-2xl">
+                            <div className="flex items-center gap-3">
+                                <div className="flex gap-1.5">
+                                    <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                    <span className="w-1.5 h-1.5 bg-white/70 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" />
                                 </div>
-                                <span className="text-[11px] font-bold text-gray-500 tracking-tight uppercase">Eko is working</span>
+                                <span className="text-[11px] font-black tracking-[0.1em] uppercase">Eko is processing...</span>
                             </div>
                         </div>
                     </div>
@@ -1249,49 +1246,40 @@ export default function EchoPanel({ patientId, patientName }) {
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Proactive Suggestion Pill (Phase 3) */}
-            {suggestion && !isGlobalLoading && ( // Changed 'loading' to 'isGlobalLoading'
-                <div className="px-3 py-1.5 -mb-2 z-10 animate-in slide-in-from-bottom-2 fade-in duration-500">
+            {/* Proactive Suggestion Pill */}
+            {suggestion && !isGlobalLoading && (
+                <div className="px-5 py-2 -mb-2 z-10 animate-in slide-in-from-bottom-2 fade-in duration-500">
                     <button
                         onClick={() => sendMessage(suggestion.prompt)}
-                        className="w-full flex items-center justify-between px-4 py-2 bg-white border border-amber-200/60 rounded-xl group 
-                                   hover:border-amber-400 hover:shadow-md hover:shadow-amber-500/10 transition-all duration-300 relative overflow-hidden active:scale-[0.98]"
+                        className="w-full flex items-center justify-between px-5 py-3 bg-white border border-amber-200 rounded-[1.25rem] group 
+                                   hover:border-amber-400 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 relative overflow-hidden active:scale-[0.98]"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-amber-50 to-orange-50 opacity-50 group-hover:opacity-100 transition-opacity" />
-                        <div className="flex items-center gap-2.5 relative z-10">
-                            <div className="p-1 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors">
-                                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-amber-50/50 to-orange-50/50 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex items-center gap-3 relative z-10">
+                            <div className="p-2 rounded-xl bg-amber-400 text-amber-950 shadow-lg shadow-amber-200/50 group-hover:scale-110 transition-transform">
+                                <Sparkles className="w-4 h-4" />
                             </div>
-                            <span className="text-[11px] font-extrabold text-amber-900 tracking-tight">{suggestion.label}</span>
+                            <span className="text-[12px] font-black text-amber-900 tracking-tight">{suggestion.label}</span>
                         </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-amber-400 group-hover:translate-x-1 group-hover:text-amber-600 transition-all relative z-10" />
+                        <ChevronRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 group-hover:text-amber-600 transition-all relative z-10" />
                     </button>
                 </div>
             )}
 
-            {/* Input */}
-            <div className="px-3 pb-3 pt-1">
-                {usage && (
-                    <div className="flex items-center justify-between px-2 mb-1.5">
-                        <span className="text-[9px] text-gray-400">
-                            {usage.model} · {usage.latencyMs}ms · {usage.totalTokens} tokens
-                        </span>
-                    </div>
-                )}
-                <div className="flex flex-col gap-2 bg-gray-50 rounded-xl border border-gray-200/60 
-                                focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100
-                                transition-all duration-150 px-3 py-2">
+            {/* Redesigned Compact Input Area */}
+            <div className="p-5">
+                <div className="bg-white rounded-[2rem] border border-slate-200 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all duration-300 shadow-inner group/input">
 
-                    {/* Attachment Pills */}
+                    {/* Attachments Display */}
                     {attachments.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-3 animate-in fade-in slide-in-from-bottom-2">
+                        <div className="flex flex-wrap gap-2 px-4 pt-4 animate-in fade-in slide-in-from-bottom-2">
                             {attachments.map((file, idx) => (
-                                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-blue-50 border border-blue-100 group">
-                                    <FileText className="w-3.5 h-3.5 text-blue-600" />
-                                    <span className="text-[10px] font-bold text-blue-800 truncate max-w-[120px]">{file.name}</span>
+                                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 shadow-sm transition-all hover:bg-indigo-100">
+                                    <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                                    <span className="text-[10px] font-black text-indigo-900 truncate max-w-[120px]">{file.name}</span>
                                     <button
                                         onClick={() => removeAttachment(idx)}
-                                        className="text-blue-300 hover:text-blue-600 transition-colors"
+                                        className="text-indigo-300 hover:text-indigo-600 transition-colors ml-1"
                                     >
                                         <X className="w-3.5 h-3.5" />
                                     </button>
@@ -1300,7 +1288,7 @@ export default function EchoPanel({ patientId, patientName }) {
                         </div>
                     )}
 
-                    <div className="flex items-end gap-2">
+                    <div className="flex items-center p-2">
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -1311,56 +1299,60 @@ export default function EchoPanel({ patientId, patientName }) {
                         />
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="p-2.5 rounded-2xl bg-gray-50 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-95 group"
-                            title="Attach Clinical Document"
+                            className="p-3 rounded-2xl text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-sm transition-all active:scale-90 group/btn"
+                            title="Attach Document"
                         >
-                            <Paperclip className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                        </button>
-                        <button
-                            onMouseDown={handleStartRecording}
-                            onMouseUp={handleStopRecording}
-                            onMouseLeave={handleStopRecording}
-                            className={`p-2.5 rounded-2xl transition-all active:scale-95 group ${isRecording
-                                ? 'bg-red-500 text-white animate-pulse'
-                                : 'bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50'
-                                }`}
-                            title="Hold to Record"
-                        >
-                            <Mic className={`w-5 h-5 ${isRecording ? 'animate-bounce' : ''}`} />
+                            <Paperclip className="w-5 h-5 group-hover/btn:rotate-12 transition-transform" />
                         </button>
 
-                        <textarea
-                            ref={inputRef}
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder={isPatientMode
-                                ? "Ask Eko... (Hold Alt to talk)"
-                                : "Ask Eko or navigate... (Hold Alt to talk)"}
-                            disabled={isGlobalLoading}
-                            rows={1}
-                            className="flex-1 bg-transparent text-[12px] text-gray-700 placeholder-slate-300
-                                   resize-none outline-none max-h-[80px]"
-                            style={{ fieldSizing: 'content' }}
-                        />
-
-                        <button
-                            onClick={() => sendMessage()}
-                            disabled={(!input.trim() && !isRecording) || isGlobalLoading}
-                            className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center 
-                                   text-white shadow-lg shadow-blue-500/20 disabled:opacity-30 disabled:bg-gray-200
-                                   hover:bg-blue-700 transition-all active:scale-95 flex-shrink-0"
-                        >
-                            <Send className="w-5 h-5 translate-x-0.5 -translate-y-0.5" />
-                        </button>
-                    </div>
-                    {!isRecording && (
-                        <div className="flex justify-center mt-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                            <span className="text-[10px] text-gray-400 font-medium tracking-tight">
-                                💡 Tip: Hold <kbd className="bg-gray-50 border border-gray-200 px-1 rounded text-[9px] font-sans">Alt</kbd> to talk
-                            </span>
+                        <div className="flex-1 px-2 relative">
+                            <textarea
+                                ref={inputRef}
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={isPatientMode ? "Ask Eko..." : "Navigate PageMD..."}
+                                disabled={isGlobalLoading}
+                                rows={1}
+                                className="w-full bg-transparent text-[14px] text-slate-700 placeholder-slate-400
+                                       resize-none outline-none py-3 font-semibold h-[46px] flex items-center"
+                                style={{ maxHeight: '120px' }}
+                            />
                         </div>
-                    )}
+
+                        <div className="flex items-center gap-1">
+                            <button
+                                onMouseDown={handleStartRecording}
+                                onMouseUp={handleStopRecording}
+                                onMouseLeave={handleStopRecording}
+                                className={`p-3 rounded-2xl transition-all active:scale-75 ${isRecording
+                                    ? 'bg-rose-500 text-white shadow-xl shadow-rose-200 animate-pulse scale-110'
+                                    : 'text-slate-400 hover:text-rose-500 hover:bg-rose-50/50'
+                                    }`}
+                                title="Hold to Voice Speak"
+                            >
+                                <Mic className={`w-5 h-5 ${isRecording ? 'animate-bounce' : ''}`} />
+                            </button>
+
+                            <button
+                                onClick={() => sendMessage()}
+                                disabled={(!input.trim() && !isRecording) || isGlobalLoading}
+                                className="w-11 h-11 rounded-[1.25rem] bg-indigo-600 flex items-center justify-center 
+                                       text-white shadow-xl shadow-indigo-200 disabled:opacity-20 disabled:scale-95 disabled:shadow-none
+                                       hover:bg-indigo-700 hover:shadow-indigo-300 hover:-translate-y-0.5 transition-all active:scale-[0.85] active:translate-y-0 flex-shrink-0"
+                            >
+                                <Send className="w-5 h-5 translate-x-0.5 -translate-y-0.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex justify-center mt-3 opacity-0 group-hover-within/input:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-full">
+                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                            Hold <kbd className="bg-white border-b-2 border-slate-300 px-1.5 py-0.5 rounded text-[9px] font-sans text-slate-800">Alt</kbd> to record
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>

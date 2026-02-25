@@ -605,7 +605,7 @@ const PortalAppointments = ({ onMessageShortcut }) => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Date</label>
-                                    <input type="date" required value={formData.preferredDate} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} min={new Date().toISOString().split('T')[0]} className="portal-input" />
+                                    <input type="date" required value={formData.preferredDate} onChange={(e) => setFormData({ ...formData, preferredDate: e.target.value })} min={format(new Date(), 'yyyy-MM-dd')} className="portal-input" />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-bold text-gray-400 uppercase tracking-widest ml-1">Preferred Time</label>

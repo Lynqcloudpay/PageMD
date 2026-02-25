@@ -192,8 +192,8 @@ const MySchedule = () => {
                         <button
                             onClick={() => setShowCancelledAppointments(!showCancelledAppointments)}
                             className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded transition-colors ${showCancelledAppointments
-                                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                                 }`}
                             title={showCancelledAppointments ? 'Hide cancelled/no-show' : 'Show cancelled/no-show'}
                         >
@@ -219,7 +219,12 @@ const MySchedule = () => {
                             <input
                                 type="date"
                                 value={format(selectedDate, 'yyyy-MM-dd')}
-                                onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                                onChange={(e) => {
+                                    if (e.target.value) {
+                                        const [y, m, d] = e.target.value.split('-').map(Number);
+                                        setSelectedDate(new Date(y, m - 1, d));
+                                    }
+                                }}
                                 className="border-none outline-none text-xs font-semibold text-gray-700 bg-transparent cursor-pointer w-28"
                             />
                             <button
@@ -302,15 +307,15 @@ const MySchedule = () => {
                                 key={appt.id}
                                 onClick={() => handlePatientClick(appt)}
                                 className={`p-3 hover:bg-gray-50 cursor-pointer transition-all border-l-4 ${isCancelledOrNoShow
-                                        ? 'bg-gray-50/50 opacity-70 border-gray-300'
-                                        : `${statusColor.border} hover:${statusColor.bg}/20`
+                                    ? 'bg-gray-50/50 opacity-70 border-gray-300'
+                                    : `${statusColor.border} hover:${statusColor.bg}/20`
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
                                     {/* Compact Number Badge */}
                                     <div className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold ${isCancelledOrNoShow
-                                            ? 'bg-gray-200 text-gray-500'
-                                            : 'bg-blue-100 text-blue-700'
+                                        ? 'bg-gray-200 text-gray-500'
+                                        : 'bg-blue-100 text-blue-700'
                                         }`}>
                                         {index + 1}
                                     </div>
@@ -319,8 +324,8 @@ const MySchedule = () => {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className={`text-sm font-bold truncate ${isCancelledOrNoShow
-                                                    ? 'text-gray-500 line-through'
-                                                    : 'text-gray-900'
+                                                ? 'text-gray-500 line-through'
+                                                : 'text-gray-900'
                                                 }`}>
                                                 {appt.patientName}
                                             </span>

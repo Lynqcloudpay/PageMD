@@ -1349,7 +1349,7 @@ const PlatformAdminClinicDetails = () => {
                                                 <label className="text-[10px] font-bold text-gray-400 uppercase">Go-Live Date</label>
                                                 <input
                                                     type="date"
-                                                    value={clinic.go_live_date ? new Date(clinic.go_live_date).toISOString().split('T')[0] : ''}
+                                                    value={clinic.go_live_date ? new Date(clinic.go_live_date + 'T12:00:00').toISOString().split('T')[0] : ''}
                                                     onChange={(e) => handleControlChange({ go_live_date: e.target.value })}
                                                     className="w-full bg-white border border-gray-100 rounded-xl px-3 py-2 text-xs font-bold text-indigo-600 outline-none focus:ring-2 ring-indigo-500/20"
                                                 />

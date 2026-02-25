@@ -529,7 +529,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         }
                         return {
                             id: v.id,
-                            date: v.visit_date ? format(new Date(v.visit_date), 'M/d/yy') : (v.created_at ? format(new Date(v.created_at), 'M/d/yy') : 'N/A'),
+                            date: v.visit_date ? format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy') : (v.created_at ? format(new Date(v.created_at), 'M/d/yy') : 'N/A'),
                             time: v.visit_date ? format(new Date(v.visit_date), 'HH:mm') : (v.created_at ? format(new Date(v.created_at), 'HH:mm') : ''),
                             visitDate: v.visit_date || v.created_at,
                             bp: bpValue || 'N/A',
@@ -584,7 +584,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                             }
                             return {
                                 id: v.id,
-                                date: v.visit_date ? format(new Date(v.visit_date), 'M/d/yy') : 'N/A',
+                                date: v.visit_date ? format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy') : 'N/A',
                                 visitDate: v.visit_date,
                                 bp: bpValue || 'N/A',
                                 hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null,
@@ -1560,7 +1560,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#F0F2F5] flex items-center justify-center">
+            <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
                 <div className="text-center">
                     <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
                     <p className="text-gray-600">Loading patient chart...</p>
@@ -1572,7 +1572,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const age = patient ? calculateAge(patient.dob) : null;
 
     return (
-        <div className="min-h-screen bg-[#F0F2F5]">
+        <div className="min-h-screen bg-[#F9FAFB]">
             <div className="w-full px-4 relative z-10">
                 <PatientHeader
                     patient={patient}
