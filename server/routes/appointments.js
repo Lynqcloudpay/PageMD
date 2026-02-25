@@ -11,9 +11,10 @@ router.use(authenticate);
 // Get stats for badges
 router.get('/stats', requirePermission('schedule:view'), async (req, res) => {
   try {
-    // Use the CLINIC'S current date (approximated by server date for now, ideally TZ-aware)
-    const today = new Date().toISOString().split('T')[0];
-    const params = [today];
+    // Use US/Eastern timezone so badge is correct even in evening hours
+    const todayExpr = "(CURRENT_TIMESTAMP AT TIME ZONE 'US/Eastern')::date";
+    const params = [];
+    let paramIdx = 0;
     let query = `
       SELECT 
         COUNT(*) FILTER(WHERE status NOT IN ('cancelled', 'no-show')) as total_today,
@@ -22,14 +23,14 @@ router.get('/stats', requirePermission('schedule:view'), async (req, res) => {
           AND (patient_status IS NULL OR patient_status NOT IN ('cancelled', 'no_show', 'no-show', 'checked_out', 'checked-out', 'completed', 'discharged'))
         ) as active_today
       FROM appointments 
-      WHERE appointment_date = $1
+      WHERE appointment_date = ${todayExpr}
     `;
 
     if (req.user.scope?.scheduleScope === 'SELF') {
-      query += ` AND provider_id = $2`;
+      query += ` AND provider_id = $1`;
       params.push(req.user.id);
     } else if (req.query.providerId) {
-      query += ` AND provider_id = $2`;
+      query += ` AND provider_id = $1`;
       params.push(req.query.providerId);
     }
 

@@ -3947,7 +3947,7 @@ const VisitNote = () => {
                                     </button>
                                     <button
                                         onClick={handleSign}
-                                        className="px-5 py-2.5 bg-gray-50 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2 min-w-[120px] justify-center"
+                                        className="px-5 py-2.5 bg-gray-800 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all shadow-md shadow-slate-200 flex items-center gap-2 min-w-[120px] justify-center"
                                     >
                                         <Lock className="w-4 h-4" />
                                         <span>Sign Note</span>

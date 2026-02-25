@@ -118,7 +118,7 @@ const VisitNoteHeader = ({
                     <div className="flex flex-wrap items-center gap-2.5">
                         <button
                             onClick={() => setShowChartReview(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-white rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-lg shadow-slate-200"
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-xl text-xs font-bold hover:bg-gray-800 transition-all shadow-lg shadow-slate-200"
                         >
                             <Eye className="w-4 h-4" />
                             <span>Review</span>
