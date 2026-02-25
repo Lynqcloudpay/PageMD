@@ -50,12 +50,13 @@ router.get('/', requirePermission('schedule:view'), async (req, res) => {
     // This ensures they appear in the cancellations/follow-up tab correctly.
     // We only touch appointments older than today.
     try {
+      // Use US/Eastern timezone for date comparison to prevent early-evening date shifts
       await pool.query(`
         UPDATE appointments 
         SET status = 'no-show', 
             patient_status = 'no-show',
             updated_at = CURRENT_TIMESTAMP
-        WHERE appointment_date < CURRENT_DATE 
+        WHERE appointment_date < (CURRENT_TIMESTAMP AT TIME ZONE 'US/Eastern')::date
           AND status NOT IN ('completed', 'checked-out', 'cancelled', 'no-show')
           AND (patient_status IS NULL OR patient_status NOT IN ('completed', 'checked_out', 'cancelled', 'no-show', 'checked-out'))
       `);
