@@ -131,7 +131,7 @@ const Dashboard = () => {
         return (
             <div className="p-8 flex items-center justify-center min-h-screen bg-[#FAFBFC]">
                 <div className="text-center">
-                    <div className="w-10 h-10 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
                     <p className="mt-4 text-gray-400 text-sm font-medium">Loading your workspace...</p>
                 </div>
             </div>
@@ -142,17 +142,17 @@ const Dashboard = () => {
         <div className="w-full bg-[#FAFBFC] min-h-screen">
             {/* Greeting Header */}
             <div className="bg-white border-b border-gray-100">
-                <div className="max-w-[1500px] mx-auto px-6 py-5">
+                <div className="max-w-[1500px] mx-auto px-6 py-3">
                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-50 to-blue-50 flex items-center justify-center border border-cyan-100">
-                                <greeting.icon className="w-6 h-6 text-cyan-600" />
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+                                <greeting.icon className="w-4.5 h-4.5 text-blue-600" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900 tracking-tight">
-                                    {greeting.text}, <span className="text-cyan-700">Dr. {user?.lastName || user?.last_name || 'Provider'}</span>
+                                <h1 className="text-lg font-bold text-gray-900 tracking-tight">
+                                    {greeting.text}, <span className="text-blue-700">Dr. {user?.lastName || user?.last_name || 'Provider'}</span>
                                 </h1>
-                                <p className="text-sm text-gray-400 mt-0.5 font-medium">
+                                <p className="text-xs text-gray-400 font-medium">
                                     {format(new Date(), 'EEEE, MMMM d, yyyy')} · {activeAppointments.length} patients today
                                 </p>
                             </div>
@@ -160,9 +160,9 @@ const Dashboard = () => {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => navigate('/patients')}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 transition-all active:scale-95 shadow-sm"
+                                className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-all active:scale-95 shadow-sm"
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5" />
                                 New Patient
                             </button>
                         </div>
@@ -170,22 +170,22 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <div className="max-w-[1500px] mx-auto px-6 py-6 space-y-6">
+            <div className="max-w-[1500px] mx-auto px-6 py-4 space-y-4">
 
                 {/* Row 1: At-a-Glance Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2.5">
                     {/* My Day Summary — Wider Card */}
-                    <div className="col-span-2 bg-white rounded-2xl border border-gray-100 p-4 relative overflow-hidden group hover:border-cyan-200 transition-all cursor-pointer" onClick={() => navigate('/schedule')}>
-                        <div className="absolute -top-6 -right-6 w-24 h-24 bg-cyan-50 rounded-full opacity-50 group-hover:scale-125 transition-transform" />
+                    <div className="col-span-2 bg-white rounded-xl border border-gray-100 p-3 relative overflow-hidden group hover:border-blue-200 transition-all cursor-pointer" onClick={() => navigate('/schedule')}>
+                        <div className="absolute -top-6 -right-6 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-125 transition-transform" />
                         <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Stethoscope className="w-4 h-4 text-cyan-600" />
+                            <div className="flex items-center gap-2 mb-2">
+                                <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">My Day</span>
                             </div>
                             <div className="flex items-end justify-between">
                                 <div>
-                                    <div className="text-3xl font-bold text-gray-900 leading-none">{activeAppointments.length}</div>
-                                    <p className="text-[10px] text-gray-400 mt-1 font-medium">patients today</p>
+                                    <div className="text-2xl font-bold text-gray-900 leading-none">{activeAppointments.length}</div>
+                                    <p className="text-[9px] text-gray-400 mt-0.5 font-medium">patients today</p>
                                 </div>
                                 <div className="text-right">
                                     <div className="flex items-center gap-3">
@@ -215,15 +215,15 @@ const Dashboard = () => {
 
                 {/* Row 2: Patient Flow Board */}
                 {flowTotal > 0 && (
-                    <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                        <div className="flex items-center justify-between mb-4">
+                    <div className="bg-white rounded-xl border border-gray-100 p-3.5">
+                        <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
-                                <TrendingUp className="w-4 h-4 text-cyan-600" />
-                                <h2 className="text-sm font-bold text-gray-800">Patient Flow</h2>
+                                <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
+                                <h2 className="text-xs font-bold text-gray-800">Patient Flow</h2>
                             </div>
-                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Live</span>
+                            <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest">Live</span>
                         </div>
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-4 gap-2">
                             <FlowStage icon={Clock} label="Scheduled" count={flow.scheduled} color="slate" />
                             <FlowStage icon={UserCheck} label="Arrived" count={flow.arrived} color="blue" />
                             <FlowStage icon={DoorOpen} label="In Room" count={flow.inRoom} color="emerald" />
@@ -231,7 +231,7 @@ const Dashboard = () => {
                         </div>
                         {/* Flow Progress Bar */}
                         {flowTotal > 0 && (
-                            <div className="mt-4 h-2 bg-gray-50 rounded-full overflow-hidden flex">
+                            <div className="mt-3 h-1.5 bg-gray-50 rounded-full overflow-hidden flex">
                                 {flow.checkedOut > 0 && <div className="bg-gray-300 transition-all duration-700" style={{ width: `${(flow.checkedOut / flowTotal) * 100}%` }} />}
                                 {flow.inRoom > 0 && <div className="bg-emerald-400 transition-all duration-700" style={{ width: `${(flow.inRoom / flowTotal) * 100}%` }} />}
                                 {flow.arrived > 0 && <div className="bg-blue-400 transition-all duration-700" style={{ width: `${(flow.arrived / flowTotal) * 100}%` }} />}
@@ -245,33 +245,33 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                     {/* LEFT: Schedule + Next Patient */}
-                    <div className="lg:col-span-8 space-y-5">
+                    <div className="lg:col-span-8 space-y-4">
 
                         {/* Next Patient Card */}
                         {nextPatient && (
                             <div
-                                className="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-2xl p-5 text-white cursor-pointer hover:shadow-lg hover:shadow-cyan-600/20 transition-all active:scale-[0.99]"
+                                className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 text-white cursor-pointer hover:shadow-lg hover:shadow-blue-600/20 transition-all active:scale-[0.99]"
                                 onClick={() => navigate(`/patient/${nextPatient.patientId}/snapshot`)}
                             >
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-                                            <User className="w-6 h-6 text-white" />
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-white/15 backdrop-blur flex items-center justify-center">
+                                            <User className="w-5 h-5 text-white" />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-200">Next Patient</p>
-                                            <h3 className="text-lg font-bold mt-0.5">{nextPatient.patientName}</h3>
-                                            <p className="text-sm text-cyan-100 font-medium">{nextPatient.type || 'Follow-up'} · {nextPatient.time}</p>
+                                            <p className="text-[9px] font-bold uppercase tracking-widest text-blue-200">Next Patient</p>
+                                            <h3 className="text-base font-bold">{nextPatient.patientName}</h3>
+                                            <p className="text-xs text-blue-100 font-medium">{nextPatient.type || 'Follow-up'} · {nextPatient.time}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${nextPatient.patient_status === 'arrived'
-                                                ? 'bg-emerald-400/20 text-emerald-100'
-                                                : 'bg-white/15 text-cyan-100'
+                                            ? 'bg-emerald-400/20 text-emerald-100'
+                                            : 'bg-white/15 text-blue-100'
                                             }`}>
                                             {nextPatient.patient_status === 'arrived' ? 'Arrived' : 'Waiting'}
                                         </span>
-                                        <ChevronRight className="w-5 h-5 text-cyan-200" />
+                                        <ChevronRight className="w-5 h-5 text-blue-200" />
                                     </div>
                                 </div>
                             </div>
@@ -281,13 +281,13 @@ const Dashboard = () => {
                         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                             <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <Calendar className="w-4 h-4 text-cyan-600" />
+                                    <Calendar className="w-4 h-4 text-blue-600" />
                                     <h2 className="font-semibold text-gray-800 text-sm">Today's Schedule</h2>
-                                    <span className="bg-cyan-50 text-cyan-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                    <span className="bg-blue-50 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
                                         {activeAppointments.length}
                                     </span>
                                 </div>
-                                <button onClick={() => navigate('/schedule')} className="text-[11px] font-semibold text-cyan-600 hover:text-cyan-700 flex items-center gap-1 transition-colors">
+                                <button onClick={() => navigate('/schedule')} className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors">
                                     Full Schedule <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                             </div>
@@ -295,7 +295,7 @@ const Dashboard = () => {
                             <div className="min-h-[400px]">
                                 {loadingAppointments ? (
                                     <div className="flex flex-col items-center justify-center py-20">
-                                        <div className="w-8 h-8 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin mb-3" />
+                                        <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-3" />
                                         <p className="text-xs text-gray-400 font-medium">Loading schedule...</p>
                                     </div>
                                 ) : activeAppointments.length > 0 ? (
@@ -311,7 +311,7 @@ const Dashboard = () => {
                                         </div>
                                         <p className="font-semibold text-gray-500 text-sm">No appointments today</p>
                                         <p className="text-xs text-gray-400 mt-1 max-w-[220px]">Your schedule is clear. Use the time to catch up on notes or review charts.</p>
-                                        <button onClick={() => navigate('/schedule')} className="mt-4 px-4 py-2 text-xs font-semibold text-cyan-600 bg-cyan-50 rounded-xl border border-cyan-100 hover:bg-cyan-100 transition-colors">
+                                        <button onClick={() => navigate('/schedule')} className="mt-4 px-4 py-2 text-xs font-semibold text-blue-600 bg-blue-50 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors">
                                             View Calendar
                                         </button>
                                     </div>
@@ -326,20 +326,20 @@ const Dashboard = () => {
                         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                             <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <Inbox className="w-4 h-4 text-cyan-600" />
+                                    <Inbox className="w-4 h-4 text-blue-600" />
                                     <h3 className="text-sm font-semibold text-gray-800">In Basket</h3>
                                     {inboxItems.length > 0 && (
                                         <span className="bg-rose-50 text-rose-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{inboxItems.length}</span>
                                     )}
                                 </div>
-                                <button onClick={() => navigate('/tasks')} className="text-[10px] font-semibold text-cyan-600 hover:text-cyan-700 uppercase tracking-wider">
+                                <button onClick={() => navigate('/tasks')} className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 uppercase tracking-wider">
                                     View All
                                 </button>
                             </div>
                             <div className="p-3 space-y-2 max-h-[280px] overflow-y-auto">
                                 {loadingInbox ? (
                                     <div className="flex items-center justify-center py-8">
-                                        <div className="w-6 h-6 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin" />
+                                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                                     </div>
                                 ) : inboxItems.length > 0 ? (
                                     inboxItems.slice(0, 5).map((item) => {
@@ -357,7 +357,7 @@ const Dashboard = () => {
                                                     <span className="text-[10px] font-bold text-gray-400">{timeStr} ago</span>
                                                     {item.priority === 'stat' && <span className="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">STAT</span>}
                                                 </div>
-                                                <p className="text-sm font-semibold text-gray-800 group-hover:text-cyan-700 truncate">{item.patient_name || 'System'}</p>
+                                                <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 truncate">{item.patient_name || 'System'}</p>
                                                 <p className="text-[11px] text-gray-500 truncate">{item.subject}</p>
                                             </button>
                                         );
@@ -374,7 +374,7 @@ const Dashboard = () => {
                         {/* Clinical Actions */}
                         <div className="bg-white rounded-2xl border border-gray-100 p-4">
                             <div className="flex items-center gap-2 mb-3">
-                                <Zap className="w-4 h-4 text-cyan-600" />
+                                <Zap className="w-4 h-4 text-blue-600" />
                                 <h3 className="text-sm font-semibold text-gray-800">Quick Actions</h3>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
@@ -423,19 +423,19 @@ const StatCard = ({ icon: Icon, label, value, color, onClick, urgent }) => {
     return (
         <button
             onClick={onClick}
-            className={`bg-white p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm 
+            className={`bg-white p-2.5 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm 
                         transition-all cursor-pointer text-left relative overflow-hidden group active:scale-95`}
         >
             {urgent && value > 0 && (
-                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
             )}
-            <div className="flex items-center gap-2 mb-2">
-                <div className={`w-7 h-7 rounded-lg ${c.bg} flex items-center justify-center`}>
-                    <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
+            <div className="flex items-center gap-1.5 mb-1.5">
+                <div className={`w-6 h-6 rounded-md ${c.bg} flex items-center justify-center`}>
+                    <Icon className={`w-3 h-3 ${c.icon}`} />
                 </div>
             </div>
-            <p className="text-xl font-bold text-gray-900 leading-none">{value}</p>
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">{label}</p>
+            <p className="text-lg font-bold text-gray-900 leading-none">{value}</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{label}</p>
         </button>
     );
 };
@@ -450,10 +450,10 @@ const FlowStage = ({ icon: Icon, label, count, color }) => {
     const c = colorMap[color] || colorMap.slate;
 
     return (
-        <div className={`${c.bg} rounded-xl p-3 text-center border border-transparent`}>
-            <Icon className={`w-4 h-4 ${c.icon} mx-auto mb-1.5`} />
-            <p className={`text-xl font-bold ${c.text} leading-none`}>{count}</p>
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">{label}</p>
+        <div className={`${c.bg} rounded-lg p-2.5 text-center border border-transparent`}>
+            <Icon className={`w-3.5 h-3.5 ${c.icon} mx-auto mb-1`} />
+            <p className={`text-lg font-bold ${c.text} leading-none`}>{count}</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{label}</p>
         </div>
     );
 };
@@ -475,14 +475,14 @@ const AppointmentRow = ({ appt, navigate }) => {
     return (
         <div
             onClick={() => navigate(`/patient/${appt.patientId}/snapshot`)}
-            className={`flex items-center gap-4 px-5 py-3.5 hover:bg-cyan-50/30 transition-colors cursor-pointer group ${isComplete ? 'opacity-50' : ''}`}
+            className={`flex items-center gap-4 px-5 py-3.5 hover:bg-blue-50/30 transition-colors cursor-pointer group ${isComplete ? 'opacity-50' : ''}`}
         >
             <div className="w-[52px] flex-shrink-0">
                 <span className="text-xs font-bold text-gray-800 bg-gray-50 px-2 py-1 rounded-lg">{appt.time?.substring(0, 5)}</span>
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                    <span className={`text-sm font-semibold group-hover:text-cyan-700 transition-colors ${isComplete ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                    <span className={`text-sm font-semibold group-hover:text-blue-700 transition-colors ${isComplete ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
                         {appt.patientName}
                     </span>
                     {appt.visit_method === 'telehealth' && (
@@ -494,7 +494,7 @@ const AppointmentRow = ({ appt, navigate }) => {
             <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight ${s.bg} ${s.text}`}>
                 {s.label}
             </span>
-            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-cyan-500 transition-colors flex-shrink-0" />
+            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors flex-shrink-0" />
         </div>
     );
 };
@@ -502,12 +502,12 @@ const AppointmentRow = ({ appt, navigate }) => {
 const QuickAction = ({ icon: Icon, label, onClick }) => (
     <button
         onClick={onClick}
-        className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 hover:bg-cyan-50 border border-transparent hover:border-cyan-100 transition-all text-left group active:scale-95"
+        className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 hover:bg-blue-50 border border-transparent hover:border-blue-100 transition-all text-left group active:scale-95"
     >
-        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-gray-100 group-hover:border-cyan-200 group-hover:bg-cyan-50 transition-colors">
-            <Icon className="w-4 h-4 text-gray-400 group-hover:text-cyan-600 transition-colors" />
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-gray-100 group-hover:border-blue-200 group-hover:bg-blue-50 transition-colors">
+            <Icon className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
         </div>
-        <span className="text-xs font-semibold text-gray-600 group-hover:text-cyan-700">{label}</span>
+        <span className="text-xs font-semibold text-gray-600 group-hover:text-blue-700">{label}</span>
     </button>
 );
 
