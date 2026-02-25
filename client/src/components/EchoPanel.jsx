@@ -768,6 +768,163 @@ function EvidenceCard({ visualization }) {
         </div>
     );
 }
+// ─── Insert Into Note Button (for any assistant message) ────────────────────
+
+function InsertIntoNoteButton({ messageContent, patientId }) {
+    const [state, setState] = useState('idle'); // idle | loading | picking | inserted | error
+    const [openNotes, setOpenNotes] = useState(null);
+    const [errorMsg, setErrorMsg] = useState(null);
+    const location = useLocation();
+
+    // Only show on visit note pages
+    const isOnVisitPage = location.pathname.includes('/visit/');
+    if (!isOnVisitPage || !patientId || !messageContent) return null;
+
+    // Check if the message looks like it contains clinical draft content
+    const text = messageContent || '';
+    const hasClinicalContent = /\b(HPI|History of Present Illness|Assessment|Review of Systems|Physical Exam|ROS|PE|Plan)[\s]*:/i.test(text);
+    if (!hasClinicalContent) return null;
+
+    // Parse sections from raw text
+    const parseSectionsFromText = (rawText) => {
+        const sections = {};
+        const patterns = [
+            { key: 'hpi', regex: /(?:\*\*)?(?:HPI|History of Present Illness)(?:\*\*)?[:\s]+/i },
+            { key: 'ros', regex: /(?:\*\*)?(?:ROS|Review of Systems)(?:\*\*)?[:\s]+/i },
+            { key: 'pe', regex: /(?:\*\*)?(?:PE|Physical Exam(?:ination)?)(?:\*\*)?[:\s]+/i },
+            { key: 'assessment', regex: /(?:\*\*)?Assessment(?:\*\*)?[:\s]+/i },
+            { key: 'plan', regex: /(?:\*\*)?Plan(?:\*\*)?[:\s]+/i },
+            { key: 'chiefComplaint', regex: /(?:\*\*)?(?:Chief Complaint|CC)(?:\*\*)?[:\s]+/i },
+        ];
+
+        // Find all section positions
+        const found = [];
+        for (const p of patterns) {
+            const match = p.regex.exec(rawText);
+            if (match) {
+                found.push({ key: p.key, start: match.index + match[0].length, headerStart: match.index });
+            }
+        }
+
+        // Sort by position
+        found.sort((a, b) => a.headerStart - b.headerStart);
+
+        // Extract content between sections
+        for (let i = 0; i < found.length; i++) {
+            const end = i + 1 < found.length ? found[i + 1].headerStart : rawText.length;
+            const content = rawText.substring(found[i].start, end).trim();
+            if (content) {
+                // Clean up markdown bold markers
+                sections[found[i].key] = content.replace(/\*\*/g, '').trim();
+            }
+        }
+
+        return sections;
+    };
+
+    const handleInsert = async (targetVisitId = null) => {
+        setState('loading');
+        setErrorMsg(null);
+
+        try {
+            if (!targetVisitId) {
+                const { data } = await api.get(`/echo/open-notes/${patientId}`);
+
+                if (data.count === 0) {
+                    setErrorMsg('No open notes found for today. Open a visit note first.');
+                    setState('error');
+                    return;
+                }
+
+                if (data.count > 1) {
+                    setOpenNotes(data.notes);
+                    setState('picking');
+                    return;
+                }
+
+                targetVisitId = data.notes[0].visitId;
+            }
+
+            const sections = parseSectionsFromText(text);
+            if (Object.keys(sections).length === 0) {
+                setErrorMsg('Could not parse clinical sections from this response.');
+                setState('error');
+                return;
+            }
+
+            await api.post('/echo/write-to-note', { visitId: targetVisitId, sections });
+            setState('inserted');
+            window.dispatchEvent(new CustomEvent('eko-note-updated', { detail: { visitId: targetVisitId } }));
+            setTimeout(() => setState('idle'), 5000);
+        } catch (err) {
+            setErrorMsg(err.response?.data?.error || 'Failed to insert into note');
+            setState('error');
+        }
+    };
+
+    return (
+        <div className="mt-3 pt-3 border-t border-slate-100">
+            {state === 'idle' && (
+                <button
+                    onClick={() => handleInsert()}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-sm w-full justify-center"
+                >
+                    <PenTool className="w-3.5 h-3.5" />
+                    Insert into Note
+                </button>
+            )}
+
+            {state === 'loading' && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-400 rounded-xl text-[10px] font-bold justify-center">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Writing to note...
+                </div>
+            )}
+
+            {state === 'inserted' && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-bold justify-center">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Inserted into Note ✓
+                </div>
+            )}
+
+            {state === 'error' && (
+                <div>
+                    <div className="text-[10px] text-rose-600 bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-200 mb-1.5">
+                        {errorMsg}
+                    </div>
+                    <button onClick={() => setState('idle')} className="text-[9px] text-gray-500 hover:text-gray-700 font-medium">
+                        Try again
+                    </button>
+                </div>
+            )}
+
+            {state === 'picking' && openNotes && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="text-[11px] font-bold text-amber-900">Multiple open notes — select one:</span>
+                    </div>
+                    {openNotes.map((note) => (
+                        <button
+                            key={note.visitId}
+                            onClick={() => handleInsert(note.visitId)}
+                            className="w-full text-left px-3 py-2 bg-white rounded-lg border border-amber-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-[11px] group"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="font-bold text-gray-800 group-hover:text-blue-700">{note.visitType}</span>
+                                {note.time && <span className="text-gray-400">{note.time}</span>}
+                            </div>
+                        </button>
+                    ))}
+                    <button onClick={() => setState('idle')} className="text-[10px] text-gray-500 hover:text-gray-700 font-medium">
+                        Cancel
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
 
 // ─── Main Echo Panel ────────────────────────────────────────────────────────
 
@@ -1318,6 +1475,11 @@ export default function EchoPanel({ patientId, patientName }) {
                                 }
                                 return null;
                             })()}
+
+                            {/* Insert into Note (for assistant messages with clinical content) */}
+                            {msg.role === 'assistant' && !msg.isError && (
+                                <InsertIntoNoteButton messageContent={msg.content} patientId={patientId} />
+                            )}
                         </div>
                     </div>
                 ))}
