@@ -38,7 +38,6 @@ const Snapshot = lazyRetry(() => import('./pages/Snapshot'));
 const VisitNote = lazyRetry(() => import('./pages/VisitNote'));
 
 const Schedule = lazyRetry(() => import('./pages/Schedule'));
-const MySchedule = lazyRetry(() => import('./pages/MySchedule'));
 const Patients = lazyRetry(() => import('./pages/Patients'));
 const Login = lazyRetry(() => import('./pages/Login'));
 const LandingPage = lazyRetry(() => import('./pages/LandingPage'));
@@ -248,13 +247,7 @@ function App() {
                                                                 </ErrorBoundary>
                                                             </ProtectedRoute>
                                                         } />
-                                                        <Route path="/my-schedule" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><MySchedule /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
+                                                        <Route path="/my-schedule" element={<Navigate to="/dashboard" replace />} />
                                                         <Route path="/patients" element={
                                                             <ProtectedRoute>
                                                                 <ErrorBoundary>

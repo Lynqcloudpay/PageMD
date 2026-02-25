@@ -184,9 +184,6 @@ const Layout = ({ children }) => {
         { path: '/dashboard', icon: BarChart3, label: 'Dashboard', badge: null },
         ...(canViewSchedule ? [
             { path: '/schedule', icon: Calendar, label: 'Schedule', badge: todayApptsCount > 0 ? todayApptsCount : null, badgeColor: 'blue' },
-            ...(showMySchedule ? [
-                { path: '/my-schedule', icon: User, label: 'My Schedule', badge: todayApptsCount > 0 ? todayApptsCount : null, badgeColor: 'blue' }
-            ] : [])
         ] : []),
         { path: '/cancellations', icon: AlertCircle, label: 'Cancellations', badge: pendingCancellationsCount > 0 ? pendingCancellationsCount : null },
         { path: '/appointment-requests', icon: CalendarPlus, label: 'Appt Requests', badge: appointmentRequestsCount > 0 ? appointmentRequestsCount : null, badgeColor: 'amber' },
