@@ -1,17 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Calendar, Users, FileText, AlertCircle, TrendingUp, Activity, Clock, User,
-    ArrowRight, Plus, MessageSquare, ClipboardList, Zap, BarChart3,
-    Video, Bell, CheckCircle2, XCircle, AlertTriangle, Pill
+    Calendar, Users, FileText, Activity, Clock, User, ChevronRight,
+    Plus, MessageSquare, ClipboardList, Zap, Bell, CheckCircle2, XCircle,
+    AlertTriangle, Pill, ArrowRight, TrendingUp, Inbox, Sun, Moon, Sunrise,
+    Stethoscope, UserCheck, DoorOpen, LogOut, Eye
 } from 'lucide-react';
 import { reportsAPI, appointmentsAPI, inboxAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../hooks/usePermissions';
 import { format } from 'date-fns';
-import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-
 
 const Dashboard = () => {
     const navigate = useNavigate();
@@ -22,7 +20,6 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [todayAppointments, setTodayAppointments] = useState([]);
     const [loadingAppointments, setLoadingAppointments] = useState(true);
-    const [activeDesktopTab, setActiveDesktopTab] = useState('inbox');
     const [inboxItems, setInboxItems] = useState([]);
     const [loadingInbox, setLoadingInbox] = useState(false);
 
@@ -34,20 +31,17 @@ const Dashboard = () => {
             } catch (error) {
                 console.warn('Could not fetch dashboard stats:', error);
                 setStats({
-                    totalPatients: 0,
-                    visitsToday: 0,
-                    pendingOrders: 0,
-                    unreadMessages: 0,
-                    pendingNotes: 0,
-                    criticalAlerts: 0,
+                    totalPatients: 0, visitsToday: 0, pendingOrders: 0,
+                    unreadMessages: 0, pendingNotes: 0, unsignedNotes: 0,
+                    cancellationFollowups: 0, unreadLabs: 0, tomorrowCount: 0,
+                    patientFlow: { scheduled: 0, arrived: 0, inRoom: 0, checkedOut: 0, noShow: 0, cancelled: 0 }
                 });
             } finally {
                 setLoading(false);
             }
         };
         fetchStats();
-        // Poll stats every 2s
-        const interval = setInterval(fetchStats, 2000);
+        const interval = setInterval(fetchStats, 5000);
         return () => clearInterval(interval);
     }, []);
 
@@ -89,311 +83,432 @@ const Dashboard = () => {
         fetchTodayAppointments();
         fetchInbox();
 
-        // POLL every 2s
         const interval = setInterval(() => {
             fetchTodayAppointments();
-            fetchInbox(true); // Silent refresh
-        }, 2000);
+            fetchInbox(true);
+        }, 5000);
 
         return () => clearInterval(interval);
     }, [user, can, scope]);
 
+    // Smart greeting
+    const greeting = useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) return { text: 'Good morning', icon: Sunrise };
+        if (hour < 17) return { text: 'Good afternoon', icon: Sun };
+        return { text: 'Good evening', icon: Moon };
+    }, []);
+
+    // Active (non-cancelled/no-show) appointments
+    const activeAppointments = useMemo(() => {
+        return todayAppointments
+            .filter(a => !['cancelled', 'no-show', 'no_show'].includes(a.patient_status))
+            .sort((a, b) => a.time.localeCompare(b.time));
+    }, [todayAppointments]);
+
+    // Next patient (first scheduled/arrived)
+    const nextPatient = useMemo(() => {
+        const now = format(new Date(), 'HH:mm');
+        return activeAppointments.find(a =>
+            a.time >= now && ['scheduled', 'arrived'].includes(a.patient_status || 'scheduled')
+        );
+    }, [activeAppointments]);
+
+    // Seen vs remaining
+    const seenCount = useMemo(() => {
+        return activeAppointments.filter(a =>
+            ['checked_out', 'checked-out', 'completed'].includes(a.patient_status)
+        ).length;
+    }, [activeAppointments]);
+
+    const remainingCount = activeAppointments.length - seenCount;
+
+    // Patient flow data
+    const flow = stats?.patientFlow || { scheduled: 0, arrived: 0, inRoom: 0, checkedOut: 0, noShow: 0, cancelled: 0 };
+    const flowTotal = flow.scheduled + flow.arrived + flow.inRoom + flow.checkedOut;
+
     if (loading) {
         return (
-            <div className="p-8 flex items-center justify-center min-h-screen">
+            <div className="p-8 flex items-center justify-center min-h-screen bg-[#FAFBFC]">
                 <div className="text-center">
-                    <div className="inline-block spinner text-blue-500 w-8 h-8"></div>
-                    <p className="mt-4 text-gray-400 font-light">Loading clinical desktop...</p>
+                    <div className="w-10 h-10 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="mt-4 text-gray-400 text-sm font-medium">Loading your workspace...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="w-full bg-white min-h-screen">
-            {/* Top Compact Header */}
-            <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-                <div className="flex items-center space-x-4">
-                    <h1 className="text-xl font-semibold text-gray-900 border-r border-gray-200 pr-4">Dashboard</h1>
-                    <p className="text-sm text-gray-400">
-                        {format(new Date(), 'EEEE, MMMM d, yyyy')}
-                    </p>
-                </div>
-                <div className="flex items-center space-x-3">
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100">
-                        <User className="w-3.5 h-3.5" />
-                        <span className="text-xs font-medium">{user?.firstName} {user?.lastName}</span>
+        <div className="w-full bg-[#FAFBFC] min-h-screen">
+            {/* Greeting Header */}
+            <div className="bg-white border-b border-gray-100">
+                <div className="max-w-[1500px] mx-auto px-6 py-5">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-50 to-blue-50 flex items-center justify-center border border-cyan-100">
+                                <greeting.icon className="w-6 h-6 text-cyan-600" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+                                    {greeting.text}, <span className="text-cyan-700">Dr. {user?.lastName || user?.last_name || 'Provider'}</span>
+                                </h1>
+                                <p className="text-sm text-gray-400 mt-0.5 font-medium">
+                                    {format(new Date(), 'EEEE, MMMM d, yyyy')} · {activeAppointments.length} patients today
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => navigate('/patients')}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-cyan-600 text-white rounded-xl text-sm font-semibold hover:bg-cyan-700 transition-all active:scale-95 shadow-sm"
+                            >
+                                <Plus className="w-4 h-4" />
+                                New Patient
+                            </button>
+                        </div>
                     </div>
-                    <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/patients')}>
-                        New Patient
-                    </Button>
                 </div>
             </div>
 
-            <div className="p-4 lg:p-6 max-w-[1600px] mx-auto space-y-6">
+            <div className="max-w-[1500px] mx-auto px-6 py-6 space-y-6">
 
-                {/* Stats Bar - Extreme Density */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    <div className="bg-white p-3 rounded-xl border border-gray-200 flex items-center justify-between hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer">
-                        <div>
-                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Today's Visits</p>
-                            <p className="text-xl font-semibold text-gray-900">{stats?.visitsToday || 0}</p>
+                {/* Row 1: At-a-Glance Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                    {/* My Day Summary — Wider Card */}
+                    <div className="col-span-2 bg-white rounded-2xl border border-gray-100 p-4 relative overflow-hidden group hover:border-cyan-200 transition-all cursor-pointer" onClick={() => navigate('/schedule')}>
+                        <div className="absolute -top-6 -right-6 w-24 h-24 bg-cyan-50 rounded-full opacity-50 group-hover:scale-125 transition-transform" />
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Stethoscope className="w-4 h-4 text-cyan-600" />
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">My Day</span>
+                            </div>
+                            <div className="flex items-end justify-between">
+                                <div>
+                                    <div className="text-3xl font-bold text-gray-900 leading-none">{activeAppointments.length}</div>
+                                    <p className="text-[10px] text-gray-400 mt-1 font-medium">patients today</p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-center">
+                                            <span className="text-lg font-bold text-emerald-600">{seenCount}</span>
+                                            <p className="text-[9px] text-gray-400 font-semibold uppercase">seen</p>
+                                        </div>
+                                        <div className="w-px h-6 bg-gray-100" />
+                                        <div className="text-center">
+                                            <span className="text-lg font-bold text-amber-600">{remainingCount}</span>
+                                            <p className="text-[9px] text-gray-400 font-semibold uppercase">left</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <Calendar className="w-5 h-5 text-blue-500" />
                     </div>
-                    <div className="bg-white p-3 rounded-xl border border-gray-200 flex items-center justify-between hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => navigate('/tasks')}>
-                        <div>
-                            <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">In Basket</p>
-                            <p className="text-xl font-semibold text-gray-900">{stats?.pendingOrders || 0}</p>
-                        </div>
-                        <ClipboardList className="w-5 h-5 text-orange-500" />
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 flex items-center justify-between hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => navigate('/tasks')}>
-                        <div>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Unread Labs</p>
-                            <p className="text-lg font-bold text-gray-900">{stats?.unreadLabs || 0}</p>
-                        </div>
-                        <Activity className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 flex items-center justify-between hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer" onClick={() => navigate('/messages')}>
-                        <div>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Messages</p>
-                            <p className="text-lg font-bold text-gray-900">{stats?.unreadMessages || 0}</p>
-                        </div>
-                        <MessageSquare className="w-4 h-4 text-blue-500 opacity-80" />
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/pending-notes')}>
-                        <div>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Unsigned Notes</p>
-                            <p className="text-lg font-bold text-gray-900">{stats?.pendingNotes || 0}</p>
-                        </div>
-                        <FileText className="w-4 h-4 text-blue-500 opacity-80" />
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/cancellations')}>
-                        <div>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Cancellations</p>
-                            <p className="text-lg font-bold text-gray-900">{stats?.cancellationFollowups || 0}</p>
-                        </div>
-                        <XCircle className="w-4 h-4 text-blue-500 opacity-80" />
-                    </div>
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 flex items-center justify-between shadow-sm hover:border-blue-400 transition-colors cursor-pointer" onClick={() => navigate('/patients')}>
-                        <div>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Total Patients</p>
-                            <p className="text-lg font-bold text-gray-900">{stats?.totalPatients || 0}</p>
-                        </div>
-                        <Users className="w-4 h-4 text-blue-500 opacity-80" />
-                    </div>
+
+                    {/* Stat Cards */}
+                    <StatCard icon={FileText} label="Unsigned" value={stats?.unsignedNotes || stats?.pendingNotes || 0} color="rose" onClick={() => navigate('/pending-notes')} urgent={stats?.unsignedNotes > 0} />
+                    <StatCard icon={ClipboardList} label="In Basket" value={stats?.pendingOrders || 0} color="amber" onClick={() => navigate('/tasks')} />
+                    <StatCard icon={Activity} label="Labs" value={stats?.unreadLabs || 0} color="blue" onClick={() => navigate('/tasks')} />
+                    <StatCard icon={MessageSquare} label="Messages" value={stats?.unreadMessages || 0} color="indigo" onClick={() => navigate('/messages')} />
+                    <StatCard icon={XCircle} label="Follow-ups" value={stats?.cancellationFollowups || 0} color="orange" onClick={() => navigate('/cancellations')} />
+                    <StatCard icon={Users} label="Patients" value={stats?.totalPatients || 0} color="slate" onClick={() => navigate('/patients')} />
                 </div>
 
-                {/* Main Content Layout */}
+                {/* Row 2: Patient Flow Board */}
+                {flowTotal > 0 && (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-cyan-600" />
+                                <h2 className="text-sm font-bold text-gray-800">Patient Flow</h2>
+                            </div>
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Live</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-3">
+                            <FlowStage icon={Clock} label="Scheduled" count={flow.scheduled} color="slate" />
+                            <FlowStage icon={UserCheck} label="Arrived" count={flow.arrived} color="blue" />
+                            <FlowStage icon={DoorOpen} label="In Room" count={flow.inRoom} color="emerald" />
+                            <FlowStage icon={CheckCircle2} label="Checked Out" count={flow.checkedOut} color="gray" />
+                        </div>
+                        {/* Flow Progress Bar */}
+                        {flowTotal > 0 && (
+                            <div className="mt-4 h-2 bg-gray-50 rounded-full overflow-hidden flex">
+                                {flow.checkedOut > 0 && <div className="bg-gray-300 transition-all duration-700" style={{ width: `${(flow.checkedOut / flowTotal) * 100}%` }} />}
+                                {flow.inRoom > 0 && <div className="bg-emerald-400 transition-all duration-700" style={{ width: `${(flow.inRoom / flowTotal) * 100}%` }} />}
+                                {flow.arrived > 0 && <div className="bg-blue-400 transition-all duration-700" style={{ width: `${(flow.arrived / flowTotal) * 100}%` }} />}
+                                {flow.scheduled > 0 && <div className="bg-slate-200 transition-all duration-700" style={{ width: `${(flow.scheduled / flowTotal) * 100}%` }} />}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Row 3: Main Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                    {/* LEFT Column: Daily Schedule (Elation style) */}
-                    <div className="lg:col-span-8 bg-white rounded-xl border border-gray-200 overflow-hidden">
-                        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-blue-500" />
-                                <h2 className="font-medium text-gray-900">Provider Schedule</h2>
-                                <span className="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full font-medium">
-                                    {todayAppointments.length} Appointments
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate('/schedule')}>
-                                    Full Schedule
-                                </Button>
-                            </div>
-                        </div>
+                    {/* LEFT: Schedule + Next Patient */}
+                    <div className="lg:col-span-8 space-y-5">
 
-                        <div className="min-h-[600px]">
-                            {loadingAppointments ? (
-                                <div className="flex flex-col items-center justify-center py-20">
-                                    <div className="spinner text-blue-600 w-8 h-8 mb-4"></div>
-                                    <p className="text-sm text-gray-500">Retrieving appointments...</p>
-                                </div>
-                            ) : todayAppointments.length > 0 ? (
-                                <table className="w-full text-left border-collapse">
-                                    <thead className="bg-gray-50 text-gray-500 text-[10px] uppercase tracking-widest font-semibold">
-                                        <tr>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-medium">Time</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-medium">Patient</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-medium">Reason/Type</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-medium">Status</th>
-                                            <th className="px-5 py-2 border-b border-gray-100 font-medium">Provider</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {todayAppointments
-                                            .sort((a, b) => a.time.localeCompare(b.time))
-                                            .map((appt) => (
-                                                <tr key={appt.id} className="hover:bg-blue-50/30 transition-colors group cursor-pointer" onClick={() => navigate(`/patient/${appt.patientId}/snapshot`)}>
-                                                    <td className="px-5 py-2 whitespace-nowrap">
-                                                        <span className="text-xs font-medium text-gray-700 bg-gray-50 px-2 py-0.5 rounded">
-                                                            {appt.time}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-2">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-medium text-gray-900 group-hover:text-blue-600">{appt.patientName}</span>
-                                                            <span className="text-[10px] text-gray-500 flex items-center gap-1">
-                                                                #{appt.patientId?.substring(0, 8).toUpperCase()} • {appt.patient_dob ? format(new Date(appt.patient_dob + 'T12:00:00'), 'MM/dd/yyyy') : 'DOB: Unknown'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-5 py-2">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-xs font-medium text-gray-700">{appt.type || 'Office Visit'}</span>
-                                                            <span className="text-[10px] text-gray-400">Duration: {appt.duration || 30}m</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-5 py-2">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium uppercase tracking-tight
-                                                            ${appt.status === 'scheduled' ? 'bg-blue-50 text-blue-700' :
-                                                                appt.status === 'checked-in' ? 'bg-green-50 text-green-700' :
-                                                                    appt.status === 'in-room' ? 'bg-purple-50 text-purple-700' : 'bg-gray-50 text-gray-600'}
-                                                        `}>
-                                                            {appt.status || 'Scheduled'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-2">
-                                                        <span className="text-xs font-semibold text-gray-600 italic">
-                                                            {appt.providerName || 'Staff'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                    </tbody>
-                                </table>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center py-32 text-center text-gray-400">
-                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                        <Calendar className="w-8 h-8 opacity-20" />
+                        {/* Next Patient Card */}
+                        {nextPatient && (
+                            <div
+                                className="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-2xl p-5 text-white cursor-pointer hover:shadow-lg hover:shadow-cyan-600/20 transition-all active:scale-[0.99]"
+                                onClick={() => navigate(`/patient/${nextPatient.patientId}/snapshot`)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                                            <User className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-200">Next Patient</p>
+                                            <h3 className="text-lg font-bold mt-0.5">{nextPatient.patientName}</h3>
+                                            <p className="text-sm text-cyan-100 font-medium">{nextPatient.type || 'Follow-up'} · {nextPatient.time}</p>
+                                        </div>
                                     </div>
-                                    <p className="font-semibold text-gray-500">No appointments for today</p>
-                                    <p className="text-sm max-w-[200px] mt-1">Ready to manage your practice? Start by scheduling a patient.</p>
-                                    <Button variant="outline" size="sm" className="mt-6" onClick={() => navigate('/schedule')}>View Full Calendar</Button>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${nextPatient.patient_status === 'arrived'
+                                                ? 'bg-emerald-400/20 text-emerald-100'
+                                                : 'bg-white/15 text-cyan-100'
+                                            }`}>
+                                            {nextPatient.patient_status === 'arrived' ? 'Arrived' : 'Waiting'}
+                                        </span>
+                                        <ChevronRight className="w-5 h-5 text-cyan-200" />
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
+                            </div>
+                        )}
 
-                    {/* RIGHT Column: Clinical Desktop (Tabbed In-Basket) */}
-                    <div className="lg:col-span-4 space-y-6 sticky top-20">
-                        {/* Tabbed In-Basket */}
-                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                            <div className="flex border-b border-gray-100">
-                                {['inbox', 'refills', 'labs'].map((tab) => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setActiveDesktopTab(tab)}
-                                        className={`flex-1 px-4 py-3 text-[11px] font-medium uppercase tracking-widest transition-all
-                                            ${activeDesktopTab === tab
-                                                ? 'bg-white text-blue-600 border-b-2 border-blue-600'
-                                                : 'text-gray-400 hover:text-gray-600'}
-                                        `}
-                                    >
-                                        {tab}
-                                    </button>
-                                ))}
+                        {/* Today's Schedule */}
+                        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                            <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Calendar className="w-4 h-4 text-cyan-600" />
+                                    <h2 className="font-semibold text-gray-800 text-sm">Today's Schedule</h2>
+                                    <span className="bg-cyan-50 text-cyan-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                                        {activeAppointments.length}
+                                    </span>
+                                </div>
+                                <button onClick={() => navigate('/schedule')} className="text-[11px] font-semibold text-cyan-600 hover:text-cyan-700 flex items-center gap-1 transition-colors">
+                                    Full Schedule <ArrowRight className="w-3.5 h-3.5" />
+                                </button>
                             </div>
 
-                            <div className="p-4 min-h-[300px]">
-                                {activeDesktopTab === 'inbox' && (
-                                    <div className="space-y-3">
-                                        {loadingInbox ? (
-                                            <div className="flex flex-col items-center justify-center py-10">
-                                                <div className="spinner text-blue-600 w-6 h-6 mb-2"></div>
-                                                <p className="text-xs text-gray-500">Loading inbox...</p>
-                                            </div>
-                                        ) : inboxItems.length > 0 ? (
-                                            inboxItems.slice(0, 5).map((item, i) => {
-                                                // Calculate time ago
-                                                const createdAt = new Date(item.created_at);
-                                                const diffMs = new Date() - createdAt;
-                                                const diffMins = Math.floor(diffMs / 60000);
-                                                const timeStr = diffMins < 60 ? `${diffMins}m ago` :
-                                                    diffMins < 1440 ? `${Math.floor(diffMins / 60)}h ago` :
-                                                        `${Math.floor(diffMins / 1440)}d ago`;
-
-                                                return (
-                                                    <div key={item.id} className="p-3 bg-white border border-gray-100 rounded-lg hover:border-blue-200 cursor-pointer shadow-sm group" onClick={() => navigate(`/tasks?id=${item.id}`)}>
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tighter">{timeStr}</span>
-                                                            {item.priority === 'stat' && <span className="bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase">Urgent</span>}
-                                                        </div>
-                                                        <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600">
-                                                            {item.patient_name || 'System'}
-                                                        </p>
-                                                        <p className="text-xs text-gray-600 truncate">{item.subject}</p>
-                                                    </div>
-                                                );
-                                            })
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center py-10 text-center text-gray-400">
-                                                <Bell className="w-8 h-8 opacity-20 mb-2" />
-                                                <p className="text-xs font-semibold">Inbox is clear</p>
-                                            </div>
-                                        )}
-                                        <button onClick={() => navigate('/tasks')} className="w-full py-2 text-[11px] font-medium text-blue-600 uppercase tracking-widest hover:bg-blue-50 rounded-lg transition-colors">
-                                            View Full Inbox →
+                            <div className="min-h-[400px]">
+                                {loadingAppointments ? (
+                                    <div className="flex flex-col items-center justify-center py-20">
+                                        <div className="w-8 h-8 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin mb-3" />
+                                        <p className="text-xs text-gray-400 font-medium">Loading schedule...</p>
+                                    </div>
+                                ) : activeAppointments.length > 0 ? (
+                                    <div className="divide-y divide-gray-50">
+                                        {activeAppointments.map((appt) => (
+                                            <AppointmentRow key={appt.id} appt={appt} navigate={navigate} />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                                        <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
+                                            <Calendar className="w-7 h-7 text-gray-300" />
+                                        </div>
+                                        <p className="font-semibold text-gray-500 text-sm">No appointments today</p>
+                                        <p className="text-xs text-gray-400 mt-1 max-w-[220px]">Your schedule is clear. Use the time to catch up on notes or review charts.</p>
+                                        <button onClick={() => navigate('/schedule')} className="mt-4 px-4 py-2 text-xs font-semibold text-cyan-600 bg-cyan-50 rounded-xl border border-cyan-100 hover:bg-cyan-100 transition-colors">
+                                            View Calendar
                                         </button>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+                    </div>
 
-                                {activeDesktopTab === 'refills' && (
-                                    <div className="flex flex-col items-center justify-center py-10 text-center text-gray-400">
-                                        <Pill className="w-8 h-8 opacity-20 mb-2" />
-                                        <p className="text-xs font-semibold">No pending refill requests</p>
+                    {/* RIGHT: Clinical Action Panel */}
+                    <div className="lg:col-span-4 space-y-5 sticky top-6">
+                        {/* In-Basket Preview */}
+                        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                            <div className="px-5 py-3.5 border-b border-gray-50 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Inbox className="w-4 h-4 text-cyan-600" />
+                                    <h3 className="text-sm font-semibold text-gray-800">In Basket</h3>
+                                    {inboxItems.length > 0 && (
+                                        <span className="bg-rose-50 text-rose-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold">{inboxItems.length}</span>
+                                    )}
+                                </div>
+                                <button onClick={() => navigate('/tasks')} className="text-[10px] font-semibold text-cyan-600 hover:text-cyan-700 uppercase tracking-wider">
+                                    View All
+                                </button>
+                            </div>
+                            <div className="p-3 space-y-2 max-h-[280px] overflow-y-auto">
+                                {loadingInbox ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <div className="w-6 h-6 border-2 border-cyan-600 border-t-transparent rounded-full animate-spin" />
                                     </div>
-                                )}
+                                ) : inboxItems.length > 0 ? (
+                                    inboxItems.slice(0, 5).map((item) => {
+                                        const createdAt = new Date(item.created_at);
+                                        const diffMs = new Date() - createdAt;
+                                        const diffMins = Math.floor(diffMs / 60000);
+                                        const timeStr = diffMins < 60 ? `${diffMins}m` :
+                                            diffMins < 1440 ? `${Math.floor(diffMins / 60)}h` :
+                                                `${Math.floor(diffMins / 1440)}d`;
 
-                                {activeDesktopTab === 'labs' && (
-                                    <div className="flex flex-col items-center justify-center py-10 text-center text-gray-400">
-                                        <Activity className="w-8 h-8 opacity-20 mb-2" />
-                                        <p className="text-xs font-semibold">No unread lab results</p>
+                                        return (
+                                            <button key={item.id} onClick={() => navigate(`/tasks?id=${item.id}`)}
+                                                className="w-full text-left p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-transparent hover:border-gray-100">
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <span className="text-[10px] font-bold text-gray-400">{timeStr} ago</span>
+                                                    {item.priority === 'stat' && <span className="bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">STAT</span>}
+                                                </div>
+                                                <p className="text-sm font-semibold text-gray-800 group-hover:text-cyan-700 truncate">{item.patient_name || 'System'}</p>
+                                                <p className="text-[11px] text-gray-500 truncate">{item.subject}</p>
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                                        <CheckCircle2 className="w-8 h-8 text-emerald-200 mb-2" />
+                                        <p className="text-xs font-semibold text-emerald-600">All clear</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-
-
-                        {/* Quick Start Card - Light Theme */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 overflow-hidden relative group">
-                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
-                                <Zap className="w-20 h-20 text-blue-500" />
+                        {/* Clinical Actions */}
+                        <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Zap className="w-4 h-4 text-cyan-600" />
+                                <h3 className="text-sm font-semibold text-gray-800">Quick Actions</h3>
                             </div>
-                            <h3 className="text-lg font-medium mb-1 relative z-10 text-gray-900">Quick Launch</h3>
-                            <p className="text-xs text-gray-400 mb-4 relative z-10">Instant access to primary workflows</p>
-
-                            <div className="flex flex-col gap-2 relative z-10">
-                                <button onClick={() => navigate('/patients')} className="flex items-center gap-3 w-full bg-white hover:bg-blue-50 p-3 rounded-lg transition-all border border-gray-200 hover:border-blue-200">
-                                    <div className="p-2 bg-blue-600 rounded-md text-white">
-                                        <Users className="w-4 h-4" />
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900">Patient Registry</span>
-                                </button>
-                                <button onClick={() => navigate('/schedule')} className="flex items-center gap-3 w-full bg-white hover:bg-blue-50 p-3 rounded-lg transition-all border border-gray-200 hover:border-blue-200">
-                                    <div className="p-2 bg-blue-600 rounded-md text-white">
-                                        <Calendar className="w-4 h-4" />
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900">Scheduling Hub</span>
-                                </button>
-                                <button onClick={() => navigate('/tasks')} className="flex items-center gap-3 w-full bg-white hover:bg-blue-50 p-3 rounded-lg transition-all border border-gray-200 hover:border-blue-200">
-                                    <div className="p-2 bg-blue-600 rounded-md text-white">
-                                        <ClipboardList className="w-4 h-4" />
-                                    </div>
-                                    <span className="text-sm font-medium text-gray-900">Clinical Task List</span>
-                                </button>
+                            <div className="grid grid-cols-2 gap-2">
+                                <QuickAction icon={Users} label="Patients" onClick={() => navigate('/patients')} />
+                                <QuickAction icon={Calendar} label="Schedule" onClick={() => navigate('/schedule')} />
+                                <QuickAction icon={FileText} label="Notes" onClick={() => navigate('/pending-notes')} />
+                                <QuickAction icon={ClipboardList} label="Tasks" onClick={() => navigate('/tasks')} />
                             </div>
                         </div>
 
-
+                        {/* Tomorrow Preview */}
+                        {stats?.tomorrowCount > 0 && (
+                            <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Eye className="w-4 h-4 text-gray-400" />
+                                        <span className="text-[11px] font-semibold text-gray-500">Tomorrow</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg font-bold text-gray-800">{stats.tomorrowCount}</span>
+                                        <span className="text-[10px] text-gray-400 font-medium">appointments</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
         </div>
     );
 };
+
+// ──────────── Sub-Components ────────────
+
+const StatCard = ({ icon: Icon, label, value, color, onClick, urgent }) => {
+    const colorMap = {
+        rose: { bg: 'bg-rose-50', text: 'text-rose-600', icon: 'text-rose-500', border: 'border-rose-100', urgentBg: 'bg-rose-500' },
+        amber: { bg: 'bg-amber-50', text: 'text-amber-600', icon: 'text-amber-500', border: 'border-amber-100' },
+        blue: { bg: 'bg-blue-50', text: 'text-blue-600', icon: 'text-blue-500', border: 'border-blue-100' },
+        indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', icon: 'text-indigo-500', border: 'border-indigo-100' },
+        orange: { bg: 'bg-orange-50', text: 'text-orange-600', icon: 'text-orange-500', border: 'border-orange-100' },
+        slate: { bg: 'bg-slate-50', text: 'text-slate-600', icon: 'text-slate-400', border: 'border-slate-100' },
+    };
+    const c = colorMap[color] || colorMap.slate;
+
+    return (
+        <button
+            onClick={onClick}
+            className={`bg-white p-3 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm 
+                        transition-all cursor-pointer text-left relative overflow-hidden group active:scale-95`}
+        >
+            {urgent && value > 0 && (
+                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            )}
+            <div className="flex items-center gap-2 mb-2">
+                <div className={`w-7 h-7 rounded-lg ${c.bg} flex items-center justify-center`}>
+                    <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
+                </div>
+            </div>
+            <p className="text-xl font-bold text-gray-900 leading-none">{value}</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">{label}</p>
+        </button>
+    );
+};
+
+const FlowStage = ({ icon: Icon, label, count, color }) => {
+    const colorMap = {
+        slate: { bg: 'bg-slate-50', text: 'text-slate-600', icon: 'text-slate-400' },
+        blue: { bg: 'bg-blue-50', text: 'text-blue-600', icon: 'text-blue-500' },
+        emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', icon: 'text-emerald-500' },
+        gray: { bg: 'bg-gray-50', text: 'text-gray-500', icon: 'text-gray-400' },
+    };
+    const c = colorMap[color] || colorMap.slate;
+
+    return (
+        <div className={`${c.bg} rounded-xl p-3 text-center border border-transparent`}>
+            <Icon className={`w-4 h-4 ${c.icon} mx-auto mb-1.5`} />
+            <p className={`text-xl font-bold ${c.text} leading-none`}>{count}</p>
+            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">{label}</p>
+        </div>
+    );
+};
+
+const AppointmentRow = ({ appt, navigate }) => {
+    const ps = appt.patient_status || 'scheduled';
+    const statusStyles = {
+        scheduled: { bg: 'bg-slate-50', text: 'text-slate-600', label: 'Scheduled' },
+        arrived: { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Arrived' },
+        'in-room': { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'In Room' },
+        'in_room': { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'In Room' },
+        'checked_out': { bg: 'bg-gray-50', text: 'text-gray-500', label: 'Complete' },
+        'checked-out': { bg: 'bg-gray-50', text: 'text-gray-500', label: 'Complete' },
+        'completed': { bg: 'bg-gray-50', text: 'text-gray-500', label: 'Complete' },
+    };
+    const s = statusStyles[ps] || statusStyles.scheduled;
+    const isComplete = ['checked_out', 'checked-out', 'completed'].includes(ps);
+
+    return (
+        <div
+            onClick={() => navigate(`/patient/${appt.patientId}/snapshot`)}
+            className={`flex items-center gap-4 px-5 py-3.5 hover:bg-cyan-50/30 transition-colors cursor-pointer group ${isComplete ? 'opacity-50' : ''}`}
+        >
+            <div className="w-[52px] flex-shrink-0">
+                <span className="text-xs font-bold text-gray-800 bg-gray-50 px-2 py-1 rounded-lg">{appt.time?.substring(0, 5)}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold group-hover:text-cyan-700 transition-colors ${isComplete ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                        {appt.patientName}
+                    </span>
+                    {appt.visit_method === 'telehealth' && (
+                        <span className="bg-indigo-50 text-indigo-600 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase">Tele</span>
+                    )}
+                </div>
+                <span className="text-[10px] text-gray-400 font-medium">{appt.type || 'Follow-up'} · {appt.duration || 30}m</span>
+            </div>
+            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight ${s.bg} ${s.text}`}>
+                {s.label}
+            </span>
+            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-cyan-500 transition-colors flex-shrink-0" />
+        </div>
+    );
+};
+
+const QuickAction = ({ icon: Icon, label, onClick }) => (
+    <button
+        onClick={onClick}
+        className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 hover:bg-cyan-50 border border-transparent hover:border-cyan-100 transition-all text-left group active:scale-95"
+    >
+        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-gray-100 group-hover:border-cyan-200 group-hover:bg-cyan-50 transition-colors">
+            <Icon className="w-4 h-4 text-gray-400 group-hover:text-cyan-600 transition-colors" />
+        </div>
+        <span className="text-xs font-semibold text-gray-600 group-hover:text-cyan-700">{label}</span>
+    </button>
+);
 
 export default Dashboard;

@@ -68,33 +68,82 @@ router.get('/quality-measures', requireRole('clinician', 'admin'), async (req, r
   }
 });
 
-// Get dashboard statistics
+// Get dashboard statistics (enhanced command center)
 router.get('/dashboard', requirePermission('reports:view'), async (req, res) => {
   try {
     const stats = {};
+    const userId = req.user?.id;
+    const clinicId = req.user?.clinic_id;
+
+    // Use US/Eastern timezone for "today"
+    const todayQuery = "(CURRENT_TIMESTAMP AT TIME ZONE 'US/Eastern')::date";
 
     // Total patients
     let patientsQuery = 'SELECT COUNT(*) as count FROM patients WHERE 1=1';
     const patientsParams = [];
-    if (req.user?.clinic_id) {
+    if (clinicId) {
       patientsQuery += ' AND clinic_id = $1';
-      patientsParams.push(req.user.clinic_id);
+      patientsParams.push(clinicId);
     }
     const patients = await pool.query(patientsQuery, patientsParams);
     stats.totalPatients = parseInt(patients.rows[0]?.count || 0);
 
-    // Visits today (Scheduled Appointments)
-    let visitsQuery = 'SELECT COUNT(*) as count FROM appointments WHERE appointment_date = CURRENT_DATE';
-    const visitsParams = [];
-    if (req.user?.clinic_id) {
-      visitsQuery += ' AND clinic_id = $1';
-      visitsParams.push(req.user.clinic_id);
-    }
-    const visitsToday = await pool.query(visitsQuery, visitsParams);
+    // Visits today (Scheduled Appointments) — exclude cancelled/no-show
+    const visitsToday = await pool.query(
+      `SELECT COUNT(*) as count FROM appointments 
+       WHERE appointment_date = ${todayQuery}
+       AND status NOT IN ('cancelled', 'no-show')
+       ${clinicId ? 'AND clinic_id = $1' : ''}`,
+      clinicId ? [clinicId] : []
+    );
     stats.visitsToday = parseInt(visitsToday.rows[0]?.count || 0);
 
+    // Patient Flow Breakdown for today
+    try {
+      const flowQuery = await pool.query(
+        `SELECT 
+          COUNT(*) FILTER (WHERE patient_status = 'scheduled' OR patient_status IS NULL) as scheduled,
+          COUNT(*) FILTER (WHERE patient_status = 'arrived') as arrived,
+          COUNT(*) FILTER (WHERE patient_status = 'in-room' OR patient_status = 'in_room') as in_room,
+          COUNT(*) FILTER (WHERE patient_status = 'checked_out' OR patient_status = 'checked-out' OR patient_status = 'completed') as checked_out,
+          COUNT(*) FILTER (WHERE patient_status = 'no-show' OR patient_status = 'no_show') as no_show,
+          COUNT(*) FILTER (WHERE patient_status = 'cancelled') as cancelled
+         FROM appointments 
+         WHERE appointment_date = ${todayQuery}
+         ${clinicId ? 'AND clinic_id = $1' : ''}`,
+        clinicId ? [clinicId] : []
+      );
+      stats.patientFlow = {
+        scheduled: parseInt(flowQuery.rows[0]?.scheduled || 0),
+        arrived: parseInt(flowQuery.rows[0]?.arrived || 0),
+        inRoom: parseInt(flowQuery.rows[0]?.in_room || 0),
+        checkedOut: parseInt(flowQuery.rows[0]?.checked_out || 0),
+        noShow: parseInt(flowQuery.rows[0]?.no_show || 0),
+        cancelled: parseInt(flowQuery.rows[0]?.cancelled || 0),
+      };
+    } catch (flowError) {
+      console.warn('Error fetching patient flow:', flowError);
+      stats.patientFlow = { scheduled: 0, arrived: 0, inRoom: 0, checkedOut: 0, noShow: 0, cancelled: 0 };
+    }
+
+    // Unsigned notes count for current user
+    if (userId) {
+      try {
+        const unsignedRes = await pool.query(
+          `SELECT COUNT(*) as count FROM visits 
+           WHERE (provider_id = $1 OR assigned_attending_id = $1)
+           AND (status = 'draft' OR status IS NULL OR status = 'preliminary')
+           AND note_signed_at IS NULL`,
+          [userId]
+        );
+        stats.unsignedNotes = parseInt(unsignedRes.rows[0]?.count || 0);
+      } catch (e) {
+        stats.unsignedNotes = 0;
+      }
+    }
+
     // In Basket / Tasks (assigned to user)
-    if (req.user?.id) {
+    if (userId) {
       try {
         const inboxStats = await pool.query(
           `SELECT 
@@ -103,7 +152,7 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
             COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'message' AND assigned_user_id = $1) as msgs_count,
             COUNT(*) FILTER (WHERE status NOT IN ('completed', 'archived') AND type = 'note' AND assigned_user_id = $1) as notes_count
            FROM inbox_items`,
-          [req.user.id]
+          [userId]
         );
         stats.pendingOrders = parseInt(inboxStats.rows[0]?.other_count || 0);
         stats.unreadLabs = parseInt(inboxStats.rows[0]?.labs_count || 0);
@@ -128,6 +177,20 @@ router.get('/dashboard', requirePermission('reports:view'), async (req, res) => 
       stats.unreadMessages = 0;
       stats.unreadLabs = 0;
       stats.pendingNotes = 0;
+    }
+
+    // Tomorrow's appointment count
+    try {
+      const tomorrowRes = await pool.query(
+        `SELECT COUNT(*) as count FROM appointments 
+         WHERE appointment_date = (${todayQuery} + INTERVAL '1 day')::date
+         AND status NOT IN ('cancelled', 'no-show')
+         ${clinicId ? 'AND clinic_id = $1' : ''}`,
+        clinicId ? [clinicId] : []
+      );
+      stats.tomorrowCount = parseInt(tomorrowRes.rows[0]?.count || 0);
+    } catch (e) {
+      stats.tomorrowCount = 0;
     }
 
     res.json(stats);
