@@ -518,30 +518,46 @@ const Snapshot = ({ showNotesOnly = false }) => {
             }
 
             let combinedVitals = [];
-            if (snapshot.recentVisits) {
-                combinedVitals = snapshot.recentVisits
-                    .filter(v => v.vitals)
-                    .map(v => {
+            combinedVitals = (snapshot.recentVisits || [])
+                .filter(v => v.vitals)
+                .map(v => {
+                    try {
                         const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
+                        if (!vData) return null;
+
                         let bpValue = vData.bp || vData.blood_pressure;
                         if (!bpValue && vData.systolic && vData.diastolic) {
                             bpValue = `${vData.systolic}/${vData.diastolic}`;
                         }
+
+                        // Safe date parsing
+                        let displayDate = 'N/A';
+                        try {
+                            if (v.visit_date) {
+                                displayDate = format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy');
+                            } else if (v.created_at) {
+                                displayDate = format(new Date(v.created_at), 'M/d/yy');
+                            }
+                        } catch (e) { console.warn('Date format error', e); }
+
                         return {
                             id: v.id,
-                            date: v.visit_date ? format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy') : (v.created_at ? format(new Date(v.created_at), 'M/d/yy') : 'N/A'),
+                            date: displayDate,
                             time: v.visit_date ? format(new Date(v.visit_date), 'HH:mm') : (v.created_at ? format(new Date(v.created_at), 'HH:mm') : ''),
                             visitDate: v.visit_date || v.created_at,
                             bp: bpValue || 'N/A',
-                            hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null, // Use null for clean Recharts handling
+                            hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null,
                             temp: vData.temp || vData.temperature || 'N/A',
                             rr: vData.rr || vData.resp_rate || 'N/A',
                             spo2: vData.spo2 || vData.oxygen_saturation || 'N/A',
                             weight: vData.weight || 'N/A',
                             createdAt: v.created_at
                         };
-                    });
-            }
+                    } catch (e) {
+                        console.warn('Error parsing recent vital', e);
+                        return null;
+                    }
+                }).filter(Boolean);
 
             try {
                 const [
@@ -577,24 +593,39 @@ const Snapshot = ({ showNotesOnly = false }) => {
                     const historicalVitals = allVisits
                         .filter(v => v.vitals)
                         .map(v => {
-                            const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
-                            let bpValue = vData.bp || vData.blood_pressure;
-                            if (!bpValue && vData.systolic && vData.diastolic) {
-                                bpValue = `${vData.systolic}/${vData.diastolic}`;
+                            try {
+                                const vData = typeof v.vitals === 'string' ? JSON.parse(v.vitals) : v.vitals;
+                                if (!vData) return null;
+
+                                let bpValue = vData.bp || vData.blood_pressure;
+                                if (!bpValue && vData.systolic && vData.diastolic) {
+                                    bpValue = `${vData.systolic}/${vData.diastolic}`;
+                                }
+
+                                let displayDate = 'N/A';
+                                try {
+                                    if (v.visit_date) {
+                                        displayDate = format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy');
+                                    }
+                                } catch (e) { }
+
+                                return {
+                                    id: v.id,
+                                    date: displayDate,
+                                    visitDate: v.visit_date,
+                                    bp: bpValue || 'N/A',
+                                    hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null,
+                                    temp: vData.temp || vData.temperature || 'N/A',
+                                    rr: vData.rr || vData.resp_rate || 'N/A',
+                                    spo2: vData.spo2 || vData.oxygen_saturation || 'N/A',
+                                    weight: vData.weight || 'N/A',
+                                    createdAt: v.created_at
+                                };
+                            } catch (e) {
+                                console.warn('Error parsing historical vital', e);
+                                return null;
                             }
-                            return {
-                                id: v.id,
-                                date: v.visit_date ? format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy') : 'N/A',
-                                visitDate: v.visit_date,
-                                bp: bpValue || 'N/A',
-                                hr: vData.pulse || vData.pulse_rate || vData.hr || vData.heart_rate || null,
-                                temp: vData.temp || vData.temperature || 'N/A',
-                                rr: vData.rr || vData.resp_rate || 'N/A',
-                                spo2: vData.spo2 || vData.oxygen_saturation || 'N/A',
-                                weight: vData.weight || 'N/A',
-                                createdAt: v.created_at
-                            };
-                        });
+                        }).filter(Boolean);
 
                     // Merge historical with snapshot recent (avoiding duplicates)
                     const existingIds = new Set(combinedVitals.map(v => v.id));

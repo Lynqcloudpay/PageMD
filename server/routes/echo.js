@@ -280,7 +280,8 @@ router.get('/open-notes/:patientId', requirePermission('ai.echo'), async (req, r
         const { patientId } = req.params;
         const userId = req.user.id;
 
-        // Find draft/in-progress visits for this patient (recent, not signed)
+        // Find draft/in-progress visits for this patient (recent encounters, not signed)
+        // Broadened to last 7 days to be resilient to timezones and multi-day charting
         const result = await pool.query(
             `SELECT v.id, v.visit_date, v.visit_type, v.status, v.note_draft,
                     v.created_at, a.appointment_time
@@ -288,8 +289,8 @@ router.get('/open-notes/:patientId', requirePermission('ai.echo'), async (req, r
              LEFT JOIN appointments a ON a.id = v.appointment_id
              WHERE v.patient_id = $1
                AND v.status NOT IN ('signed', 'cosigned', 'retracted')
-               AND v.visit_date >= CURRENT_DATE - INTERVAL '1 day'
-             ORDER BY v.created_at DESC`,
+               AND v.visit_date >= CURRENT_DATE - INTERVAL '7 days'
+             ORDER BY v.visit_date DESC, v.created_at DESC`,
             [patientId]
         );
 
