@@ -475,6 +475,32 @@ async function syncInboxItems(tenantId, schema, providedClient = null) {
         END
     `, [tenantId]);
 
+    // 9. Sync Clinical Tasks from clinical_tasks table
+    await client.query(`
+    INSERT INTO inbox_items(
+      id, tenant_id, patient_id, type, priority, status,
+      subject, body, reference_id, reference_table,
+      assigned_user_id, created_by, clinic_id, created_at, updated_at,
+      completed_at, completed_by
+    )
+    SELECT
+      gen_random_uuid(), $1, patient_id, 'task', 
+      priority, 
+      CASE WHEN status = 'completed' THEN 'completed' ELSE 'new' END,
+      title, description, id, 'clinical_tasks',
+      assigned_to, assigned_by, $1, created_at, updated_at,
+      completed_at, completed_by
+    FROM clinical_tasks
+    WHERE (status != 'completed' AND status != 'cancelled')
+    ON CONFLICT (reference_id, reference_table) WHERE status != 'completed' 
+    DO UPDATE SET 
+        priority = EXCLUDED.priority,
+        subject = EXCLUDED.subject,
+        body = EXCLUDED.body,
+        assigned_user_id = EXCLUDED.assigned_user_id,
+        updated_at = CURRENT_TIMESTAMP
+    `, [tenantId]);
+
   } finally {
     if (shouldRelease) {
       client.release();
@@ -738,6 +764,8 @@ router.put('/:id', async (req, res) => {
           await client.query("UPDATE orders SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
         } else if (item.reference_table === 'documents') {
           await client.query("UPDATE documents SET reviewed = true, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
+        } else if (item.reference_table === 'clinical_tasks') {
+          await client.query("UPDATE clinical_tasks SET status = 'completed', completed_at = CURRENT_TIMESTAMP, completed_by = $1 WHERE id = $2", [req.user.id, item.reference_id]);
         }
       }
 

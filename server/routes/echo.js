@@ -226,13 +226,17 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                         break;
 
                     case 'create_reminder':
+                        // Reminders now go directly to Patient Flags (Chart) as requested, 
+                        // instead of clogging the In Basket as invisible messages.
                         record = await client.query(
-                            `INSERT INTO messages (patient_id, from_user_id, to_user_id, subject, body, message_type, priority, task_status)
-                             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-                            [actPayload.patient_id, userId, userId,
-                            `Reminder: ${(actPayload.reminder_text || '').substring(0, 100)}`,
-                            actPayload.reminder_text,
-                                'task', actPayload.priority || 'normal', 'open']
+                            `INSERT INTO patient_flags (
+                                clinic_id, patient_id, created_by_user_id,
+                                note, custom_label, custom_severity, status
+                            )
+                            VALUES ($1, $2, $3, $4, $5, $6, 'active') 
+                            RETURNING *, note as body, custom_label as subject`,
+                            [tenantId, actPayload.patient_id, userId,
+                                actPayload.reminder_text, 'REMINDER', 'info']
                         );
                         break;
                 }

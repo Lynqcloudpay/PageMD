@@ -97,7 +97,6 @@ const InbasketRedesign = () => {
 
     // Data State
     const [items, setItems] = useState([]);
-    const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({});
@@ -216,29 +215,15 @@ const InbasketRedesign = () => {
         }
     }, [filterStatus, assignedFilter, users.length, selectedItem]);
 
-    // Fetch tasks separately
-    const fetchTasks = useCallback(async () => {
-        try {
-            const params = {
-                assigned_to: assignedFilter === 'me' ? 'me' : undefined,
-                status: filterStatus === 'reviewed' ? 'completed' : 'open'
-            };
-            const res = await tasksAPI.getAll(params);
-            setTasks(res.data || []);
-        } catch (error) {
-            console.error('Error fetching tasks:', error);
-        }
-    }, [assignedFilter, filterStatus]);
+
 
     useEffect(() => {
         fetchData();
-        fetchTasks();
         const poll = setInterval(() => {
             fetchData(true, true);
-            if (activeSection === 'tasks') fetchTasks();
         }, 30000); // 30 seconds to prevent flickering
         return () => clearInterval(poll);
-    }, [fetchData, fetchTasks, activeSection]);
+    }, [fetchData]);
 
     // Fetch details when item selected
     useEffect(() => {
@@ -384,15 +369,7 @@ const InbasketRedesign = () => {
         }
     };
 
-    const handleCompleteTask = async (taskId) => {
-        try {
-            await tasksAPI.complete(taskId);
-            showSuccess('Task completed');
-            fetchTasks();
-        } catch (e) {
-            showError('Failed to complete task');
-        }
-    };
+
 
     const handleReply = async (isExternal = false) => {
         if (!replyText.trim() || !selectedItem) return;
@@ -627,51 +604,6 @@ const InbasketRedesign = () => {
                         <div className="flex items-center justify-center h-full">
                             <RefreshCw className="w-8 h-8 animate-spin text-gray-300" />
                         </div>
-                    ) : activeSection === 'tasks' ? (
-                        // Tasks List
-                        <div className="divide-y divide-gray-100">
-                            {tasks.map(task => (
-                                <div
-                                    key={task.id}
-                                    className="p-4 hover:bg-gray-50 cursor-pointer flex items-start gap-4"
-                                >
-                                    <button
-                                        onClick={() => handleCompleteTask(task.id)}
-                                        className="mt-1 p-1 rounded-full border-2 border-gray-300 hover:border-green-500 hover:bg-green-50 transition-all"
-                                    >
-                                        <Check className={`w-4 h-4 ${task.status === 'completed'
-                                            ? 'text-green-500'
-                                            : 'text-transparent'
-                                            }`} />
-                                    </button>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-medium text-gray-900">{task.title}</h3>
-                                        <p className="text-xs text-gray-500 mt-1 truncate">{task.description}</p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${getPriorityBadge(task.priority)}`}>
-                                                {task.priority}
-                                            </span>
-                                            {task.patient_first_name && (
-                                                <span className="text-[10px] text-gray-500">
-                                                    {task.patient_first_name} {task.patient_last_name}
-                                                </span>
-                                            )}
-                                            {task.due_date && (
-                                                <span className="text-[10px] text-gray-400">
-                                                    Due: {format(new Date(task.due_date), 'MMM d')}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            {tasks.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                                    <ListTodo className="w-12 h-12 mb-2 opacity-30" />
-                                    <p>No tasks found</p>
-                                </div>
-                            )}
-                        </div>
                     ) : filteredItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-gray-400">
                             <Inbox className="w-12 h-12 mb-2 opacity-30" />
@@ -905,8 +837,8 @@ const InbasketRedesign = () => {
                                     </>
                                 )}
 
-                                {/* Messages just get Mark Done */}
-                                {['portal_message', 'message'].includes(selectedItem.type) && (
+                                {/* Messages and Tasks just get Mark Done */}
+                                {['portal_message', 'message', 'task'].includes(selectedItem.type) && (
                                     <button
                                         onClick={async () => {
                                             try {

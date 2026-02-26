@@ -763,6 +763,27 @@ const Snapshot = ({ showNotesOnly = false }) => {
         return status;
     }, [vitals]);
 
+    const chartData = useMemo(() => {
+        return [...vitals]
+            .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
+            .reverse()
+            .map((v, idx) => {
+                const bpRaw = String(v.fullBp || v.bp || '');
+                const bpClean = decodeHtmlEntities(bpRaw);
+                const sys = parseInt(bpClean.split('/')[0]) || null;
+                const dia = parseInt(bpClean.split('/')[1]) || null;
+                const hr = parseInt(v.hr) || null;
+                return {
+                    key: `${v.date}-${idx}-${sys || 'nan'}`,
+                    name: v.date === 'Today (Draft)' ? 'Today' : v.date,
+                    sys: sys,
+                    dia: dia,
+                    hr: hr,
+                    fullBp: bpClean
+                };
+            });
+    }, [vitals]);
+
     // Handle Break-the-Glass authorization
     useEffect(() => {
         const handlePrivacyAuthorized = (event) => {
@@ -1983,142 +2004,175 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-6 bg-gray-50 p-2 px-4 rounded-lg border border-gray-200">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
-                                                    <span className="text-[9px] font-bold text-gray-600 tracking-wide">Sys. BP</span>
+                                            <div className="flex gap-4 bg-gray-50 p-2 px-4 rounded-lg border border-gray-200">
+                                                <div className="flex items-center gap-2 border-r border-gray-200 pr-4">
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
+                                                            <span className="text-[9px] font-bold text-gray-700 tracking-wide uppercase">BP Trends</span>
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <span className="text-[8px] text-blue-500 font-bold">SYS</span>
+                                                            <span className="text-[8px] text-blue-300 font-bold">DIA</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
-                                                    <span className="text-[9px] font-bold text-gray-600 tracking-wide">Heart Rate</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
+                                                            <span className="text-[9px] font-bold text-gray-700 tracking-wide uppercase">Heart Rate</span>
+                                                        </div>
+                                                        <span className="text-[8px] text-rose-500 font-bold uppercase">BPM Trends</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="h-44 w-full relative min-h-[176px]">
-                                            {vitals.filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A')).length > 0 ? (
-                                                <ResponsiveContainer width="100%" height="100%">
-                                                    <AreaChart
-                                                        data={[...vitals]
-                                                            .filter(v => (v.bp && v.bp !== 'N/A') || (v.hr && v.hr !== 'N/A'))
-                                                            .reverse()
-                                                            .map((v, idx) => {
-                                                                // Decode HTML entities like &#x2F; (slash) 
-                                                                const bpRaw = String(v.fullBp || v.bp || '');
-                                                                const bpClean = decodeHtmlEntities(bpRaw);
-
-                                                                const sys = parseInt(bpClean.split('/')[0]) || null;
-                                                                const dia = parseInt(bpClean.split('/')[1]) || null;
-                                                                const hr = parseInt(v.hr) || null;
-                                                                return {
-                                                                    key: `${v.date}-${idx}-${sys || 'nan'}`,
-                                                                    name: v.date === 'Today (Draft)' ? 'Today' : v.date,
-                                                                    sys: sys,
-                                                                    dia: dia,
-                                                                    hr: hr,
-                                                                    fullBp: bpClean
-                                                                };
-                                                            })}
-                                                        margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
-                                                    >
-                                                        <defs>
-                                                            {/* Picture 3 Style Multi-layered Gradients */}
-                                                            <linearGradient id="gradientSysMain" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
-                                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                                                            </linearGradient>
-                                                            <linearGradient id="gradientSysGlow" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.08} />
-                                                                <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
-                                                            </linearGradient>
-                                                            <linearGradient id="gradientHrMain" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="0%" stopColor="#ec4899" stopOpacity={0.12} />
-                                                                <stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
-                                                            </linearGradient>
-                                                        </defs>
-                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                        <XAxis
-                                                            dataKey="key"
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            tick={(props) => {
-                                                                const { x, y, payload } = props;
-                                                                // Extract the original date from our composite key
-                                                                const date = payload.value.split('-')[0];
-                                                                return (
-                                                                    <text x={x} y={y + 15} textAnchor="middle" fontSize={9} fill="#94a3b8" fontWeight="500">
-                                                                        {date}
-                                                                    </text>
-                                                                );
-                                                            }}
-                                                        />
-                                                        <YAxis
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: '500' }}
-                                                            domain={['auto', 'auto']}
-                                                            dx={-5}
-                                                        />
-                                                        <Tooltip
-                                                            content={({ active, payload, label }) => {
-                                                                if (active && payload && payload.length) {
-                                                                    const sysVal = payload.find(p => p.dataKey === 'sys')?.value;
-                                                                    const hrVal = payload.find(p => p.dataKey === 'hr')?.value;
-                                                                    const dateLabel = label ? label.split('-')[0] : '';
-
-                                                                    return (
-                                                                        <div className="bg-white/95 backdrop-blur-xl border border-gray-100 shadow-2xl rounded-2xl p-4 ring-1 ring-gray-950/5">
-                                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-slate-50 pb-2">{dateLabel}</p>
-                                                                            <div className="space-y-2.5">
-                                                                                <div className="flex items-center justify-between gap-8">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                                                                                        <span className="text-[11px] font-semibold text-gray-600">BP Systolic</span>
+                                        <div className="h-44 w-full relative min-h-[176px] grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {chartData.length > 0 ? (
+                                                <>
+                                                    {/* LEFT COLUMN: BLOOD PRESSURE */}
+                                                    <div className="h-full relative group/chart-bp">
+                                                        <div className="absolute top-0 right-4 z-10 opacity-0 group-hover/chart-bp:opacity-100 transition-opacity">
+                                                            <span className="text-[8px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-tighter shadow-sm">mmHg Tracking</span>
+                                                        </div>
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                                                                <defs>
+                                                                    <linearGradient id="gradientSysMain" x1="0" y1="0" x2="0" y2="1">
+                                                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                                                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                                                                    </linearGradient>
+                                                                    <linearGradient id="gradientDiaMain" x1="0" y1="0" x2="0" y2="1">
+                                                                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.1} />
+                                                                        <stop offset="100%" stopColor="#60a5fa" stopOpacity={0} />
+                                                                    </linearGradient>
+                                                                </defs>
+                                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                                <XAxis
+                                                                    dataKey="key"
+                                                                    axisLine={false}
+                                                                    tickLine={false}
+                                                                    tick={(props) => {
+                                                                        const { x, y, payload } = props;
+                                                                        const date = payload.value.split('-')[0];
+                                                                        return <text x={x} y={y + 15} textAnchor="middle" fontSize={8} fill="#94a3b8" fontWeight="600">{date}</text>;
+                                                                    }}
+                                                                />
+                                                                <YAxis hide domain={['auto', 'auto']} />
+                                                                <Tooltip
+                                                                    content={({ active, payload, label }) => {
+                                                                        if (active && payload && payload.length) {
+                                                                            const sys = payload.find(p => p.dataKey === 'sys')?.value;
+                                                                            const dia = payload.find(p => p.dataKey === 'dia')?.value;
+                                                                            const dateLabel = label ? label.split('-')[0] : '';
+                                                                            return (
+                                                                                <div className="bg-white/95 backdrop-blur-xl border border-gray-100 shadow-xl rounded-xl p-3 ring-1 ring-gray-950/5 animate-in fade-in zoom-in duration-200">
+                                                                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2 border-b border-slate-50 pb-1">{dateLabel}</p>
+                                                                                    <div className="space-y-1.5">
+                                                                                        <div className="flex items-center justify-between gap-6">
+                                                                                            <span className="text-[10px] font-bold text-gray-600">Systolic</span>
+                                                                                            <span className="text-[11px] font-black text-blue-600">{sys || '--'}</span>
+                                                                                        </div>
+                                                                                        <div className="flex items-center justify-between gap-6">
+                                                                                            <span className="text-[10px] font-bold text-gray-600">Diastolic</span>
+                                                                                            <span className="text-[11px] font-black text-blue-400">{dia || '--'}</span>
+                                                                                        </div>
                                                                                     </div>
-                                                                                    <span className="text-[13px] font-bold text-blue-700">{sysVal || '--'} <small className="text-[9px] text-blue-400 font-medium">mmHg</small></span>
                                                                                 </div>
-                                                                                <div className="flex items-center justify-between gap-8">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <div className="w-2 h-2 rounded-full bg-rose-500" />
-                                                                                        <span className="text-[11px] font-semibold text-gray-600">Heart Rate</span>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    }}
+                                                                />
+                                                                <Area
+                                                                    type="monotone"
+                                                                    dataKey="sys"
+                                                                    stroke="#3b82f6"
+                                                                    strokeWidth={3}
+                                                                    fill="url(#gradientSysMain)"
+                                                                    dot={{ r: 3, fill: '#3b82f6', strokeWidth: 1.5, stroke: '#fff' }}
+                                                                    activeDot={{ r: 5, strokeWidth: 1.5, stroke: '#fff', fill: '#3b82f6' }}
+                                                                    connectNulls
+                                                                    animationDuration={1500}
+                                                                />
+                                                                <Area
+                                                                    type="monotone"
+                                                                    dataKey="dia"
+                                                                    stroke="#60a5fa"
+                                                                    strokeWidth={2}
+                                                                    fill="url(#gradientDiaMain)"
+                                                                    strokeDasharray="4 4"
+                                                                    dot={{ r: 2, fill: '#60a5fa', strokeWidth: 1, stroke: '#fff' }}
+                                                                    activeDot={{ r: 4, strokeWidth: 1, stroke: '#fff', fill: '#60a5fa' }}
+                                                                    connectNulls
+                                                                    animationDuration={1500}
+                                                                />
+                                                            </AreaChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+
+                                                    {/* RIGHT COLUMN: HEART RATE */}
+                                                    <div className="h-full relative group/chart-hr">
+                                                        <div className="absolute top-0 right-4 z-10 opacity-0 group-hover/chart-hr:opacity-100 transition-opacity">
+                                                            <span className="text-[8px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-tighter shadow-sm">BPM Precision</span>
+                                                        </div>
+                                                        <ResponsiveContainer width="100%" height="100%">
+                                                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                                                                <defs>
+                                                                    <linearGradient id="gradientHrMain" x1="0" y1="0" x2="0" y2="1">
+                                                                        <stop offset="0%" stopColor="#ec4899" stopOpacity={0.12} />
+                                                                        <stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
+                                                                    </linearGradient>
+                                                                </defs>
+                                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                                <XAxis
+                                                                    dataKey="key"
+                                                                    axisLine={false}
+                                                                    tickLine={false}
+                                                                    tick={(props) => {
+                                                                        const { x, y, payload } = props;
+                                                                        const date = payload.value.split('-')[0];
+                                                                        return <text x={x} y={y + 15} textAnchor="middle" fontSize={8} fill="#94a3b8" fontWeight="600">{date}</text>;
+                                                                    }}
+                                                                />
+                                                                <YAxis hide domain={['auto', 'auto']} />
+                                                                <Tooltip
+                                                                    content={({ active, payload, label }) => {
+                                                                        if (active && payload && payload.length) {
+                                                                            const hr = payload.find(p => p.dataKey === 'hr')?.value;
+                                                                            const dateLabel = label ? label.split('-')[0] : '';
+                                                                            return (
+                                                                                <div className="bg-white/95 backdrop-blur-xl border border-gray-100 shadow-xl rounded-xl p-3 ring-1 ring-gray-950/5 animate-in fade-in zoom-in duration-200">
+                                                                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-2 border-b border-slate-50 pb-1">{dateLabel}</p>
+                                                                                    <div className="flex items-center justify-between gap-6">
+                                                                                        <span className="text-[10px] font-bold text-gray-600">Heart Rate</span>
+                                                                                        <span className="text-[11px] font-black text-rose-600">{hr || '--'} <small className="text-[8px] font-bold">BPM</small></span>
                                                                                     </div>
-                                                                                    <span className="text-[13px] font-bold text-rose-700">{hrVal || '--'} <small className="text-[9px] text-rose-400 font-medium">bpm</small></span>
                                                                                 </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                return null;
-                                                            }}
-                                                        />
-                                                        {/* Picture 3 Aesthetic Layers */}
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="sys"
-                                                            stroke="#3b82f6"
-                                                            strokeWidth={4}
-                                                            fill="url(#gradientSysMain)"
-                                                            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#3b82f6' }}
-                                                            connectNulls
-                                                            isAnimationActive={false}
-                                                        />
-                                                        <Area
-                                                            type="monotone"
-                                                            dataKey="hr"
-                                                            name="Heart Rate"
-                                                            stroke="#ec4899"
-                                                            strokeWidth={3}
-                                                            fill="url(#gradientHrMain)"
-                                                            dot={{ r: 4, fill: '#ec4899', strokeWidth: 2, stroke: '#fff' }}
-                                                            activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#ec4899' }}
-                                                            connectNulls
-                                                            isAnimationActive={false}
-                                                        />
-                                                    </AreaChart>
-                                                </ResponsiveContainer>
+                                                                            );
+                                                                        }
+                                                                        return null;
+                                                                    }}
+                                                                />
+                                                                <Area
+                                                                    type="monotone"
+                                                                    dataKey="hr"
+                                                                    stroke="#ec4899"
+                                                                    strokeWidth={3}
+                                                                    fill="url(#gradientHrMain)"
+                                                                    dot={{ r: 4, fill: '#ec4899', strokeWidth: 2, stroke: '#fff' }}
+                                                                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff', fill: '#ec4899' }}
+                                                                    connectNulls
+                                                                    animationDuration={1500}
+                                                                />
+                                                            </AreaChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </>
                                             ) : (
-                                                <div className="h-full flex flex-col items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                                <div className="col-span-full h-full flex flex-col items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
                                                     <div className="p-4 bg-white rounded-2xl shadow-sm mb-4">
                                                         <Waves className="w-8 h-8 text-gray-300" />
                                                     </div>
