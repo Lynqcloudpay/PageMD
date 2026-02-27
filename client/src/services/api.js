@@ -155,6 +155,7 @@ export const visitsAPI = {
   cosign: (id, data) => api.post(`/visits/${id}/cosign`, data),
   reject: (id, data) => api.post(`/visits/${id}/reject`, data),
   heartbeat: (id) => api.post(`/visits/${id}/heartbeat`),
+  refineSection: (data) => api.post('/echo/refine-section', data),
 };
 
 // Orders

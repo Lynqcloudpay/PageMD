@@ -537,11 +537,20 @@ const Snapshot = ({ showNotesOnly = false }) => {
                         let displayDate = 'N/A';
                         try {
                             if (v.visit_date) {
-                                displayDate = format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy');
+                                const visitDateStr = String(v.visit_date);
+                                const dateObj = visitDateStr.includes('T') ? new Date(visitDateStr) : new Date(visitDateStr + 'T12:00:00');
+                                if (!isNaN(dateObj.getTime())) {
+                                    displayDate = format(dateObj, 'M/d/yy');
+                                }
                             } else if (v.created_at) {
-                                displayDate = format(new Date(v.created_at), 'M/d/yy');
+                                const dateObj = new Date(v.created_at);
+                                if (!isNaN(dateObj.getTime())) {
+                                    displayDate = format(dateObj, 'M/d/yy');
+                                }
                             }
-                        } catch (e) { console.warn('Date format error', e); }
+                        } catch (e) {
+                            console.warn('Date format error for visit vitals:', e, v.visit_date);
+                        }
 
                         return {
                             id: v.id,
@@ -608,7 +617,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 let displayDate = 'N/A';
                                 try {
                                     if (v.visit_date) {
-                                        displayDate = format(new Date(v.visit_date + 'T12:00:00'), 'M/d/yy');
+                                        const visitDateStr = String(v.visit_date);
+                                        const dateObj = visitDateStr.includes('T') ? new Date(visitDateStr) : new Date(visitDateStr + 'T12:00:00');
+                                        if (!isNaN(dateObj.getTime())) {
+                                            displayDate = format(dateObj, 'M/d/yy');
+                                        }
                                     }
                                 } catch (e) { }
 

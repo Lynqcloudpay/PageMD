@@ -21,7 +21,7 @@ import OrderPicker from '../components/OrderPicker';
 import OrderDetailsModal from '../components/OrderDetailsModal';
 import { usePrivileges } from '../hooks/usePrivileges';
 import { useAuth } from '../context/AuthContext';
-import { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate, usersAPI, macrosAPI } from '../services/api';
+import api, { ordersCatalogAPI, visitsAPI, codesAPI, patientsAPI, icd10API, documentsAPI, documentsAPIUpdate, usersAPI, macrosAPI } from '../services/api';
 import { format } from 'date-fns';
 import { hpiDotPhrases } from '../data/hpiDotPhrases';
 import { ProblemInput, MedicationInput, AllergyInput, FamilyHistoryInput, SurgicalHistoryInput } from '../components/PAMFOSInputs';
@@ -2289,7 +2289,7 @@ const VisitNote = () => {
         showToast(`AI is crafting ${section.toUpperCase()}...`, 'info', { duration: 3000 });
 
         try {
-            const response = await api.post('/echo/refine-section', {
+            const response = await visitsAPI.refineSection({
                 visitId: currentVisitId,
                 section,
                 diagnosis

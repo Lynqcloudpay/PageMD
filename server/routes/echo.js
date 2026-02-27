@@ -97,7 +97,16 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
                     if (patientInfo.rows.length > 0) {
                         const p = patientInfo.rows[0];
                         const gender = p.gender ? p.gender.toLowerCase() : 'unknown';
-                        const age = p.dob ? Math.floor((new Date() - new Date(p.dob)) / 31557600000) : 'adult';
+
+                        // Robust age calculation
+                        const today = new Date();
+                        const birthDate = new Date(p.dob);
+                        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+                        const m = today.getMonth() - birthDate.getMonth();
+                        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                            calculatedAge--;
+                        }
+                        const age = p.dob ? calculatedAge : 'adult';
 
                         // Fetch Active Problems for Option A (Linkage)
                         const problemsQuery = await pool.query(
@@ -863,7 +872,15 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
             return res.status(400).json({ error: 'No spoken transcript found for this visit. Please transcribe audio first.' });
         }
 
-        const age = visit.dob ? Math.floor((new Date() - new Date(visit.dob)) / 31557600000) : 'adult';
+        // Robust age calculation for refinement
+        const today = new Date();
+        const birthDate = new Date(visit.dob);
+        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            calculatedAge--;
+        }
+        const age = visit.dob ? calculatedAge : 'adult';
         const context = `The patient is a ${age}-year-old ${visit.gender || 'unknown'}. PMHx: ${visit.problem_list || 'None reported'}.`;
 
         // 2. Formulate targeted prompt
