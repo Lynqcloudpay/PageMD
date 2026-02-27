@@ -1210,7 +1210,7 @@ export default function EchoPanel({ patientId, patientName }) {
                     setIsRecording(false);
                     return;
                 }
-                await handleAudioUpload(audioBlob);
+                await handleAudioUpload(audioBlob, isAmbient ? 'ambient' : 'dictation');
                 stream.getTracks().forEach(track => track.stop());
                 setRecordingTime(0);
                 if (timerRef.current) clearInterval(timerRef.current);
@@ -1247,9 +1247,9 @@ export default function EchoPanel({ patientId, patientName }) {
         setIsSilent(false);
     };
 
-    const handleAudioUpload = async (blob) => {
-        const isAmbient = recordingModeRef.current === 'ambient';
-        console.log('[EchoPanel] handleAudioUpload START, blob size:', blob.size, 'captured mode:', recordingModeRef.current);
+    const handleAudioUpload = async (blob, modeOverride = null) => {
+        const isAmbient = modeOverride ? (modeOverride === 'ambient') : (recordingModeRef.current === 'ambient');
+        console.log('[EchoPanel] handleAudioUpload START, blob size:', blob.size, 'Final mode:', isAmbient ? 'ambient' : 'dictation');
         setIsGlobalLoading(true);
         try {
             const formData = new FormData();
@@ -1736,8 +1736,8 @@ export default function EchoPanel({ patientId, patientName }) {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Eko clinical ask..."
-                                disabled={isGlobalLoading}
+                                placeholder={ambientMode ? "Ambient Scribing Active..." : "Eko clinical ask..."}
+                                disabled={isGlobalLoading || (ambientMode && isRecording)}
                                 rows={1}
                                 className="w-full bg-transparent text-[12px] text-slate-600 placeholder-slate-400
                                        resize-none outline-none py-2.5 font-medium h-[38px] flex items-center"
@@ -1746,63 +1746,59 @@ export default function EchoPanel({ patientId, patientName }) {
                         </div>
 
                         <div className="flex items-center gap-0.5">
-                            {/* Ambient Mode Toggle — One click to enable & start, second to disable & stop */}
+                            {/* Ambient Mode Toggle — The Master Control */}
                             <button
                                 onClick={() => {
                                     const nextMode = !ambientMode;
                                     setAmbientMode(nextMode);
-                                    console.log('[EchoPanel] Radio button clicked, nextMode:', nextMode);
+                                    console.log('[EchoPanel] Master Toggle clicked, nextMode:', nextMode);
                                     if (nextMode) {
                                         handleStartRecording(true); // Force ambient start
                                     } else if (isRecording) {
                                         handleStopRecording();
                                     }
                                 }}
-                                className={`p-2 rounded-full transition-all ${ambientMode
-                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
+                                className={`p-2.5 rounded-full transition-all flex items-center gap-2 ${ambientMode
+                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300 shadow-sm'
                                     : 'text-slate-300 hover:text-amber-500 hover:bg-amber-50'
                                     }`}
-                                title={ambientMode ? 'Stop Ambient Scribe' : 'Start Ambient Scribe'}
+                                title={ambientMode ? 'Stop & Scribe' : 'Start Ambient Scribe'}
                             >
-                                <Radio className={`w-3.5 h-3.5 ${isRecording && ambientMode ? 'animate-pulse' : ''}`} />
+                                <Radio className={`w-4 h-4 ${isRecording && ambientMode ? 'animate-pulse' : ''}`} />
+                                {ambientMode && <span className="text-[10px] font-bold pr-1">{isRecording ? 'STOP & SCRIBE' : 'START SCRIBE'}</span>}
                             </button>
 
-                            {/* Mic Button — ambient uses click toggle, dictation uses push-to-talk */}
-                            {ambientMode ? (
-                                <button
-                                    onClick={isRecording ? handleStopRecording : handleStartRecording}
-                                    className={`p-2 rounded-full transition-all ${isRecording
-                                        ? isSilent
-                                            ? 'bg-amber-400 text-white'
-                                            : 'bg-rose-500 text-white animate-pulse'
-                                        : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'
-                                        }`}
-                                    title={isRecording ? 'Stop Ambient Scribe' : 'Start Ambient Scribe'}
-                                >
-                                    {isRecording ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-                                </button>
-                            ) : (
-                                <button
-                                    onMouseDown={handleStartRecording}
-                                    onMouseUp={handleStopRecording}
-                                    onMouseLeave={handleStopRecording}
-                                    className={`p-2 rounded-full transition-all ${isRecording
-                                        ? 'bg-rose-500 text-white animate-pulse'
-                                        : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'
-                                        }`}
-                                >
-                                    <Mic className="w-3.5 h-3.5" />
-                                </button>
+                            {/* Hide other controls when in Ambient Mode to prevent confusion */}
+                            {!ambientMode && (
+                                <>
+                                    {/* Mic Button for Dictation (Push-to-talk) */}
+                                    <button
+                                        onMouseDown={() => handleStartRecording(false)}
+                                        onMouseUp={handleStopRecording}
+                                        className={`p-2.5 rounded-full transition-all ${isRecording
+                                            ? 'bg-rose-500 text-white shadow-lg animate-pulse'
+                                            : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'
+                                            }`}
+                                        title="Hold to Dictate"
+                                    >
+                                        <Mic className="w-4 h-4" />
+                                    </button>
+
+                                    {/* Send Button for Text */}
+                                    <button
+                                        onClick={() => {
+                                            if (input.trim()) sendMessage(input);
+                                        }}
+                                        disabled={isGlobalLoading || !input.trim()}
+                                        className={`p-2.5 rounded-full transition-all ${input.trim()
+                                            ? 'bg-cyan-600 text-white shadow-md active:scale-95'
+                                            : 'text-slate-200'
+                                            }`}
+                                    >
+                                        <Send className="w-4 h-4" />
+                                    </button>
+                                </>
                             )}
-
-                            <button
-                                onClick={() => sendMessage()}
-                                disabled={(!input.trim() && !isRecording) || isGlobalLoading}
-                                className="w-8 h-8 rounded-full bg-cyan-600 flex items-center justify-center
-                                       text-white disabled:opacity-30 transition-all hover:bg-cyan-700 active:scale-90"
-                            >
-                                <Send className="w-3.5 h-3.5" />
-                            </button>
                         </div>
                     </div>
 

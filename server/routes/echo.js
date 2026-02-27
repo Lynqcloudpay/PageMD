@@ -74,8 +74,9 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
             console.warn('[Echo API] Transcribe called without audio file. Check multipart headers.');
             return res.status(400).json({ error: 'No audio file provided' });
         }
-
+        const visitId = req.body?.visitId;
         const mode = req.body?.mode || 'dictation';
+        console.log(`[Echo Route] Transcribe request received. Mode: ${mode}, File: ${req.file?.originalname}`);
         const transcription = await echoService.transcribeAudio(req.file.buffer, req.file.originalname, { mode });
 
         // In ambient mode, post-process raw transcript into structured SOAP note
