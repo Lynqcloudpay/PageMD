@@ -980,6 +980,7 @@ export default function EchoPanel({ patientId, patientName }) {
     const silenceTimerRef = useRef(null);
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
+    const recordingModeRef = useRef(null); // 'ambient' or 'dictation'
     const MAX_RECORDING_SECONDS = 1800; // 30 minutes hard cap
 
     // Resolve which conversation key is currently displayed
@@ -1137,7 +1138,8 @@ export default function EchoPanel({ patientId, patientName }) {
 
     const handleStartRecording = async (forcedMode = null) => {
         const isAmbient = forcedMode !== null ? forcedMode : ambientMode;
-        console.log('[EchoPanel] handleStartRecording, isAmbient:', isAmbient);
+        recordingModeRef.current = isAmbient ? 'ambient' : 'dictation';
+        console.log('[EchoPanel] handleStartRecording, mode captured:', recordingModeRef.current);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mediaRecorder = new MediaRecorder(stream);
@@ -1246,13 +1248,14 @@ export default function EchoPanel({ patientId, patientName }) {
     };
 
     const handleAudioUpload = async (blob) => {
-        const isAmbient = ambientModeRef.current;
-        console.log('[EchoPanel] handleAudioUpload, blob size:', blob.size, 'mode:', isAmbient ? 'ambient' : 'dictation');
+        const isAmbient = recordingModeRef.current === 'ambient';
+        console.log('[EchoPanel] handleAudioUpload START, blob size:', blob.size, 'captured mode:', recordingModeRef.current);
         setIsGlobalLoading(true);
         try {
             const formData = new FormData();
             formData.append('audio', blob, 'recording.webm');
             formData.append('mode', isAmbient ? 'ambient' : 'dictation');
+            console.log('[EchoPanel] Sending request to /echo/transcribe with mode:', isAmbient ? 'ambient' : 'dictation');
 
             const { data } = await api.post('/echo/transcribe', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
