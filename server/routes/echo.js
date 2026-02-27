@@ -90,23 +90,27 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
                     body: JSON.stringify({
                         model: 'gpt-4o-mini',
                         temperature: 0.1,
-                        max_tokens: 1500,
+                        max_tokens: 2000,
+                        response_format: { type: 'json_object' },
                         messages: [
                             {
                                 role: 'system',
-                                content: `You are a medical scribe assistant. Given a raw transcription of a doctor-patient conversation:
+                                content: `You are a medical scribe assistant. Given a raw transcription of a doctor-patient conversation (which may be in ANY language — Spanish, English, French, etc.):
+
 1. IGNORE all small talk, greetings, weather discussion, family chat, and non-clinical content.
 2. Extract ONLY medically relevant information.
-3. Format into these sections (omit empty sections):
+3. ALWAYS output in ENGLISH regardless of the input language. Translate all content to English.
+4. Return a JSON object with these fields (use empty string "" if section has no relevant content):
 
-Chief Complaint: [one sentence]
-HPI: [narrative paragraph in doctor's voice]
-Review of Systems: [relevant positives and negatives mentioned]
-Physical Exam: [any exam findings discussed]
-Assessment: [clinical impressions]
-Plan: [any treatment, follow-up, or orders discussed]
+{
+  "chiefComplaint": "One sentence chief complaint",
+  "hpi": "Narrative paragraph in the doctor's voice, past tense for history, present tense for current symptoms",
+  "ros": "Review of systems — relevant positives and negatives mentioned during conversation",
+  "pe": "Physical examination findings discussed or performed during the encounter",
+  "structuredNote": "The full formatted note as readable text with section headers (Chief Complaint:, HPI:, Review of Systems:, Physical Exam:)"
+}
 
-Write in professional clinical language. Use past tense for history, present tense for current findings.`
+Write in professional clinical language. Do NOT include Assessment or Plan.`
                             },
                             {
                                 role: 'user',
@@ -118,13 +122,25 @@ Write in professional clinical language. Use past tense for history, present ten
 
                 if (soapResponse.ok) {
                     const soapData = await soapResponse.json();
-                    const structuredNote = soapData.choices?.[0]?.message?.content || '';
-                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → ${structuredNote.length} chars structured`);
+                    const rawContent = soapData.choices?.[0]?.message?.content || '{}';
+                    let parsed = {};
+                    try { parsed = JSON.parse(rawContent); } catch (e) { parsed = { structuredNote: rawContent }; }
+
+                    const structuredNote = parsed.structuredNote || rawContent;
+                    const parsedSections = {
+                        chiefComplaint: parsed.chiefComplaint || '',
+                        hpi: parsed.hpi || '',
+                        ros: parsed.ros || '',
+                        pe: parsed.pe || ''
+                    };
+
+                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → sections: CC=${parsedSections.chiefComplaint.length}, HPI=${parsedSections.hpi.length}, ROS=${parsedSections.ros.length}, PE=${parsedSections.pe.length}`);
                     return res.json({
                         success: true,
                         text: transcription,
                         rawTranscript: transcription,
                         structuredNote,
+                        parsedSections,
                         mode: 'ambient'
                     });
                 }

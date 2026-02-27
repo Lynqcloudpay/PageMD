@@ -1247,15 +1247,33 @@ export default function EchoPanel({ patientId, patientName }) {
             });
 
             if (data.success) {
-                if (data.mode === 'ambient' && data.structuredNote) {
-                    // In ambient mode, show the structured SOAP note as an assistant message
+                if (data.mode === 'ambient' && (data.structuredNote || data.parsedSections)) {
+                    // Show the structured SOAP note as an assistant message for review
                     const ambientMessage = {
                         role: 'assistant',
-                        content: data.structuredNote,
+                        content: data.structuredNote || 'Ambient scribe completed.',
                         timestamp: new Date(),
                         toolCalls: [{ name: 'ambient_scribe', dataAccessed: ['audio_transcription'] }],
                     };
                     setContextMessages(displayKey, prev => [...prev, ambientMessage]);
+
+                    // Auto-insert into the open visit note (if on a visit page)
+                    if (data.parsedSections) {
+                        const visitMatch = location.pathname.match(/\/visit\/([a-f0-9-]+)/i);
+                        if (visitMatch) {
+                            const visitId = visitMatch[1];
+                            try {
+                                await api.post('/echo/write-to-note', {
+                                    visitId,
+                                    sections: data.parsedSections
+                                });
+                                window.dispatchEvent(new CustomEvent('eko-note-updated', { detail: { visitId } }));
+                                console.log('[EchoPanel] Auto-inserted ambient scribe into visit note:', visitId);
+                            } catch (insertErr) {
+                                console.warn('[EchoPanel] Auto-insert failed (note may be signed):', insertErr.response?.data?.error || insertErr.message);
+                            }
+                        }
+                    }
                 } else if (data.text) {
                     sendMessage(data.text);
                 }
@@ -1713,16 +1731,24 @@ export default function EchoPanel({ patientId, patientName }) {
                         </div>
 
                         <div className="flex items-center gap-0.5">
-                            {/* Ambient Mode Toggle */}
+                            {/* Ambient Mode Toggle — One click to enable & start, second to disable & stop */}
                             <button
-                                onClick={() => setAmbientMode(!ambientMode)}
+                                onClick={() => {
+                                    const nextMode = !ambientMode;
+                                    setAmbientMode(nextMode);
+                                    if (nextMode) {
+                                        handleStartRecording();
+                                    } else if (isRecording) {
+                                        handleStopRecording();
+                                    }
+                                }}
                                 className={`p-2 rounded-full transition-all ${ambientMode
                                     ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
                                     : 'text-slate-300 hover:text-amber-500 hover:bg-amber-50'
                                     }`}
-                                title={ambientMode ? 'Ambient Scribe ON' : 'Enable Ambient Scribe'}
+                                title={ambientMode ? 'Stop Ambient Scribe' : 'Start Ambient Scribe'}
                             >
-                                <Radio className="w-3.5 h-3.5" />
+                                <Radio className={`w-3.5 h-3.5 ${isRecording && ambientMode ? 'animate-pulse' : ''}`} />
                             </button>
 
                             {/* Mic Button — ambient uses click toggle, dictation uses push-to-talk */}

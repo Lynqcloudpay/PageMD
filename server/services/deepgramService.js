@@ -47,7 +47,7 @@ async function transcribeAudio(buffer, options = {}) {
             buffer,
             {
                 model: 'nova-2-medical',
-                language: 'en-US',
+                detect_language: true,  // Auto-detect spoken language (en, es, fr, pt, etc.)
                 smart_format: true,
                 punctuate: true,
                 paragraphs: isAmbient,
