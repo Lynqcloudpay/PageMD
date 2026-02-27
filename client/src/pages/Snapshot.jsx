@@ -795,7 +795,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
         const highestSys = sysValues.length > 0 ? Math.max(...sysValues) : 0;
 
         return {
-            hrDomain: [0, Math.max(100, highestHr + 10)],
+            hrDomain: [30, Math.max(100, highestHr + 10)],
             bpDomain: [0, Math.max(160, highestSys + 10)]
         };
     }, [chartData]);
