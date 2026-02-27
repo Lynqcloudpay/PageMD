@@ -412,10 +412,12 @@ router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => 
         }
 
         // Verify the visit exists, belongs to this user, and is still draft
-        const visitCheck = await pool.query(
-            `SELECT id, note_draft, status, provider_id FROM visits WHERE id = $1`,
-            [visitId]
-        );
+        const { patientId } = req.body;
+        const query = patientId
+            ? [`SELECT id, note_draft, status, provider_id, patient_id FROM visits WHERE id = $1 AND patient_id = $2`, [visitId, patientId]]
+            : [`SELECT id, note_draft, status, provider_id, patient_id FROM visits WHERE id = $1`, [visitId]];
+
+        const visitCheck = await pool.query(query[0], query[1]);
 
         if (visitCheck.rows.length === 0) {
             return res.status(404).json({ error: 'Visit not found' });

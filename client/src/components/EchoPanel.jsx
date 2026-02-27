@@ -1278,6 +1278,7 @@ export default function EchoPanel({ patientId, patientName }) {
                             try {
                                 await api.post('/echo/write-to-note', {
                                     visitId,
+                                    patientId, // Cross-verification
                                     sections: data.parsedSections
                                 });
                                 window.dispatchEvent(new CustomEvent('eko-note-updated', { detail: { visitId } }));
