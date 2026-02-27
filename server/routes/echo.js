@@ -137,7 +137,12 @@ NARRATIVE STYLE (Option A/B):
 
 SEPARATION OF DATA:
 - HPI (Subjective): Capture ONLY what the patient says. Narrative style. DO NOT include physical exam findings (labels like "lungs clear" or "heart regular" belong in PE).
-- BILLING POLLUTION (Option B): Proactively document pertinent negatives even if not explicitly discussed (e.g., for chest pain, document "Denies fever, diaphoresis, or radiating pain"). This increases E/M level without fabricating the story. 
+- BILLING POLLUTION (Revenue Maximization): 
+  1. Pertinent Negatives: Proactively document negatives to rule out high-risk differentials (e.g., for headache, denies vision change/neck stiffness).
+  2. SDOH (Social Determinants): If any social factors are mentioned (work stress, home life, living situation), document them as these bump risk to "Moderate".
+  3. Data Review Synthesis: Include phrases like "Independent review of internal records and recent labs was performed" if implied.
+  4. Chronic Condition Status: For items in PMHx, use status words (e.g., "History of HTN, currently well-controlled/stable") to support "Complexity of Problems Addressed".
+  5. Differential Reasoning: Briefly list alternatives being considered/dismissed (e.g., "Symptoms are inconsistent with [Serious Condition]").
 - Level 5 E/M markers: Ensure HPI includes Location, Quality, Severity, Duration, Timing, Context, and Modifying Factors.
 
 PRONOUNS:
