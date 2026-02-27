@@ -898,11 +898,19 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 responseFormat = { type: 'text' };
                 break;
             case 'ros':
-                promptSnippet = "Document the Review of Systems based on the spoken conversation. Use medical terminology (e.g., 'Denies chest pain, shortness of breath').";
+                promptSnippet = `Document a complete Review of Systems (ROS). 
+                Format EACH system on a new line as: **System Name:** Findings.
+                INCLUDE: General/Constitutional, HENT, Respiratory, Cardiovascular, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Psychiatric.
+                IMPORTANT: If a system was NOT mentioned in the transcript, assume findings are negative/normal (e.g., "**Cardiovascular:** Denies chest pain or palpitations."). 
+                Use medical terminology (e.g., "Denies", "Negative for").`;
                 responseFormat = { type: 'text' };
                 break;
             case 'pe':
-                promptSnippet = "Document the Physical Exam findings mentioned during the encounter. Use professional shorthand (e.g., 'Lungs: CTB BL').";
+                promptSnippet = `Document a complete Physical Exam findings. 
+                Format EACH system on a new line as: **System Name:** Findings.
+                INCLUDE: Constitutional, HENT, Neck, Lungs, Heart, Abdomen, Musculoskeletal, Neurological, Skin/Integumentary.
+                IMPORTANT: If a system was NOT explicitly mentioned as being examined, assume findings are normal/WNL (Within Normal Limits). 
+                Use medical shorthand/terminology (e.g., "WNL", "Supple", "CTB BL", "RRR", "Nontender").`;
                 responseFormat = { type: 'text' };
                 break;
             case 'assessment_suggestions':
