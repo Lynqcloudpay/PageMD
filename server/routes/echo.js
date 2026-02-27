@@ -82,6 +82,24 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
         // In ambient mode, post-process raw transcript into structured SOAP note
         if (mode === 'ambient' && transcription && transcription.trim().length > 0) {
             try {
+                // Fetch patient context (gender) to ensure correct pronoun usage
+                let patientContext = '';
+                if (visitId) {
+                    const patientInfo = await pool.query(
+                        `SELECT p.gender, p.first_name, p.last_name, p.dob 
+                         FROM patients p 
+                         JOIN visits v ON v.patient_id = p.id 
+                         WHERE v.id = $1`,
+                        [visitId]
+                    );
+                    if (patientInfo.rows.length > 0) {
+                        const p = patientInfo.rows[0];
+                        const gender = p.gender ? p.gender.toLowerCase() : 'unknown';
+                        const age = p.dob ? Math.floor((new Date() - new Date(p.dob)) / 31557600000) : 'adult';
+                        patientContext = `The patient is a ${age}-year-old ${gender}. `;
+                    }
+                }
+
                 const soapResponse = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -96,22 +114,22 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
                         messages: [
                             {
                                 role: 'system',
-                                content: `You are a medical scribe assistant. Given a raw transcription of a doctor-patient conversation (which may be in ANY language — Spanish, English, French, etc.):
-
-1. IGNORE all small talk, greetings, weather discussion, and family chat.
-2. Extract ONLY medically relevant information.
-3. ALWAYS output in ENGLISH. Translate non-English content to professional English.
-4. Return a JSON object with these fields:
-
+                                content: `You are a medical scribe assistant. ${patientContext}Given a raw transcription of a doctor-patient conversation:
+1. IGNORE all small talk and greetings.
+2. Extract ONLY clinical information.
+3. ALWAYS output in ENGLISH.
+4. PRONOUNS: You MUST use biological binary pronouns based on the patient's gender. If female, use 'She/Her'. If male, use 'He/Him'. NEVER use 'they/them' or gender-neutral language to refer to the patient.
+5. Return a JSON object with these fields:
 {
-  "chiefComplaint": "Ultra-concise phrase (e.g., 'Chest pain', 'Headache'). Do NOT include duration or full sentences.",
-  "hpi": "Narrative paragraph in the doctor's voice, past tense for history, present tense for current symptoms.",
-  "ros": "Review of Systems. Format as '**System:** Findings.' (e.g. **Constitutional:** negative for weight loss.). Each system MUST be on a NEW line/row. Include: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Skin.",
-  "pe": "Physical Examination. Format as '**System:** Findings.' (e.g. **General:** well-appearing.). Each system MUST be on a NEW line/row. Include: General, Head Neck, Eyes, ENT, Cardiovascular, Respiratory, Abdomen, Extremities, Neurological, Skin.",
-  "structuredNote": "The full formatted note as readable text with clear headers (Chief Complaint:, HPI:, Review of Systems:, Physical Exam:)"
+  "chiefComplaint": "Ultra-concise phrase (e.g., 'Chest pain'). Do NOT include full sentences.",
+  "hpi": "Narrative paragraph in the doctor's voice. Past tense for history, present for current symptoms. MANDATORY: Use correct biological pronouns (He/She). IGNORE 'they/them/their' when referring to the patient. BILLING OPTIMIZATION: Prioritize details that support Level 4/5 E/M coding (e.g., duration, timing, severity, associated signs/symptoms, and complexity of chronic conditions).",
+  "ros": "Review of Systems. Format as '**System:** Findings.' (e.g. **Constitutional:** negative for weight loss.). Each system MUST be on a NEW line/row for billing audit clarity. Include: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Skin.",
+  "pe": "Physical Examination. Format as '**System:** Findings.' (e.g. **General:** well-appearing.). Each system MUST be on a NEW line/row. Prioritize findings that demonstrate systemic complexity. Include: General, Head Neck, Eyes, ENT, Cardiovascular, Respiratory, Abdomen, Extremities, Neurological, Skin.",
+  "structuredNote": "The full formatted note with clear clinical headers. BILLING NOTE: Include any mentioned social determinants of health (SDOH) or chronic condition risk adjustments (HCC) discussed."
 }
-
-Write in professional clinical language. Do NOT include Assessment or Plan.`
+REVENUE RULES:
+- Capture complexity: If the patient mentions multiple concerns or chronic condition management, ensure the HPI and Assessment/Plan (implied in HPI narrative) reflect this to support higher-tier coding.
+- Detail-Oriented: Every system captured in ROS/PE adds to the documented complexity. Ensure a comprehensive 10-system ROS and multi-system PE is drafted if discussed.`
                             },
                             {
                                 role: 'user',

@@ -147,6 +147,12 @@ export function EkoProvider({ children }) {
         formData.append('audio', blob, 'recording.webm');
         formData.append('mode', mode);
 
+        // Extract visitId from URL to provide context to backend
+        const visitMatch = location.pathname.match(/\/visit\/([a-f0-9-]+)/i);
+        if (visitMatch) {
+            formData.append('visitId', visitMatch[1]);
+        }
+
         setIsProcessing(true);
         try {
             const { data } = await api.post('/echo/transcribe', formData, {
