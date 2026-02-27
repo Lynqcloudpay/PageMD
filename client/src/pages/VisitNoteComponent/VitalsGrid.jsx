@@ -1,4 +1,4 @@
-import { Activity, Thermometer, Wind, Droplets, Scale, MoveVertical, PlusCircle, History, Clock } from 'lucide-react';
+import { Activity, Thermometer, Wind, Droplets, Scale, MoveVertical, PlusCircle, History, Clock, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const VitalInput = ({ label, value, unit, icon: Icon, onChange, onKeyDown, isAbnormal, disabled, refProp, placeholder = "--", className = "" }) => (
@@ -36,6 +36,7 @@ const VitalsGrid = ({
     vitalsHistory = [],
     onUpdateVital,
     onAddReading,
+    onDeleteReading,
     isLocked,
     isAbnormalVital,
     previousWeight,
@@ -233,6 +234,7 @@ const VitalsGrid = ({
                                     <th className="px-4 py-2 text-[9px] font-bold text-gray-500 uppercase tracking-wider">Temp (°F)</th>
                                     <th className="px-4 py-2 text-[9px] font-bold text-gray-500 uppercase tracking-wider">Weight</th>
                                     <th className="px-4 py-2 text-[9px] font-bold text-gray-500 uppercase tracking-wider">BMI</th>
+                                    {!isLocked && onDeleteReading && <th className="px-4 py-2 text-[9px] font-bold text-gray-500 uppercase tracking-wider text-right">Action</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -243,16 +245,27 @@ const VitalsGrid = ({
                                             {v.taken_at ? format(new Date(v.taken_at), 'hh:mm a') : 'Original'}
                                             {idx === vitalsHistory.length - 1 && <span className="ml-1 px-1.5 py-px bg-blue-100 text-blue-600 text-[8px] font-black uppercase rounded">Current</span>}
                                         </td>
-                                        <td className="px-4 py-2.5 text-[11px] font-bold text-gray-700">
+                                        <td className={`px-4 py-2.5 text-[11px] font-bold ${isAbnormalVital('systolic', v.systolic) || isAbnormalVital('diastolic', v.diastolic) ? 'text-red-600 bg-red-50/30' : 'text-gray-700'}`}>
                                             {v.systolic && v.diastolic ? `${v.systolic}/${v.diastolic}` : (v.bp || '--')}
                                         </td>
-                                        <td className="px-4 py-2.5 text-[11px] font-medium text-gray-600">{v.pulse || '--'}</td>
-                                        <td className="px-4 py-2.5 text-[11px] font-medium text-gray-600">{v.o2sat || '--'}</td>
-                                        <td className="px-4 py-2.5 text-[11px] font-medium text-gray-600">{v.temp || '--'}</td>
+                                        <td className={`px-4 py-2.5 text-[11px] font-medium ${isAbnormalVital('pulse', v.pulse) ? 'text-red-600 bg-red-50/30 font-bold' : 'text-gray-600'}`}>{v.pulse || '--'}</td>
+                                        <td className={`px-4 py-2.5 text-[11px] font-medium ${isAbnormalVital('o2sat', v.o2sat) ? 'text-red-600 bg-red-50/30 font-bold' : 'text-gray-600'}`}>{v.o2sat || '--'}</td>
+                                        <td className={`px-4 py-2.5 text-[11px] font-medium ${isAbnormalVital('temp', v.temp) ? 'text-red-600 bg-red-50/30 font-bold' : 'text-gray-600'}`}>{v.temp || '--'}</td>
                                         <td className="px-4 py-2.5 text-[11px] font-medium text-gray-600">
                                             {v.weight ? `${v.weight} ${v.weightUnit || 'lbs'}` : '--'}
                                         </td>
-                                        <td className="px-4 py-2.5 text-[11px] font-medium text-gray-600">{v.bmi || '--'}</td>
+                                        <td className={`px-4 py-2.5 text-[11px] font-medium ${isAbnormalVital('bmi', v.bmi) ? 'text-red-600 bg-red-50/30 font-bold' : 'text-gray-600'}`}>{v.bmi || '--'}</td>
+                                        {!isLocked && onDeleteReading && (
+                                            <td className="px-4 py-2 text-right">
+                                                <button
+                                                    onClick={() => onDeleteReading(idx)}
+                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                    title="Delete this reading"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>

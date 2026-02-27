@@ -675,6 +675,20 @@ const VisitNote = () => {
         });
     };
 
+    const handleDeleteVitalsReading = (index) => {
+        setVitalsList(prev => {
+            if (prev.length <= 1) {
+                // If it's the only one, just clear it instead of deleting
+                return [{
+                    taken_at: new Date().toISOString(),
+                    systolic: '', diastolic: '', bp: '', temp: '', pulse: '', resp: '', o2sat: '',
+                    weight: '', height: '', bmi: '', weightUnit: 'lbs', heightUnit: 'in'
+                }];
+            }
+            return prev.filter((_, i) => i !== index);
+        });
+    };
+
     // Previous visit weight for comparison
     const [previousWeight, setPreviousWeight] = useState(null);
     const [previousWeightUnit, setPreviousWeightUnit] = useState('lbs');
@@ -3027,6 +3041,7 @@ const VisitNote = () => {
                                 vitalsHistory={vitalsList}
                                 onUpdateVital={updateActiveVital}
                                 onAddReading={handleAddVitalsReading}
+                                onDeleteReading={handleDeleteVitalsReading}
                                 isLocked={isLocked}
                                 isAbnormalVital={isAbnormalVital}
                                 calculateBMI={calculateBMI}
