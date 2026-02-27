@@ -11,6 +11,7 @@ import { PatientTabsProvider } from './context/PatientTabsContext'
 import { KeyboardShortcutsProvider } from './context/KeyboardShortcutsContext'
 import { TaskProvider } from './context/TaskContext'
 import { PlatformAdminProvider } from './context/PlatformAdminContext'
+import { EkoProvider } from './context/EkoContext'
 import { NotificationProvider } from './components/NotificationProvider'
 
 // Lazy-load with auto-retry on chunk failure (stale deploy recovery)
@@ -170,290 +171,292 @@ function App() {
                             <TaskProvider>
                                 <KeyboardShortcutsProvider>
                                     <PatientTabsProvider>
-                                        <MobileRedirectHandler>
-                                            <div className="min-h-screen font-sans bg-white">
-                                                <React.Suspense fallback={
-                                                    <div className="min-h-screen flex items-center justify-center">
-                                                        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                                                    </div>
-                                                }>
-                                                    <Routes>
-                                                        {/* Platform Admin Routes */}
-                                                        <Route path="/platform-admin" element={<Navigate to="/platform-admin/login" replace />} />
-                                                        <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
-                                                        <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
-                                                        <Route path="/platform-admin/clinics" element={<PlatformAdminClinics />} />
-                                                        <Route path="/platform-admin/clinics/:id" element={<PlatformAdminClinicDetails />} />
-                                                        <Route path="/platform-admin/roles" element={<PlatformAdminRoles />} />
-                                                        <Route path="/platform-admin/revenue" element={<PlatformAdminRevenue />} />
-                                                        <Route path="/platform-admin/support" element={<PlatformAdminSupport />} />
-                                                        <Route path="/platform-admin/team" element={<PlatformAdminTeam />} />
-                                                        <Route path="/platform-admin/developers" element={<PlatformAdminDevelopers />} />
-                                                        <Route path="/platform-admin/archives" element={<PlatformAdminArchives />} />
-                                                        {/* <Route path="/platform-admin/database" element={<PlatformAdminDatabase />} /> */}
-                                                        <Route path="/platform-admin/settings" element={<PlatformAdminProfile />} />
-                                                        {/* <Route path="/platform-admin/system" element={<PlatformAdminSystem />} /> */}
+                                        <EkoProvider>
+                                            <MobileRedirectHandler>
+                                                <div className="min-h-screen font-sans bg-white">
+                                                    <React.Suspense fallback={
+                                                        <div className="min-h-screen flex items-center justify-center">
+                                                            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                                                        </div>
+                                                    }>
+                                                        <Routes>
+                                                            {/* Platform Admin Routes */}
+                                                            <Route path="/platform-admin" element={<Navigate to="/platform-admin/login" replace />} />
+                                                            <Route path="/platform-admin/login" element={<PlatformAdminLogin />} />
+                                                            <Route path="/platform-admin/dashboard" element={<PlatformAdminDashboard />} />
+                                                            <Route path="/platform-admin/clinics" element={<PlatformAdminClinics />} />
+                                                            <Route path="/platform-admin/clinics/:id" element={<PlatformAdminClinicDetails />} />
+                                                            <Route path="/platform-admin/roles" element={<PlatformAdminRoles />} />
+                                                            <Route path="/platform-admin/revenue" element={<PlatformAdminRevenue />} />
+                                                            <Route path="/platform-admin/support" element={<PlatformAdminSupport />} />
+                                                            <Route path="/platform-admin/team" element={<PlatformAdminTeam />} />
+                                                            <Route path="/platform-admin/developers" element={<PlatformAdminDevelopers />} />
+                                                            <Route path="/platform-admin/archives" element={<PlatformAdminArchives />} />
+                                                            {/* <Route path="/platform-admin/database" element={<PlatformAdminDatabase />} /> */}
+                                                            <Route path="/platform-admin/settings" element={<PlatformAdminProfile />} />
+                                                            {/* <Route path="/platform-admin/system" element={<PlatformAdminSystem />} /> */}
 
-                                                        {/* Regular EMR Routes */}
-                                                        {/* Clinic Auth & Impersonation */}
-                                                        <Route path="/login" element={<Login />} />
-                                                        <Route path="/auth/impersonate" element={<ImpersonateHandler />} />
-                                                        <Route path="/" element={<LandingPage />} />
-                                                        <Route path="/features" element={<FeaturesPage />} />
-                                                        <Route path="/security" element={<SecurityPage />} />
-                                                        <Route path="/pricing" element={<PricingPage />} />
-                                                        <Route path="/register" element={<RegisterPage />} />
-                                                        <Route path="/contact" element={<ContactPage />} />
-                                                        <Route path="/about" element={<AboutPage />} />
-                                                        <Route path="/digital-intake" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><DigitalIntake /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/intake" element={
-                                                            <React.Suspense fallback={<div>Loading Registration...</div>}>
-                                                                <PublicIntake />
-                                                            </React.Suspense>
-                                                        } />
-                                                        <Route path="/sales-admin" element={<SalesAdmin />} />
-                                                        <Route path="/verify-demo" element={<VerifyDemo />} />
-                                                        <Route path="/demo-confirm" element={<DemoConfirmation />} />
+                                                            {/* Regular EMR Routes */}
+                                                            {/* Clinic Auth & Impersonation */}
+                                                            <Route path="/login" element={<Login />} />
+                                                            <Route path="/auth/impersonate" element={<ImpersonateHandler />} />
+                                                            <Route path="/" element={<LandingPage />} />
+                                                            <Route path="/features" element={<FeaturesPage />} />
+                                                            <Route path="/security" element={<SecurityPage />} />
+                                                            <Route path="/pricing" element={<PricingPage />} />
+                                                            <Route path="/register" element={<RegisterPage />} />
+                                                            <Route path="/contact" element={<ContactPage />} />
+                                                            <Route path="/about" element={<AboutPage />} />
+                                                            <Route path="/digital-intake" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><DigitalIntake /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/intake" element={
+                                                                <React.Suspense fallback={<div>Loading Registration...</div>}>
+                                                                    <PublicIntake />
+                                                                </React.Suspense>
+                                                            } />
+                                                            <Route path="/sales-admin" element={<SalesAdmin />} />
+                                                            <Route path="/verify-demo" element={<VerifyDemo />} />
+                                                            <Route path="/demo-confirm" element={<DemoConfirmation />} />
 
-                                                        {/* Patient Portal Routes */}
-                                                        <Route path="/portal/login" element={<PortalLogin />} />
-                                                        <Route path="/portal/register" element={<PortalRegister />} />
-                                                        <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
-                                                        <Route path="/portal/reset-password" element={<PortalResetPassword />} />
-                                                        <Route path="/portal/telehealth" element={<PortalTelehealth />} />
-                                                        <Route path="/visit/guest" element={<GuestVisitPage />} />
-                                                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                                                        <Route path="/setup-password" element={<SetupPassword />} />
-                                                        <Route path="/reset-password" element={<SetupPassword />} />
-                                                        <Route path="/portal/dashboard" element={<PortalDashboard />} />
-                                                        <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
-                                                        <Route path="/dashboard" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Dashboard /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/schedule" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Schedule /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/my-schedule" element={<Navigate to="/dashboard" replace />} />
-                                                        <Route path="/patients" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Patients /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/pending-notes" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><PendingNotes /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/tasks" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Inbasket /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        {/* Alias /inbox to /tasks */}
-                                                        <Route path="/inbox" element={<Navigate to="/tasks" replace />} />
-                                                        <Route path="/analytics" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Analytics /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/compliance" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Compliance /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/messages" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Messages /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/telehealth" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Telehealth /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/billing" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Billing /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/billing/manager" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><BillingManager /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/claims/:id" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><ClaimViewer /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/billing/posting" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><PaymentPosting /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/billing/reports/ar-aging" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><BillingReports /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/billing/reports/collections" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><BillingReports /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/billing/statements" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><PatientStatements /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/cancellations" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Cancellations /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/appointment-requests" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><AppointmentRequests /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/users" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><UserManagement /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/admin-settings" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><AdminSettings /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/support" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><SupportPage /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/profile" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Profile /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        {/* Patient routes - flat structure to avoid nested Routes issues */}
+                                                            {/* Patient Portal Routes */}
+                                                            <Route path="/portal/login" element={<PortalLogin />} />
+                                                            <Route path="/portal/register" element={<PortalRegister />} />
+                                                            <Route path="/portal/forgot-password" element={<PortalForgotPassword />} />
+                                                            <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+                                                            <Route path="/portal/telehealth" element={<PortalTelehealth />} />
+                                                            <Route path="/visit/guest" element={<GuestVisitPage />} />
+                                                            <Route path="/forgot-password" element={<ForgotPassword />} />
+                                                            <Route path="/setup-password" element={<SetupPassword />} />
+                                                            <Route path="/reset-password" element={<SetupPassword />} />
+                                                            <Route path="/portal/dashboard" element={<PortalDashboard />} />
+                                                            <Route path="/portal" element={<Navigate to="/portal/dashboard" replace />} />
+                                                            <Route path="/dashboard" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Dashboard /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/schedule" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Schedule /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/my-schedule" element={<Navigate to="/dashboard" replace />} />
+                                                            <Route path="/patients" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Patients /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/pending-notes" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><PendingNotes /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/tasks" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Inbasket /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            {/* Alias /inbox to /tasks */}
+                                                            <Route path="/inbox" element={<Navigate to="/tasks" replace />} />
+                                                            <Route path="/analytics" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Analytics /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/compliance" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Compliance /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/messages" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Messages /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/telehealth" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Telehealth /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/billing" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Billing /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/billing/manager" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><BillingManager /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/claims/:id" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><ClaimViewer /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/billing/posting" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><PaymentPosting /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/billing/reports/ar-aging" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><BillingReports /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/billing/reports/collections" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><BillingReports /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/billing/statements" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><PatientStatements /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/cancellations" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Cancellations /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/appointment-requests" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><AppointmentRequests /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/users" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><UserManagement /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/admin-settings" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><AdminSettings /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/support" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><SupportPage /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/profile" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Profile /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            {/* Patient routes - flat structure to avoid nested Routes issues */}
 
-                                                        <Route path="/patient/:id/visit/new" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout>
-                                                                        <PatientNoteLayout>
-                                                                            <VisitNote />
-                                                                        </PatientNoteLayout>
-                                                                    </Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/patient/:id/visit/:visitId" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout>
-                                                                        <PatientNoteLayout>
-                                                                            <VisitNote />
-                                                                        </PatientNoteLayout>
-                                                                    </Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/patient/:id/fee-sheet/:visitId" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout>
-                                                                        <FeeSheet />
-                                                                    </Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/patient/:id/superbill/:visitId" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout>
-                                                                        <FeeSheet />
-                                                                    </Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/patient/:id/snapshot" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Snapshot /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        <Route path="/patient/:id/notes" element={
-                                                            <ProtectedRoute>
-                                                                <ErrorBoundary>
-                                                                    <Layout><Snapshot showNotesOnly={true} /></Layout>
-                                                                </ErrorBoundary>
-                                                            </ProtectedRoute>
-                                                        } />
-                                                        {/* Catch-all redirect for /patient/:id - must come LAST */}
-                                                        <Route path="/patient/:id" element={
-                                                            <PatientRedirect />
-                                                        } />
-                                                    </Routes>
-                                                </React.Suspense>
-                                            </div>
-                                        </MobileRedirectHandler>
+                                                            <Route path="/patient/:id/visit/new" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout>
+                                                                            <PatientNoteLayout>
+                                                                                <VisitNote />
+                                                                            </PatientNoteLayout>
+                                                                        </Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/patient/:id/visit/:visitId" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout>
+                                                                            <PatientNoteLayout>
+                                                                                <VisitNote />
+                                                                            </PatientNoteLayout>
+                                                                        </Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/patient/:id/fee-sheet/:visitId" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout>
+                                                                            <FeeSheet />
+                                                                        </Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/patient/:id/superbill/:visitId" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout>
+                                                                            <FeeSheet />
+                                                                        </Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/patient/:id/snapshot" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Snapshot /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            <Route path="/patient/:id/notes" element={
+                                                                <ProtectedRoute>
+                                                                    <ErrorBoundary>
+                                                                        <Layout><Snapshot showNotesOnly={true} /></Layout>
+                                                                    </ErrorBoundary>
+                                                                </ProtectedRoute>
+                                                            } />
+                                                            {/* Catch-all redirect for /patient/:id - must come LAST */}
+                                                            <Route path="/patient/:id" element={
+                                                                <PatientRedirect />
+                                                            } />
+                                                        </Routes>
+                                                    </React.Suspense>
+                                                </div>
+                                            </MobileRedirectHandler>
+                                        </EkoProvider>
                                     </PatientTabsProvider>
                                 </KeyboardShortcutsProvider>
                             </TaskProvider>

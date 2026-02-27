@@ -8,6 +8,7 @@ import {
     Mic, Square, Paperclip, ShieldAlert, BookOpen, FileImage
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useEko } from '../context/EkoContext';
 import api from '../services/api';
 
 // ─── Trend Chart Component (lightweight SVG) ────────────────────────────────
@@ -941,16 +942,23 @@ function InsertIntoNoteButton({ messageContent, patientId }) {
 export default function EchoPanel({ patientId, patientName }) {
     const { user } = useAuth();
     const location = useLocation();
-    const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState([]);
+    const {
+        isOpen, setIsOpen, getConversationKey, getConversation,
+        updateConversation, setMessages: setContextMessages, clearConversation: clearCtxConversation,
+        closeConversation, openConversations, activeKey, setActiveKey, conversations
+    } = useEko();
+
+    const convKey = getConversationKey(patientId);
+    const conv = getConversation(activeKey || convKey);
+    const messages = conv.messages;
+    const conversationId = conv.conversationId;
+    const proactiveGaps = conv.proactiveGaps;
+
     const [input, setInput] = useState('');
     const [attachments, setAttachments] = useState([]);
     const fileInputRef = useRef(null);
     const [isGlobalLoading, setIsGlobalLoading] = useState(false);
-    const [conversationId, setConversationId] = useState(null);
-    const [usage, setUsage] = useState(null);
     const [error, setError] = useState(null);
-    const [proactiveGaps, setProactiveGaps] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [suggestion, setSuggestion] = useState(null);
@@ -961,7 +969,10 @@ export default function EchoPanel({ patientId, patientName }) {
     const audioChunksRef = useRef([]);
     const timerRef = useRef(null);
 
-    const isPatientMode = !!patientId;
+    // Resolve which conversation key is currently displayed
+    const displayKey = activeKey || convKey;
+    const displayConv = getConversation(displayKey);
+    const isPatientMode = displayKey !== 'global';
 
     // Navigation Observer Logic
     useEffect(() => {
@@ -1016,24 +1027,27 @@ export default function EchoPanel({ patientId, patientName }) {
         };
     }, [isOpen, isRecording]);
 
-    // Reset on patient change
+    // On patient context change, set active key (don't wipe conversations)
     useEffect(() => {
-        setMessages([]);
-        setConversationId(null);
-        setError(null);
-        setProactiveGaps(null);
-
-        // Proactive clinical gap peeking
+        setActiveKey(convKey);
+        // Ensure the conversation entry exists with patient name
         if (patientId) {
+            updateConversation(convKey, { patientName: patientName || patientId });
+        }
+    }, [convKey, patientId, patientName]);
+
+    // Proactive clinical gap peeking — only fetch once per patient
+    useEffect(() => {
+        if (patientId && !getConversation(convKey).proactiveGaps) {
             api.get(`/echo/gaps/${patientId}`)
                 .then(res => {
                     if (res.data?.gaps?.length > 0) {
-                        setProactiveGaps(res.data);
+                        updateConversation(convKey, { proactiveGaps: res.data });
                     }
                 })
                 .catch(err => console.error('Silent gap check failed:', err));
         }
-    }, [patientId]);
+    }, [patientId, convKey]);
 
     const sendMessage = useCallback(async (messageText) => {
         const text = messageText || input.trim();
@@ -1050,7 +1064,7 @@ export default function EchoPanel({ patientId, patientName }) {
             timestamp: new Date(),
             attachments: currentAttachments.map(f => ({ name: f.name, type: f.type }))
         };
-        setMessages(prev => [...prev, userMessage]);
+        setContextMessages(displayKey, prev => [...prev, userMessage]);
         setIsGlobalLoading(true);
 
         try {
@@ -1090,15 +1104,14 @@ export default function EchoPanel({ patientId, patientName }) {
                 writeActions: data.writeActions,
                 usage: data.usage
             };
-            setMessages(prev => [...prev, assistantMessage]);
-            setConversationId(data.conversationId);
-            setUsage(data.usage);
+            setContextMessages(displayKey, prev => [...prev, assistantMessage]);
+            updateConversation(displayKey, { conversationId: data.conversationId });
 
         } catch (err) {
             console.error('[EchoPanel] Send error:', err);
             const errorMsg = err.response?.data?.error || err.message;
             setError(errorMsg);
-            setMessages(prev => [...prev, {
+            setContextMessages(displayKey, prev => [...prev, {
                 role: 'assistant',
                 content: 'Sorry, I encountered an error. Please try again.',
                 timestamp: new Date(),
@@ -1107,7 +1120,7 @@ export default function EchoPanel({ patientId, patientName }) {
         } finally {
             setIsGlobalLoading(false);
         }
-    }, [input, isGlobalLoading, patientId, conversationId, attachments]);
+    }, [input, isGlobalLoading, displayKey, conversationId, attachments]);
 
     const handleStartRecording = async () => {
         try {
@@ -1199,7 +1212,7 @@ export default function EchoPanel({ patientId, patientName }) {
                         vizList[vizIndex].status = 'committed';
                     }
                 });
-                setMessages(newMessages);
+                setContextMessages(displayKey, newMessages);
 
                 if (window.refreshChartData) window.refreshChartData();
             } else {
@@ -1222,7 +1235,7 @@ export default function EchoPanel({ patientId, patientName }) {
         const vizIndex = newMessages[messageIndex].visualizations.findIndex(v => v.action_id === action.action_id);
         if (vizIndex !== -1) {
             newMessages[messageIndex].visualizations[vizIndex].status = 'rejected';
-            setMessages(newMessages);
+            setContextMessages(displayKey, newMessages);
         }
     }
 
@@ -1246,8 +1259,7 @@ export default function EchoPanel({ patientId, patientName }) {
     };
 
     const clearConversation = () => {
-        setMessages([]);
-        setConversationId(null);
+        clearCtxConversation(displayKey);
         setError(null);
     };
 
@@ -1336,6 +1348,46 @@ export default function EchoPanel({ patientId, patientName }) {
                     </div>
                 </div>
             </div>
+
+            {/* Conversation Tabs */}
+            {openConversations.length > 1 && (
+                <div className="flex gap-1 px-3 py-1.5 border-b border-slate-100 overflow-x-auto scrollbar-none bg-slate-50/50">
+                    {openConversations.map(key => {
+                        const c = getConversation(key);
+                        const label = key === 'global' ? 'General' : (c.patientName || key).split(' ').slice(0, 2).join(' ');
+                        const isActive = key === displayKey;
+                        const msgCount = c.messages.length;
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => setActiveKey(key)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider whitespace-nowrap transition-all flex-shrink-0 group/tab
+                                    ${isActive
+                                        ? 'bg-cyan-600 text-white shadow-sm shadow-cyan-200'
+                                        : 'bg-white text-slate-500 border border-slate-200 hover:border-cyan-300 hover:text-cyan-600'}`}
+                            >
+                                <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white' : (key === 'global' ? 'bg-green-400' : 'bg-cyan-400')}`} />
+                                <span className="max-w-[80px] truncate">{label}</span>
+                                {msgCount > 0 && (
+                                    <span className={`text-[7px] ${isActive ? 'text-cyan-200' : 'text-slate-400'}`}>
+                                        {msgCount}
+                                    </span>
+                                )}
+                                <span
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        closeConversation(key);
+                                    }}
+                                    className={`ml-0.5 opacity-0 group-hover/tab:opacity-100 transition-opacity cursor-pointer rounded-full hover:bg-white/20 p-0.5
+                                        ${isActive ? 'text-cyan-200 hover:text-white' : 'text-slate-400 hover:text-rose-500'}`}
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 min-h-[300px] max-h-[480px]
