@@ -34,16 +34,16 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
                                 e.stopPropagation();
                                 onDraftWithAI();
                             }}
-                            className="relative overflow-hidden px-4 py-2 rounded-xl transition-all duration-300 flex items-center gap-1.5 group bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.3)] hover:shadow-[0_8px_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 border border-emerald-400/50"
+                            className="relative overflow-hidden px-3.5 py-1.5 rounded-lg transition-all duration-300 flex items-center gap-1.5 group bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-[0_2px_10px_rgba(59,130,246,0.3)] hover:shadow-[0_6px_16px_rgba(59,130,246,0.4)] hover:-translate-y-0.5 border border-blue-400/40"
                             title={draftLabel || "Draft with AI"}
                         >
                             {/* Glass reflection effect on hover */}
-                            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                             <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <span className="relative z-10 flex items-center gap-1.5 transform group-hover:scale-105 transition-transform duration-300 drop-shadow-sm">
-                                {draftIcon || <Sparkles className="w-3.5 h-3.5 text-emerald-100 group-hover:text-white animate-pulse" />}
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white">{draftLabel || 'Draft'}</span>
+                            <span className="relative z-10 flex items-center gap-1.5 transform group-hover:scale-[1.03] transition-transform duration-300 drop-shadow-sm">
+                                {draftIcon || <Sparkles className="w-3 h-3 text-blue-100 group-hover:text-white animate-pulse" />}
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-white">{draftLabel || 'Draft'}</span>
                             </span>
                         </button>
                     )}
