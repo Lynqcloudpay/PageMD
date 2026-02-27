@@ -1738,8 +1738,8 @@ export default function EchoPanel({ patientId, patientName }) {
                                 placeholder={ambientMode ? "Ambient Scribing Active..." : "Eko clinical ask..."}
                                 disabled={isGlobalLoading || (ambientMode && isRecording)}
                                 rows={1}
-                                className="w-full bg-transparent text-[12px] text-slate-600 placeholder-slate-400
-                                       resize-none outline-none py-2.5 font-medium h-[38px] flex items-center"
+                                className="w-full bg-transparent border-none text-[12px] text-slate-600 placeholder-slate-400
+                                       resize-none outline-none focus:ring-0 py-2.5 font-medium h-[38px] flex items-center"
                                 style={{ maxHeight: '80px' }}
                             />
                         </div>
