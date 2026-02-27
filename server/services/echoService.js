@@ -2662,12 +2662,35 @@ function redactPHI(text) {
 }
 
 /**
- * Transcribe clinical audio using OpenAI Whisper
+ * Transcribe clinical audio — Deepgram Nova-2 Medical (primary) → Whisper (fallback)
+ * 
+ * @param {Buffer} buffer - Raw audio buffer
+ * @param {string} originalname - Original filename
+ * @param {Object} options - { mode: 'dictation'|'ambient' }
+ * @returns {Promise<string>} Transcript text
  */
-async function transcribeAudio(buffer, originalname) {
+async function transcribeAudio(buffer, originalname, options = {}) {
+    const deepgramService = require('./deepgramService');
+
+    // Primary: Deepgram Nova-2 Medical
+    if (deepgramService.isAvailable()) {
+        try {
+            const result = await deepgramService.transcribeAudio(buffer, {
+                mimetype: 'audio/webm',
+                mode: options.mode || 'dictation'
+            });
+            console.log(`[Echo Service] Transcribed via Deepgram (${result.durationSeconds?.toFixed(1)}s, ${result.latencyMs}ms)`);
+            return result.text;
+        } catch (dgErr) {
+            console.warn('[Echo Service] Deepgram failed, falling back to Whisper:', dgErr.message);
+        }
+    } else {
+        console.log('[Echo Service] Deepgram not configured, using Whisper');
+    }
+
+    // Fallback: OpenAI Whisper
     try {
         const formData = new FormData();
-        // Node 18+ fetch handles FormData + Blob nicely
         const blob = new Blob([buffer], { type: 'audio/webm' });
         formData.append('file', blob, originalname || 'audio.webm');
         formData.append('model', 'whisper-1');
@@ -2687,9 +2710,10 @@ async function transcribeAudio(buffer, originalname) {
         }
 
         const data = await response.json();
+        console.log('[Echo Service] Transcribed via Whisper (fallback)');
         return data.text;
     } catch (err) {
-        console.error('[Echo Service] Transcription failure:', err.message);
+        console.error('[Echo Service] All transcription providers failed:', err.message);
         throw err;
     }
 }

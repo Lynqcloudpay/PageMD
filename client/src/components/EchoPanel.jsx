@@ -5,7 +5,7 @@ import {
     Pill, FileText, Bot, User, Navigation, BarChart3, Trash2, History,
     Stethoscope, ClipboardList, Plus, CheckCircle2, AlertTriangle, Calendar,
     Inbox, PenTool, Search, Copy, ChevronRight, Zap, Globe, FlaskConical, ArrowUpRight, ArrowDownRight,
-    Mic, Square, Paperclip, ShieldAlert, BookOpen, FileImage
+    Mic, MicOff, Square, Paperclip, ShieldAlert, BookOpen, FileImage, Radio
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEko } from '../context/EkoContext';
@@ -962,12 +962,18 @@ export default function EchoPanel({ patientId, patientName }) {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [suggestion, setSuggestion] = useState(null);
+    const [ambientMode, setAmbientMode] = useState(false);
+    const [isSilent, setIsSilent] = useState(false);
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const timerRef = useRef(null);
+    const silenceTimerRef = useRef(null);
+    const audioContextRef = useRef(null);
+    const analyserRef = useRef(null);
+    const MAX_RECORDING_SECONDS = 1800; // 30 minutes hard cap
 
     // Resolve which conversation key is currently displayed
     const displayKey = activeKey || convKey;
@@ -1129,6 +1135,45 @@ export default function EchoPanel({ patientId, patientName }) {
             mediaRecorderRef.current = mediaRecorder;
             audioChunksRef.current = [];
 
+            // VAD: Voice Activity Detection using Web Audio API
+            if (ambientMode) {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    audioContextRef.current = audioContext;
+                    const source = audioContext.createMediaStreamSource(stream);
+                    const analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 512;
+                    analyser.smoothingTimeConstant = 0.8;
+                    source.connect(analyser);
+                    analyserRef.current = analyser;
+
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    let silenceStart = null;
+                    const SILENCE_THRESHOLD = 15; // Volume level below which is "silence"
+                    const SILENCE_DELAY_MS = 3000; // 3 seconds of silence to trigger indicator
+
+                    const checkSilence = () => {
+                        if (!analyserRef.current) return;
+                        analyserRef.current.getByteFrequencyData(dataArray);
+                        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+                        if (average < SILENCE_THRESHOLD) {
+                            if (!silenceStart) silenceStart = Date.now();
+                            if (Date.now() - silenceStart > SILENCE_DELAY_MS) {
+                                setIsSilent(true);
+                            }
+                        } else {
+                            silenceStart = null;
+                            setIsSilent(false);
+                        }
+                        silenceTimerRef.current = requestAnimationFrame(checkSilence);
+                    };
+                    checkSilence();
+                } catch (vadErr) {
+                    console.warn('VAD setup failed (non-blocking):', vadErr);
+                }
+            }
+
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     audioChunksRef.current.push(event.data);
@@ -1136,12 +1181,21 @@ export default function EchoPanel({ patientId, patientName }) {
             };
 
             mediaRecorder.onstop = async () => {
+                // Clean up VAD
+                if (silenceTimerRef.current) cancelAnimationFrame(silenceTimerRef.current);
+                if (audioContextRef.current) {
+                    audioContextRef.current.close().catch(() => { });
+                    audioContextRef.current = null;
+                }
+                analyserRef.current = null;
+                setIsSilent(false);
+
                 if (audioChunksRef.current.length === 0) {
                     setIsRecording(false);
                     return;
                 }
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                if (audioBlob.size < 1000) { // Ignore blobs smaller than 1KB (likely silence or micro-tap)
+                if (audioBlob.size < 1000) {
                     setIsRecording(false);
                     return;
                 }
@@ -1151,11 +1205,20 @@ export default function EchoPanel({ patientId, patientName }) {
                 if (timerRef.current) clearInterval(timerRef.current);
             };
 
-            mediaRecorder.start();
+            // In ambient mode, collect data every second for longer recordings
+            mediaRecorder.start(ambientMode ? 1000 : undefined);
             setIsRecording(true);
             setRecordingTime(0);
             timerRef.current = setInterval(() => {
-                setRecordingTime(prev => prev + 1);
+                setRecordingTime(prev => {
+                    const next = prev + 1;
+                    // Hard timeout: auto-stop at 30 minutes
+                    if (next >= MAX_RECORDING_SECONDS) {
+                        handleStopRecording();
+                        setError('Maximum recording duration reached (30 min).');
+                    }
+                    return next;
+                });
             }, 1000);
         } catch (err) {
             console.error('Recording start failed:', err);
@@ -1167,27 +1230,41 @@ export default function EchoPanel({ patientId, patientName }) {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
         }
+        if (silenceTimerRef.current) cancelAnimationFrame(silenceTimerRef.current);
         setIsRecording(false);
+        setIsSilent(false);
     };
 
     const handleAudioUpload = async (blob) => {
-        setIsGlobalLoading(true); // Changed 'setLoading' to 'setIsGlobalLoading'
+        setIsGlobalLoading(true);
         try {
             const formData = new FormData();
             formData.append('audio', blob, 'recording.webm');
+            formData.append('mode', ambientMode ? 'ambient' : 'dictation');
 
             const { data } = await api.post('/echo/transcribe', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            if (data.success && data.text) {
-                sendMessage(data.text);
+            if (data.success) {
+                if (data.mode === 'ambient' && data.structuredNote) {
+                    // In ambient mode, show the structured SOAP note as an assistant message
+                    const ambientMessage = {
+                        role: 'assistant',
+                        content: data.structuredNote,
+                        timestamp: new Date(),
+                        toolCalls: [{ name: 'ambient_scribe', dataAccessed: ['audio_transcription'] }],
+                    };
+                    setContextMessages(displayKey, prev => [...prev, ambientMessage]);
+                } else if (data.text) {
+                    sendMessage(data.text);
+                }
             }
         } catch (err) {
             console.error('Transcription error:', err);
             setError('Failed to transcribe audio.');
         } finally {
-            setIsGlobalLoading(false); // Changed 'setLoading' to 'setIsGlobalLoading'
+            setIsGlobalLoading(false);
         }
     };
 
@@ -1636,17 +1713,45 @@ export default function EchoPanel({ patientId, patientName }) {
                         </div>
 
                         <div className="flex items-center gap-0.5">
+                            {/* Ambient Mode Toggle */}
                             <button
-                                onMouseDown={handleStartRecording}
-                                onMouseUp={handleStopRecording}
-                                onMouseLeave={handleStopRecording}
-                                className={`p-2 rounded-full transition-all ${isRecording
-                                    ? 'bg-rose-500 text-white animate-pulse'
-                                    : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'
+                                onClick={() => setAmbientMode(!ambientMode)}
+                                className={`p-2 rounded-full transition-all ${ambientMode
+                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
+                                    : 'text-slate-300 hover:text-amber-500 hover:bg-amber-50'
                                     }`}
+                                title={ambientMode ? 'Ambient Scribe ON' : 'Enable Ambient Scribe'}
                             >
-                                <Mic className="w-3.5 h-3.5" />
+                                <Radio className="w-3.5 h-3.5" />
                             </button>
+
+                            {/* Mic Button — ambient uses click toggle, dictation uses push-to-talk */}
+                            {ambientMode ? (
+                                <button
+                                    onClick={isRecording ? handleStopRecording : handleStartRecording}
+                                    className={`p-2 rounded-full transition-all ${isRecording
+                                        ? isSilent
+                                            ? 'bg-amber-400 text-white'
+                                            : 'bg-rose-500 text-white animate-pulse'
+                                        : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'
+                                        }`}
+                                    title={isRecording ? 'Stop Ambient Scribe' : 'Start Ambient Scribe'}
+                                >
+                                    {isRecording ? <Square className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                                </button>
+                            ) : (
+                                <button
+                                    onMouseDown={handleStartRecording}
+                                    onMouseUp={handleStopRecording}
+                                    onMouseLeave={handleStopRecording}
+                                    className={`p-2 rounded-full transition-all ${isRecording
+                                        ? 'bg-rose-500 text-white animate-pulse'
+                                        : 'text-slate-300 hover:text-rose-500 hover:bg-rose-50'
+                                        }`}
+                                >
+                                    <Mic className="w-3.5 h-3.5" />
+                                </button>
+                            )}
 
                             <button
                                 onClick={() => sendMessage()}
@@ -1658,11 +1763,26 @@ export default function EchoPanel({ patientId, patientName }) {
                             </button>
                         </div>
                     </div>
+
+                    {/* Ambient Recording Status Bar */}
+                    {isRecording && ambientMode && (
+                        <div className="flex items-center justify-between px-4 py-1.5 bg-gradient-to-r from-rose-50 to-amber-50 border-t border-rose-100 rounded-b-3xl">
+                            <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${isSilent ? 'bg-amber-400' : 'bg-rose-500 animate-pulse'}`} />
+                                <span className="text-[9px] font-bold text-rose-700 uppercase tracking-wider">
+                                    {isSilent ? 'Listening (Silence)' : 'Ambient Scribe Active'}
+                                </span>
+                            </div>
+                            <span className="text-[10px] font-mono text-rose-500 font-bold">
+                                {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{(recordingTime % 60).toString().padStart(2, '0')}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-center mt-2 opacity-0 group-hover-within/input:opacity-100 transition-opacity">
                     <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">
-                        Alt + Record
+                        {ambientMode ? 'Ambient Scribe · Click mic to start' : 'Alt + Record'}
                     </span>
                 </div>
             </div>

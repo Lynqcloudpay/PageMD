@@ -1,8 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Square, Loader2, CheckCircle2 } from 'lucide-react';
 import Button from './ui/Button';
+import api from '../services/api';
 
-// Voice Recorder Component - For ambient documentation (Epic-style)
+const MAX_RECORDING_SECONDS = 1800; // 30 minutes
+
+// Voice Recorder Component - For ambient documentation
 const VoiceRecorder = ({ onTranscript, onClose }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -38,23 +41,48 @@ const VoiceRecorder = ({ onTranscript, onClose }) => {
 
       mediaRecorder.onstop = async () => {
         setIsProcessing(true);
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        
-        // Simulate transcription (in production, use Web Speech API or cloud service)
-        setTimeout(() => {
-          const mockTranscript = generateMockTranscript();
-          setTranscript(mockTranscript);
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+
+        if (audioBlob.size < 1000) {
           setIsProcessing(false);
-          stream.getTracks().forEach(track => track.stop());
-        }, 2000);
+          return;
+        }
+
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+          formData.append('mode', 'dictation');
+
+          const { data } = await api.post('/echo/transcribe', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+
+          if (data.success && data.text) {
+            setTranscript(data.text);
+          } else {
+            setTranscript('Transcription returned empty. Please try again.');
+          }
+        } catch (err) {
+          console.error('Transcription error:', err);
+          setTranscript('Transcription failed. Please try again.');
+        } finally {
+          setIsProcessing(false);
+        }
       };
 
-      mediaRecorder.start();
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setRecordingTime(0);
-      
+
       intervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime(prev => {
+          const next = prev + 1;
+          if (next >= MAX_RECORDING_SECONDS) {
+            stopRecording();
+          }
+          return next;
+        });
       }, 1000);
     } catch (error) {
       console.error('Error accessing microphone:', error);
@@ -70,10 +98,6 @@ const VoiceRecorder = ({ onTranscript, onClose }) => {
         clearInterval(intervalRef.current);
       }
     }
-  };
-
-  const generateMockTranscript = () => {
-    return `Patient presents with chief complaint of chest pain. Pain started approximately 2 hours ago, described as pressure-like, substernal, radiating to left arm. Associated with shortness of breath and diaphoresis. No relief with rest. Denies nausea or vomiting. Past medical history significant for hypertension and hyperlipidemia. On examination, patient appears uncomfortable, diaphoretic. Blood pressure 150 over 90, heart rate 95, regular. Lungs clear to auscultation bilaterally. Heart regular rate and rhythm, no murmurs. Abdomen soft, non-tender. Extremities without edema.`;
   };
 
   const formatTime = (seconds) => {
@@ -96,7 +120,7 @@ const VoiceRecorder = ({ onTranscript, onClose }) => {
           <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-4">
             Voice Recording
           </h3>
-          
+
           {/* Recording Status */}
           <div className="text-center py-8">
             {isRecording ? (

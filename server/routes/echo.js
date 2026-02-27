@@ -63,7 +63,10 @@ router.post('/chat', requirePermission('ai.echo'), async (req, res) => {
 
 /**
  * POST /api/echo/transcribe
- * Transcribe clinical audio using Whisper
+ * Transcribe clinical audio using Deepgram Nova-2 Medical (Whisper fallback)
+ * 
+ * Body (multipart): audio file + optional mode ('dictation' | 'ambient')
+ * In ambient mode, raw transcript is post-processed into a SOAP note via GPT-4o-mini
  */
 router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'), async (req, res) => {
     try {
@@ -72,8 +75,65 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
             return res.status(400).json({ error: 'No audio file provided' });
         }
 
-        const transcription = await echoService.transcribeAudio(req.file.buffer, req.file.originalname);
-        res.json({ success: true, text: transcription });
+        const mode = req.body?.mode || 'dictation';
+        const transcription = await echoService.transcribeAudio(req.file.buffer, req.file.originalname, { mode });
+
+        // In ambient mode, post-process raw transcript into structured SOAP note
+        if (mode === 'ambient' && transcription && transcription.trim().length > 0) {
+            try {
+                const soapResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${process.env.AI_API_KEY || process.env.OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        temperature: 0.1,
+                        max_tokens: 1500,
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `You are a medical scribe assistant. Given a raw transcription of a doctor-patient conversation:
+1. IGNORE all small talk, greetings, weather discussion, family chat, and non-clinical content.
+2. Extract ONLY medically relevant information.
+3. Format into these sections (omit empty sections):
+
+Chief Complaint: [one sentence]
+HPI: [narrative paragraph in doctor's voice]
+Review of Systems: [relevant positives and negatives mentioned]
+Physical Exam: [any exam findings discussed]
+Assessment: [clinical impressions]
+Plan: [any treatment, follow-up, or orders discussed]
+
+Write in professional clinical language. Use past tense for history, present tense for current findings.`
+                            },
+                            {
+                                role: 'user',
+                                content: `Raw conversation transcript:\n\n${transcription}`
+                            }
+                        ]
+                    })
+                });
+
+                if (soapResponse.ok) {
+                    const soapData = await soapResponse.json();
+                    const structuredNote = soapData.choices?.[0]?.message?.content || '';
+                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → ${structuredNote.length} chars structured`);
+                    return res.json({
+                        success: true,
+                        text: transcription,
+                        rawTranscript: transcription,
+                        structuredNote,
+                        mode: 'ambient'
+                    });
+                }
+            } catch (soapErr) {
+                console.warn('[Echo API] SOAP structuring failed, returning raw transcript:', soapErr.message);
+            }
+        }
+
+        res.json({ success: true, text: transcription, mode });
     } catch (err) {
         console.error('[Echo API] Transcribe error details:', {
             message: err.message,
