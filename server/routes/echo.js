@@ -853,10 +853,12 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
 
         console.log(`[Echo Refine] Refining ${section} ${diagnosis ? `for ${diagnosis}` : ''} in visit ${visitId}`);
 
-        // 1. Fetch transcript and patient context
+        // 1. Fetch transcript, patient context, and visit orders
         const visitResult = await pool.query(
             `SELECT v.visit_transcript, v.patient_id, p.gender, p.dob,
-             (SELECT string_agg(problem_name, ', ') FROM problems WHERE patient_id = v.patient_id AND status = 'active') as problem_list
+             (SELECT string_agg(problem_name, ', ') FROM problems WHERE patient_id = v.patient_id AND status = 'active') as problem_list,
+             (SELECT string_agg(medication_name || ' ' || COALESCE(dosage, ''), '; ') FROM medications WHERE patient_id = v.patient_id AND active = true) as med_list,
+             v.note_draft
              FROM visits v
              JOIN patients p ON v.patient_id = p.id
              WHERE v.id = $1`,
@@ -900,16 +902,31 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 promptSnippet = "Document the Physical Exam findings mentioned during the encounter. Use professional shorthand (e.g., 'Lungs: CTB BL').";
                 responseFormat = { type: 'text' };
                 break;
-            case 'assessment':
-                promptSnippet = "List the clinical diagnoses addressed during this visit. Format as a numbered list.";
+            case 'assessment_suggestions':
+                promptSnippet = `Based on the transcript, identify potential diagnoses that were discussed or addressed.
+                Output a JSON object with a "suggestions" key containing an array of objects:
+                { "code": "ICD-10 Code", "description": "Clinical Description", "reason": "Brief logic for this suggestion" }
+                Ensure codes are specific and billable.`;
+                responseFormat = { type: 'json_object' };
                 break;
             case 'mdm':
-                promptSnippet = `Write a high-billing-value Medical Decision Making (MDM) clinical rationale specifically for the diagnosis: "${diagnosis}". 
-                Justify the complexity, risk, and clinical thought process. This will be used for E/M coding level 4 or 5. 
-                Keep it concise but impactful. Output ONLY the MDM logic text.`;
+                // Comprehensive MDM logic
+                const ordersUsed = visit.note_draft ? (visit.note_draft.match(/Plan:[\s\S]+/i)?.[0] || 'No specific orders found') : 'N/A';
+                promptSnippet = `Write a high-billing-value Medical Decision Making (MDM) clinical rationale.
+                Target Diagnosis: "${diagnosis || 'Generalized health management'}".
+                CONTEXT TO INTEGRATE:
+                - Spoken Visit History: ${visit.visit_transcript.substring(0, 1000)}...
+                - Current Visit Orders/Plan: ${ordersUsed}
+                - Patient Home Medications: ${visit.med_list || 'None noted'}
+                - Chronic Problems: ${visit.problem_list || 'None noted'}
+                
+                CLINICAL GOAL: Justify a high complexity level (Level 4 or 5) by documenting how you are managing acute issues while considering the complexity of their chronic conditions and current medications. 
+                Output ONLY the MDM logic text.`;
+                responseFormat = { type: 'text' };
                 break;
             default:
                 promptSnippet = `Document the ${section} section accurately based on the conversation.`;
+                responseFormat = { type: 'text' };
         }
 
         const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -921,12 +938,13 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
             body: JSON.stringify({
                 model: 'gpt-4o',
                 temperature: 0.1,
+                response_format: responseFormat,
                 messages: [
                     {
                         role: 'system',
                         content: `You are an elite Medical Scribe. ${context}
                         TASK: Refine/Draft the "${section}" section of the visit note.
-                        CRITICAL: ONLY output the content for the requested section. No preamble, no conversational fillers.`
+                        CRITICAL: ONLY output the requested content. ${responseFormat.type === 'json_object' ? 'Output VALID JSON.' : 'No preamble, no conversational fillers.'}`
                     },
                     {
                         role: 'user',
@@ -938,9 +956,20 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
 
         if (!aiResponse.ok) throw new Error('AI processing failed');
         const data = await aiResponse.json();
-        const draftedText = data.choices?.[0]?.message?.content || '';
+        let draftedText = data.choices?.[0]?.message?.content || '';
+        let suggestions = null;
 
-        res.json({ success: true, draftedText: draftedText.trim() });
+        if (section === 'assessment_suggestions') {
+            try {
+                const parsed = JSON.parse(draftedText);
+                suggestions = parsed.suggestions || [];
+                draftedText = ''; // Clear text if we are in suggestion mode
+            } catch (e) {
+                console.error('JSON parse error for suggestions:', e);
+            }
+        }
+
+        res.json({ success: true, draftedText: draftedText.trim(), suggestions });
 
     } catch (err) {
         console.error('[Echo Refine] Error:', err);

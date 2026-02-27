@@ -442,6 +442,7 @@ const VisitNote = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [lastSaved, setLastSaved] = useState(null);
     const [toast, setToast] = useState(null);
+    const [assessmentSuggestions, setAssessmentSuggestions] = useState([]); // New state for AI suggestions
     const [isRetracted, setIsRetracted] = useState(false);
     const [showRetractModal, setShowRetractModal] = useState(false);
     const [retractData, setRetractData] = useState({ reason_code: 'ERROR', reason_text: '' });
@@ -2295,8 +2296,49 @@ const VisitNote = () => {
                 diagnosis
             });
 
-            if (response.data.success && response.data.draftedText) {
+            if (response.data.success) {
+                if (section === 'assessment_suggestions') {
+                    setAssessmentSuggestions(response.data.suggestions || []);
+                    if ((response.data.suggestions || []).length > 0) {
+                        showToast(`AI found ${response.data.suggestions.length} potential diagnoses`, 'success');
+                    } else {
+                        showToast('AI could not identify specific diagnoses from this transcript.', 'info');
+                    }
+                    return;
+                }
+
                 const draftedValue = response.data.draftedText;
+                if (!draftedValue && section !== 'mdm') return;
+
+                if (section === 'mdm' && planIndex === null) {
+                    // Global Synthesis: AI drafts MDM for ALL diagnoses in plan
+                    const currentPlan = [...(noteData.planStructured || [])];
+                    if (currentPlan.length === 0) {
+                        showToast('Add diagnoses to the plan first to synthesize MDM', 'info');
+                        return;
+                    }
+
+                    showToast(`Synthesizing MDM for ${currentPlan.length} diagnoses...`, 'info');
+
+                    // Trigger refinement for each diagnosis sequentially to avoid race conditions or use Promise.all
+                    for (let i = 0; i < currentPlan.length; i++) {
+                        const diag = currentPlan[i].diagnosis;
+                        try {
+                            const mdmResponse = await visitsAPI.refineSection({
+                                visitId: currentVisitId,
+                                section: 'mdm',
+                                diagnosis: diag
+                            });
+                            if (mdmResponse.data.success && mdmResponse.data.draftedText) {
+                                updatePlanDetails(i, 'mdm', mdmResponse.data.draftedText);
+                            }
+                        } catch (e) {
+                            console.error(`Failed to synthesize MDM for ${diag}`, e);
+                        }
+                    }
+                    showToast('Comprehensive MDM synthesis complete', 'success');
+                    return;
+                }
 
                 if (planIndex !== null && section === 'mdm') {
                     updatePlanDetails(planIndex, 'mdm', draftedValue);
@@ -3627,7 +3669,8 @@ const VisitNote = () => {
                                 defaultOpen={true}
                                 isEdited={editedSections.has('assessment')}
                                 id="assessment"
-                                onDraftWithAI={() => refineSectionWithAI('assessment')}
+                                onDraftWithAI={() => refineSectionWithAI('assessment_suggestions')}
+                                draftLabel="Suggest ICD-10"
                             >
                                 {/* ICD-10 Search - Simple inline search */}
                                 {hasPrivilege('search_icd10') && (
@@ -3722,6 +3765,47 @@ const VisitNote = () => {
                                         ))}
                                     </div>
                                 )}
+
+                                {/* AI Suggestions (Ghost Entries) */}
+                                {assessmentSuggestions.length > 0 && (
+                                    <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Sparkles className="w-3 h-3 text-primary-500" />
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">AI Suggestions</span>
+                                        </div>
+                                        {assessmentSuggestions.map((sug, i) => (
+                                            <div key={`sug-${i}`} className="flex items-center justify-between p-2 bg-primary-50/30 border border-primary-100/50 rounded-xl group animate-in fade-in slide-in-from-top-1 duration-300">
+                                                <div className="flex-1 min-w-0 mr-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-primary-600">{sug.code}</span>
+                                                        <span className="text-[10px] font-medium text-gray-800 truncate">{sug.description}</span>
+                                                    </div>
+                                                    <p className="text-[9px] text-gray-400 italic line-clamp-1">{sug.reason}</p>
+                                                </div>
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <button
+                                                        onClick={() => {
+                                                            handleAddICD10({ code: sug.code, description: sug.description }, false);
+                                                            setAssessmentSuggestions(prev => prev.filter((_, idx) => idx !== i));
+                                                            showToast('Diagnosis accepted', 'success');
+                                                        }}
+                                                        className="p-1 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors"
+                                                        title="Approve"
+                                                    >
+                                                        <CheckCircle2 className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setAssessmentSuggestions(prev => prev.filter((_, idx) => idx !== i))}
+                                                        className="p-1 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        title="Dismiss"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </VisitNoteSection>
                         </div>
 
@@ -3732,6 +3816,9 @@ const VisitNote = () => {
                             isEdited={editedSections.has('plan')}
                             id="plan"
                             className="z-10 relative"
+                            onDraftWithAI={() => refineSectionWithAI('mdm')}
+                            draftIcon={<Sparkles className="w-3.5 h-3.5" />}
+                            draftLabel="Synthesize MDM"
                         >
                             <div className="relative">
                                 {!isSigned && noteData.planStructured && noteData.planStructured.length > 0 && (
