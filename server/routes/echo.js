@@ -106,8 +106,8 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
 {
   "chiefComplaint": "Ultra-concise phrase (e.g., 'Chest pain', 'Headache'). Do NOT include duration or full sentences.",
   "hpi": "Narrative paragraph in the doctor's voice, past tense for history, present tense for current symptoms.",
-  "ros": "Review of Systems. Format as 'System: Findings.' (e.g. Constitutional: negative for weight loss. Gastrointestinal: positive for nausea.) Include: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Skin.",
-  "pe": "Physical Examination. Format as '**System:** Findings.' (e.g. **General:** well-appearing. **Abdomen:** non-tender.). Include: General, Head Neck, Eyes, ENT, Cardiovascular, Respiratory, Abdomen, Extremities, Neurological, Skin.",
+  "ros": "Review of Systems. Format as '**System:** Findings.' (e.g. **Constitutional:** negative for weight loss.). Each system MUST be on a NEW line/row. Include: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Skin.",
+  "pe": "Physical Examination. Format as '**System:** Findings.' (e.g. **General:** well-appearing.). Each system MUST be on a NEW line/row. Include: General, Head Neck, Eyes, ENT, Cardiovascular, Respiratory, Abdomen, Extremities, Neurological, Skin.",
   "structuredNote": "The full formatted note as readable text with clear headers (Chief Complaint:, HPI:, Review of Systems:, Physical Exam:)"
 }
 
