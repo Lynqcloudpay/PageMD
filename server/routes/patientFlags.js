@@ -10,8 +10,9 @@ const { requirePermission } = require('../services/authorization');
 router.get('/types', authenticate, async (req, res) => {
     try {
         const clinicId = req.user.clinic_id || req.user.clinicId;
+        const db = req.dbClient || pool;
         // Return both clinic-specific flags and system default flags
-        const result = await pool.query(
+        const result = await db.query(
             `SELECT * FROM flag_types 
              WHERE clinic_id = $1 OR (clinic_id IS NULL AND is_default = true)
              ORDER BY severity = 'critical' DESC, label ASC`,
@@ -29,10 +30,11 @@ router.get('/types', authenticate, async (req, res) => {
  */
 router.post('/types', authenticate, requirePermission('patient_flags:manage_types'), async (req, res) => {
     try {
+        const db = req.dbClient || pool;
         const clinicId = req.user.clinic_id || req.user.clinicId;
         const { label, category, severity, color, requires_acknowledgment, requires_expiration, default_expiration_days } = req.body;
 
-        const result = await pool.query(
+        const result = await db.query(
             `INSERT INTO flag_types (clinic_id, label, category, severity, color, requires_acknowledgment, requires_expiration, default_expiration_days)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *`,
@@ -54,7 +56,7 @@ router.put('/types/:id', authenticate, requirePermission('patient_flags:manage_t
         const clinicId = req.user.clinic_id || req.user.clinicId;
         const { label, category, severity, color, requires_acknowledgment, requires_expiration, default_expiration_days } = req.body;
 
-        const result = await pool.query(
+        const result = await db.query(
             `UPDATE flag_types 
              SET label = $1, category = $2, severity = $3, color = $4, requires_acknowledgment = $5, 
                  requires_expiration = $6, default_expiration_days = $7, updated_at = CURRENT_TIMESTAMP
@@ -80,8 +82,9 @@ router.delete('/types/:id', authenticate, requirePermission('patient_flags:manag
     try {
         const { id } = req.params;
         const clinicId = req.user.clinic_id || req.user.clinicId;
+        const db = req.dbClient || pool;
 
-        const result = await pool.query(
+        const result = await db.query(
             'DELETE FROM flag_types WHERE id = $1 AND clinic_id = $2 RETURNING *',
             [id, clinicId]
         );
@@ -103,10 +106,11 @@ router.get('/patient/:patientId', authenticate, async (req, res) => {
     try {
         const { patientId } = req.params;
         const clinicId = req.user.clinic_id || req.user.clinicId;
+        const db = req.dbClient || pool;
 
         // Use COALESCE to prioritize custom_label over flag_type label if needed,
         // or just return both and let the frontend decide.
-        const result = await pool.query(
+        const result = await db.query(
             `SELECT pf.*, 
                     COALESCE(pf.custom_label, ft.label) as display_label,
                     COALESCE(ft.category, 'admin') as category, 
@@ -146,12 +150,13 @@ router.post('/patient/:patientId', authenticate, requirePermission('patient_flag
     try {
         const { patientId } = req.params;
         const clinicId = req.user.clinic_id || req.user.clinicId;
+        const db = req.dbClient || pool;
         const { flag_type_id, note, expires_at, custom_label, custom_severity, custom_color } = req.body;
 
         // Handle 'other' from dropdown which isn't a valid UUID
         const actualFlagTypeId = (flag_type_id === 'other' || !flag_type_id) ? null : flag_type_id;
 
-        const result = await pool.query(
+        const result = await db.query(
             `INSERT INTO patient_flags (
                 clinic_id, patient_id, flag_type_id, 
                 note, expires_at, created_by_user_id,
@@ -195,8 +200,9 @@ router.patch('/:id/resolve', authenticate, requirePermission('patient_flags:reso
     try {
         const { id } = req.params;
         const clinicId = req.user.clinic_id || req.user.clinicId;
+        const db = req.dbClient || pool;
 
-        const result = await pool.query(
+        const result = await db.query(
             `UPDATE patient_flags
              SET status = 'resolved', resolved_by_user_id = $1, resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
              WHERE id = $2 AND clinic_id = $3 AND status = 'active'
@@ -233,12 +239,13 @@ router.post('/:id/acknowledge', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
         const clinicId = req.user.clinic_id || req.user.clinicId;
+        const db = req.dbClient || pool;
 
         // Verify flag exists and update
-        const flagCheck = await pool.query('SELECT patient_id FROM patient_flags WHERE id = $1 AND clinic_id = $2', [id, clinicId]);
+        const flagCheck = await db.query('SELECT patient_id FROM patient_flags WHERE id = $1 AND clinic_id = $2', [id, clinicId]);
         if (flagCheck.rows.length === 0) return res.status(404).json({ error: 'Flag not found' });
 
-        await pool.query(
+        await db.query(
             `INSERT INTO patient_flag_acknowledgments (clinic_id, patient_flag_id, user_id)
              VALUES ($1, $2, $3)
              ON CONFLICT (patient_flag_id, user_id) DO NOTHING`,

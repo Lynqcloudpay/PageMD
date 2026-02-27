@@ -317,7 +317,6 @@ const InbasketRedesign = () => {
     // Get section counts
     const getSectionCount = (sectionId) => {
         const section = INBOX_SECTIONS.find(s => s.id === sectionId);
-        if (sectionId === 'tasks') return taskStats.my_open || 0;
         // Count ONLY items with status 'new' for the badges to avoid showing "seen" items as notifications
         return items.filter(i => section?.types.includes(i.type) && i.status === 'new').length;
     };
