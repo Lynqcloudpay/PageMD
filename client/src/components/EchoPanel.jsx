@@ -945,7 +945,10 @@ export default function EchoPanel({ patientId, patientName }) {
     const {
         isOpen, setIsOpen, getConversationKey, getConversation,
         updateConversation, setMessages: setContextMessages, clearConversation: clearCtxConversation,
-        closeConversation, openConversations, activeKey, setActiveKey, conversations
+        closeConversation, openConversations, activeKey, setActiveKey, conversations,
+        isRecording, setIsRecording, recordingTime, setRecordingTime,
+        ambientMode, setAmbientMode, isSilent, setIsSilent,
+        handleStartRecording, handleStopRecording, error, setError
     } = useEko();
 
     const convKey = getConversationKey(patientId);
@@ -958,12 +961,7 @@ export default function EchoPanel({ patientId, patientName }) {
     const [attachments, setAttachments] = useState([]);
     const fileInputRef = useRef(null);
     const [isGlobalLoading, setIsGlobalLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingTime, setRecordingTime] = useState(0);
     const [suggestion, setSuggestion] = useState(null);
-    const [ambientMode, setAmbientMode] = useState(false);
-    const [isSilent, setIsSilent] = useState(false);
     const ambientModeRef = useRef(false);
 
     // Keep ref in sync for async handlers
@@ -974,19 +972,34 @@ export default function EchoPanel({ patientId, patientName }) {
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
-    const mediaRecorderRef = useRef(null);
-    const audioChunksRef = useRef([]);
-    const timerRef = useRef(null);
-    const silenceTimerRef = useRef(null);
-    const audioContextRef = useRef(null);
-    const analyserRef = useRef(null);
-    const recordingModeRef = useRef(null); // 'ambient' or 'dictation'
     const MAX_RECORDING_SECONDS = 1800; // 30 minutes hard cap
 
     // Resolve which conversation key is currently displayed
     const displayKey = activeKey || convKey;
     const displayConv = getConversation(displayKey);
     const isPatientMode = displayKey !== 'global';
+
+    // Transcription Event Listener
+    useEffect(() => {
+        const handleTranscription = (e) => {
+            const data = e.detail;
+            if (data.mode === 'ambient' && (data.structuredNote || data.parsedSections)) {
+                const ambientMessage = {
+                    role: 'assistant',
+                    content: data.structuredNote || 'Ambient scribe completed.',
+                    timestamp: new Date(),
+                    toolCalls: [{ name: 'ambient_scribe', dataAccessed: ['audio_transcription'] }],
+                };
+                setContextMessages(displayKey, prev => [...prev, ambientMessage]);
+            } else if (data.text) {
+                // If it was a dictation, send it as a message
+                sendMessage(data.text);
+            }
+        };
+
+        window.addEventListener('eko-transcription-complete', handleTranscription);
+        return () => window.removeEventListener('eko-transcription-complete', handleTranscription);
+    }, [displayKey, setContextMessages]);
 
     // Navigation Observer Logic
     useEffect(() => {
@@ -1134,171 +1147,7 @@ export default function EchoPanel({ patientId, patientName }) {
         }
     }, [input, isGlobalLoading, displayKey, conversationId, attachments]);
 
-    const handleStartRecording = async (forcedMode = null) => {
-        const isAmbient = forcedMode !== null ? forcedMode : ambientMode;
-        recordingModeRef.current = isAmbient ? 'ambient' : 'dictation';
-        console.log('[EchoPanel] handleStartRecording, mode captured:', recordingModeRef.current);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
-            mediaRecorderRef.current = mediaRecorder;
-            audioChunksRef.current = [];
 
-            // VAD: Voice Activity Detection using Web Audio API
-            if (isAmbient) {
-                try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    audioContextRef.current = audioContext;
-                    const source = audioContext.createMediaStreamSource(stream);
-                    const analyser = audioContext.createAnalyser();
-                    analyser.fftSize = 512;
-                    analyser.smoothingTimeConstant = 0.8;
-                    source.connect(analyser);
-                    analyserRef.current = analyser;
-
-                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                    let silenceStart = null;
-                    const SILENCE_THRESHOLD = 15; // Volume level below which is "silence"
-                    const SILENCE_DELAY_MS = 3000; // 3 seconds of silence to trigger indicator
-
-                    const checkSilence = () => {
-                        if (!analyserRef.current) return;
-                        analyserRef.current.getByteFrequencyData(dataArray);
-                        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-
-                        if (average < SILENCE_THRESHOLD) {
-                            if (!silenceStart) silenceStart = Date.now();
-                            if (Date.now() - silenceStart > SILENCE_DELAY_MS) {
-                                setIsSilent(true);
-                            }
-                        } else {
-                            silenceStart = null;
-                            setIsSilent(false);
-                        }
-                        silenceTimerRef.current = requestAnimationFrame(checkSilence);
-                    };
-                    checkSilence();
-                } catch (vadErr) {
-                    console.warn('VAD setup failed (non-blocking):', vadErr);
-                }
-            }
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = async () => {
-                // Clean up VAD
-                if (silenceTimerRef.current) cancelAnimationFrame(silenceTimerRef.current);
-                if (audioContextRef.current) {
-                    audioContextRef.current.close().catch(() => { });
-                    audioContextRef.current = null;
-                }
-                analyserRef.current = null;
-                setIsSilent(false);
-
-                if (audioChunksRef.current.length === 0) {
-                    setIsRecording(false);
-                    return;
-                }
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                if (audioBlob.size < 1000) {
-                    setIsRecording(false);
-                    return;
-                }
-                await handleAudioUpload(audioBlob, isAmbient ? 'ambient' : 'dictation');
-                stream.getTracks().forEach(track => track.stop());
-                setRecordingTime(0);
-                if (timerRef.current) clearInterval(timerRef.current);
-            };
-
-            // In ambient mode, collect data every second for longer recordings
-            mediaRecorder.start(isAmbient ? 1000 : undefined);
-            setIsRecording(true);
-            setRecordingTime(0);
-            timerRef.current = setInterval(() => {
-                setRecordingTime(prev => {
-                    const next = prev + 1;
-                    // Hard timeout: auto-stop at 30 minutes
-                    if (next >= MAX_RECORDING_SECONDS) {
-                        handleStopRecording();
-                        setError('Maximum recording duration reached (30 min).');
-                    }
-                    return next;
-                });
-            }, 1000);
-        } catch (err) {
-            console.error('Recording start failed:', err);
-            setError('Microphone access denied or error occurred.');
-        }
-    };
-
-    const handleStopRecording = () => {
-        console.log('[EchoPanel] handleStopRecording, current isRecording:', isRecording);
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-        }
-        if (silenceTimerRef.current) cancelAnimationFrame(silenceTimerRef.current);
-        setIsRecording(false);
-        setIsSilent(false);
-    };
-
-    const handleAudioUpload = async (blob, modeOverride = null) => {
-        const isAmbient = modeOverride ? (modeOverride === 'ambient') : (recordingModeRef.current === 'ambient');
-        console.log('[EchoPanel] handleAudioUpload START, blob size:', blob.size, 'Final mode:', isAmbient ? 'ambient' : 'dictation');
-        setIsGlobalLoading(true);
-        try {
-            const formData = new FormData();
-            formData.append('audio', blob, 'recording.webm');
-            formData.append('mode', isAmbient ? 'ambient' : 'dictation');
-            console.log('[EchoPanel] Sending request to /echo/transcribe with mode:', isAmbient ? 'ambient' : 'dictation');
-
-            const { data } = await api.post('/echo/transcribe', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-
-            if (data.success) {
-                if (data.mode === 'ambient' && (data.structuredNote || data.parsedSections)) {
-                    // Show the structured SOAP note as an assistant message for review
-                    const ambientMessage = {
-                        role: 'assistant',
-                        content: data.structuredNote || 'Ambient scribe completed.',
-                        timestamp: new Date(),
-                        toolCalls: [{ name: 'ambient_scribe', dataAccessed: ['audio_transcription'] }],
-                    };
-                    setContextMessages(displayKey, prev => [...prev, ambientMessage]);
-
-                    // Auto-insert into the open visit note (if on a visit page)
-                    if (data.parsedSections) {
-                        const visitMatch = location.pathname.match(/\/visit\/([a-f0-9-]+)/i);
-                        if (visitMatch) {
-                            const visitId = visitMatch[1];
-                            try {
-                                await api.post('/echo/write-to-note', {
-                                    visitId,
-                                    patientId, // Cross-verification
-                                    sections: data.parsedSections
-                                });
-                                window.dispatchEvent(new CustomEvent('eko-note-updated', { detail: { visitId } }));
-                                console.log('[EchoPanel] Auto-inserted ambient scribe into visit note:', visitId);
-                            } catch (insertErr) {
-                                console.warn('[EchoPanel] Auto-insert failed (note may be signed):', insertErr.response?.data?.error || insertErr.message);
-                            }
-                        }
-                    }
-                } else if (data.text) {
-                    sendMessage(data.text);
-                }
-            }
-        } catch (err) {
-            console.error('Transcription error:', err);
-            setError('Failed to transcribe audio.');
-        } finally {
-            setIsGlobalLoading(false);
-        }
-    };
 
     async function handleApproveAction(action, messageIndex) {
         // Now handles both single action objects and arrays for batch

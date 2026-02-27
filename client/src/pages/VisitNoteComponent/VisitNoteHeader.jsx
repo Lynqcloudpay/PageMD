@@ -1,8 +1,9 @@
 import React from 'react';
 import {
     Save, Lock, FileText, Eye, Printer, PanelRight, Sparkles,
-    CheckCircle2, AlertCircle, RotateCcw, ArrowLeft
+    CheckCircle2, AlertCircle, RotateCcw, ArrowLeft, Radio
 } from 'lucide-react';
+import { useEko } from '../../context/EkoContext';
 import { format } from 'date-fns';
 
 const VisitNoteHeader = ({
@@ -34,6 +35,11 @@ const VisitNoteHeader = ({
     id,
     providerName
 }) => {
+    const {
+        ambientMode, setAmbientMode, isRecording, recordingTime,
+        handleStartRecording, handleStopRecording
+    } = useEko();
+
     const visitDate = visitData?.visit_date ? format(new Date(visitData.visit_date), 'MMM d, yyyy') : format(new Date(), 'MMM d, yyyy');
 
     return (
@@ -142,6 +148,34 @@ const VisitNoteHeader = ({
                                     <span>Sign Note</span>
                                 </button>
                             </>
+                        )}
+
+                        {!isSigned && !isPreliminary && (
+                            <button
+                                onClick={() => {
+                                    const nextMode = !ambientMode;
+                                    setAmbientMode(nextMode);
+                                    if (nextMode) {
+                                        handleStartRecording(true);
+                                    } else if (isRecording) {
+                                        handleStopRecording();
+                                    }
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg ${ambientMode
+                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
+                                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <Radio className={`w-4 h-4 ${isRecording && ambientMode ? 'animate-pulse text-rose-500' : ''}`} />
+                                <div className="flex flex-col items-start leading-none">
+                                    <span>{ambientMode ? (isRecording ? 'STOP SCRIBE' : 'START SCRIBE') : 'SCRIBE'}</span>
+                                    {isRecording && ambientMode && (
+                                        <span className="text-[8px] font-mono mt-0.5">
+                                            {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{(recordingTime % 60).toString().padStart(2, '0')}
+                                        </span>
+                                    )}
+                                </div>
+                            </button>
                         )}
 
                         {isSigned && (
