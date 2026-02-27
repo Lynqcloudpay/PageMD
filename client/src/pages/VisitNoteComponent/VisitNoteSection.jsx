@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Sparkles } from 'lucide-react';
 
-const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = false, id, badge, className = "" }) => {
+const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = false, id, badge, className = "", onDraftWithAI }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
