@@ -964,6 +964,13 @@ export default function EchoPanel({ patientId, patientName }) {
     const [suggestion, setSuggestion] = useState(null);
     const [ambientMode, setAmbientMode] = useState(false);
     const [isSilent, setIsSilent] = useState(false);
+    const ambientModeRef = useRef(false);
+
+    // Keep ref in sync for async handlers
+    useEffect(() => {
+        ambientModeRef.current = ambientMode;
+        console.log('[EchoPanel] ambientMode changed to:', ambientMode);
+    }, [ambientMode]);
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
@@ -1128,7 +1135,9 @@ export default function EchoPanel({ patientId, patientName }) {
         }
     }, [input, isGlobalLoading, displayKey, conversationId, attachments]);
 
-    const handleStartRecording = async () => {
+    const handleStartRecording = async (forcedMode = null) => {
+        const isAmbient = forcedMode !== null ? forcedMode : ambientMode;
+        console.log('[EchoPanel] handleStartRecording, isAmbient:', isAmbient);
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mediaRecorder = new MediaRecorder(stream);
@@ -1136,7 +1145,7 @@ export default function EchoPanel({ patientId, patientName }) {
             audioChunksRef.current = [];
 
             // VAD: Voice Activity Detection using Web Audio API
-            if (ambientMode) {
+            if (isAmbient) {
                 try {
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     audioContextRef.current = audioContext;
@@ -1206,7 +1215,7 @@ export default function EchoPanel({ patientId, patientName }) {
             };
 
             // In ambient mode, collect data every second for longer recordings
-            mediaRecorder.start(ambientMode ? 1000 : undefined);
+            mediaRecorder.start(isAmbient ? 1000 : undefined);
             setIsRecording(true);
             setRecordingTime(0);
             timerRef.current = setInterval(() => {
@@ -1227,6 +1236,7 @@ export default function EchoPanel({ patientId, patientName }) {
     };
 
     const handleStopRecording = () => {
+        console.log('[EchoPanel] handleStopRecording, current isRecording:', isRecording);
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
         }
@@ -1236,11 +1246,13 @@ export default function EchoPanel({ patientId, patientName }) {
     };
 
     const handleAudioUpload = async (blob) => {
+        const isAmbient = ambientModeRef.current;
+        console.log('[EchoPanel] handleAudioUpload, blob size:', blob.size, 'mode:', isAmbient ? 'ambient' : 'dictation');
         setIsGlobalLoading(true);
         try {
             const formData = new FormData();
             formData.append('audio', blob, 'recording.webm');
-            formData.append('mode', ambientMode ? 'ambient' : 'dictation');
+            formData.append('mode', isAmbient ? 'ambient' : 'dictation');
 
             const { data } = await api.post('/echo/transcribe', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -1736,8 +1748,9 @@ export default function EchoPanel({ patientId, patientName }) {
                                 onClick={() => {
                                     const nextMode = !ambientMode;
                                     setAmbientMode(nextMode);
+                                    console.log('[EchoPanel] Radio button clicked, nextMode:', nextMode);
                                     if (nextMode) {
-                                        handleStartRecording();
+                                        handleStartRecording(true); // Force ambient start
                                     } else if (isRecording) {
                                         handleStopRecording();
                                     }
