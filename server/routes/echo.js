@@ -154,7 +154,8 @@ JSON STRUCTURE:
   "hpi": "Narrative SUBJECTIVE paragraph. Strictly no physical exam data. Include relevant PMHx from the provided list.",
   "ros": "**System:** Findings. Each on a NEW row.",
   "pe": "**System:** Findings. Each on a NEW row.",
-  "assessmentPlan": "MDM BLOCKS: For each diagnosis discussed, create a block like: '1. [Diagnosis Name] (Status): [Diagnostic/MDM Logic explaining the why]. Plan: [Specific verbal instructions + orders/meds].'"
+  "assessment": "Numbered list of diagnoses.",
+  "plan": "MDM BLOCKS: For each diagnosis discussed, create a block like:\n1. [Diagnosis Name]\nMDM: [Diagnostic/MDM Logic justifying complexity/risk].\nPlan: [Specific verbal instructions to patient].\n- [Order/Med 1]\n- [Order/Med 2]"
 }`
                             },
                             {
@@ -176,10 +177,11 @@ JSON STRUCTURE:
                         hpi: parsed.hpi || '',
                         ros: parsed.ros || '',
                         pe: parsed.pe || '',
-                        assessmentPlan: parsed.assessmentPlan || ''
+                        assessment: parsed.assessment || '',
+                        plan: parsed.plan || ''
                     };
 
-                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → sections: CC=${parsedSections.chiefComplaint.length}, HPI=${parsedSections.hpi.length}, ROS=${parsedSections.ros.length}, PE=${parsedSections.pe.length}, AP=${parsedSections.assessmentPlan.length}`);
+                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → sections: CC=${parsedSections.chiefComplaint.length}, HPI=${parsedSections.hpi.length}, ROS=${parsedSections.ros.length}, PE=${parsedSections.pe.length}, Plan=${parsedSections.plan.length}`);
                     return res.json({
                         success: true,
                         text: transcription,
@@ -481,13 +483,13 @@ router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => 
         const sectionOrder = [];
 
         // Parse "Section Label: content" format
-        const sectionRegex = /^(Chief Complaint|HPI|Review of Systems|Physical Exam|Results|Assessment|Plan|Caregiver Training|ASCVD Risk|Safety Plan|Care Plan|Follow Up):\s*/gm;
+        const sectionRegex = /^(Chief Complaint|HPI|Review of Systems|Physical Exam|Results|Assessment|Plan|Care Plan|Follow Up):\s*/gm;
         let lastMatch = null;
         let match;
         const allMatches = [];
 
         // Find all section headers
-        const regex = /(^|\n)(Chief Complaint|HPI|Review of Systems|Physical Exam|Results|Assessment|Plan|Caregiver Training|ASCVD Risk|Safety Plan|Care Plan|Follow Up):\s*/g;
+        const regex = /(^|\n)(Chief Complaint|HPI|Review of Systems|Physical Exam|Results|Assessment|Plan|Care Plan|Follow Up):\s*/g;
         while ((match = regex.exec(existingDraft)) !== null) {
             allMatches.push({ label: match[2], index: match.index + match[0].length - match[2].length - 2, headerEnd: match.index + match[0].length });
         }
@@ -510,7 +512,6 @@ router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => 
             'results': 'Results',
             'assessment': 'Assessment',
             'plan': 'Plan',
-            'assessmentPlan': 'Assessment',
             'carePlan': 'Care Plan',
             'followUp': 'Follow Up'
         };
@@ -543,8 +544,7 @@ router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => 
         // Reconstruct the note_draft in proper order
         const canonicalOrder = [
             'Chief Complaint', 'HPI', 'Review of Systems', 'Physical Exam',
-            'Results', 'Assessment', 'Plan', 'Caregiver Training', 'ASCVD Risk',
-            'Safety Plan', 'Care Plan', 'Follow Up'
+            'Results', 'Assessment', 'Plan', 'Care Plan', 'Follow Up'
         ];
 
         const outputSections = [];

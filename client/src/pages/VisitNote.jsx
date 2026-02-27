@@ -848,14 +848,6 @@ const VisitNote = () => {
         const resultsMatch = safeDecodedText.match(/(?:Results|Data):\s*(.+?)(?:\n\n|\n(?:Assessment|Plan):|$)/is);
         const assessmentMatch = safeDecodedText.match(/(?:Assessment|A):\s*(.+?)(?:\n\n|\n(?:Plan|P):|$)/is);
 
-        // Updated regexes to support new sections: CTS, ASCVD, Safety Plan
-        // Plan can now stop at CTS, ASCVD, Safety, or Care Plan
-        const planMatch = safeDecodedText.match(/(?:Plan|P):\s*(.+?)(?:\n\n|\n(?:Caregiver Training|CTS|ASCVD Risk|Cardiovascular|Safety Plan|Behavioral Safety|Care Plan|CP|Follow Up|FU):|$)/is);
-
-        const ctsMatch = safeDecodedText.match(/(?:Caregiver Training|CTS):\s*(.+?)(?:\n\n|\n(?:ASCVD Risk|Cardiovascular|Safety Plan|Behavioral Safety|Care Plan|CP|Follow Up|FU):|$)/is);
-        const ascvdMatch = safeDecodedText.match(/(?:ASCVD Risk|Cardiovascular):\s*(.+?)(?:\n\n|\n(?:Safety Plan|Behavioral Safety|Care Plan|CP|Follow Up|FU):|$)/is);
-        const safetyPlanMatch = safeDecodedText.match(/(?:Safety Plan|Behavioral Safety):\s*(.+?)(?:\n\n|\n(?:Care Plan|CP|Follow Up|FU):|$)/is);
-
         const carePlanMatch = safeDecodedText.match(/(?:Care Plan|CP):\s*(.+?)(?:\n\n|\n(?:Follow Up|FU):|$)/is);
         const followUpMatch = safeDecodedText.match(/(?:Follow Up|FU):\s*(.+?)(?:\n\n|$)/is);
 
@@ -867,9 +859,6 @@ const VisitNote = () => {
             results: resultsMatch ? decodeHtmlEntities(resultsMatch[1].trim()) : '',
             assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : '',
             plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : '',
-            cts: ctsMatch ? decodeHtmlEntities(ctsMatch[1].trim()) : '',
-            ascvd: ascvdMatch ? decodeHtmlEntities(ascvdMatch[1].trim()) : '',
-            safetyPlan: safetyPlanMatch ? decodeHtmlEntities(safetyPlanMatch[1].trim()) : '',
             carePlan: carePlanMatch ? decodeHtmlEntities(carePlanMatch[1].trim()) : '',
             followUp: followUpMatch ? decodeHtmlEntities(followUpMatch[1].trim()) : ''
         };
@@ -895,52 +884,56 @@ const VisitNote = () => {
         const lines = planText.split('\n');
         let currentDiagnosis = null;
         let currentOrders = [];
+        let currentMDM = null;
+        let currentInstructions = null;
+
+        const finalizePrev = () => {
+            if (currentDiagnosis) {
+                structured.push({
+                    diagnosis: currentDiagnosis,
+                    orders: [...currentOrders],
+                    mdm: currentMDM,
+                    instructions: currentInstructions
+                });
+            }
+        };
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
-            // Check if line is a diagnosis (starts with number and period)
             const safeLine = typeof line === 'string' ? line : String(line || '');
             const diagnosisMatch = safeLine.match(/^(\d+)\.\s*(.+)$/);
+
             if (diagnosisMatch) {
-                // Save previous diagnosis if exists
-                if (currentDiagnosis) {
-                    structured.push({
-                        diagnosis: currentDiagnosis,
-                        orders: [...currentOrders]
-                    });
-                }
-                // Start new diagnosis
+                finalizePrev();
                 currentDiagnosis = diagnosisMatch[2].trim();
                 currentOrders = [];
+                currentMDM = null;
+                currentInstructions = null;
+            } else if (line.startsWith('MDM:')) {
+                currentMDM = line.replace(/^MDM:\s*/, '').trim();
+            } else if (line.startsWith('Plan:') || line.startsWith('Instructions:')) {
+                currentInstructions = line.replace(/^(Plan|Instructions):\s*/, '').trim();
             } else if (line.startsWith('•') || line.startsWith('-')) {
-                // This is an order line
                 const orderText = line.replace(/^[•\-]\s*/, '').trim();
                 if (orderText && currentDiagnosis) {
                     currentOrders.push(orderText);
                 }
             } else if (line && currentDiagnosis) {
-                // Continuation of previous order or new order without bullet
                 currentOrders.push(line);
             }
         }
-
-        // Don't forget the last diagnosis
-        if (currentDiagnosis) {
-            structured.push({
-                diagnosis: currentDiagnosis,
-                orders: currentOrders
-            });
-        }
-
+        finalizePrev();
         return structured;
     };
 
     const formatPlanText = (structuredPlan) => {
         if (!structuredPlan || structuredPlan.length === 0) return '';
         return structuredPlan.map((item, index) => {
-            const diagnosisLine = `${index + 1}. ${item.diagnosis}`;
-            const ordersLines = item.orders.map(order => `  • ${order}`).join('\n');
-            return `${diagnosisLine}\n${ordersLines}`;
+            const lines = [`${index + 1}. ${item.diagnosis}`];
+            if (item.mdm) lines.push(`MDM: ${item.mdm}`);
+            if (item.instructions) lines.push(`Plan: ${item.instructions}`);
+            item.orders.forEach(order => lines.push(`  • ${order}`));
+            return lines.join('\n');
         }).join('\n\n');
     };
 
@@ -973,11 +966,6 @@ const VisitNote = () => {
             planText = sourceData.plan;
         }
         if (planText) sections.push(`Plan: ${planText}`);
-
-        // New Phase 7 Sections
-        if (sourceData.cts) sections.push(`Caregiver Training: ${sourceData.cts}`);
-        if (sourceData.ascvd) sections.push(`ASCVD Risk: ${sourceData.ascvd}`);
-        if (sourceData.safetyPlan) sections.push(`Safety Plan: ${sourceData.safetyPlan}`);
 
         if (sourceData.carePlan) sections.push(`Care Plan: ${sourceData.carePlan}`);
         if (sourceData.followUp) sections.push(`Follow Up: ${sourceData.followUp}`);
@@ -1064,9 +1052,11 @@ const VisitNote = () => {
                 const visit = response.data;
                 if (visit?.note_draft) {
                     const parsed = parseNoteText(visit.note_draft);
+                    const planStructured = parsed.plan ? parsePlanText(parsed.plan) : [];
                     setNoteData(prev => ({
                         ...prev,
-                        ...parsed
+                        ...parsed,
+                        planStructured: planStructured.length > 0 ? planStructured : prev.planStructured
                     }));
                     showToast('Eko inserted content into your note', 'success');
                 }
@@ -2247,6 +2237,22 @@ const VisitNote = () => {
             }
             const formattedPlan = formatPlanText(updatedPlan);
             return { ...prev, planStructured: updatedPlan, plan: formattedPlan };
+        });
+    };
+
+    const updatePlanDetails = (index, field, value) => {
+        setNoteData(prev => {
+            const updatedPlan = [...(prev.planStructured || [])];
+            updatedPlan[index] = {
+                ...updatedPlan[index],
+                [field]: value
+            };
+            const formattedPlan = formatPlanText(updatedPlan);
+            return {
+                ...prev,
+                planStructured: updatedPlan,
+                plan: formattedPlan
+            };
         });
     };
 
@@ -3710,6 +3716,63 @@ const VisitNote = () => {
                                                     )}
                                                 </div>
 
+                                                {/* MDM & Plan for each diagnosis */}
+                                                {!isLocked ? (
+                                                    <div className="mt-3 mb-4 space-y-4 pl-4 border-l-2 border-primary-50 px-1 py-1">
+                                                        <div className="group/mdm relative">
+                                                            <div className="flex items-center gap-2 mb-1.5">
+                                                                <div className="p-1 bg-blue-50 rounded-md">
+                                                                    <Sparkles className="w-3 h-3 text-blue-500" />
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">Clinical Logic (MDM)</span>
+                                                            </div>
+                                                            <textarea
+                                                                value={item.mdm || ''}
+                                                                onChange={(e) => updatePlanDetails(index, 'mdm', e.target.value)}
+                                                                placeholder="Add clinical reasoning for billing justification..."
+                                                                className="w-full bg-blue-50/10 border border-blue-100/30 rounded-xl p-3 text-[13px] italic text-gray-700 outline-none focus:border-blue-400 focus:bg-blue-50/20 transition-all min-h-[60px] shadow-sm placeholder:text-gray-300"
+                                                            />
+                                                        </div>
+                                                        <div className="group/plan relative">
+                                                            <div className="flex items-center gap-2 mb-1.5">
+                                                                <div className="p-1 bg-gray-50 rounded-md">
+                                                                    <Stethoscope className="w-3 h-3 text-gray-500" />
+                                                                </div>
+                                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Care Instructions</span>
+                                                            </div>
+                                                            <textarea
+                                                                value={item.instructions || ''}
+                                                                onChange={(e) => updatePlanDetails(index, 'instructions', e.target.value)}
+                                                                placeholder="Add specific instructions given to patient..."
+                                                                className="w-full bg-gray-50/20 border border-gray-100/50 rounded-xl p-3 text-[13px] font-semibold text-gray-800 outline-none focus:border-gray-300 focus:bg-gray-50/40 transition-all min-h-[60px] shadow-sm placeholder:text-gray-300"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    (item.mdm || item.instructions) && (
+                                                        <div className="mt-2 mb-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 shadow-sm shadow-blue-50/50 space-y-3">
+                                                            {item.mdm && (
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                                                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">Clinical Logic (MDM)</span>
+                                                                    </div>
+                                                                    <p className="text-[13px] text-gray-700 leading-relaxed font-medium italic">"{item.mdm}"</p>
+                                                                </div>
+                                                            )}
+                                                            {item.instructions && (
+                                                                <div>
+                                                                    <div className="flex items-center gap-2 mb-1">
+                                                                        <Stethoscope className="w-3.5 h-3.5 text-gray-500" />
+                                                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Care Instructions</span>
+                                                                    </div>
+                                                                    <p className="text-[13px] text-gray-700 leading-relaxed font-semibold">{item.instructions}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                )}
+
                                                 {/* Orders List beneath the diagnosis */}
                                                 <div className="mt-1">
                                                     {item.orders.length === 0 ? (
@@ -3803,102 +3866,7 @@ const VisitNote = () => {
                             )}
                         </VisitNoteSection>
 
-                        {/* Additional Clinical Sections Grid */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 overflow-visible">
-                            {/* Caregiver Training (CTS) */}
-                            <VisitNoteSection title="Caregiver Training (CTS)" defaultOpen={false} isEdited={editedSections.has('cts')} id="cts">
-                                <div className="space-y-4">
-                                    <textarea
-                                        value={noteData.cts || ''}
-                                        onChange={(e) => handleTextChange(e.target.value, 'cts')}
-                                        placeholder="Education topics, duration, participant response..."
-                                        className="vn-textarea min-h-[120px]"
-                                        disabled={isLocked}
-                                    />
-                                    {!isSigned && (
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Quick Templates</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {[
-                                                    'CTS: Wound Care Education (15 min)',
-                                                    'CTS: Infection Control (10 min)',
-                                                    'CTS: ADL Assistance Techniques',
-                                                    'CTS: Medication Administration'
-                                                ].map((template) => (
-                                                    <button
-                                                        key={template}
-                                                        onClick={() => handleTextChange(noteData.cts ? `${noteData.cts}\n${template}` : template, 'cts')}
-                                                        className="px-3 py-1.5 bg-white border border-gray-100 hover:border-primary-200 text-gray-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
-                                                    >
-                                                        {template}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </VisitNoteSection>
-
-                            {/* ASCVD Risk Management */}
-                            <VisitNoteSection title="ASCVD Risk Management" defaultOpen={false} isEdited={editedSections.has('ascvd')} id="ascvd">
-                                <div className="space-y-4">
-                                    <textarea
-                                        value={noteData.ascvd || ''}
-                                        onChange={(e) => handleTextChange(e.target.value, 'ascvd')}
-                                        placeholder="10-year risk score, statin therapy goal, lifestyle plan..."
-                                        className="vn-textarea min-h-[120px]"
-                                        disabled={isLocked}
-                                    />
-                                    {!isSigned && (
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Risk Categories</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {['Low Risk (<5%)', 'Borderline (5-7.4%)', 'Intermediate (7.5-19.9%)', 'High Risk (≥20%)'].map((risk) => (
-                                                    <button
-                                                        key={risk}
-                                                        onClick={() => handleTextChange(noteData.ascvd ? `${noteData.ascvd}\nRisk Category: ${risk}` : `Risk Category: ${risk}`, 'ascvd')}
-                                                        className="px-3 py-1.5 bg-white border border-gray-100 hover:border-primary-200 text-gray-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
-                                                    >
-                                                        {risk}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </VisitNoteSection>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5 overflow-visible">
-                            {/* Behavioral Safety Plan */}
-                            <VisitNoteSection title="Behavioral Safety Plan" defaultOpen={false} isEdited={editedSections.has('safetyPlan')}>
-                                <div className="space-y-4">
-                                    <textarea
-                                        value={noteData.safetyPlan || ''}
-                                        onChange={(e) => handleTextChange(e.target.value, 'safetyPlan')}
-                                        placeholder="Warning signs, coping strategies, supportive contacts..."
-                                        className="vn-textarea min-h-[120px]"
-                                        disabled={isLocked}
-                                    />
-                                    {!isSigned && (
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">Section Headers</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {['Warning Signs', 'Coping Strategies', 'Social Contacts', 'Professional Contacts'].map((comp) => (
-                                                    <button
-                                                        key={comp}
-                                                        onClick={() => handleTextChange(noteData.safetyPlan ? `${noteData.safetyPlan}\n${comp}: ` : `${comp}: `, 'safetyPlan')}
-                                                        className="px-3 py-1.5 bg-white border border-gray-100 hover:border-primary-200 text-gray-600 rounded-xl text-[10px] font-bold transition-all shadow-sm"
-                                                    >
-                                                        {comp}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </VisitNoteSection>
-
+                        <div className="mb-5">
                             {/* Care Plan */}
                             <VisitNoteSection title="Care Plan" defaultOpen={true} isEdited={editedSections.has('carePlan')}>
                                 <textarea

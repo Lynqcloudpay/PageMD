@@ -174,17 +174,34 @@ const VisitChartView = ({ visitId, patientId, onClose, standalone = true, onOpen
         const lines = planText.split('\n');
         let currentDiagnosis = null;
         let currentOrders = [];
+        let currentMDM = null;
+        let currentInstructions = null;
+
+        const finalizePrev = () => {
+            if (currentDiagnosis) {
+                structured.push({
+                    diagnosis: currentDiagnosis,
+                    orders: [...currentOrders],
+                    mdm: currentMDM,
+                    instructions: currentInstructions
+                });
+            }
+        };
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             const safeLine = typeof line === 'string' ? line : String(line || '');
             const diagnosisMatch = safeLine.match(/^(\d+)\.\s*(.+)$/);
             if (diagnosisMatch) {
-                if (currentDiagnosis) {
-                    structured.push({ diagnosis: currentDiagnosis, orders: [...currentOrders] });
-                }
+                finalizePrev();
                 currentDiagnosis = diagnosisMatch[2].trim();
                 currentOrders = [];
+                currentMDM = null;
+                currentInstructions = null;
+            } else if (line.startsWith('MDM:')) {
+                currentMDM = line.replace(/^MDM:\s*/, '').trim();
+            } else if (line.startsWith('Plan:') || line.startsWith('Instructions:')) {
+                currentInstructions = line.replace(/^(Plan|Instructions):\s*/, '').trim();
             } else if (line.startsWith('•') || line.startsWith('-')) {
                 const orderText = line.replace(/^[•\-]\s*/, '').trim();
                 if (orderText && currentDiagnosis) {
@@ -194,9 +211,7 @@ const VisitChartView = ({ visitId, patientId, onClose, standalone = true, onOpen
                 currentOrders.push(line);
             }
         }
-        if (currentDiagnosis) {
-            structured.push({ diagnosis: currentDiagnosis, orders: currentOrders });
-        }
+        finalizePrev();
         return structured;
     };
 
@@ -1115,6 +1130,25 @@ const VisitChartView = ({ visitId, patientId, onClose, standalone = true, onOpen
                                         {noteData.planStructured?.length > 0 ? noteData.planStructured.map((p, i) => (
                                             <div key={i} className="space-y-3">
                                                 <div className="text-[13px] font-bold text-gray-800 border-b border-blue-50 pb-1.5">{p.diagnosis}</div>
+
+                                                {/* MDM / Plan Blocks */}
+                                                {(p.mdm || p.instructions) && (
+                                                    <div className="bg-blue-50/40 p-3 rounded-lg border border-blue-100/30 space-y-2 ml-3">
+                                                        {p.mdm && (
+                                                            <div>
+                                                                <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest block mb-0.5">Clinical Logic</span>
+                                                                <p className="text-[12px] text-gray-700 leading-relaxed italic">"{p.mdm}"</p>
+                                                            </div>
+                                                        )}
+                                                        {p.instructions && (
+                                                            <div>
+                                                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest block mb-0.5">Care Instructions</span>
+                                                                <p className="text-[12px] text-gray-700 font-semibold">{p.instructions}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 <ul className="pl-8 space-y-1.5">
                                                     {p.orders.map((o, j) => (
                                                         <li key={j} className="text-[13px] text-gray-700 font-medium flex items-center gap-2.5"><div className="w-1.5 h-1.5 bg-blue-300 rounded-full"></div> {o}</li>
