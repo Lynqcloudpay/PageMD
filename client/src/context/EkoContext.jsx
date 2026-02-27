@@ -105,11 +105,16 @@ export function EkoProvider({ children }) {
                 } catch (e) { console.warn('VAD failed:', e); }
             }
 
+            const currentAudioChunks = [];
+
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+                if (e.data.size > 0) currentAudioChunks.push(e.data);
             };
 
             mediaRecorder.onstop = async () => {
+                // Ensure the global ref only contains THIS session's chunks
+                audioChunksRef.current = currentAudioChunks;
+
                 if (silenceTimerRef.current) cancelAnimationFrame(silenceTimerRef.current);
                 if (audioContextRef.current) {
                     audioContextRef.current.close().catch(() => { });
