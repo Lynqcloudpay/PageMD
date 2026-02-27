@@ -1030,9 +1030,9 @@ export default function EchoPanel({ patientId, patientName }) {
     // On patient context change, set active key (don't wipe conversations)
     useEffect(() => {
         setActiveKey(convKey);
-        // Ensure the conversation entry exists with patient name
-        if (patientId) {
-            updateConversation(convKey, { patientName: patientName || patientId });
+        // Ensure the conversation entry exists with patient name (only set if name is valid)
+        if (patientId && patientName) {
+            updateConversation(convKey, { patientName });
         }
     }, [convKey, patientId, patientName]);
 
@@ -1354,7 +1354,12 @@ export default function EchoPanel({ patientId, patientName }) {
                 <div className="flex gap-1 px-3 py-1.5 border-b border-slate-100 overflow-x-auto scrollbar-none bg-slate-50/50">
                     {openConversations.map(key => {
                         const c = getConversation(key);
-                        const label = key === 'global' ? 'General' : (c.patientName || key).split(' ').slice(0, 2).join(' ');
+                        let displayVal = c.patientName || key;
+                        // Avoid showing the raw UUID (or MRN) in the UI if patientName wasn't loaded
+                        if (displayVal && displayVal.includes('-') && displayVal.length > 20) {
+                            displayVal = 'Chart';
+                        }
+                        const label = key === 'global' ? 'General' : displayVal.split(' ').slice(0, 2).join(' ');
                         const isActive = key === displayKey;
                         const msgCount = c.messages.length;
                         return (
