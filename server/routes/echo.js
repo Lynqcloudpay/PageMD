@@ -98,17 +98,17 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
                                 role: 'system',
                                 content: `You are a medical scribe assistant. Given a raw transcription of a doctor-patient conversation (which may be in ANY language — Spanish, English, French, etc.):
 
-1. IGNORE all small talk, greetings, weather discussion, family chat, and non-clinical content.
+1. IGNORE all small talk, greetings, weather discussion, and family chat.
 2. Extract ONLY medically relevant information.
-3. ALWAYS output in ENGLISH regardless of the input language. Translate all content to English.
-4. Return a JSON object with these fields (use empty string "" if section has no relevant content):
+3. ALWAYS output in ENGLISH. Translate non-English content to professional English.
+4. Return a JSON object with these fields:
 
 {
   "chiefComplaint": "One sentence chief complaint",
-  "hpi": "Narrative paragraph in the doctor's voice, past tense for history, present tense for current symptoms",
-  "ros": "Review of systems — relevant positives and negatives mentioned during conversation",
-  "pe": "Physical examination findings discussed or performed during the encounter",
-  "structuredNote": "The full formatted note as readable text with section headers (Chief Complaint:, HPI:, Review of Systems:, Physical Exam:)"
+  "hpi": "Narrative paragraph in the doctor's voice, past tense for history, present tense for current symptoms.",
+  "ros": "Review of Systems. Format as 'System: Findings.' (e.g. Constitutional: negative for weight loss. Gastrointestinal: positive for nausea.) Include: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Skin.",
+  "pe": "Physical Examination. Format as '**System:** Findings.' (e.g. **General:** well-appearing. **Abdomen:** non-tender.). Include: General, Head Neck, Eyes, ENT, Cardiovascular, Respiratory, Abdomen, Extremities, Neurological, Skin.",
+  "structuredNote": "The full formatted note as readable text with clear headers (Chief Complaint:, HPI:, Review of Systems:, Physical Exam:)"
 }
 
 Write in professional clinical language. Do NOT include Assessment or Plan.`
