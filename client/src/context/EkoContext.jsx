@@ -23,10 +23,50 @@ export function EkoProvider({ children }) {
     const analyserRef = useRef(null);
     const recordingModeRef = useRef(null);
     const ambientModeRef = useRef(false);
+    const isRecordingRef = useRef(false);
 
     useEffect(() => {
         ambientModeRef.current = ambientMode;
     }, [ambientMode]);
+
+    useEffect(() => {
+        isRecordingRef.current = isRecording;
+    }, [isRecording]);
+
+    const handleStopRecording = useCallback(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+        }
+        if (timerRef.current) clearInterval(timerRef.current);
+        setIsRecording(false);
+    }, []);
+
+    // Safety: Auto-stop if user navigates away while recording
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            if (isRecordingRef.current) {
+                handleStopRecording();
+            }
+        };
+
+        const handleRouteChange = () => {
+            // If we're not on a visit page anymore, stop
+            if (isRecordingRef.current && !window.location.pathname.includes('/visit/')) {
+                console.log('[EkonContext] Navigated away from visit, auto-stopping scribe...');
+                handleStopRecording();
+                setAmbientMode(false);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        // We use a small interval or custom event to check path changes if router doesn't trigger
+        const pathInterval = setInterval(handleRouteChange, 1000);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            clearInterval(pathInterval);
+        };
+    }, [handleStopRecording]);
 
     const handleStartRecording = useCallback(async (forcedMode = null) => {
         const isAmbient = forcedMode !== null ? forcedMode : ambientModeRef.current;
@@ -102,13 +142,7 @@ export function EkoProvider({ children }) {
         }
     }, []);
 
-    const handleStopRecording = useCallback(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-        }
-        if (timerRef.current) clearInterval(timerRef.current);
-        setIsRecording(false);
-    }, []);
+
 
     const handleAudioUpload = async (blob, mode) => {
         const formData = new FormData();
