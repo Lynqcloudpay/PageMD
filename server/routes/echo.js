@@ -104,7 +104,7 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
 4. Return a JSON object with these fields:
 
 {
-  "chiefComplaint": "One sentence chief complaint",
+  "chiefComplaint": "Ultra-concise phrase (e.g., 'Chest pain', 'Headache'). Do NOT include duration or full sentences.",
   "hpi": "Narrative paragraph in the doctor's voice, past tense for history, present tense for current symptoms.",
   "ros": "Review of Systems. Format as 'System: Findings.' (e.g. Constitutional: negative for weight loss. Gastrointestinal: positive for nausea.) Include: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Skin.",
   "pe": "Physical Examination. Format as '**System:** Findings.' (e.g. **General:** well-appearing. **Abdomen:** non-tender.). Include: General, Head Neck, Eyes, ENT, Cardiovascular, Respiratory, Abdomen, Extremities, Neurological, Skin.",
