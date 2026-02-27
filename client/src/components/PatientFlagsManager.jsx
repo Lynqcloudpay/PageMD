@@ -11,6 +11,8 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
     const [types, setTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [adding, setAdding] = useState(false);
+    const [addingReminder, setAddingReminder] = useState(false);
+    const [newReminderText, setNewReminderText] = useState('');
     const [newFlag, setNewFlag] = useState({
         flag_type_id: '',
         custom_label: '',
@@ -55,6 +57,25 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
             onUpdate?.();
         } catch (err) {
             alert('Failed to add flag');
+        }
+    };
+
+    const handleAddReminder = async (e) => {
+        e.preventDefault();
+        if (!newReminderText.trim()) return;
+        try {
+            await patientFlagsAPI.create(patientId, {
+                note: newReminderText.trim(),
+                custom_label: 'REMINDER',
+                custom_severity: 'info',
+                expires_at: null
+            });
+            setAddingReminder(false);
+            setNewReminderText('');
+            fetchData();
+            onUpdate?.();
+        } catch (err) {
+            alert('Failed to add reminder');
         }
     };
 
@@ -106,19 +127,56 @@ const PatientFlagsManager = ({ patientId, onClose, onUpdate }) => {
                 ) : (
                     <>
                         {/* Summary Section */}
-                        <div className="grid grid-cols-2 gap-2 mb-4">
-                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div className="grid grid-cols-3 gap-2 mb-4">
+                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex flex-col justify-center">
                                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Flags</div>
                                 <div className="text-xl font-bold text-gray-900">{flags.filter(f => f.status === 'active').length}</div>
                             </div>
                             <button
-                                onClick={() => setAdding(true)}
+                                onClick={() => { setAdding(true); setAddingReminder(false); }}
+                                className="bg-rose-600 p-3 rounded-xl text-white flex flex-col justify-center items-center hover:bg-rose-700 transition-all font-bold"
+                            >
+                                <Plus size={18} />
+                                <span className="text-[9px] uppercase tracking-widest mt-0.5">Add Flag</span>
+                            </button>
+                            <button
+                                onClick={() => { setAddingReminder(true); setAdding(false); }}
                                 className="bg-blue-600 p-3 rounded-xl text-white flex flex-col justify-center items-center hover:bg-blue-700 transition-all font-bold"
                             >
                                 <Plus size={18} />
-                                <span className="text-[10px] uppercase tracking-widest">Add New Flag</span>
+                                <span className="text-[9px] uppercase tracking-widest mt-0.5">Add Reminder</span>
                             </button>
                         </div>
+
+                        {/* Add Reminder Form */}
+                        {addingReminder && (
+                            <div className="bg-blue-50 p-4 rounded-2xl border border-blue-200 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="font-bold text-sm text-blue-900">New Clinical Reminder</h3>
+                                    <button onClick={() => setAddingReminder(false)} className="text-blue-400 hover:text-blue-600">
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleAddReminder} className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        required
+                                        autoFocus
+                                        placeholder="Type your reminder..."
+                                        className="flex-1 text-sm border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                        value={newReminderText}
+                                        onChange={(e) => setNewReminderText(e.target.value)}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!newReminderText.trim()}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase hover:bg-blue-700 transition-all shadow-md disabled:opacity-50"
+                                    >
+                                        Save
+                                    </button>
+                                </form>
+                            </div>
+                        )}
 
                         {/* Add Flag Form */}
                         {adding && (

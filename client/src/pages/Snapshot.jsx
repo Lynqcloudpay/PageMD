@@ -156,8 +156,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
     const [healthMaintenance, setHealthMaintenance] = useState([]);
     const [isEditingSticky, setIsEditingSticky] = useState(false);
     const [stickyNoteText, setStickyNoteText] = useState('');
-    const [isAddingReminder, setIsAddingReminder] = useState(false);
-    const [newReminderText, setNewReminderText] = useState('');
     const [showHMEditModal, setShowHMEditModal] = useState(false);
     const [selectedHMItem, setSelectedHMItem] = useState(null);
     const [hmSpecialtyFilter, setHmSpecialtyFilter] = useState('Cardiology');
@@ -1049,28 +1047,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
             console.error('Error resolving flag:', error);
             showError('Failed to dismiss alert. Restoring...');
             fetchFlags();
-        }
-    };
-
-    const handleAddReminder = async () => {
-        if (!newReminderText.trim()) return;
-        setActionLoading(true);
-        try {
-            await patientFlagsAPI.create(id, {
-                note: newReminderText.trim(),
-                custom_label: 'REMINDER',
-                custom_severity: 'info',
-                expires_at: null
-            });
-            setNewReminderText('');
-            setIsAddingReminder(false);
-            showSuccess('Reminder added');
-            fetchFlags();
-        } catch (err) {
-            console.error('Failed to add reminder', err);
-            showError('Failed to add reminder');
-        } finally {
-            setActionLoading(false);
         }
     };
 
@@ -2006,53 +1982,6 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                                 {/* Main Dashboard Content */}
                                 <div className="lg:col-span-3 space-y-5">
-                                    {/* Action Bar */}
-                                    <div className="flex justify-end pt-1 px-1">
-                                        {isAddingReminder ? (
-                                            <div className="flex items-center gap-2 bg-white p-2 border-2 border-blue-100 shadow-sm rounded-xl w-full max-w-md animate-in slide-in-from-top-2">
-                                                <input
-                                                    type="text"
-                                                    value={newReminderText}
-                                                    onChange={e => setNewReminderText(e.target.value)}
-                                                    placeholder="Type a clinical reminder..."
-                                                    className="flex-1 text-[11px] px-3 py-1.5 focus:outline-none focus:bg-blue-50/50 rounded-lg bg-gray-50 border-none transition-colors font-medium text-gray-700"
-                                                    onKeyDown={e => {
-                                                        if (e.key === 'Enter') handleAddReminder();
-                                                        if (e.key === 'Escape') {
-                                                            setIsAddingReminder(false);
-                                                            setNewReminderText('');
-                                                        }
-                                                    }}
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    onClick={handleAddReminder}
-                                                    disabled={actionLoading || !newReminderText.trim()}
-                                                    className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider disabled:opacity-50 hover:bg-blue-700 transition-colors shadow-sm"
-                                                >
-                                                    {actionLoading ? 'saving...' : 'Save'}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setIsAddingReminder(false);
-                                                        setNewReminderText('');
-                                                    }}
-                                                    className="px-2 py-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-50 flex-shrink-0"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => setIsAddingReminder(true)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-600 border-2 border-dashed border-blue-200 shadow-sm hover:shadow hover:bg-blue-50 transition-all rounded-xl text-[10px] font-bold uppercase tracking-widest"
-                                            >
-                                                <Plus className="w-3.5 h-3.5" />
-                                                Add Reminder
-                                            </button>
-                                        )}
-                                    </div>
-
                                     {/* Clinical Alerts Banner - High Visibility Inline version */}
                                     {activeFlags.length > 0 && (
                                         <div className="space-y-1.5 px-0.5">
