@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 
 const EkoContext = createContext(null);
@@ -41,6 +42,8 @@ export function EkoProvider({ children }) {
         setIsRecording(false);
     }, []);
 
+    const location = useLocation();
+
     // Safety: Auto-stop if user navigates away while recording
     useEffect(() => {
         const handleBeforeUnload = () => {
@@ -49,24 +52,18 @@ export function EkoProvider({ children }) {
             }
         };
 
-        const handleRouteChange = () => {
-            // If we're not on a visit page anymore, stop
-            if (isRecordingRef.current && !window.location.pathname.includes('/visit/')) {
-                console.log('[EkonContext] Navigated away from visit, auto-stopping scribe...');
-                handleStopRecording();
-                setAmbientMode(false);
-            }
-        };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-        // We use a small interval or custom event to check path changes if router doesn't trigger
-        const pathInterval = setInterval(handleRouteChange, 1000);
-
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-            clearInterval(pathInterval);
-        };
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [handleStopRecording]);
+
+    // Track route changes to stop recording if we leave the visit note
+    useEffect(() => {
+        if (isRecordingRef.current && !location.pathname.includes('/visit/')) {
+            console.log('[EkoContext] Route changed, stopping recording safely...');
+            handleStopRecording();
+            setAmbientMode(false);
+        }
+    }, [location.pathname, handleStopRecording]);
 
     const handleStartRecording = useCallback(async (forcedMode = null) => {
         const isAmbient = forcedMode !== null ? forcedMode : ambientModeRef.current;
