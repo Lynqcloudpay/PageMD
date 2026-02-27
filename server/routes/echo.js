@@ -181,7 +181,19 @@ JSON STRUCTURE:
                         plan: parsed.plan || ''
                     };
 
-                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → sections: CC=${parsedSections.chiefComplaint.length}, HPI=${parsedSections.hpi.length}, ROS=${parsedSections.ros.length}, PE=${parsedSections.pe.length}, Plan=${parsedSections.plan.length}`);
+                    // 3. PERSIST RAW TRANSCRIPT TO VISIT RECORD (Elite Memory)
+                    if (visitId) {
+                        try {
+                            await pool.query(
+                                `UPDATE visits SET visit_transcript = $1, updated_at = NOW() WHERE id = $2`,
+                                [transcription, visitId]
+                            );
+                            console.log(`[Echo API] Persisted transcript for visit ${visitId} (${transcription.length} chars)`);
+                        } catch (saveErr) {
+                            console.error(`[Echo API] Failed to persist transcript:`, saveErr);
+                        }
+                    }
+
                     return res.json({
                         success: true,
                         text: transcription,
@@ -194,6 +206,16 @@ JSON STRUCTURE:
             } catch (soapErr) {
                 console.warn('[Echo API] SOAP structuring failed, returning raw transcript:', soapErr.message);
             }
+        }
+
+        // Even in dictation mode or failed ambient, if we have a visitId, store it
+        if (visitId && transcription && transcription.trim().length > 0) {
+            try {
+                await pool.query(
+                    `UPDATE visits SET visit_transcript = $1, updated_at = NOW() WHERE id = $2`,
+                    [transcription, visitId]
+                );
+            } catch (saveErr) { }
         }
 
         res.json({ success: true, text: transcription, mode });
@@ -806,6 +828,106 @@ router.delete('/preferences/:id', requirePermission('ai.echo'), async (req, res)
     } catch (err) {
         console.error('[Echo API] Preference delete error:', err);
         res.status(500).json({ error: 'Failed to delete preference' });
+    }
+});
+
+/**
+ * POST /api/echo/refine-section
+ * Individualized AI refinement for a specific note section
+ */
+router.post('/refine-section', requirePermission('ai.echo'), async (req, res) => {
+    try {
+        const { visitId, section, diagnosis } = req.body;
+        if (!visitId || !section) {
+            return res.status(400).json({ error: 'Visit ID and section are required' });
+        }
+
+        console.log(`[Echo Refine] Refining ${section} ${diagnosis ? `for ${diagnosis}` : ''} in visit ${visitId}`);
+
+        // 1. Fetch transcript and patient context
+        const visitResult = await pool.query(
+            `SELECT v.visit_transcript, v.patient_id, p.gender, p.dob,
+             (SELECT string_agg(problem_name, ', ') FROM problems WHERE patient_id = v.patient_id AND status = 'active') as problem_list
+             FROM visits v
+             JOIN patients p ON v.patient_id = p.id
+             WHERE v.id = $1`,
+            [visitId]
+        );
+
+        if (visitResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Visit not found' });
+        }
+
+        const visit = visitResult.rows[0];
+        if (!visit.visit_transcript) {
+            return res.status(400).json({ error: 'No spoken transcript found for this visit. Please transcribe audio first.' });
+        }
+
+        const age = visit.dob ? Math.floor((new Date() - new Date(visit.dob)) / 31557600000) : 'adult';
+        const context = `The patient is a ${age}-year-old ${visit.gender || 'unknown'}. PMHx: ${visit.problem_list || 'None reported'}.`;
+
+        // 2. Formulate targeted prompt
+        let promptSnippet = "";
+        let responseFormat = {};
+
+        switch (section.toLowerCase()) {
+            case 'hpi':
+                promptSnippet = "Write a professional, narrative HPI (Subjective only). Do not include physical exam. Focus on symptoms, onset, and relevant PMHx linkage.";
+                responseFormat = { type: 'text' };
+                break;
+            case 'ros':
+                promptSnippet = "Document the Review of Systems based on the spoken conversation. Use medical terminology (e.g., 'Denies chest pain, shortness of breath').";
+                responseFormat = { type: 'text' };
+                break;
+            case 'pe':
+                promptSnippet = "Document the Physical Exam findings mentioned during the encounter. Use professional shorthand (e.g., 'Lungs: CTB BL').";
+                responseFormat = { type: 'text' };
+                break;
+            case 'assessment':
+                promptSnippet = "List the clinical diagnoses addressed during this visit. Format as a numbered list.";
+                break;
+            case 'mdm':
+                promptSnippet = `Write a high-billing-value Medical Decision Making (MDM) clinical rationale specifically for the diagnosis: "${diagnosis}". 
+                Justify the complexity, risk, and clinical thought process. This will be used for E/M coding level 4 or 5. 
+                Keep it concise but impactful. Output ONLY the MDM logic text.`;
+                break;
+            default:
+                promptSnippet = `Document the ${section} section accurately based on the conversation.`;
+        }
+
+        const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.AI_API_KEY || process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                temperature: 0.1,
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are an elite Medical Scribe. ${context}
+                        TASK: Refine/Draft the "${section}" section of the visit note.
+                        CRITICAL: ONLY output the content for the requested section. No preamble, no conversational fillers.`
+                    },
+                    {
+                        role: 'user',
+                        content: `Transcript:\n"${visit.visit_transcript}"\n\nCommand: ${promptSnippet}`
+                    }
+                ]
+            })
+        });
+
+        if (!aiResponse.ok) throw new Error('AI processing failed');
+        const data = await aiResponse.json();
+        const draftedText = data.choices?.[0]?.message?.content || '';
+
+        res.json({ success: true, draftedText: draftedText.trim() });
+
+    } catch (err) {
+        console.error('[Echo Refine] Error:', err);
+        res.status(500).json({ error: 'Failed to refine section with AI' });
     }
 });
 

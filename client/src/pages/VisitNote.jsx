@@ -893,8 +893,7 @@ const VisitNote = () => {
                 structured.push({
                     diagnosis: currentDiagnosis,
                     orders: [...currentOrders],
-                    mdm: currentMDM,
-                    instructions: currentInstructions
+                    mdm: currentMDM
                 });
             }
         };
@@ -909,11 +908,8 @@ const VisitNote = () => {
                 currentDiagnosis = diagnosisMatch[2].trim();
                 currentOrders = [];
                 currentMDM = null;
-                currentInstructions = null;
             } else if (line.startsWith('MDM:')) {
                 currentMDM = line.replace(/^MDM:\s*/, '').trim();
-            } else if (line.startsWith('Plan:') || line.startsWith('Instructions:')) {
-                currentInstructions = line.replace(/^(Plan|Instructions):\s*/, '').trim();
             } else if (line.startsWith('•') || line.startsWith('-')) {
                 const orderText = line.replace(/^[•\-]\s*/, '').trim();
                 if (orderText && currentDiagnosis) {
@@ -931,9 +927,8 @@ const VisitNote = () => {
         if (!structuredPlan || structuredPlan.length === 0) return '';
         return structuredPlan.map((item, index) => {
             const lines = [`${index + 1}. ${item.diagnosis}`];
-            if (item.mdm) lines.push(`MDM: ${item.mdm}`);
-            if (item.instructions) lines.push(`Plan: ${item.instructions}`);
             item.orders.forEach(order => lines.push(`  • ${order}`));
+            if (item.mdm) lines.push(`MDM: ${item.mdm}`);
             return lines.join('\n');
         }).join('\n\n');
     };
@@ -2288,6 +2283,48 @@ const VisitNote = () => {
         }
     };
 
+    const refineSectionWithAI = async (section, diagnosis = null, planIndex = null) => {
+        if (!currentVisitId || isLocked) return;
+
+        showToast(`AI is crafting ${section.toUpperCase()}...`, 'info', { duration: 3000 });
+
+        try {
+            const response = await api.post('/echo/refine-section', {
+                visitId: currentVisitId,
+                section,
+                diagnosis
+            });
+
+            if (response.data.success && response.data.draftedText) {
+                const draftedValue = response.data.draftedText;
+
+                if (planIndex !== null && section === 'mdm') {
+                    updatePlanDetails(planIndex, 'mdm', draftedValue);
+                } else if (section === 'hpi') {
+                    handleTextChange(draftedValue, 'hpi');
+                    setNoteData(prev => ({ ...prev, hpi: draftedValue }));
+                } else if (section === 'ros') {
+                    handleTextChange(draftedValue, 'rosNotes');
+                    setNoteData(prev => ({ ...prev, rosNotes: draftedValue }));
+                } else if (section === 'pe') {
+                    handleTextChange(draftedValue, 'peNotes');
+                    setNoteData(prev => ({ ...prev, peNotes: draftedValue }));
+                } else if (section === 'assessment') {
+                    handleTextChange(draftedValue, 'assessment');
+                    setNoteData(prev => ({ ...prev, assessment: draftedValue }));
+                } else if (section === 'pamfos') {
+                    // Logic for history sections could be more complex, but we'll put it in summary for now
+                    handleTextChange(draftedValue, 'chiefComplaint'); // Or a general summary field
+                }
+
+                showToast(`AI successfully ${diagnosis ? `drafted MDM for ${diagnosis}` : `updated ${section.toUpperCase()}`}`, 'success');
+            }
+        } catch (err) {
+            console.error('Refine error:', err);
+            showToast('AI failed to refine this section. Ensure you have transcribed audio first.', 'error');
+        }
+    };
+
     const convertWeight = (value, fromUnit, toUnit) => {
         if (!value) return '';
         const num = parseFloat(value);
@@ -2975,7 +3012,13 @@ const VisitNote = () => {
                         </div>
 
                         {/* HPI */}
-                        <VisitNoteSection title="History of Present Illness (HPI)" defaultOpen={true} isEdited={editedSections.has('hpi')} id="hpi">
+                        <VisitNoteSection
+                            title="History of Present Illness (HPI)"
+                            defaultOpen={true}
+                            isEdited={editedSections.has('hpi')}
+                            id="hpi"
+                            onDraftWithAI={() => refineSectionWithAI('hpi')}
+                        >
                             <div className="relative">
                                 <span className="absolute -top-1.5 right-4 z-10 text-[9px] font-bold text-gray-400 bg-white px-2 py-0.5 rounded-full border border-slate-50 uppercase tracking-widest group-focus-within:text-primary-400 transition-colors">F2 for placeholders</span>
                                 <textarea
@@ -3052,7 +3095,12 @@ const VisitNote = () => {
                         {/* ROS and PE Side by Side */}
                         <div id="ros-pe" className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 scroll-mt-32">
                             {/* ROS */}
-                            <VisitNoteSection title="Review of Systems" defaultOpen={true} id="ros">
+                            <VisitNoteSection
+                                title="Review of Systems"
+                                defaultOpen={true}
+                                id="ros"
+                                onDraftWithAI={() => refineSectionWithAI('ros')}
+                            >
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {Object.keys(noteData.ros).map(system => {
                                         const isSelected = noteData.ros[system];
@@ -3127,7 +3175,12 @@ const VisitNote = () => {
                             </VisitNoteSection>
 
                             {/* Physical Exam */}
-                            <VisitNoteSection title="Physical Examination" defaultOpen={true} id="pe">
+                            <VisitNoteSection
+                                title="Physical Examination"
+                                defaultOpen={true}
+                                id="pe"
+                                onDraftWithAI={() => refineSectionWithAI('pe')}
+                            >
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {Object.keys(noteData.pe).map(system => {
                                         const isSelected = noteData.pe[system];
@@ -3209,6 +3262,7 @@ const VisitNote = () => {
                             defaultOpen={false}
                             id="pamfos"
                             badge={(patientData?.problems?.length || 0) + (patientData?.medications?.length || 0) + (patientData?.allergies?.length || 0)}
+                            onDraftWithAI={() => refineSectionWithAI('pamfos')}
                         >
                             <div className="space-y-8 py-2">
                                 {/* P - Past Medical History */}
@@ -3566,108 +3620,110 @@ const VisitNote = () => {
                             )}
                         </VisitNoteSection>
 
-                        {/* Assessment */}
-                        <VisitNoteSection
-                            title="Assessment"
-                            defaultOpen={true}
-                            isEdited={editedSections.has('assessment')}
-                            id="assessment"
-                            className={showIcd10Search ? 'z-50 relative' : 'z-20 relative'}
-                        >
-                            {/* ICD-10 Search - Simple inline search */}
-                            {hasPrivilege('search_icd10') && (
-                                <div className="mb-3 relative">
-                                    <div className="relative group">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
-                                        <input
-                                            id="icd10-quick-search"
-                                            type="text"
-                                            placeholder={editingDiagnosisIndex !== null ? `Editing: ${diagnoses[editingDiagnosisIndex]}` : "Search ICD-10 diagnosis..."}
-                                            value={icd10Search}
-                                            onChange={(e) => {
-                                                setIcd10Search(e.target.value);
-                                                setShowIcd10Search(true);
-                                            }}
-                                            disabled={isLocked}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    // Assessment logic
-                                                }
-                                            }}
-                                            className="vn-input !pl-14 pr-10"
-                                        />
-                                        <button
-                                            onClick={() => setShowICD10Modal(true)}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
-                                            title="Advanced Search"
-                                        >
-                                            <Search className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
-                                        <div className="absolute z-[100] mt-2 w-full border border-gray-200 rounded-2xl bg-white shadow-2xl max-h-80 overflow-y-auto py-2">
-                                            {icd10Results.map((code) => (
-                                                <button
-                                                    key={code.id || code.code}
-                                                    onClick={() => {
-                                                        handleAddICD10(code, false);
-                                                        setIcd10Search('');
-                                                        setIcd10Results([]);
-                                                        setShowIcd10Search(false);
-                                                    }}
-                                                    className="w-full text-left px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-gray-50 transition-colors group"
-                                                >
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="font-bold text-primary-600 text-xs tracking-tight">{code.code}</span>
-                                                        {!code.is_billable && (
-                                                            <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-widest">Non-Billable</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-xs text-gray-600 leading-relaxed line-clamp-2 font-medium">{code.description}</div>
-                                                </button>
-                                            ))}
+                        <div className="mb-5">
+                            {/* Assessment */}
+                            <VisitNoteSection
+                                title="Assessment"
+                                defaultOpen={true}
+                                isEdited={editedSections.has('assessment')}
+                                id="assessment"
+                                onDraftWithAI={() => refineSectionWithAI('assessment')}
+                            >
+                                {/* ICD-10 Search - Simple inline search */}
+                                {hasPrivilege('search_icd10') && (
+                                    <div className="mb-3 relative">
+                                        <div className="relative group">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-primary-500 transition-colors" />
+                                            <input
+                                                id="icd10-quick-search"
+                                                type="text"
+                                                placeholder={editingDiagnosisIndex !== null ? `Editing: ${diagnoses[editingDiagnosisIndex]}` : "Search ICD-10 diagnosis..."}
+                                                value={icd10Search}
+                                                onChange={(e) => {
+                                                    setIcd10Search(e.target.value);
+                                                    setShowIcd10Search(true);
+                                                }}
+                                                disabled={isLocked}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        // Assessment logic
+                                                    }
+                                                }}
+                                                className="vn-input !pl-14 pr-10"
+                                            />
+                                            <button
+                                                onClick={() => setShowICD10Modal(true)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"
+                                                title="Advanced Search"
+                                            >
+                                                <Search className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                    )}
 
-                                    {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
-                                        <div className="mt-2 border border-gray-100 rounded-2xl bg-white p-4 text-center">
-                                            <p className="text-xs text-gray-400 font-medium italic">No codes found for "{icd10Search}"</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {!isSigned && diagnoses.length > 0 && (
-                                <div className="mt-2 divide-y divide-gray-100/50">
-                                    {diagnoses.map((diag, idx) => (
-                                        <div key={idx} className="vn-list-item-compact group">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-bold text-gray-400 w-4">{idx + 1}.</span>
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingDiagnosisIndex(idx);
-                                                        setShowICD10Modal(true);
-                                                    }}
-                                                    className="vn-link-diagnosis text-left"
-                                                >
-                                                    {diag.replace(/^\d+[\.\)]?\s*/, '')}
-                                                </button>
+                                        {showIcd10Search && icd10Results.length > 0 && icd10Search.trim().length >= 2 && (
+                                            <div className="absolute z-[100] mt-2 w-full border border-gray-200 rounded-2xl bg-white shadow-2xl max-h-80 overflow-y-auto py-2">
+                                                {icd10Results.map((code) => (
+                                                    <button
+                                                        key={code.id || code.code}
+                                                        onClick={() => {
+                                                            handleAddICD10(code, false);
+                                                            setIcd10Search('');
+                                                            setIcd10Results([]);
+                                                            setShowIcd10Search(false);
+                                                        }}
+                                                        className="w-full text-left px-4 py-2.5 border-b border-slate-50 last:border-0 hover:bg-gray-50 transition-colors group"
+                                                    >
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="font-bold text-primary-600 text-xs tracking-tight">{code.code}</span>
+                                                            {!code.is_billable && (
+                                                                <span className="text-[9px] font-bold bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded-full border border-amber-100 uppercase tracking-widest">Non-Billable</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-gray-600 leading-relaxed line-clamp-2 font-medium">{code.description}</div>
+                                                    </button>
+                                                ))}
                                             </div>
-                                            {!isLocked && (
-                                                <button
-                                                    onClick={() => removeDiagnosisFromAssessment(idx)}
-                                                    className="p-1 text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </VisitNoteSection>
+                                        )}
+
+                                        {showIcd10Search && icd10Results.length === 0 && icd10Search.trim().length >= 2 && (
+                                            <div className="mt-2 border border-gray-100 rounded-2xl bg-white p-4 text-center">
+                                                <p className="text-xs text-gray-400 font-medium italic">No codes found for "{icd10Search}"</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {!isSigned && diagnoses.length > 0 && (
+                                    <div className="mt-2 divide-y divide-gray-100/50">
+                                        {diagnoses.map((diag, idx) => (
+                                            <div key={idx} className="vn-list-item-compact group">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[10px] font-bold text-gray-400 w-4">{idx + 1}.</span>
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingDiagnosisIndex(idx);
+                                                            setShowICD10Modal(true);
+                                                        }}
+                                                        className="vn-link-diagnosis text-left"
+                                                    >
+                                                        {diag.replace(/^\d+[\.\)]?\s*/, '')}
+                                                    </button>
+                                                </div>
+                                                {!isLocked && (
+                                                    <button
+                                                        onClick={() => removeDiagnosisFromAssessment(idx)}
+                                                        className="p-1 text-gray-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </VisitNoteSection>
+                        </div>
 
                         {/* Plan */}
                         <VisitNoteSection
@@ -3717,63 +3773,6 @@ const VisitNote = () => {
                                                     )}
                                                 </div>
 
-                                                {/* MDM & Plan for each diagnosis */}
-                                                {!isLocked ? (
-                                                    <div className="mt-3 mb-4 space-y-4 pl-4 border-l-2 border-primary-50 px-1 py-1">
-                                                        <div className="group/mdm relative">
-                                                            <div className="flex items-center gap-2 mb-1.5">
-                                                                <div className="p-1 bg-blue-50 rounded-md">
-                                                                    <Sparkles className="w-3 h-3 text-blue-500" />
-                                                                </div>
-                                                                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">Clinical Logic (MDM)</span>
-                                                            </div>
-                                                            <textarea
-                                                                value={item.mdm || ''}
-                                                                onChange={(e) => updatePlanDetails(index, 'mdm', e.target.value)}
-                                                                placeholder="Add clinical reasoning for billing justification..."
-                                                                className="w-full bg-blue-50/10 border border-blue-100/30 rounded-xl p-3 text-[13px] italic text-gray-700 outline-none focus:border-blue-400 focus:bg-blue-50/20 transition-all min-h-[60px] shadow-sm placeholder:text-gray-300"
-                                                            />
-                                                        </div>
-                                                        <div className="group/plan relative">
-                                                            <div className="flex items-center gap-2 mb-1.5">
-                                                                <div className="p-1 bg-gray-50 rounded-md">
-                                                                    <Stethoscope className="w-3 h-3 text-gray-500" />
-                                                                </div>
-                                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Care Instructions</span>
-                                                            </div>
-                                                            <textarea
-                                                                value={item.instructions || ''}
-                                                                onChange={(e) => updatePlanDetails(index, 'instructions', e.target.value)}
-                                                                placeholder="Add specific instructions given to patient..."
-                                                                className="w-full bg-gray-50/20 border border-gray-100/50 rounded-xl p-3 text-[13px] font-semibold text-gray-800 outline-none focus:border-gray-300 focus:bg-gray-50/40 transition-all min-h-[60px] shadow-sm placeholder:text-gray-300"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    (item.mdm || item.instructions) && (
-                                                        <div className="mt-2 mb-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 shadow-sm shadow-blue-50/50 space-y-3">
-                                                            {item.mdm && (
-                                                                <div>
-                                                                    <div className="flex items-center gap-2 mb-1">
-                                                                        <Sparkles className="w-3.5 h-3.5 text-blue-500" />
-                                                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">Clinical Logic (MDM)</span>
-                                                                    </div>
-                                                                    <p className="text-[13px] text-gray-700 leading-relaxed font-medium italic">"{item.mdm}"</p>
-                                                                </div>
-                                                            )}
-                                                            {item.instructions && (
-                                                                <div>
-                                                                    <div className="flex items-center gap-2 mb-1">
-                                                                        <Stethoscope className="w-3.5 h-3.5 text-gray-500" />
-                                                                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Care Instructions</span>
-                                                                    </div>
-                                                                    <p className="text-[13px] text-gray-700 leading-relaxed font-semibold">{item.instructions}</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )
-                                                )}
-
                                                 {/* Orders List beneath the diagnosis */}
                                                 <div className="mt-1">
                                                     {item.orders.length === 0 ? (
@@ -3799,6 +3798,48 @@ const VisitNote = () => {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* MDM & Plan for each diagnosis - NOW BELOW ORDERS */}
+                                                {!isLocked ? (
+                                                    <div className="mt-4 mb-4 space-y-4 pl-4 border-l-2 border-primary-50 px-1 py-1">
+                                                        <div className="group/mdm relative">
+                                                            <div className="flex items-center justify-between mb-1.5">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="p-1 bg-blue-50 rounded-md">
+                                                                        <Sparkles className="w-3 h-3 text-blue-500" />
+                                                                    </div>
+                                                                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">Clinical Logic (MDM)</span>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => refineSectionWithAI('mdm', item.diagnosis, index)}
+                                                                    className="p-1 text-primary-500 hover:bg-primary-50 rounded-md transition-all flex items-center gap-1 border border-primary-100/50 bg-white"
+                                                                    title="Draft MDM with AI"
+                                                                >
+                                                                    <Sparkles className="w-2.5 h-2.5" />
+                                                                    <span className="text-[9px] font-bold uppercase">AI Draft</span>
+                                                                </button>
+                                                            </div>
+                                                            <textarea
+                                                                value={item.mdm || ''}
+                                                                onChange={(e) => updatePlanDetails(index, 'mdm', e.target.value)}
+                                                                placeholder="Add clinical reasoning for billing justification..."
+                                                                className="w-full bg-blue-50/10 border border-blue-100/30 rounded-xl p-3 text-[13px] italic text-gray-700 outline-none focus:border-blue-400 focus:bg-blue-50/20 transition-all min-h-[60px] shadow-sm placeholder:text-gray-300"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    item.mdm && (
+                                                        <div className="mt-3 mb-3 bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 shadow-sm shadow-blue-50/50">
+                                                            <div>
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                                                                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">Clinical Logic (MDM)</span>
+                                                                </div>
+                                                                <p className="text-[13px] text-gray-700 leading-relaxed font-medium italic">"{item.mdm}"</p>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                )}
                                             </div>
                                         ))}
                                     </div>

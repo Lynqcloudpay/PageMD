@@ -28,6 +28,19 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
                     )}
                 </div>
                 <div className="flex items-center gap-2">
+                    {onDraftWithAI && !isEdited && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDraftWithAI();
+                            }}
+                            className="p-2 text-primary-500 hover:bg-primary-50 rounded-xl transition-all flex items-center gap-1.5 border border-primary-100/50 bg-white/50"
+                            title="Draft with AI"
+                        >
+                            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                            <span className="text-[10px] font-bold uppercase tracking-tighter">Draft</span>
+                        </button>
+                    )}
                     <ChevronDown
                         className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
                     />
