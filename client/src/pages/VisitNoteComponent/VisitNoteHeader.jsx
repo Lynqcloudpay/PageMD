@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useEko } from '../../context/EkoContext';
 import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const VisitNoteHeader = ({
     visitData,
@@ -121,6 +122,91 @@ const VisitNoteHeader = ({
                         </div>
                     </div>
 
+                    {/* Centered Standalone Scribe Master Control */}
+                    {!isSigned && !isPreliminary && (
+                        <div className="md:absolute md:left-1/2 md:-translate-x-1/2 flex flex-col items-center justify-center">
+                            <motion.button
+                                whileHover={{ scale: 1.05, boxShadow: "0 0 25px rgba(245, 158, 11, 0.4)" }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                    const nextMode = !ambientMode;
+                                    setAmbientMode(nextMode);
+                                    if (nextMode) {
+                                        handleStartRecording(true);
+                                    } else if (isRecording) {
+                                        handleStopRecording();
+                                    }
+                                }}
+                                className={`relative group flex items-center gap-4 px-8 py-3 rounded-2xl text-xs font-bold transition-all overflow-hidden ${ambientMode
+                                        ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white ring-2 ring-amber-300 ring-offset-2'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-amber-300 hover:bg-amber-50 shadow-md'
+                                    }`}
+                            >
+                                {/* Active Recording Glow/Breath Effect */}
+                                {isRecording && ambientMode && (
+                                    <motion.div
+                                        animate={{
+                                            opacity: [0.1, 0.4, 0.1],
+                                            scale: [1, 1.1, 1]
+                                        }}
+                                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                        className="absolute inset-0 bg-white/20"
+                                    />
+                                )}
+
+                                <div className="relative flex items-center gap-3">
+                                    <div className="relative">
+                                        <Radio className={`w-5 h-5 ${isRecording && ambientMode ? 'animate-pulse text-white' : 'text-amber-500'}`} />
+                                        <AnimatePresence>
+                                            {isRecording && ambientMode && (
+                                                <motion.span
+                                                    initial={{ scale: 1, opacity: 0.5 }}
+                                                    animate={{ scale: 2.5, opacity: 0 }}
+                                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                                    className="absolute inset-0 bg-white rounded-full"
+                                                />
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                    <div className="flex flex-col items-start leading-tight min-w-[120px]">
+                                        <span className="tracking-[0.1em] uppercase text-[10px]">
+                                            {ambientMode ? (isRecording ? 'STOP SCRIBE' : 'RESUME SCRIBE') : 'AMBIENT SCRIBE'}
+                                        </span>
+                                        {isRecording && ambientMode && (
+                                            <span className="text-[11px] font-mono mt-0.5 font-black">
+                                                {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{(recordingTime % 60).toString().padStart(2, '0')}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Recording Indicator Dot */}
+                                {isRecording && ambientMode && (
+                                    <div className="flex h-2.5 w-2.5 ml-1">
+                                        <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-rose-200 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white/20"></span>
+                                    </div>
+                                )}
+                            </motion.button>
+
+                            <AnimatePresence>
+                                {isRecording && ambientMode && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className="absolute -bottom-8 flex items-center gap-1.5 whitespace-nowrap bg-amber-50 px-3 py-1 rounded-full border border-amber-100 shadow-sm"
+                                    >
+                                        <Sparkles className="w-3 h-3 text-amber-500" />
+                                        <span className="text-[9px] font-bold text-amber-600 uppercase tracking-widest">
+                                            Eko is listening and documenting...
+                                        </span>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
+
                     <div className="flex flex-wrap items-center gap-2.5">
                         <button
                             onClick={() => setShowChartReview(true)}
@@ -150,33 +236,7 @@ const VisitNoteHeader = ({
                             </>
                         )}
 
-                        {!isSigned && !isPreliminary && (
-                            <button
-                                onClick={() => {
-                                    const nextMode = !ambientMode;
-                                    setAmbientMode(nextMode);
-                                    if (nextMode) {
-                                        handleStartRecording(true);
-                                    } else if (isRecording) {
-                                        handleStopRecording();
-                                    }
-                                }}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg ${ambientMode
-                                    ? 'bg-amber-100 text-amber-600 ring-1 ring-amber-300'
-                                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <Radio className={`w-4 h-4 ${isRecording && ambientMode ? 'animate-pulse text-rose-500' : ''}`} />
-                                <div className="flex flex-col items-start leading-none">
-                                    <span>{ambientMode ? (isRecording ? 'STOP SCRIBE' : 'START SCRIBE') : 'SCRIBE'}</span>
-                                    {isRecording && ambientMode && (
-                                        <span className="text-[8px] font-mono mt-0.5">
-                                            {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{(recordingTime % 60).toString().padStart(2, '0')}
-                                        </span>
-                                    )}
-                                </div>
-                            </button>
-                        )}
+
 
                         {isSigned && (
                             <div className="flex items-center gap-3 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 text-xs font-bold">
