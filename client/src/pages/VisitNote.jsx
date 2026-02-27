@@ -8,7 +8,6 @@ import {
     DollarSign, Eye, Calendar, AlertCircle, AlertTriangle, Stethoscope, ScrollText, Copy, RotateCcw,
     PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves, FilePlus, Share2, Edit2, Maximize2
 } from 'lucide-react';
-import MdmModal from '../components/MdmModal';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
 
@@ -585,8 +584,7 @@ const VisitNote = () => {
     const [isAddingMedicationFromSidebar, setIsAddingMedicationFromSidebar] = useState(false);
     const [showMacroAddModal, setShowMacroAddModal] = useState(false);
     const [newMacroData, setNewMacroData] = useState({ shortcut_code: '', template_text: '' });
-    const [showMdmModal, setShowMdmModal] = useState(false);
-    const [mdmModalData, setMdmModalData] = useState({ index: null, diagnosis: '', text: '' });
+    const [expandedMdms, setExpandedMdms] = useState({}); // index -> boolean
 
     // Note sections
     const [noteData, setNoteData] = useState({
@@ -3960,10 +3958,7 @@ const VisitNote = () => {
                                                             <div className="flex items-center justify-between mb-1.5">
                                                                 <div
                                                                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                                                                    onClick={() => {
-                                                                        setMdmModalData({ index, diagnosis: item.diagnosis, text: item.mdm || '' });
-                                                                        setShowMdmModal(true);
-                                                                    }}
+                                                                    onClick={() => setExpandedMdms(p => ({ ...p, [index]: !p[index] }))}
                                                                 >
                                                                     <div className="p-1 bg-blue-50 rounded-md">
                                                                         <Sparkles className="w-3 h-3 text-blue-500" />
@@ -3979,23 +3974,34 @@ const VisitNote = () => {
                                                                     <span className="text-[9px] font-bold uppercase">AI Draft</span>
                                                                 </button>
                                                             </div>
-                                                            <div
-                                                                onClick={() => {
-                                                                    setMdmModalData({ index, diagnosis: item.diagnosis, text: item.mdm || '' });
-                                                                    setShowMdmModal(true);
-                                                                }}
-                                                                className="w-full bg-blue-50/10 border border-blue-100/30 rounded-xl p-3 text-[13px] italic text-gray-700 cursor-pointer hover:bg-blue-50/30 hover:border-blue-200 transition-all min-h-[60px] shadow-sm relative group"
-                                                            >
-                                                                {item.mdm ? (
-                                                                    <div className="line-clamp-3 leading-relaxed">
-                                                                        {item.mdm}
-                                                                    </div>
-                                                                ) : (
-                                                                    <span className="text-gray-300">Add clinical reasoning (Expand to edit)...</span>
-                                                                )}
-                                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <Maximize2 className="w-3 h-3 text-blue-400" />
-                                                                </div>
+
+                                                            <div className="relative group/mdm-box">
+                                                                <textarea
+                                                                    value={item.mdm || ''}
+                                                                    onChange={(e) => updatePlanDetails(index, 'mdm', e.target.value)}
+                                                                    onClick={(e) => !expandedMdms[index] && e.target.scrollHeight > 60 && setExpandedMdms(p => ({ ...p, [index]: true }))}
+                                                                    placeholder="Add clinical reasoning for billing justification..."
+                                                                    className={`w-full bg-blue-50/10 border border-blue-100/30 rounded-xl p-3 text-[13px] italic text-gray-700 outline-none focus:border-blue-400 focus:bg-white transition-all shadow-sm placeholder:text-gray-300 ${expandedMdms[index] ? 'resize-y overflow-hidden h-auto' : 'h-[60px] overflow-y-auto'}`}
+                                                                    style={expandedMdms[index] ? {
+                                                                        height: 'auto',
+                                                                        minHeight: '100px'
+                                                                    } : {}}
+                                                                    ref={el => {
+                                                                        if (el && expandedMdms[index]) {
+                                                                            el.style.height = 'auto';
+                                                                            el.style.height = el.scrollHeight + 'px';
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setExpandedMdms(p => ({ ...p, [index]: !p[index] }));
+                                                                    }}
+                                                                    className="absolute top-2 right-2 p-1 bg-white/80 rounded-md hover:bg-white text-blue-400 border border-blue-100/50 shadow-sm opacity-0 group-hover/mdm-box:opacity-100 transition-opacity z-10"
+                                                                >
+                                                                    {expandedMdms[index] ? <ChevronUp className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -4908,16 +4914,6 @@ const VisitNote = () => {
                     } finally {
                         setIsSaving(false);
                     }
-                }}
-            />
-            <MdmModal
-                isOpen={showMdmModal}
-                onClose={() => setShowMdmModal(false)}
-                mdmText={mdmModalData.text}
-                diagnosis={mdmModalData.diagnosis}
-                onSave={(text) => {
-                    updatePlanDetails(mdmModalData.index, 'mdm', text);
-                    showToast('Clinical reasoning saved', 'success');
                 }}
             />
             <SignPromptModal
