@@ -34,11 +34,17 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
                                 e.stopPropagation();
                                 onDraftWithAI();
                             }}
-                            className="p-2 text-primary-500 hover:bg-primary-50 rounded-xl transition-all flex items-center gap-1.5 border border-primary-100/50 bg-white/50"
+                            className="relative overflow-hidden px-4 py-2 rounded-xl transition-all duration-300 flex items-center gap-1.5 group bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_4px_12px_rgba(16,185,129,0.3)] hover:shadow-[0_8px_20px_rgba(16,185,129,0.4)] hover:-translate-y-0.5 border border-emerald-400/50"
                             title={draftLabel || "Draft with AI"}
                         >
-                            {draftIcon || <Sparkles className="w-3.5 h-3.5 animate-pulse" />}
-                            <span className="text-[10px] font-bold uppercase tracking-tighter">{draftLabel || 'Draft'}</span>
+                            {/* Glass reflection effect on hover */}
+                            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                            <span className="relative z-10 flex items-center gap-1.5 transform group-hover:scale-105 transition-transform duration-300 drop-shadow-sm">
+                                {draftIcon || <Sparkles className="w-3.5 h-3.5 text-emerald-100 group-hover:text-white animate-pulse" />}
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white">{draftLabel || 'Draft'}</span>
+                            </span>
                         </button>
                     )}
                     <ChevronDown
