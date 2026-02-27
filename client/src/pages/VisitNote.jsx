@@ -625,12 +625,12 @@ const VisitNote = () => {
 
     const [visitType, setVisitType] = useState('Office Visit');
 
-    // Vitals
-    const [vitals, setVitals] = useState({
+    // Vitals - Now supports multiple sets
+    const [vitalsList, setVitalsList] = useState([{
+        taken_at: new Date().toISOString(),
         systolic: '',
         diastolic: '',
         bp: '',
-        bpReadings: [],
         temp: '',
         pulse: '',
         resp: '',
@@ -640,7 +640,40 @@ const VisitNote = () => {
         bmi: '',
         weightUnit: 'lbs',
         heightUnit: 'in'
-    });
+    }]);
+
+    // Keep 'vitals' as a reference to the active/latest set for compatibility
+    const vitals = vitalsList[vitalsList.length - 1];
+
+    const updateActiveVital = (index, field, value) => {
+        setVitalsList(prev => {
+            const newList = [...prev];
+            newList[index] = { ...newList[index], [field]: value };
+            return newList;
+        });
+    };
+
+    const handleAddVitalsReading = () => {
+        setVitalsList(prev => {
+            const last = prev[prev.length - 1];
+            return [...prev, {
+                taken_at: new Date().toISOString(),
+                systolic: '',
+                diastolic: '',
+                bp: '',
+                temp: '',
+                pulse: '',
+                resp: '',
+                o2sat: '',
+                // Carry over static values like weight/height if available, or start fresh
+                weight: last?.weight || '',
+                height: last?.height || '',
+                bmi: last?.bmi || '',
+                weightUnit: last?.weightUnit || 'lbs',
+                heightUnit: last?.heightUnit || 'in'
+            }];
+        });
+    };
 
     // Previous visit weight for comparison
     const [previousWeight, setPreviousWeight] = useState(null);
@@ -1178,23 +1211,21 @@ const VisitNote = () => {
                             .catch(e => console.warn('Retraction details not found'));
                     }
 
+                    // Load Vitals - Handle both old object format and new array format
                     if (visit.vitals) {
-                        const v = typeof visit.vitals === 'string' ? JSON.parse(visit.vitals) : visit.vitals;
-                        setVitals({
-                            systolic: v.systolic || '',
-                            diastolic: v.diastolic || '',
-                            bp: decodeHtmlEntities(v.bp) || (v.systolic && v.diastolic ? `${v.systolic}/${v.diastolic}` : ''),
-                            bpReadings: v.bpReadings || [],
-                            temp: v.temp || '',
-                            pulse: v.pulse || '',
-                            resp: v.resp || '',
-                            o2sat: v.o2sat || '',
-                            weight: v.weight || '',
-                            height: v.height || '',
-                            bmi: v.bmi || '',
-                            weightUnit: v.weightUnit || 'lbs',
-                            heightUnit: v.heightUnit || 'in'
-                        });
+                        const vRaw = typeof visit.vitals === 'string' ? JSON.parse(visit.vitals) : visit.vitals;
+                        if (Array.isArray(vRaw)) {
+                            setVitalsList(vRaw.length > 0 ? vRaw : [{
+                                taken_at: new Date().toISOString(),
+                                systolic: '', diastolic: '', bp: '', temp: '', pulse: '', resp: '', o2sat: '', weight: '', height: '', bmi: '', weightUnit: 'lbs', heightUnit: 'in'
+                            }]);
+                        } else {
+                            // Convert old single object to array
+                            setVitalsList([{
+                                ...vRaw,
+                                taken_at: vRaw.taken_at || visit.created_at || new Date().toISOString()
+                            }]);
+                        }
                     }
                     if (visit.note_draft) {
                         const noteDraftText = typeof visit.note_draft === 'string' ? visit.note_draft : (typeof visit.note_draft === 'object' ? JSON.stringify(visit.note_draft) : String(visit.note_draft));
@@ -1332,7 +1363,7 @@ const VisitNote = () => {
                         console.log('Restoring from local backup', localBackup);
                         setNoteData(localBackup.noteData);
                         if (localBackup.vitals) {
-                            setVitals(localBackup.vitals);
+                            setVitalsList(Array.isArray(localBackup.vitals) ? localBackup.vitals : [localBackup.vitals]);
                         }
                         // showToast('Restored unsaved work from local backup', 'info');
                     }
@@ -1376,23 +1407,12 @@ const VisitNote = () => {
             }
 
             if (visitId) {
-                const vitalsToSave = {
-                    systolic: vitals.systolic || null,
-                    diastolic: vitals.diastolic || null,
-                    bp: vitals.bp || (vitals.systolic && vitals.diastolic ? `${vitals.systolic}/${vitals.diastolic}` : null),
-                    temp: vitals.temp || null,
-                    pulse: vitals.pulse || null,
-                    resp: vitals.resp || null,
-                    o2sat: vitals.o2sat || null,
-                    weight: vitals.weight || null,
-                    height: vitals.height || null,
-                    bmi: vitals.bmi || null,
-                    weightUnit: vitals.weightUnit || 'lbs',
-                    heightUnit: vitals.heightUnit || 'in'
-                };
-
-                // Save even if note is empty
-                await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave, visit_type: visitType });
+                // Save as array
+                await visitsAPI.update(visitId, {
+                    noteDraft: noteDraft || '',
+                    vitals: vitalsList,
+                    visit_type: visitType
+                });
 
                 const reloadResponse = await visitsAPI.get(visitId);
                 setVisitData(reloadResponse.data);
@@ -1421,7 +1441,7 @@ const VisitNote = () => {
         } finally {
             isAutoSavingRef.current = false;
         }
-    }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitals, visitType, combineNoteSections, parseNoteText, parsePlanText, showToast]);
+    }, [id, currentVisitId, urlVisitId, isSigned, isSaving, noteData, vitalsList, visitType, combineNoteSections, parseNoteText, parsePlanText, showToast]);
 
     const handleCreateSuperbill = async () => {
         if (!currentVisitId || currentVisitId === 'new') {
@@ -1480,7 +1500,7 @@ const VisitNote = () => {
                 clearTimeout(autoSaveTimeoutRef.current);
             }
         };
-    }, [noteData, vitals, visitType, scheduleAutoSave, isSigned, loading]);
+    }, [noteData, vitalsList, visitType, scheduleAutoSave, isSigned, loading]);
 
     const handleDelete = async () => {
         if (isSigned) {
@@ -1543,29 +1563,11 @@ const VisitNote = () => {
                 }
             }
             if (visitId) {
-                // First, save vitals and note draft to ensure everything is saved
-                const vitalsToSave = {
-                    systolic: vitals.systolic || null,
-                    diastolic: vitals.diastolic || null,
-                    bp: vitals.bp || (vitals.systolic && vitals.diastolic ? `${vitals.systolic}/${vitals.diastolic}` : null),
-                    temp: vitals.temp || null,
-                    pulse: vitals.pulse || null,
-                    resp: vitals.resp || null,
-                    o2sat: vitals.o2sat || null,
-                    weight: vitals.weight || null,
-                    height: vitals.height || null,
-                    bmi: vitals.bmi || null,
-                    weightUnit: vitals.weightUnit || 'lbs',
-                    heightUnit: vitals.heightUnit || 'in'
-                };
+                // Save vitals as array
+                await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsList });
 
-                // Save vitals first to ensure they're in the database
-                console.log('Saving vitals before signing:', vitalsToSave);
-                await visitsAPI.update(visitId, { noteDraft: noteDraft || '', vitals: vitalsToSave });
-
-                // Then sign the note (vitals should already be saved, but include them as backup)
-                console.log('Signing note with vitals:', vitalsToSave);
-                const signRes = await visitsAPI.sign(visitId, noteDraft, vitalsToSave, selectedAttendingId);
+                // Then sign the note
+                const signRes = await visitsAPI.sign(visitId, noteDraft, vitalsList, selectedAttendingId);
 
                 setShowSignPrompt(false);
                 if (signRes.data?.status === 'preliminary') {
@@ -3021,7 +3023,24 @@ const VisitNote = () => {
 
                         {/* Vitals */}
                         <VisitNoteSection title="Vital Signs" defaultOpen={true} id="vitals">
-                            <VitalsGrid vitals={vitals} setVitals={setVitals} isLocked={isLocked} isAbnormalVital={isAbnormalVital} calculateBMI={calculateBMI} heightRef={heightRef} systolicRef={systolicRef} diastolicRef={diastolicRef} pulseRef={pulseRef} o2satRef={o2satRef} tempRef={tempRef} weightRef={weightRef} hpiRef={hpiRef} previousWeight={previousWeight} getWeightChange={getWeightChange} />
+                            <VitalsGrid
+                                vitalsHistory={vitalsList}
+                                onUpdateVital={updateActiveVital}
+                                onAddReading={handleAddVitalsReading}
+                                isLocked={isLocked}
+                                isAbnormalVital={isAbnormalVital}
+                                calculateBMI={calculateBMI}
+                                heightRef={heightRef}
+                                systolicRef={systolicRef}
+                                diastolicRef={diastolicRef}
+                                pulseRef={pulseRef}
+                                o2satRef={o2satRef}
+                                tempRef={tempRef}
+                                weightRef={weightRef}
+                                hpiRef={hpiRef}
+                                previousWeight={previousWeight}
+                                getWeightChange={getWeightChange}
+                            />
                         </VisitNoteSection>
 
                         {/* Chief Complaint */}

@@ -351,10 +351,19 @@ const VisitChartView = ({ visitId, patientId, onClose, standalone = true, onOpen
                 if (typeof v === 'string') {
                     try { v = JSON.parse(v); } catch (e) { v = null; }
                 }
-                if (v && typeof v === 'object') {
+
+                if (Array.isArray(v)) {
+                    setVitals(v.map(item => {
+                        const decoded = {};
+                        Object.keys(item).forEach(key => {
+                            decoded[key] = item[key]; // decodeHtmlEntities handled in render
+                        });
+                        return decoded;
+                    }));
+                } else if (v && typeof v === 'object') {
                     const decodedVitals = {};
                     Object.keys(v).forEach(key => {
-                        decodedVitals[key] = decodeHtmlEntities(v[key]);
+                        decodedVitals[key] = v[key];
                     });
                     setVitals(decodedVitals);
                 }
@@ -1081,17 +1090,29 @@ const VisitChartView = ({ visitId, patientId, onClose, standalone = true, onOpen
                                 {/* VITALS */}
                                 <div className="mt-8 pt-6 border-t border-blue-50 avoid-cut">
                                     <span className="section-label text-blue-400 text-[10px] mb-2">Physical Observations (Vitals)</span>
-                                    <div className="grid grid-cols-5 gap-4 mt-2">
-                                        {[
-                                            { label: 'B/P', value: decodeHtmlEntities(vitals?.bp), unit: 'mmHg' },
-                                            { label: 'Pulse', value: decodeHtmlEntities(vitals?.pulse), unit: 'bpm' },
-                                            { label: 'Temp', value: decodeHtmlEntities(vitals?.temp), unit: '°F' },
-                                            { label: 'O2 Sat', value: decodeHtmlEntities(vitals?.o2sat), unit: '%' },
-                                            { label: 'BMI', value: decodeHtmlEntities(vitals?.bmi), unit: '' }
-                                        ].map((v, i) => (
-                                            <div key={i} className="bg-blue-50/30 border border-blue-50 rounded px-3 py-2 text-center">
-                                                <div className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">{v.label}</div>
-                                                <div className="text-[14px] font-bold text-gray-700 tabular-nums">{v.value || '--'} <span className="text-[10px] font-medium text-gray-400">{v.unit}</span></div>
+                                    <div className="space-y-4">
+                                        {(Array.isArray(vitals) ? vitals : (vitals ? [vitals] : [])).map((vSet, idx, arr) => (
+                                            <div key={idx} className="relative">
+                                                {arr.length > 1 && (
+                                                    <div className="text-[9px] font-bold text-blue-400/60 uppercase tracking-widest mb-2 flex items-center gap-1">
+                                                        <Clock className="w-2.5 h-2.5" />
+                                                        Reading {idx + 1} {vSet.taken_at ? `- ${format(new Date(vSet.taken_at), 'hh:mm a')}` : ''}
+                                                    </div>
+                                                )}
+                                                <div className="grid grid-cols-5 gap-4 mt-2">
+                                                    {[
+                                                        { label: 'B/P', value: decodeHtmlEntities(vSet.bp) || (vSet.systolic && vSet.diastolic ? `${vSet.systolic}/${vSet.diastolic}` : null), unit: 'mmHg' },
+                                                        { label: 'Pulse', value: decodeHtmlEntities(vSet.pulse), unit: 'bpm' },
+                                                        { label: 'Temp', value: decodeHtmlEntities(vSet.temp), unit: '°F' },
+                                                        { label: 'O2 Sat', value: decodeHtmlEntities(vSet.o2sat), unit: '%' },
+                                                        { label: 'BMI', value: decodeHtmlEntities(vSet.bmi), unit: '' }
+                                                    ].map((v, i) => (
+                                                        <div key={i} className="bg-blue-50/30 border border-blue-50 rounded px-3 py-2 text-center">
+                                                            <div className="text-[9px] font-bold text-blue-400 uppercase tracking-wider">{v.label}</div>
+                                                            <div className="text-[14px] font-bold text-gray-700 tabular-nums">{v.value || '--'} <span className="text-[10px] font-medium text-gray-400">{v.unit}</span></div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

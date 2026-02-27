@@ -11,7 +11,7 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
         >
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-white/50 transition-colors group border-b border-inherit"
+                className="w-full px-5 py-3.5 flex items-center justify-between bg-blue-50/20 hover:bg-blue-50/40 transition-colors group border-b border-inherit"
             >
                 <div className="flex items-center gap-3">
                     <h3 className="vn-title">{title}</h3>
