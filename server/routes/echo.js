@@ -913,27 +913,29 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 responseFormat = { type: 'json_object' };
                 break;
             case 'mdm':
-                // Concise, high-impact MDM logic
+                // Physician-grade clinical reasoning MDM
                 const ordersUsed = visit.note_draft ? (visit.note_draft.match(/Plan:[\s\S]+/i)?.[0] || 'No specific orders found') : 'N/A';
-                promptSnippet = `Write a CONCISE Medical Decision Making (MDM) rationale in exactly 1-2 short paragraphs (MAX 6 sentences total).
+                promptSnippet = `You are the treating physician writing your own clinical reasoning. Write a CONCISE MDM (1-2 short paragraphs, MAX 6 sentences).
                 Diagnosis: "${diagnosis || 'Generalized health management'}".
                 
                 CONTEXT:
-                - Visit transcript (excerpt): ${transcript.substring(0, 800)}
-                - Orders placed: ${ordersUsed}
+                - Transcript excerpt: ${transcript.substring(0, 800)}
+                - Orders/Rx placed: ${ordersUsed}
                 - Home Meds: ${visit.med_list || 'None'}
                 - Chronic Problems: ${visit.problem_list || 'None'}
                 
-                FORMULA (follow this structure tightly):
-                1. State the acute problem and what was found/discussed today.
-                2. Note relevant chronic conditions and current medications that add management complexity.
-                3. State the orders/testing/referrals placed and why.
-                4. End with one sentence justifying moderate-to-high complexity (e.g., "Given the interplay of [acute] with [chronic conditions] and [medication risk], this encounter reflects moderate-to-high complexity MDM.").
+                THINK LIKE A PHYSICIAN — include:
+                1. DIFFERENTIAL considered and why this diagnosis was favored (r/o what?)
+                2. ORDER JUSTIFICATION — why EACH lab/imaging/referral was ordered (e.g., "CBC ordered to r/o infectious or inflammatory etiology"; "Ortho referral given failed conservative tx")
+                3. RISK — medication interactions or comorbidity risk that influenced your plan (e.g., "Given concurrent anticoagulation with Eliquis, NSAID use limited to short course with GI monitoring")
+                4. FOLLOW-UP rationale — what to reassess and when (e.g., "RTC 2 weeks to reassess pain response; escalate to surgical consult if no improvement")
                 
-                RULES:
-                - Be DIRECT. No filler phrases like "it is crucial to consider" or "further highlighting the need for".
-                - Use clinical shorthand (PMHx, c/o, r/o, etc.).
-                - NEVER exceed 2 paragraphs. Shorter is better.
+                STRICT RULES:
+                - Write in FIRST PERSON as the physician ("I considered...", "Labs ordered to r/o...")
+                - NO patient emotion or concern language ("patient is worried about surgery")
+                - NO generic filler ("it is important to note", "this adds complexity")
+                - Use clinical shorthand (PMHx, c/o, r/o, f/u, RTC, BID, etc.)
+                - MAX 2 paragraphs. Every sentence must serve a clinical or billing purpose.
                 - Output ONLY the MDM text.`;
                 responseFormat = { type: 'text' };
                 break;
