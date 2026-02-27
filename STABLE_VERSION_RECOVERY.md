@@ -1,17 +1,17 @@
 # STABLE VERSION RECOVERY GUIDE
 
 ## Current Stable Version
-**Tag:** `v1.1.0-stable`
-**Date:** January 01, 2026
-**Commit Hash:** `200e1096eeacdfb8fa218fd9173bf82c934ae837`
+**Tag:** `v1.27.0-stable`
+**Date:** February 27, 2026
+**Commit Hash:** `677405907b2df28aa9f7c96807008db1015e0aa2`
 
 ## Features in This Stable Version
-✅ **CORE FIX:** Synchronized Dashboard "In Basket" count with actual `inbox_items` table.
-✅ **CORE FIX:** Robust HTML Entity Decoding for medications (specifically handles slashes like `&#x2F;` and `&sol;`).
-✅ **ENHANCEMENT:** Integrated **Clinical Notes** (co-signing) and **Referrals** into the unified In Basket.
-✅ **UI IMPROVEMENT:** Added specialized detail panes for Referrals and Notes in the In Basket.
-✅ **CRITICAL FIX:** Resolved decryption and display issues across Schedule, Inbox, Superbills, and Visits.
-✅ **UI POLISH:** Unified 4-pass textarea-based HTML decoding across all clinical modules.
+✅ **ENCOUNTER VITALS:** Support for multiple vitals readings (e.g., repeating BP) within a single visit note.
+✅ **HISTORY TRACKING:** Automated history table for current encounter readings with clinical timestamps.
+✅ **ABNORMAL HIGHLIGHTING:** Integrated red visual alerts for abnormal Vital Signs in the encounter history table.
+✅ **UI REFINEMENT:** Ultra-thin premium section headers with improved depth and visual separation.
+✅ **DELETION SUPPORT:** Ability to safely remove specific vitals readings from history.
+✅ **BACKWARD COMPATIBILITY:** Robust handling of legacy single-set vitals records and new array formats.
 
 ## How to Revert to This Stable Version
 
@@ -23,7 +23,7 @@ cd "/Volumes/Mel's SSD/paper emr"
 git fetch --all --tags
 
 # Revert to stable tag
-git checkout v1.1.0-stable
+git checkout v1.27.0-stable
 
 # Deploy to production (using your SSH key)
 ./deploy-fast.sh /path/to/your/deploy_key.pem
@@ -34,7 +34,7 @@ git checkout v1.1.0-stable
 cd "/Volumes/Mel's SSD/paper emr"
 
 # Revert to specific commit
-git checkout 200e1096eeacdfb8fa218fd9173bf82c934ae837
+git checkout 677405907b2df28aa9f7c96807008db1015e0aa2
 
 # Deploy to production
 ./deploy-fast.sh /path/to/your/deploy_key.pem
@@ -76,9 +76,9 @@ docker compose -f docker-compose.prod.yml logs -f api
 
 After reverting, verify the following:
 
-1. **Dashboard Sync:** Check that the "In Basket" count matches the actual number of items in the In Basket page.
-2. **Medication Display:** Verify medications with slashes (e.g., Sacubitril/Valsartan) display correctly without `&#x2F;`.
-3. **In Basket Categories:** Verify "Clinical Notes" and "Referrals" appear in the In Basket sidebar.
+1. **Vitals History:** Check that the "New Reading" button adds a set and abnormal values highlight red.
+2. **Section Headers:** Verify headers are ultra-thin and have a subtle blue background.
+3. **Deletion:** Ensure you can delete a reading from the history table.
 4. **Login:** Ensure you can log in at https://pagemdemr.com.
 
 ## Important Files in This Version
