@@ -859,7 +859,7 @@ router.delete('/preferences/:id', requirePermission('ai.echo'), async (req, res)
  */
 router.post('/refine-section', requirePermission('ai.echo'), async (req, res) => {
     try {
-        const { visitId, section, diagnosis } = req.body;
+        const { visitId, section, diagnosis, existingMdms } = req.body;
         if (!visitId || !section) {
             return res.status(400).json({ error: 'Visit ID and section are required' });
         }
@@ -957,6 +957,14 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 - NO generic filler ("it is important to note", "this adds complexity")
                 - Use clinical shorthand (PMHx, c/o, r/o, f/u, RTC, BID, etc.)
                 - MAX 2 paragraphs. Every sentence must serve a clinical or billing purpose.
+                
+                ${existingMdms ? `REPETITION WARNING:
+                The following MDMs have already been written for other diagnoses in this visit:
+                ---
+                ${existingMdms}
+                ---
+                DO NOT repeat the same clinical logic or wording. If this diagnosis (e.g., Unstable Angina) is related to another (e.g., ACS), focus specifically on the unique reasoning or management aspects of THIS diagnosis code. Cross-reference briefly if needed, but do not copy-paste paragraphs.` : ''}
+
                 - Output ONLY the MDM text.`;
                 responseFormat = { type: 'text' };
                 break;

@@ -2323,10 +2323,17 @@ const VisitNote = () => {
         showToast(`AI is crafting ${section.toUpperCase()}...`, 'info', { duration: 3000 });
 
         try {
+            // Gather existing MDMs to prevent repetition
+            const existingMdms = section === 'mdm' ? (noteData.planStructured || [])
+                .filter(item => item.mdm && item.diagnosis !== diagnosis)
+                .map(item => `Diagnosis: ${item.diagnosis}\nMDM: ${item.mdm}`)
+                .join('\n\n') : null;
+
             const response = await visitsAPI.refineSection({
                 visitId: currentVisitId,
                 section,
-                diagnosis
+                diagnosis,
+                existingMdms
             });
 
             if (response.data.success) {
@@ -2357,13 +2364,26 @@ const VisitNote = () => {
                     for (let i = 0; i < currentPlan.length; i++) {
                         const diag = currentPlan[i].diagnosis;
                         try {
+                            // Recalculate existing MDMs periodically for sequential synthesis
+                            const currentMdms = (noteData.planStructured || [])
+                                .filter((item, idx) => item.mdm && idx !== i)
+                                .map(item => `Diagnosis: ${item.diagnosis}\nMDM: ${item.mdm}`)
+                                .join('\n\n');
+
                             const mdmResponse = await visitsAPI.refineSection({
                                 visitId: currentVisitId,
                                 section: 'mdm',
-                                diagnosis: diag
+                                diagnosis: diag,
+                                existingMdms: currentMdms
                             });
                             if (mdmResponse.data.success && mdmResponse.data.draftedText) {
                                 updatePlanDetails(i, 'mdm', mdmResponse.data.draftedText);
+                                // Update noteData immediately so the next iteration gets the new text
+                                setNoteData(prev => {
+                                    const updated = [...(prev.planStructured || [])];
+                                    if (updated[i]) updated[i].mdm = mdmResponse.data.draftedText;
+                                    return { ...prev, planStructured: updated };
+                                });
                             }
                         } catch (e) {
                             console.error(`Failed to synthesize MDM for ${diag}`, e);
