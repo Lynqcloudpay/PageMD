@@ -160,7 +160,7 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                                 exit={{ opacity: 0, scale: 0.95, y: -20, x: -20 }}
                                 transition={{ type: "tween", ease: "easeOut", duration: 0.25 }}
                                 className="absolute w-[92%] max-w-[1150px] md:-ml-8 transform-gpu will-change-transform"
-                                style={{ height: 'calc(100vh - 110px)', height: 'calc(100dvh - 110px)' }}
+                                style={{ height: 'calc(100dvh - 110px)' }}
                             >
                                 {/* Right Edge Manila Folder Tab */}
                                 <div
