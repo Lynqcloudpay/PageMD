@@ -129,7 +129,7 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
                         'Authorization': `Bearer ${process.env.AI_API_KEY || process.env.OPENAI_API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: 'gpt-4o', // Using GPT-4o for better "Deep Reasoning" (Option C)
+                        model: 'gpt-4o-mini', // Using GPT-4o-mini for cost efficiency
                         temperature: 0.1,
                         max_tokens: 2500,
                         response_format: { type: 'json_object' },
@@ -801,7 +801,7 @@ router.get('/usage', requirePermission('ai.echo'), async (req, res) => {
 
         res.json({
             today: budget,
-            model: process.env.ECHO_MODEL || 'gpt-4o'
+            model: process.env.ECHO_MODEL || 'gpt-4o-mini'
         });
     } catch (err) {
         console.error('[Echo API] Usage fetch error:', err);
@@ -981,7 +981,7 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 'Authorization': `Bearer ${process.env.AI_API_KEY || process.env.OPENAI_API_KEY}`
             },
             body: JSON.stringify({
-                model: 'gpt-4o',
+                model: 'gpt-4o-mini',
                 temperature: 0.1,
                 response_format: responseFormat,
                 messages: [

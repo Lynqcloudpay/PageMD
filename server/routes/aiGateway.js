@@ -32,7 +32,7 @@ router.use(requireScopes('ai.use'));
 // AI Provider configuration
 const AI_PROVIDER = process.env.AI_PROVIDER || 'openai'; // openai, anthropic, google
 const AI_API_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
-const AI_MODEL = process.env.AI_MODEL || 'gpt-4o';
+const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
 
 /**
  * Store AI output with provenance
