@@ -603,11 +603,11 @@ const Layout = ({ children }) => {
                 {/* Echo AI — Global Availability (Phase 2A) */}
                 {(() => {
                     const echoPatientId = location.pathname.includes('/patient/') ? location.pathname.split('/patient/')[1]?.split('/')[0] : null;
-                    const activeTab = echoPatientId ? tabs.find(t => t.id === echoPatientId) : null;
+                    const activeTab = echoPatientId ? tabs.find(t => t.patientId === echoPatientId) : null;
                     return (
                         <EchoPanel
                             patientId={echoPatientId}
-                            patientName={activeTab?.name || null}
+                            patientName={activeTab?.patientName || null}
                         />
                     );
                 })()}
