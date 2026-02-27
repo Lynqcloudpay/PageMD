@@ -993,8 +993,6 @@ export default function EchoPanel({ patientId, patientName }) {
         const path = location.pathname.toLowerCase();
         if (path.includes('labs') || path.includes('orders')) {
             setSuggestion({ label: 'Analyze Labs', prompt: 'Interpret the latest lab results and check for trends.' });
-        } else if (path.includes('visit') || path.includes('notes')) {
-            setSuggestion({ label: 'Draft SOAP Note', prompt: 'Draft the HPI and Assessment for this visit.' });
         } else if (path.includes('schedule')) {
             setSuggestion({ label: 'Day Summary', prompt: 'Give me a summary of my priority patients for today.' });
         } else {
