@@ -11,28 +11,28 @@ export default {
                 // Frosted Clinical Palette
                 'frost-black': '#10141A',
                 'frost-gray': '#E4E4E4',
-                'frost-blue': '#83A2DB',
+                'frost-blue': '#3B82F6', // Updated to energetic blue
                 'frost-rose': '#CE6969',
 
                 // Legacy aliases (for gradual migration)
                 'graphite-black': '#10141A',
                 'deep-gray': '#10141A',
-                'strong-azure': '#83A2DB',
+                'strong-azure': '#3B82F6', // Updated to energetic blue
                 'fresh-green': '#22C55E',
                 'soft-gray': '#F5F5F5',
 
                 primary: {
-                    DEFAULT: '#83A2DB',
-                    50: '#F0F4FA',
-                    100: '#DDE6F3',
-                    200: '#BDD0E9',
-                    300: '#9DB9DF',
-                    400: '#83A2DB',
-                    500: '#6B8EC9',
-                    600: '#5A7AB5',
-                    700: '#4A669E',
-                    800: '#3D5483',
-                    900: '#33466B',
+                    DEFAULT: '#3B82F6', // Tailwind blue-500
+                    50: '#EFF6FF',
+                    100: '#DBEAFE',
+                    200: '#BFDBFE',
+                    300: '#93C5FD',
+                    400: '#60A5FA',
+                    500: '#3B82F6',
+                    600: '#2563EB',
+                    700: '#1D4ED8',
+                    800: '#1E40AF',
+                    900: '#1E3A8A',
                 },
                 accent: {
                     DEFAULT: '#CE6969',
