@@ -2253,6 +2253,22 @@ const VisitNote = () => {
         });
     };
 
+    const addQuickInstruction = (diagnosisIndex, text) => {
+        setNoteData(prev => {
+            const updatedPlan = JSON.parse(JSON.stringify(prev.planStructured || []));
+            if (updatedPlan[diagnosisIndex]) {
+                const currentOrders = updatedPlan[diagnosisIndex].orders || [];
+                updatedPlan[diagnosisIndex].orders = [...currentOrders, text];
+            }
+            const formattedPlan = formatPlanText(updatedPlan);
+            return {
+                ...prev,
+                planStructured: updatedPlan,
+                plan: formattedPlan
+            };
+        });
+    };
+
     const updatePlanDetails = (index, field, value) => {
         setNoteData(prev => {
             const updatedPlan = [...(prev.planStructured || [])];
@@ -3861,10 +3877,10 @@ const VisitNote = () => {
                                             <div key={index} className="group">
                                                 {/* Diagnosis Link Row */}
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-1.5">
+                                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
                                                         <span className="text-[10px] font-bold text-gray-400 w-4">{index + 1}.</span>
                                                         <span
-                                                            className="vn-link-diagnosis cursor-pointer"
+                                                            className="vn-link-diagnosis cursor-pointer truncate"
                                                             onClick={() => {
                                                                 setSelectedDiagnosis(item.diagnosis);
                                                                 setShowOrderModal(true);
@@ -3872,15 +3888,29 @@ const VisitNote = () => {
                                                         >
                                                             {item.diagnosis.replace(/^\d+[\.\)]?\s*/, '')}
                                                         </span>
+                                                        <span className="text-gray-300 mx-0.5">•</span>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Add instruction..."
+                                                            className="flex-1 bg-transparent border-none outline-none text-[10px] text-primary-600 placeholder:text-gray-300 font-medium p-0 focus:ring-0"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && e.target.value.trim()) {
+                                                                    e.preventDefault();
+                                                                    addQuickInstruction(index, e.target.value.trim());
+                                                                    e.target.value = '';
+                                                                    showToast('Instruction added', 'success');
+                                                                }
+                                                            }}
+                                                        />
                                                         <span
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setSelectedDiagnosis(item.diagnosis);
                                                                 setShowOrderModal(true);
                                                             }}
-                                                            className="vn-add-order-link"
+                                                            className="vn-add-order-link shrink-0"
                                                         >
-                                                            + Add Order
+                                                            + Formal Order
                                                         </span>
                                                     </div>
                                                     {!isLocked && (

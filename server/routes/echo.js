@@ -961,7 +961,16 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 responseFormat = { type: 'text' };
                 break;
             default:
-                promptSnippet = `Document the ${section} section accurately based on the conversation.`;
+                if (section.toLowerCase() === 'plan') {
+                    promptSnippet = `Document the plan section accurately based on the conversation. 
+                    STRICT FORMATTING: 
+                    1. List EVERY diagnosis addressed.
+                    2. Under each diagnosis, list EVERY instruction, medication, or order discussed as a distinct bullet point starting with its own line.
+                    3. Ensure NO words are joined/concatenated. Use proper spacing and punctuation.
+                    4. Do not include patient preference or fluff. Just clinical orders and logic.`;
+                } else {
+                    promptSnippet = `Document the ${section} section accurately based on the conversation.`;
+                }
                 responseFormat = { type: 'text' };
         }
 
