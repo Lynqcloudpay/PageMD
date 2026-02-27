@@ -154,7 +154,7 @@ JSON STRUCTURE:
   "hpi": "Narrative SUBJECTIVE paragraph. Strictly no physical exam data. Include relevant PMHx from the provided list.",
   "ros": "**System:** Findings. Each on a NEW row.",
   "pe": "**System:** Findings. Each on a NEW row.",
-  "structuredNote": "Full note including CC, HPI, ROS, PE with headers."
+  "assessmentPlan": "MDM BLOCKS: For each diagnosis discussed, create a block like: '1. [Diagnosis Name] (Status): [Diagnostic/MDM Logic explaining the why]. Plan: [Specific verbal instructions + orders/meds].'"
 }`
                             },
                             {
@@ -171,20 +171,20 @@ JSON STRUCTURE:
                     let parsed = {};
                     try { parsed = JSON.parse(rawContent); } catch (e) { parsed = { structuredNote: rawContent }; }
 
-                    const structuredNote = parsed.structuredNote || rawContent;
                     const parsedSections = {
                         chiefComplaint: parsed.chiefComplaint || '',
                         hpi: parsed.hpi || '',
                         ros: parsed.ros || '',
-                        pe: parsed.pe || ''
+                        pe: parsed.pe || '',
+                        assessmentPlan: parsed.assessmentPlan || ''
                     };
 
-                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → sections: CC=${parsedSections.chiefComplaint.length}, HPI=${parsedSections.hpi.length}, ROS=${parsedSections.ros.length}, PE=${parsedSections.pe.length}`);
+                    console.log(`[Echo API] Ambient scribe: ${transcription.length} chars → sections: CC=${parsedSections.chiefComplaint.length}, HPI=${parsedSections.hpi.length}, ROS=${parsedSections.ros.length}, PE=${parsedSections.pe.length}, AP=${parsedSections.assessmentPlan.length}`);
                     return res.json({
                         success: true,
                         text: transcription,
                         rawTranscript: transcription,
-                        structuredNote,
+                        structuredNote: parsed.structuredNote || rawContent,
                         parsedSections,
                         mode: 'ambient'
                     });
@@ -449,7 +449,7 @@ router.get('/open-notes/:patientId', requirePermission('ai.echo'), async (req, r
 router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => {
     try {
         const { visitId, sections } = req.body;
-        // sections: { hpi: "...", ros: "...", pe: "...", assessment: "...", plan: "..." }
+        // sections: { hpi: "...", ros: "...", pe: "...", assessment: "...", plan: "...", assessmentPlan: "..." }
 
         if (!visitId || !sections || Object.keys(sections).length === 0) {
             return res.status(400).json({ error: 'visitId and sections are required' });
@@ -510,6 +510,7 @@ router.post('/write-to-note', requirePermission('ai.echo'), async (req, res) => 
             'results': 'Results',
             'assessment': 'Assessment',
             'plan': 'Plan',
+            'assessmentPlan': 'Assessment',
             'carePlan': 'Care Plan',
             'followUp': 'Follow Up'
         };
