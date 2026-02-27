@@ -6,8 +6,9 @@ import {
     Sparkles, ArrowLeft, Zap, Search, X, Printer, History,
     Activity, ActivitySquare, CheckCircle2, CheckSquare, Square, Trash2, Pill, Users, UserCircle, ChevronRight,
     DollarSign, Eye, Calendar, AlertCircle, AlertTriangle, Stethoscope, ScrollText, Copy, RotateCcw,
-    PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves, FilePlus, Share2
+    PanelRight, RefreshCw, StopCircle, FileImage, FlaskConical, Heart, Waves, FilePlus, Share2, Edit2, Maximize2
 } from 'lucide-react';
+import MdmModal from '../components/MdmModal';
 import Toast from '../components/ui/Toast';
 import { OrderModal, PrescriptionModal, ReferralModal } from '../components/ActionModals';
 
@@ -584,6 +585,8 @@ const VisitNote = () => {
     const [isAddingMedicationFromSidebar, setIsAddingMedicationFromSidebar] = useState(false);
     const [showMacroAddModal, setShowMacroAddModal] = useState(false);
     const [newMacroData, setNewMacroData] = useState({ shortcut_code: '', template_text: '' });
+    const [showMdmModal, setShowMdmModal] = useState(false);
+    const [mdmModalData, setMdmModalData] = useState({ index: null, diagnosis: '', text: '' });
 
     // Note sections
     const [noteData, setNoteData] = useState({
@@ -3955,11 +3958,17 @@ const VisitNote = () => {
                                                     <div className="mt-4 mb-4 space-y-4 pl-4 border-l-2 border-primary-50 px-1 py-1">
                                                         <div className="group/mdm relative">
                                                             <div className="flex items-center justify-between mb-1.5">
-                                                                <div className="flex items-center gap-2">
+                                                                <div
+                                                                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                                                                    onClick={() => {
+                                                                        setMdmModalData({ index, diagnosis: item.diagnosis, text: item.mdm || '' });
+                                                                        setShowMdmModal(true);
+                                                                    }}
+                                                                >
                                                                     <div className="p-1 bg-blue-50 rounded-md">
                                                                         <Sparkles className="w-3 h-3 text-blue-500" />
                                                                     </div>
-                                                                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">Clinical Logic (MDM)</span>
+                                                                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block underline decoration-dotted decoration-blue-200 underline-offset-4">Clinical Logic (MDM)</span>
                                                                 </div>
                                                                 <button
                                                                     onClick={() => refineSectionWithAI('mdm', item.diagnosis, index)}
@@ -3970,12 +3979,24 @@ const VisitNote = () => {
                                                                     <span className="text-[9px] font-bold uppercase">AI Draft</span>
                                                                 </button>
                                                             </div>
-                                                            <textarea
-                                                                value={item.mdm || ''}
-                                                                onChange={(e) => updatePlanDetails(index, 'mdm', e.target.value)}
-                                                                placeholder="Add clinical reasoning for billing justification..."
-                                                                className="w-full bg-blue-50/10 border border-blue-100/30 rounded-xl p-3 text-[13px] italic text-gray-700 outline-none focus:border-blue-400 focus:bg-blue-50/20 transition-all min-h-[60px] shadow-sm placeholder:text-gray-300"
-                                                            />
+                                                            <div
+                                                                onClick={() => {
+                                                                    setMdmModalData({ index, diagnosis: item.diagnosis, text: item.mdm || '' });
+                                                                    setShowMdmModal(true);
+                                                                }}
+                                                                className="w-full bg-blue-50/10 border border-blue-100/30 rounded-xl p-3 text-[13px] italic text-gray-700 cursor-pointer hover:bg-blue-50/30 hover:border-blue-200 transition-all min-h-[60px] shadow-sm relative group"
+                                                            >
+                                                                {item.mdm ? (
+                                                                    <div className="line-clamp-3 leading-relaxed">
+                                                                        {item.mdm}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-gray-300">Add clinical reasoning (Expand to edit)...</span>
+                                                                )}
+                                                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Maximize2 className="w-3 h-3 text-blue-400" />
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -4887,6 +4908,16 @@ const VisitNote = () => {
                     } finally {
                         setIsSaving(false);
                     }
+                }}
+            />
+            <MdmModal
+                isOpen={showMdmModal}
+                onClose={() => setShowMdmModal(false)}
+                mdmText={mdmModalData.text}
+                diagnosis={mdmModalData.diagnosis}
+                onSave={(text) => {
+                    updatePlanDetails(mdmModalData.index, 'mdm', text);
+                    showToast('Clinical reasoning saved', 'success');
                 }}
             />
             <SignPromptModal
