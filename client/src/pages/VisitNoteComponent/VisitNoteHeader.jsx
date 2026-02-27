@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     Save, Lock, FileText, Eye, Printer, PanelRight, Sparkles,
-    CheckCircle2, AlertCircle, RotateCcw, ArrowLeft, Radio
+    CheckCircle2, AlertCircle, RotateCcw, ArrowLeft, Radio, Loader2, BrainCircuit
 } from 'lucide-react';
 import { useEko } from '../../context/EkoContext';
 import { format } from 'date-fns';
@@ -39,7 +39,7 @@ const VisitNoteHeader = ({
 }) => {
     const {
         ambientMode, setAmbientMode, isRecording, recordingTime,
-        handleStartRecording, handleStopRecording
+        handleStartRecording, handleStopRecording, isProcessing
     } = useEko();
 
     const visitDate = visitData?.visit_date ? format(new Date(visitData.visit_date), 'MMM d, yyyy') : format(new Date(), 'MMM d, yyyy');
@@ -133,13 +133,15 @@ const VisitNoteHeader = ({
                                     setAmbientMode(true);
                                     handleStartRecording(true);
                                 }}
-                                className={`group flex items-center gap-4 px-8 py-3 rounded-2xl text-xs font-bold transition-all shadow-md border ${isRecording && ambientMode
-                                        ? 'opacity-0 pointer-events-none'
-                                        : 'bg-white text-gray-700 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
+                                className={`group flex items-center gap-4 px-8 py-3 rounded-2xl text-xs font-bold transition-all shadow-md border ${(isRecording && ambientMode) || isProcessing
+                                    ? 'opacity-0 pointer-events-none'
+                                    : 'bg-white text-gray-700 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
                                     }`}
                             >
                                 <Radio className="w-5 h-5 text-amber-500" />
-                                <span className="tracking-[0.1em] uppercase text-[10px]">Ambient Scribe</span>
+                                <span className="tracking-[0.1em] uppercase text-[10px]">
+                                    {isProcessing ? 'Processing Scribe...' : 'Ambient Scribe'}
+                                </span>
                             </button>
 
                             {/* The Floating Portal Version (Active when recording) */}
@@ -189,6 +191,33 @@ const VisitNoteHeader = ({
                                         <span className="text-[11px] font-black text-amber-700 uppercase tracking-widest">
                                             Eko is listening and documenting...
                                         </span>
+                                    </motion.div>
+                                </div>,
+                                document.body
+                            )}
+
+                            {/* The Processing State (Visible after stopping) */}
+                            {isProcessing && createPortal(
+                                <div className="fixed inset-x-0 bottom-12 z-[9999] pointer-events-none flex flex-col items-center gap-3">
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        className="bg-white/95 backdrop-blur-xl px-10 py-5 rounded-[40px] border border-blue-100 shadow-[0_25px_60px_rgba(59,130,246,0.3)] flex items-center gap-6"
+                                    >
+                                        <div className="relative">
+                                            <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-20" />
+                                            <div className="relative p-3 bg-blue-500 text-white rounded-full shadow-lg">
+                                                <BrainCircuit className="w-8 h-8 animate-pulse" />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em]">Processing Session</span>
+                                                <Loader2 className="w-3 h-3 text-blue-500 animate-spin" />
+                                            </div>
+                                            <h4 className="text-sm font-bold text-gray-800">Eko is transcribing & drafting clinical notes...</h4>
+                                            <p className="text-[10px] text-gray-500 font-medium">This will take just a few seconds.</p>
+                                        </div>
                                     </motion.div>
                                 </div>,
                                 document.body

@@ -13,6 +13,7 @@ export function EkoProvider({ children }) {
     const [recordingTime, setRecordingTime] = useState(0);
     const [ambientMode, setAmbientMode] = useState(false);
     const [isSilent, setIsSilent] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState(null);
 
     // Recording Refs
@@ -146,6 +147,7 @@ export function EkoProvider({ children }) {
         formData.append('audio', blob, 'recording.webm');
         formData.append('mode', mode);
 
+        setIsProcessing(true);
         try {
             const { data } = await api.post('/echo/transcribe', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
@@ -174,6 +176,8 @@ export function EkoProvider({ children }) {
             }
         } catch (err) {
             console.error('Upload failed:', err);
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -253,6 +257,7 @@ export function EkoProvider({ children }) {
             ambientMode,
             setAmbientMode,
             isSilent,
+            isProcessing,
             error,
             setError,
             handleStartRecording,
