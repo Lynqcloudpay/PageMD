@@ -108,10 +108,10 @@ router.get('/patient/:patientId', authenticate, async (req, res) => {
         // or just return both and let the frontend decide.
         const result = await pool.query(
             `SELECT pf.*, 
-                    COALESCE(ft.label, pf.custom_label) as display_label,
+                    COALESCE(pf.custom_label, ft.label) as display_label,
                     COALESCE(ft.category, 'admin') as category, 
-                    COALESCE(ft.severity, pf.custom_severity, 'info') as display_severity, 
-                    COALESCE(ft.color, pf.custom_color) as display_color,
+                    COALESCE(pf.custom_severity, ft.severity, 'info') as display_severity, 
+                    COALESCE(pf.custom_color, ft.color) as display_color,
                     COALESCE(ft.requires_acknowledgment, false) as requires_acknowledgment,
                     u.first_name as created_by_first, u.last_name as created_by_last,
                     ru.first_name as resolved_by_first, ru.last_name as resolved_by_last,

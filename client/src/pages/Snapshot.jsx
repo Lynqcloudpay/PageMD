@@ -189,6 +189,9 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
     useEffect(() => {
         fetchFlags();
+        // Polling for flags to catch Eko/Echo background updates
+        const interval = setInterval(fetchFlags, 30000);
+        return () => clearInterval(interval);
     }, [fetchFlags]);
 
     const handleSaveSticky = async () => {
@@ -1007,11 +1010,30 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
         try {
             await patientFlagsAPI.acknowledge(flagId);
-            showSuccess('Alert acknowledged successfully');
+            showSuccess('Reminder acknowledged successfully');
         } catch (error) {
             console.error('Error acknowledging flag:', error);
-            showError('Failed to acknowledge alert. Restoring...');
+            showError('Failed to acknowledge reminder. Restoring...');
             fetchFlags(); // Revert state by re-fetching
+        }
+    };
+
+    const handleResolveFlag = async (flagId, e) => {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        // Optimistic update
+        setActiveFlags(prev => prev.filter(flag => flag.id !== flagId));
+
+        try {
+            await patientFlagsAPI.resolve(flagId);
+            showSuccess('Alert dismissed successfully');
+        } catch (error) {
+            console.error('Error resolving flag:', error);
+            showError('Failed to dismiss alert. Restoring...');
+            fetchFlags();
         }
     };
 
@@ -1949,36 +1971,67 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                 <div className="lg:col-span-3 space-y-5">
                                     {/* Clinical Alerts Banner - High Visibility Inline version */}
                                     {activeFlags.length > 0 && (
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 px-0.5">
                                             {activeFlags.map(flag => {
                                                 const flagLabel = (flag.display_label || '').toUpperCase();
                                                 const flagType = (flag.flag_type || '').toUpperCase();
                                                 const isReminder = flagLabel.includes('REMINDER') || flagType.includes('REMINDER');
-                                                const baseColor = isReminder ? 'blue' : 'rose';
+
+                                                // Explicit classes for Tailwind JIT safety
+                                                const colors = isReminder
+                                                    ? {
+                                                        border: 'border-l-blue-500 border-y-blue-100 border-r-blue-100',
+                                                        bg: 'bg-blue-600',
+                                                        text: 'text-blue-900',
+                                                        subText: 'text-blue-600',
+                                                        pill: 'bg-blue-600',
+                                                        btn: 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100'
+                                                    }
+                                                    : {
+                                                        border: 'border-l-rose-500 border-y-rose-100 border-r-rose-100',
+                                                        bg: 'bg-rose-600',
+                                                        text: 'text-rose-900',
+                                                        subText: 'text-rose-600',
+                                                        pill: 'bg-rose-600',
+                                                        btn: 'bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border-rose-100'
+                                                    };
 
                                                 return (
-                                                    <div key={flag.id} className={`bg-white border-l-4 border-l-${baseColor}-500 border-y border-r border-${baseColor}-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all group/flag animate-in slide-in-from-top-2`}>
+                                                    <div key={flag.id} className={`bg-white border-l-4 ${colors.border} rounded-lg p-2.5 flex items-center justify-between shadow-sm hover:shadow-md transition-all group/flag animate-in slide-in-from-top-2`}>
                                                         <div className="flex items-center gap-2.5">
-                                                            <div className={`p-1 px-2 bg-${baseColor}-500 text-white rounded text-[8px] font-bold uppercase tracking-widest`}>
-                                                                {isReminder ? 'Reminder' : 'Alert'}
+                                                            <div className={`${colors.pill} text-white rounded text-[8px] font-bold uppercase tracking-widest px-2 py-1 shadow-sm`}>
+                                                                {isReminder ? 'Action Item' : (flag.category || flag.display_severity || 'Alert')}
                                                             </div>
                                                             <div className="flex flex-col text-left">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className={`text-[11px] font-bold text-${baseColor}-900 uppercase tracking-tight`}>{isReminder ? 'Clinical Reminder' : (flag.display_label || 'Medical Alert')}</span>
-                                                                    <span className="w-1 h-1 rounded-full bg-gray-100" />
-                                                                    <span className="text-[10px] text-gray-500 font-medium">{flag.severity || 'Medium Severity'}</span>
+                                                                    <span className={`text-[11px] font-bold ${colors.text} uppercase tracking-tight`}>
+                                                                        {isReminder ? 'Clinical Follow-up' : (flag.display_label || 'Medical Alert')}
+                                                                    </span>
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                                                    <span className={`text-[10px] ${colors.subText} font-bold uppercase tracking-tighter opacity-80`}>
+                                                                        {flag.display_severity || 'Standard'}
+                                                                    </span>
                                                                 </div>
-                                                                {flag.note && <p className="text-[10px] text-gray-600 font-medium mt-0.5">{flag.note}</p>}
+                                                                {flag.note && <p className="text-[10px] text-gray-600 font-medium mt-0.5 max-w-md line-clamp-2">{flag.note}</p>}
                                                             </div>
                                                         </div>
-                                                        {isReminder && (
-                                                            <button
-                                                                onClick={(e) => handleAcknowledgeFlag(flag.id, e)}
-                                                                className="opacity-0 group-hover/flag:opacity-100 transition-opacity px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-bold uppercase border border-blue-100 shadow-sm"
-                                                            >
-                                                                Complete
-                                                            </button>
-                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            {isReminder ? (
+                                                                <button
+                                                                    onClick={(e) => handleAcknowledgeFlag(flag.id, e)}
+                                                                    className={`opacity-0 group-hover/flag:opacity-100 transition-opacity px-4 py-1.5 ${colors.btn} rounded-lg text-[10px] font-black uppercase border shadow-sm`}
+                                                                >
+                                                                    Mark Done
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) => handleResolveFlag(flag.id, e)}
+                                                                    className={`opacity-0 group-hover/flag:opacity-100 transition-opacity px-4 py-1.5 ${colors.btn} rounded-lg text-[10px] font-black uppercase border shadow-sm`}
+                                                                >
+                                                                    Dismiss
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
@@ -2008,22 +2061,21 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 <div className="flex items-center gap-2 border-r border-gray-200 pr-4">
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm" />
-                                                            <span className="text-[9px] font-bold text-gray-700 tracking-wide uppercase">BP Trends</span>
+                                                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-sm shadow-blue-200" />
+                                                            <span className="text-[9px] font-bold text-gray-700 tracking-wide uppercase">Blood Pressure</span>
                                                         </div>
-                                                        <div className="flex gap-2">
-                                                            <span className="text-[8px] text-blue-500 font-bold">SYS</span>
-                                                            <span className="text-[8px] text-blue-300 font-bold">DIA</span>
+                                                        <div className="flex gap-2 text-[8px] font-bold">
+                                                            <span className="text-blue-600">SYS</span>
+                                                            <span className="text-red-500">DIA</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm" />
-                                                            <span className="text-[9px] font-bold text-gray-700 tracking-wide uppercase">Heart Rate</span>
+                                                            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-200" />
+                                                            <span className="text-[9px] font-bold text-gray-700 tracking-wide uppercase">Pulse Rate</span>
                                                         </div>
-                                                        <span className="text-[8px] text-rose-500 font-bold uppercase">BPM Trends</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2034,19 +2086,16 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                 <>
                                                     {/* LEFT COLUMN: BLOOD PRESSURE */}
                                                     <div className="h-full relative group/chart-bp">
-                                                        <div className="absolute top-0 right-4 z-10 opacity-0 group-hover/chart-bp:opacity-100 transition-opacity">
-                                                            <span className="text-[8px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-tighter shadow-sm">mmHg Tracking</span>
-                                                        </div>
                                                         <ResponsiveContainer width="100%" height="100%">
-                                                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                                                            <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 20 }}>
                                                                 <defs>
                                                                     <linearGradient id="gradientSysMain" x1="0" y1="0" x2="0" y2="1">
-                                                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.15} />
+                                                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.4} />
                                                                         <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
                                                                     </linearGradient>
                                                                     <linearGradient id="gradientDiaMain" x1="0" y1="0" x2="0" y2="1">
-                                                                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.1} />
-                                                                        <stop offset="100%" stopColor="#60a5fa" stopOpacity={0} />
+                                                                        <stop offset="0%" stopColor="#ef4444" stopOpacity={0.2} />
+                                                                        <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
                                                                     </linearGradient>
                                                                 </defs>
                                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -2056,11 +2105,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     tickLine={false}
                                                                     tick={(props) => {
                                                                         const { x, y, payload } = props;
-                                                                        const date = payload.value.split('-')[0];
-                                                                        return <text x={x} y={y + 15} textAnchor="middle" fontSize={8} fill="#94a3b8" fontWeight="600">{date}</text>;
+                                                                        const dateRaw = payload.value.split('-')[0];
+                                                                        if (dateRaw === 'N/A' || !dateRaw) return null;
+                                                                        return <text x={x} y={y + 15} textAnchor="middle" fontSize={8} fill="#94a3b8" fontWeight="600">{dateRaw}</text>;
                                                                     }}
                                                                 />
-                                                                <YAxis hide domain={['auto', 'auto']} />
+                                                                <YAxis
+                                                                    domain={[0, 250]}
+                                                                    axisLine={false}
+                                                                    tickLine={false}
+                                                                    tick={{ fontSize: 7, fill: '#94a3b8', fontWeight: 'bold' }}
+                                                                    tickCount={6}
+                                                                    width={25}
+                                                                />
                                                                 <Tooltip
                                                                     content={({ active, payload, label }) => {
                                                                         if (active && payload && payload.length) {
@@ -2077,7 +2134,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                                         </div>
                                                                                         <div className="flex items-center justify-between gap-6">
                                                                                             <span className="text-[10px] font-bold text-gray-600">Diastolic</span>
-                                                                                            <span className="text-[11px] font-black text-blue-400">{dia || '--'}</span>
+                                                                                            <span className="text-[11px] font-black text-red-500">{dia || '--'}</span>
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
@@ -2100,12 +2157,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                 <Area
                                                                     type="monotone"
                                                                     dataKey="dia"
-                                                                    stroke="#60a5fa"
+                                                                    stroke="#ef4444"
                                                                     strokeWidth={2}
                                                                     fill="url(#gradientDiaMain)"
-                                                                    strokeDasharray="4 4"
-                                                                    dot={{ r: 2, fill: '#60a5fa', strokeWidth: 1, stroke: '#fff' }}
-                                                                    activeDot={{ r: 4, strokeWidth: 1, stroke: '#fff', fill: '#60a5fa' }}
+                                                                    dot={{ r: 2, fill: '#ef4444', strokeWidth: 1, stroke: '#fff' }}
+                                                                    activeDot={{ r: 4, strokeWidth: 1, stroke: '#fff', fill: '#ef4444' }}
                                                                     connectNulls
                                                                     animationDuration={1500}
                                                                 />
@@ -2115,14 +2171,11 @@ const Snapshot = ({ showNotesOnly = false }) => {
 
                                                     {/* RIGHT COLUMN: HEART RATE */}
                                                     <div className="h-full relative group/chart-hr">
-                                                        <div className="absolute top-0 right-4 z-10 opacity-0 group-hover/chart-hr:opacity-100 transition-opacity">
-                                                            <span className="text-[8px] font-bold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100 uppercase tracking-tighter shadow-sm">BPM Precision</span>
-                                                        </div>
                                                         <ResponsiveContainer width="100%" height="100%">
-                                                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                                                            <AreaChart data={chartData} margin={{ top: 10, right: 20, left: 20, bottom: 20 }}>
                                                                 <defs>
                                                                     <linearGradient id="gradientHrMain" x1="0" y1="0" x2="0" y2="1">
-                                                                        <stop offset="0%" stopColor="#ec4899" stopOpacity={0.12} />
+                                                                        <stop offset="0%" stopColor="#ec4899" stopOpacity={0.4} />
                                                                         <stop offset="100%" stopColor="#ec4899" stopOpacity={0} />
                                                                     </linearGradient>
                                                                 </defs>
@@ -2133,11 +2186,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     tickLine={false}
                                                                     tick={(props) => {
                                                                         const { x, y, payload } = props;
-                                                                        const date = payload.value.split('-')[0];
-                                                                        return <text x={x} y={y + 15} textAnchor="middle" fontSize={8} fill="#94a3b8" fontWeight="600">{date}</text>;
+                                                                        const dateRaw = payload.value.split('-')[0];
+                                                                        if (dateRaw === 'N/A' || !dateRaw) return null;
+                                                                        return <text x={x} y={y + 15} textAnchor="middle" fontSize={8} fill="#94a3b8" fontWeight="600">{dateRaw}</text>;
                                                                     }}
                                                                 />
-                                                                <YAxis hide domain={['auto', 'auto']} />
+                                                                <YAxis
+                                                                    domain={[0, 200]}
+                                                                    axisLine={false}
+                                                                    tickLine={false}
+                                                                    tick={{ fontSize: 7, fill: '#94a3b8', fontWeight: 'bold' }}
+                                                                    tickCount={5}
+                                                                    width={25}
+                                                                />
                                                                 <Tooltip
                                                                     content={({ active, payload, label }) => {
                                                                         if (active && payload && payload.length) {

@@ -528,7 +528,7 @@ const TOOL_CATALOG = [
         type: 'function',
         function: {
             name: 'send_message',
-            description: 'Send a message to the patient (via portal) or to another provider (internal). Stages the message for provider approval before sending.',
+            description: 'Send a message to the patient (via portal) or to another provider (internal). Stages the message for provider approval. DO NOT use this for clinical reminders or tasks; use create_reminder instead.',
             parameters: {
                 type: 'object',
                 properties: {
@@ -587,10 +587,14 @@ const TOOL_CATALOG = [
         type: 'function',
         function: {
             name: 'create_reminder',
-            description: 'Create a clinical reminder or task for the provider. Use when the provider says "remind me to...", "follow up on...", "don\'t forget to...". Stages for approval.',
+            description: 'Core tool for clinical follow-ups, reminders, and tasks. These appear in the high-visibility blue banner on the patient chart. Use for "remind me to...", "follow up on...", "don\'t forget to...". Stages for approval.',
             parameters: {
                 type: 'object',
                 properties: {
+                    patient_id: {
+                        type: 'string',
+                        description: 'The UUID of the patient this reminder is for. Mandatory for clinical reminders.'
+                    },
                     reminder_text: {
                         type: 'string',
                         description: 'The reminder/task description (e.g., "Ask about diabetes management", "Follow up on lab results")'
@@ -605,7 +609,7 @@ const TOOL_CATALOG = [
                         description: 'Priority level (default: normal)'
                     }
                 },
-                required: ['reminder_text']
+                required: ['reminder_text', 'patient_id']
             }
         }
     },
@@ -1316,6 +1320,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
 
             case 'create_reminder': {
                 const actionId = `act_${Math.random().toString(36).substring(2, 9)}`;
+                const targetPatientId = args.patient_id || patientId;
                 return {
                     result: {
                         action_id: actionId,
@@ -1323,7 +1328,7 @@ async function executeTool(toolName, args, patientContext, patientId, tenantId, 
                         label: `Reminder: ${args.reminder_text.substring(0, 50)}${args.reminder_text.length > 50 ? '...' : ''}`,
                         message: `Staged creating a reminder: **${args.reminder_text}**${args.due_date ? ` (due: ${args.due_date})` : ''}.`,
                         payload: {
-                            patient_id: patientId || null,
+                            patient_id: targetPatientId || null,
                             reminder_text: args.reminder_text,
                             due_date: args.due_date || null,
                             priority: args.priority || 'normal'

@@ -228,12 +228,18 @@ router.post('/commit', requirePermission('ai.echo'), async (req, res) => {
                     case 'create_reminder':
                         // Reminders now go directly to Patient Flags (Chart) as requested, 
                         // instead of clogging the In Basket as invisible messages.
+                        // We provide a mandatory flag_type_id via subquery to ensure DB constraint satisfaction,
+                        // but use custom_label 'REMINDER' which Snapshot.jsx prioritize for the blue UI.
                         record = await client.query(
                             `INSERT INTO patient_flags (
-                                clinic_id, patient_id, created_by_user_id,
+                                clinic_id, patient_id, flag_type_id, created_by_user_id,
                                 note, custom_label, custom_severity, status
                             )
-                            VALUES ($1, $2, $3, $4, $5, $6, 'active') 
+                            VALUES (
+                                $1, $2, 
+                                (SELECT id FROM flag_types WHERE label = 'Safety Concern' OR label = 'Critical Alert' OR label = 'Reminder' LIMIT 1),
+                                $3, $4, $5, $6, 'active'
+                            ) 
                             RETURNING *, note as body, custom_label as subject`,
                             [tenantId, actPayload.patient_id, userId,
                                 actPayload.reminder_text, 'REMINDER', 'info']
