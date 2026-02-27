@@ -787,6 +787,19 @@ const Snapshot = ({ showNotesOnly = false }) => {
             });
     }, [vitals]);
 
+    const chartYDomains = useMemo(() => {
+        const hrValues = chartData.map(d => d.hr).filter(x => x != null);
+        const sysValues = chartData.map(d => d.sys).filter(x => x != null);
+
+        const highestHr = hrValues.length > 0 ? Math.max(...hrValues) : 0;
+        const highestSys = sysValues.length > 0 ? Math.max(...sysValues) : 0;
+
+        return {
+            hrDomain: [0, Math.max(100, highestHr + 10)],
+            bpDomain: [0, Math.max(160, highestSys + 10)]
+        };
+    }, [chartData]);
+
     // Handle Break-the-Glass authorization
     useEffect(() => {
         const handlePrivacyAuthorized = (event) => {
@@ -2111,7 +2124,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     }}
                                                                 />
                                                                 <YAxis
-                                                                    domain={[0, 250]}
+                                                                    domain={chartYDomains.bpDomain}
                                                                     axisLine={false}
                                                                     tickLine={false}
                                                                     tick={{ fontSize: 7, fill: '#94a3b8', fontWeight: 'bold' }}
@@ -2192,7 +2205,7 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                                                     }}
                                                                 />
                                                                 <YAxis
-                                                                    domain={[0, 200]}
+                                                                    domain={chartYDomains.hrDomain}
                                                                     axisLine={false}
                                                                     tickLine={false}
                                                                     tick={{ fontSize: 7, fill: '#94a3b8', fontWeight: 'bold' }}
