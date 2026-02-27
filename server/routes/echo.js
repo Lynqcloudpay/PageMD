@@ -139,32 +139,44 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
                                 content: `You are an elite Medical Scribe. ${patientContext}
 GOAL: Create a high-revenue, physician-grade clinical note.
 
-NARRATIVE STYLE (Option A/B):
-- Opening: Start HPI with "[Age] [Gender] with a PMHx of [Relevant History from Problem List] who presents for [Chief Complaint]."
-- Clinical Linkage: If current symptoms relate to PMHx (e.g., headache vs history of migraine), explicitly state: "Patient has a known history of [Condition] and notes this episode is [similar/different]."
+CRITICAL DEMOGRAPHICS RULE:
+- The patient's EXACT age and gender are provided in the context above. USE THEM EXACTLY.
+- DO NOT infer, guess, or change the patient's age or gender from the transcript.
+- If the transcript contradicts the provided demographics, IGNORE the transcript and use the provided values.
+
+NARRATIVE STYLE:
+- Opening: Start HPI with "[EXACT Age from context] [EXACT Gender from context] with a PMHx of [ONLY conditions from the Active Problem List provided above] who presents for [Chief Complaint]."
+- Clinical Linkage: If current symptoms relate to PMHx, explicitly state it. ONLY reference conditions that appear in the Active Problem List. NEVER invent or hallucinate conditions not on the list.
 - "Dr. Format": Use professional medical shorthand (e.g., PMHx, pt, noted, denies, c/o).
 
+PMHx STRICT RULE:
+- ONLY mention medical history conditions that are EXPLICITLY listed in the Active Problem List above.
+- If the Active Problem List is empty or says "None reported", do NOT fabricate any medical history.
+- NEVER add conditions like "angina", "diabetes", "hypertension" unless they appear in the provided Active Problem List.
+
 SEPARATION OF DATA:
-- HPI (Subjective): Capture ONLY what the patient says. Narrative style. DO NOT include physical exam findings (labels like "lungs clear" or "heart regular" belong in PE).
-- BILLING POLLUTION (Revenue Maximization): 
-  1. Pertinent Negatives: Proactively document negatives to rule out high-risk differentials (e.g., for headache, denies vision change/neck stiffness).
-  2. SDOH (Social Determinants): If any social factors are mentioned (work stress, home life, living situation), document them as these bump risk to "Moderate".
-  3. Data Review Synthesis: Include phrases like "Independent review of internal records and recent labs was performed" if implied.
-  4. Chronic Condition Status: For items in PMHx, use status words (e.g., "History of HTN, currently well-controlled/stable") to support "Complexity of Problems Addressed".
-  5. Differential Reasoning: Briefly list alternatives being considered/dismissed (e.g., "Symptoms are inconsistent with [Serious Condition]").
-- Level 5 E/M markers: Ensure HPI includes Location, Quality, Severity, Duration, Timing, Context, and Modifying Factors.
+- HPI (Subjective): Capture ONLY what the patient says. Narrative style. DO NOT include physical exam findings.
+- BILLING OPTIMIZATION: 
+  1. Pertinent Negatives: Document negatives to rule out high-risk differentials.
+  2. SDOH: If social factors are mentioned, document them.
+  3. Data Review: Include "Independent review of internal records was performed" if implied.
+  4. Chronic Condition Status: For items in PMHx, use status words.
+  5. Differential Reasoning: Briefly note alternatives being considered.
+- Level 5 E/M markers: Include Location, Quality, Severity, Duration, Timing, Context, Modifying Factors.
+
+ROS COMPLETENESS RULE:
+- You MUST document ALL 10 systems. For systems not explicitly discussed, write "Negative" or "Denies [relevant symptoms]".
+- The 10 required systems are: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Psychiatric.
 
 PRONOUNS:
 - Use biological binary pronouns (He/She, Him/Her). NEVER use 'they/them' for a single patient.
 
-JSON STRUCTURE:
+JSON STRUCTURE (output ONLY these 4 fields — do NOT include assessment or plan):
 {
   "chiefComplaint": "Short phrase.",
-  "hpi": "Narrative SUBJECTIVE paragraph. Strictly no physical exam data. Include relevant PMHx from the provided list.",
-  "ros": "**System:** Findings. Each on a NEW row.",
-  "pe": "**System:** Findings. Each on a NEW row.",
-  "assessment": "Numbered list of diagnoses.",
-  "plan": "MDM BLOCKS: For each diagnosis discussed, create a block like:\n1. [Diagnosis Name]\nMDM: [Diagnostic/MDM Logic justifying complexity/risk].\nPlan: [Specific verbal instructions to patient].\n- [Order/Med 1]\n- [Order/Med 2]"
+  "hpi": "Narrative SUBJECTIVE paragraph. Strictly no physical exam data. Include ONLY PMHx from the provided Active Problem List.",
+  "ros": "**System:** Findings. Each on a NEW row. ALL 10 systems MUST be documented.",
+  "pe": "**System:** Findings. Each on a NEW row."
 }`
                             },
                             {
@@ -185,9 +197,10 @@ JSON STRUCTURE:
                         chiefComplaint: parsed.chiefComplaint || '',
                         hpi: parsed.hpi || '',
                         ros: parsed.ros || '',
-                        pe: parsed.pe || '',
-                        assessment: parsed.assessment || '',
-                        plan: parsed.plan || ''
+                        pe: parsed.pe || ''
+                        // NOTE: assessment and plan are intentionally EXCLUDED from ambient auto-draft.
+                        // The physician will use the AI Draft button to generate assessment suggestions
+                        // and the MDM button to generate clinical reasoning — on demand only.
                     };
 
                     // 3. PERSIST RAW TRANSCRIPT TO VISIT RECORD (Elite Memory)
@@ -894,15 +907,15 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
 
         switch (section.toLowerCase()) {
             case 'hpi':
-                promptSnippet = "Write a professional, narrative HPI (Subjective only). Do not include physical exam. Focus on symptoms, onset, and relevant PMHx linkage.";
+                promptSnippet = `Write a professional, narrative HPI (Subjective only). Do not include physical exam. Focus on symptoms, onset, and relevant PMHx linkage. CRITICAL: Use the EXACT patient age and gender from the context provided. ONLY reference conditions from the Active Problem List provided. Do NOT invent or hallucinate any medical history not in the list.`;
                 responseFormat = { type: 'text' };
                 break;
             case 'ros':
                 promptSnippet = `Document a complete Review of Systems (ROS). 
                 Format EACH system on a new line as: **System Name:** Findings.
-                INCLUDE: General/Constitutional, HENT, Respiratory, Cardiovascular, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Psychiatric.
-                IMPORTANT: If a system was NOT mentioned in the transcript, assume findings are negative/normal (e.g., "**Cardiovascular:** Denies chest pain or palpitations."). 
-                Use medical terminology (e.g., "Denies", "Negative for").`;
+                YOU MUST INCLUDE ALL 10 SYSTEMS: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Psychiatric.
+                IMPORTANT: If a system was NOT mentioned in the transcript, document it as negative/normal (e.g., "**Eyes:** Denies vision changes or eye pain."). 
+                EVERY system MUST appear. Use medical terminology (e.g., "Denies", "Negative for").`;
                 responseFormat = { type: 'text' };
                 break;
             case 'pe':
@@ -967,7 +980,7 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                         role: 'system',
                         content: `You are an elite Medical Scribe. ${context}
                         TASK: Refine/Draft the "${section}" section of the visit note.
-                        CRITICAL: ONLY output the requested content. ${responseFormat.type === 'json_object' ? 'Output VALID JSON.' : 'No preamble, no conversational fillers.'}`
+                        CRITICAL: ONLY output the requested content. Use the EXACT patient demographics (age, gender) from context above. ONLY reference PMHx conditions from the context. NEVER invent medical history. ${responseFormat.type === 'json_object' ? 'Output VALID JSON.' : 'No preamble, no conversational fillers.'}`
                     },
                     {
                         role: 'user',

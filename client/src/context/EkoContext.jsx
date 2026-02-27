@@ -176,10 +176,15 @@ export function EkoProvider({ children }) {
                     if (visitMatch) {
                         const visitId = visitMatch[1];
                         const patientId = patientMatch ? patientMatch[1] : null;
+
+                        // IMPORTANT: Only auto-write HPI, ROS, PE, chiefComplaint.
+                        // Assessment and Plan are physician-controlled — only generated on demand via AI Draft buttons.
+                        const { assessment, plan, ...safeSections } = data.parsedSections;
+
                         await api.post('/echo/write-to-note', {
                             visitId,
                             patientId,
-                            sections: data.parsedSections
+                            sections: safeSections
                         });
                         window.dispatchEvent(new CustomEvent('eko-note-updated', { detail: { visitId } }));
                     }
