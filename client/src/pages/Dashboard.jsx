@@ -23,10 +23,18 @@ const Dashboard = () => {
     const [inboxItems, setInboxItems] = useState([]);
     const [loadingInbox, setLoadingInbox] = useState(false);
 
+    // View mode: 'personal' (only my stats/pts) or 'clinic' (full clinic stats/pts)
+    const [viewMode, setViewMode] = useState('personal');
+    const canViewClinic = can('reports:view') || can('schedule:view_all') || user?.is_admin;
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const response = await reportsAPI.getDashboard();
+                const params = {};
+                if (viewMode === 'personal' && user?.id) {
+                    params.providerId = user.id;
+                }
+                const response = await reportsAPI.getDashboard(params);
                 setStats(response.data);
             } catch (error) {
                 console.warn('Could not fetch dashboard stats:', error);
@@ -41,9 +49,9 @@ const Dashboard = () => {
             }
         };
         fetchStats();
-        const interval = setInterval(fetchStats, 5000);
+        const interval = setInterval(fetchStats, 10000); // 10s for stats is enough
         return () => clearInterval(interval);
-    }, []);
+    }, [viewMode, user?.id]);
 
     useEffect(() => {
         const fetchTodayAppointments = async () => {
@@ -54,9 +62,12 @@ const Dashboard = () => {
             try {
                 const today = format(new Date(), 'yyyy-MM-dd');
                 const params = { date: today };
-                if (scope.scheduleScope === 'SELF') {
+
+                // Dashboard defaults to personal view, but respects mode
+                if (viewMode === 'personal' || scope.scheduleScope === 'SELF') {
                     params.providerId = user.id;
                 }
+
                 const response = await appointmentsAPI.get(params);
                 setTodayAppointments(response.data || []);
             } catch (error) {
@@ -71,6 +82,7 @@ const Dashboard = () => {
             if (!user) return;
             try {
                 if (!silent) setLoadingInbox(true);
+                // Inbox is ALWAYS personalized to 'me'
                 const response = await inboxAPI.getAll({ status: 'new', assignedTo: 'me' });
                 setInboxItems(response.data || []);
             } catch (error) {
@@ -86,10 +98,10 @@ const Dashboard = () => {
         const interval = setInterval(() => {
             fetchTodayAppointments();
             fetchInbox(true);
-        }, 5000);
+        }, 8000);
 
         return () => clearInterval(interval);
-    }, [user, can, scope]);
+    }, [user, can, scope, viewMode]);
 
     const greeting = useMemo(() => {
         const hour = new Date().getHours();
@@ -152,13 +164,34 @@ const Dashboard = () => {
                                 </p>
                             </div>
                         </div>
-                        <button
-                            onClick={() => navigate('/patients')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-all active:scale-95 shadow-sm"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            New Patient
-                        </button>
+
+                        <div className="flex items-center gap-3">
+                            {/* Dashboard Mode Selector */}
+                            {canViewClinic && (
+                                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-0.5">
+                                    <button
+                                        onClick={() => setViewMode('personal')}
+                                        className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${viewMode === 'personal' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                    >
+                                        My Dashboard
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('clinic')}
+                                        className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${viewMode === 'clinic' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                    >
+                                        Clinic Overview
+                                    </button>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={() => navigate('/patients')}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-all active:scale-95 shadow-sm"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                New Patient
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

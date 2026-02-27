@@ -350,7 +350,7 @@ export const feeSheetAPI = {
 export const reportsAPI = {
   getRegistry: (condition, search) => api.get(`/reports/registry/${condition}`, { params: { search } }),
   getQualityMeasures: (params) => api.get('/reports/quality-measures', { params }),
-  getDashboard: () => api.get('/reports/dashboard'),
+  getDashboard: (params) => api.get('/reports/dashboard', { params }),
 };
 
 // HL7
