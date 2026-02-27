@@ -27,7 +27,7 @@ const AI_API_KEY = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
 if (!AI_API_KEY) {
     console.warn('[Echo] WARNING: Neither AI_API_KEY nor OPENAI_API_KEY found in environment.');
 }
-const ECHO_MODEL = process.env.ECHO_MODEL || 'gpt-4o';
+const ECHO_MODEL = process.env.ECHO_MODEL || 'gpt-4o-mini';
 const DAILY_TOKEN_BUDGET = parseInt(process.env.ECHO_DAILY_TOKEN_BUDGET || '500000');
 
 const BASE_SYSTEM_PROMPT = `You are Eko, a clinical AI assistant embedded in the PageMD EMR.
