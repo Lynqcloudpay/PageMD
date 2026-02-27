@@ -54,7 +54,12 @@ rsync -av --delete -e "ssh -i $KEY_PATH -o StrictHostKeyChecking=no" "$LOCAL_DIS
 # Verify files reached the server
 echo "🔍 Verifying files on server..."
 ssh -i "$KEY_PATH" -o StrictHostKeyChecking=no $USER@$HOST "ls -la $DIR/deploy/static/index.html"
-# 3. Sync Server Files
+# 3. Sync Deployment Files (docker-compose, Caddyfile, etc.)
+echo "📤 Syncing deployment files to server..."
+rsync -av -e "ssh -i $KEY_PATH -o StrictHostKeyChecking=no" \
+  "$PROJECT_ROOT/deploy/" "$USER@$HOST:$DIR/deploy/"
+
+# 4. Sync Server Files
 echo "📤 Syncing server files to server..."
 # EXTREMELY IMPORTANT: We MUST exclude archives, uploads, and logs from --delete!
 # Otherwise, we will wipe all cold storage backups and patient uploads on every deploy.
