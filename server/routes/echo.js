@@ -82,21 +82,34 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
         // In ambient mode, post-process raw transcript into structured SOAP note
         if (mode === 'ambient' && transcription && transcription.trim().length > 0) {
             try {
-                // Fetch patient context (gender) to ensure correct pronoun usage
+                // Fetch rich patient context: Demographics + Active Problem List
                 let patientContext = '';
+                let problemList = [];
                 if (visitId) {
                     const patientInfo = await pool.query(
-                        `SELECT p.gender, p.first_name, p.last_name, p.dob 
+                        `SELECT p.id as patient_id, p.gender, p.first_name, p.last_name, p.dob 
                          FROM patients p 
                          JOIN visits v ON v.patient_id = p.id 
                          WHERE v.id = $1`,
                         [visitId]
                     );
+
                     if (patientInfo.rows.length > 0) {
                         const p = patientInfo.rows[0];
                         const gender = p.gender ? p.gender.toLowerCase() : 'unknown';
                         const age = p.dob ? Math.floor((new Date() - new Date(p.dob)) / 31557600000) : 'adult';
+
+                        // Fetch Active Problems for Option A (Linkage)
+                        const problemsQuery = await pool.query(
+                            `SELECT problem_name FROM problems WHERE patient_id = $1 AND status = 'active'`,
+                            [p.patient_id]
+                        );
+                        problemList = problemsQuery.rows.map(r => r.problem_name);
+
                         patientContext = `The patient is a ${age}-year-old ${gender}. `;
+                        if (problemList.length > 0) {
+                            patientContext += `Active Problem List: ${problemList.join(', ')}. `;
+                        }
                     }
                 }
 
@@ -107,33 +120,41 @@ router.post('/transcribe', requirePermission('ai.echo'), upload.single('audio'),
                         'Authorization': `Bearer ${process.env.AI_API_KEY || process.env.OPENAI_API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: 'gpt-4o-mini',
+                        model: 'gpt-4o', // Using GPT-4o for better "Deep Reasoning" (Option C)
                         temperature: 0.1,
-                        max_tokens: 2000,
+                        max_tokens: 2500,
                         response_format: { type: 'json_object' },
                         messages: [
                             {
                                 role: 'system',
-                                content: `You are a medical scribe assistant. ${patientContext}Given a raw transcription of a doctor-patient conversation:
-1. IGNORE all small talk and greetings.
-2. Extract ONLY clinical information.
-3. ALWAYS output in ENGLISH.
-4. PRONOUNS: You MUST use biological binary pronouns based on the patient's gender. If female, use 'She/Her'. If male, use 'He/Him'. NEVER use 'they/them' or gender-neutral language to refer to the patient.
-5. Return a JSON object with these fields:
+                                content: `You are an elite Medical Scribe. ${patientContext}
+GOAL: Create a high-revenue, physician-grade clinical note.
+
+NARRATIVE STYLE (Option A/B):
+- Opening: Start HPI with "[Age] [Gender] with a PMHx of [Relevant History from Problem List] who presents for [Chief Complaint]."
+- Clinical Linkage: If current symptoms relate to PMHx (e.g., headache vs history of migraine), explicitly state: "Patient has a known history of [Condition] and notes this episode is [similar/different]."
+- "Dr. Format": Use professional medical shorthand (e.g., PMHx, pt, noted, denies, c/o).
+
+SEPARATION OF DATA:
+- HPI (Subjective): Capture ONLY what the patient says. Narrative style. DO NOT include physical exam findings (labels like "lungs clear" or "heart regular" belong in PE).
+- BILLING POLLUTION (Option B): Proactively document pertinent negatives even if not explicitly discussed (e.g., for chest pain, document "Denies fever, diaphoresis, or radiating pain"). This increases E/M level without fabricating the story. 
+- Level 5 E/M markers: Ensure HPI includes Location, Quality, Severity, Duration, Timing, Context, and Modifying Factors.
+
+PRONOUNS:
+- Use biological binary pronouns (He/She, Him/Her). NEVER use 'they/them' for a single patient.
+
+JSON STRUCTURE:
 {
-  "chiefComplaint": "Ultra-concise phrase (e.g., 'Chest pain'). Do NOT include full sentences.",
-  "hpi": "Narrative paragraph in the doctor's voice. Past tense for history, present for current symptoms. MANDATORY: Use correct biological pronouns (He/She). IGNORE 'they/them/their' when referring to the patient. BILLING OPTIMIZATION: Prioritize details that support Level 4/5 E/M coding (e.g., duration, timing, severity, associated signs/symptoms, and complexity of chronic conditions).",
-  "ros": "Review of Systems. Format as '**System:** Findings.' (e.g. **Constitutional:** negative for weight loss.). Each system MUST be on a NEW line/row for billing audit clarity. Include: Constitutional, Eyes, ENT, Cardiovascular, Respiratory, Gastrointestinal, Genitourinary, Musculoskeletal, Neurological, Skin.",
-  "pe": "Physical Examination. Format as '**System:** Findings.' (e.g. **General:** well-appearing.). Each system MUST be on a NEW line/row. Prioritize findings that demonstrate systemic complexity. Include: General, Head Neck, Eyes, ENT, Cardiovascular, Respiratory, Abdomen, Extremities, Neurological, Skin.",
-  "structuredNote": "The full formatted note with clear clinical headers. BILLING NOTE: Include any mentioned social determinants of health (SDOH) or chronic condition risk adjustments (HCC) discussed."
-}
-REVENUE RULES:
-- Capture complexity: If the patient mentions multiple concerns or chronic condition management, ensure the HPI and Assessment/Plan (implied in HPI narrative) reflect this to support higher-tier coding.
-- Detail-Oriented: Every system captured in ROS/PE adds to the documented complexity. Ensure a comprehensive 10-system ROS and multi-system PE is drafted if discussed.`
+  "chiefComplaint": "Short phrase.",
+  "hpi": "Narrative SUBJECTIVE paragraph. Strictly no physical exam data. Include relevant PMHx from the provided list.",
+  "ros": "**System:** Findings. Each on a NEW row.",
+  "pe": "**System:** Findings. Each on a NEW row.",
+  "structuredNote": "Full note including CC, HPI, ROS, PE with headers."
+}`
                             },
                             {
                                 role: 'user',
-                                content: `Raw conversation transcript:\n\n${transcription}`
+                                content: `Draft a professional note based on this transcript:\n\n${transcription}`
                             }
                         ]
                     })
