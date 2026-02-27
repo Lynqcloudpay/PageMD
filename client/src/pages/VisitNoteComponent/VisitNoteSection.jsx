@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Sparkles } from 'lucide-react';
 
-const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = false, id, badge, className = "", onDraftWithAI }) => {
+const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = false, id, badge, className = "", onDraftWithAI, draftLabel, draftIcon }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
@@ -35,10 +35,10 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
                                 onDraftWithAI();
                             }}
                             className="p-2 text-primary-500 hover:bg-primary-50 rounded-xl transition-all flex items-center gap-1.5 border border-primary-100/50 bg-white/50"
-                            title="Draft with AI"
+                            title={draftLabel || "Draft with AI"}
                         >
-                            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                            <span className="text-[10px] font-bold uppercase tracking-tighter">Draft</span>
+                            {draftIcon || <Sparkles className="w-3.5 h-3.5 animate-pulse" />}
+                            <span className="text-[10px] font-bold uppercase tracking-tighter">{draftLabel || 'Draft'}</span>
                         </button>
                     )}
                     <ChevronDown
@@ -60,3 +60,4 @@ const VisitNoteSection = ({ title, children, defaultOpen = true, isEdited = fals
 };
 
 export default VisitNoteSection;
+

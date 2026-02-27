@@ -870,7 +870,10 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
         }
 
         const visit = visitResult.rows[0];
-        if (!visit.visit_transcript) {
+        // Graceful fallback: visit_transcript is the canonical source, but note_draft
+        // holds the content for all visits transcribed before the column was added.
+        const transcript = visit.visit_transcript || visit.note_draft;
+        if (!transcript) {
             return res.status(400).json({ error: 'No spoken transcript found for this visit. Please transcribe audio first.' });
         }
 
@@ -915,7 +918,7 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 promptSnippet = `Write a high-billing-value Medical Decision Making (MDM) clinical rationale.
                 Target Diagnosis: "${diagnosis || 'Generalized health management'}".
                 CONTEXT TO INTEGRATE:
-                - Spoken Visit History: ${visit.visit_transcript.substring(0, 1000)}...
+                - Spoken Visit History: ${transcript.substring(0, 1000)}...
                 - Current Visit Orders/Plan: ${ordersUsed}
                 - Patient Home Medications: ${visit.med_list || 'None noted'}
                 - Chronic Problems: ${visit.problem_list || 'None noted'}
@@ -948,7 +951,7 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                     },
                     {
                         role: 'user',
-                        content: `Transcript:\n"${visit.visit_transcript}"\n\nCommand: ${promptSnippet}`
+                        content: `Transcript:\n"${transcript}"\n\nCommand: ${promptSnippet}`
                     }
                 ]
             })
