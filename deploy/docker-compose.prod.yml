@@ -90,6 +90,7 @@ services:
       # Echo AI
       AI_API_KEY: ${AI_API_KEY}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
       ECHO_MODEL: ${ECHO_MODEL:-gpt-4o}
     depends_on:
       db:
