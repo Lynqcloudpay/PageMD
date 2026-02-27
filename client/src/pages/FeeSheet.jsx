@@ -619,18 +619,18 @@ const FeeSheet = () => {
             />
 
             {/* Total Footer */}
-            <div className="sticky bottom-6 bg-gray-50 text-white p-5 rounded-2xl shadow-2xl flex justify-between items-center">
+            <div className="sticky bottom-6 bg-white/80 backdrop-blur-xl p-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex justify-between items-center border border-gray-100 no-print">
                 <div className="flex gap-8">
                     <div>
-                        <div className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Total Charges</div>
-                        <div className="text-2xl font-bold">
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Total Charges</div>
+                        <div className="text-2xl font-black text-slate-900">
                             ${bill.filter(i => !i.del).reduce((acc, curr) => acc + (parseFloat(curr.fee) * (parseInt(curr.units) || 1)), 0).toFixed(2)}
                         </div>
                     </div>
                     <div className="border-l border-gray-200 h-10 my-auto"></div>
                     <div>
-                        <div className="text-[10px] uppercase tracking-wider text-gray-400 font-bold mb-1">Line Items</div>
-                        <div className="text-2xl font-bold">{bill.filter(i => !i.del).length}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Line Items</div>
+                        <div className="text-2xl font-black text-slate-900">{bill.filter(i => !i.del).length}</div>
                     </div>
                 </div>
                 <div className="flex gap-3">

@@ -60,8 +60,8 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
         <div className="fixed inset-0 bg-gray-50/40 z-[200] flex flex-col p-4 backdrop-blur-md">
             {/* Top Workspace Toolbar */}
             <div className="flex justify-between items-center mb-6 pl-2 pr-2 relative z-[250]">
-                <div className="flex items-center gap-3 text-white font-bold tracking-tight bg-gray-50/70 border border-white/10 px-4 py-2 rounded-full shadow-xl backdrop-blur-xl">
-                    <Layers className="w-4 h-4 text-blue-400" />
+                <div className="flex items-center gap-3 text-slate-800 font-bold tracking-tight bg-gray-50/70 border border-white/20 px-4 py-2 rounded-full shadow-xl backdrop-blur-xl">
+                    <Layers className="w-4 h-4 text-blue-500" />
                     <span>Chart Review Workspace</span>
 
                     <div className="relative">
@@ -114,7 +114,7 @@ const MultiVisitViewer = ({ initialVisitId, patientId, onClose }) => {
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-3 bg-gray-50/70 hover:bg-gray-50 text-white rounded-full transition-all border border-white/10 backdrop-blur-xl shadow-xl group"
+                    className="p-3 bg-gray-50/70 hover:bg-gray-50 text-slate-500 rounded-full transition-all border border-white/20 backdrop-blur-xl shadow-xl group"
                 >
                     <X className="w-5 h-5 group-hover:rotate-90 transition-transform" />
                 </button>

@@ -930,12 +930,12 @@ const Snapshot = ({ showNotesOnly = false }) => {
                                     ? signedByName
                                     : providerNameFallback;
                             })(),
-                            summary: hpiMatch ? hpiMatch[1].trim().substring(0, 200) : (noteText.substring(0, 200) || "No note available"),
-                            plan: planMatch ? planMatch[1].trim() : extractPlan(noteText),
-                            assessment: assessmentMatch ? assessmentMatch[1].trim() : "",
-                            carePlan: carePlanMatch ? carePlanMatch[1].trim() : "",
-                            followUp: followUpMatch ? followUpMatch[1].trim() : "",
-                            chiefComplaint: chiefComplaint,
+                            summary: hpiMatch ? decodeHtmlEntities(hpiMatch[1].trim()).substring(0, 200) : (decodeHtmlEntities(noteText).substring(0, 200) || "No note available"),
+                            plan: planMatch ? decodeHtmlEntities(planMatch[1].trim()) : decodeHtmlEntities(extractPlan(noteText)),
+                            assessment: assessmentMatch ? decodeHtmlEntities(assessmentMatch[1].trim()) : "",
+                            carePlan: carePlanMatch ? decodeHtmlEntities(carePlanMatch[1].trim()) : "",
+                            followUp: followUpMatch ? decodeHtmlEntities(followUpMatch[1].trim()) : "",
+                            chiefComplaint: chiefComplaint ? decodeHtmlEntities(chiefComplaint) : null,
                             signed: (visit.status || '').toLowerCase().trim() === 'signed',
                             preliminary: (visit.status || '').toLowerCase().trim() === 'preliminary',
                             locked: visit.locked || !!visit.note_signed_by,
