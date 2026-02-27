@@ -913,18 +913,28 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 responseFormat = { type: 'json_object' };
                 break;
             case 'mdm':
-                // Comprehensive MDM logic
+                // Concise, high-impact MDM logic
                 const ordersUsed = visit.note_draft ? (visit.note_draft.match(/Plan:[\s\S]+/i)?.[0] || 'No specific orders found') : 'N/A';
-                promptSnippet = `Write a high-billing-value Medical Decision Making (MDM) clinical rationale.
-                Target Diagnosis: "${diagnosis || 'Generalized health management'}".
-                CONTEXT TO INTEGRATE:
-                - Spoken Visit History: ${transcript.substring(0, 1000)}...
-                - Current Visit Orders/Plan: ${ordersUsed}
-                - Patient Home Medications: ${visit.med_list || 'None noted'}
-                - Chronic Problems: ${visit.problem_list || 'None noted'}
+                promptSnippet = `Write a CONCISE Medical Decision Making (MDM) rationale in exactly 1-2 short paragraphs (MAX 6 sentences total).
+                Diagnosis: "${diagnosis || 'Generalized health management'}".
                 
-                CLINICAL GOAL: Justify a high complexity level (Level 4 or 5) by documenting how you are managing acute issues while considering the complexity of their chronic conditions and current medications. 
-                Output ONLY the MDM logic text.`;
+                CONTEXT:
+                - Visit transcript (excerpt): ${transcript.substring(0, 800)}
+                - Orders placed: ${ordersUsed}
+                - Home Meds: ${visit.med_list || 'None'}
+                - Chronic Problems: ${visit.problem_list || 'None'}
+                
+                FORMULA (follow this structure tightly):
+                1. State the acute problem and what was found/discussed today.
+                2. Note relevant chronic conditions and current medications that add management complexity.
+                3. State the orders/testing/referrals placed and why.
+                4. End with one sentence justifying moderate-to-high complexity (e.g., "Given the interplay of [acute] with [chronic conditions] and [medication risk], this encounter reflects moderate-to-high complexity MDM.").
+                
+                RULES:
+                - Be DIRECT. No filler phrases like "it is crucial to consider" or "further highlighting the need for".
+                - Use clinical shorthand (PMHx, c/o, r/o, etc.).
+                - NEVER exceed 2 paragraphs. Shorter is better.
+                - Output ONLY the MDM text.`;
                 responseFormat = { type: 'text' };
                 break;
             default:
