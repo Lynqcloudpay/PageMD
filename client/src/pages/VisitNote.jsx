@@ -143,6 +143,87 @@ const ResultImage = ({ doc }) => {
     );
 };
 
+const DraftIntentModal = ({ isOpen, onClose, onConfirm, section }) => {
+    const [customIntent, setCustomIntent] = useState('');
+    const quickIntents = [
+        { label: 'Annual Physical / Wellness', value: 'This is an annual physical / wellness exam. Document normal findings where appropriate.' },
+        { label: 'Establish Care / New Patient', value: 'This is a new patient establishing care. Document comprehensive history and baseline assessments.' },
+        { label: 'Routine Follow-up', value: 'This is a routine follow-up for chronic conditions. Focus on stability and medication adherence.' },
+        { label: 'Acute Symptom / Sick Visit', value: 'This is an acute visit for a new symptom. Document onset, severity, and targeted assessment.' },
+        { label: 'Pre-operative Clearance', value: 'This is a pre-operative evaluation. Focus on surgical risk and medical clearance.' },
+    ];
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
+                <div className="p-6 bg-gradient-to-br from-indigo-50 to-white border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+                                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900">AI Drafting Intent</h3>
+                                <p className="text-sm text-gray-500 font-medium">No transcription found. What should the {section?.toUpperCase()} be about?</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-colors text-gray-400">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-1 gap-2">
+                        {quickIntents.map((qi, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => onConfirm(qi.value)}
+                                className="w-full text-left p-4 rounded-2xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50 transition-all group flex items-center justify-between"
+                            >
+                                <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-700">{qi.label}</span>
+                                <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="pt-2">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Custom Clinical Focus</label>
+                        <textarea
+                            value={customIntent}
+                            onChange={(e) => setCustomIntent(e.target.value)}
+                            placeholder="e.g. Patient here for chest pain since yesterday..."
+                            className="w-full h-24 p-4 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm resize-none"
+                        />
+                    </div>
+                </div>
+
+                <div className="p-6 bg-gray-50 flex gap-3">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 py-3 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        disabled={!customIntent.trim()}
+                        onClick={() => onConfirm(customIntent)}
+                        className="flex-[2] bg-indigo-600 text-white py-3 rounded-2xl text-sm font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
+                    >
+                        Generate with Custom Intent
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Collapsible Section Component - Refined UX
 const SectionLegacy = ({ title, children, defaultOpen = true, isEdited = false, id, badge }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -585,6 +666,10 @@ const VisitNote = () => {
     const [showMacroAddModal, setShowMacroAddModal] = useState(false);
     const [newMacroData, setNewMacroData] = useState({ shortcut_code: '', template_text: '' });
     const [expandedMdms, setExpandedMdms] = useState({}); // index -> boolean
+    const [showIntentModal, setShowIntentModal] = useState(false);
+    const [intentSection, setIntentSection] = useState(null);
+    const [intentDiagnosis, setIntentDiagnosis] = useState(null);
+    const [intentPlanIndex, setIntentPlanIndex] = useState(null);
 
     // Note sections
     const [noteData, setNoteData] = useState({
@@ -2317,8 +2402,18 @@ const VisitNote = () => {
         }
     };
 
-    const refineSectionWithAI = async (section, diagnosis = null, planIndex = null) => {
+    const refineSectionWithAI = async (section, diagnosis = null, planIndex = null, intent = null) => {
         if (!currentVisitId || isLocked) return;
+
+        // Check if we need to ask for intent (no transcription)
+        const hasTranscript = visitData?.visit_transcript && visitData.visit_transcript.trim().length > 30;
+        if (!intent && !hasTranscript) {
+            setIntentSection(section);
+            setIntentDiagnosis(diagnosis);
+            setIntentPlanIndex(planIndex);
+            setShowIntentModal(true);
+            return;
+        }
 
         showToast(`AI is crafting ${section.toUpperCase()}...`, 'info', { duration: 3000 });
 
@@ -2333,7 +2428,8 @@ const VisitNote = () => {
                 visitId: currentVisitId,
                 section,
                 diagnosis,
-                existingMdms
+                existingMdms,
+                intent // Pass the user's explicit intent to the backend
             });
 
             if (response.data.success) {
@@ -2360,12 +2456,14 @@ const VisitNote = () => {
 
                     showToast(`Synthesizing MDM for ${currentPlan.length} diagnoses...`, 'info');
 
-                    // Trigger refinement for each diagnosis sequentially to avoid race conditions or use Promise.all
-                    for (let i = 0; i < currentPlan.length; i++) {
-                        const diag = currentPlan[i].diagnosis;
+                    // Manage a local copy of the plan throughout synthesis to ensure accurate context propagation
+                    let updatedPlan = [...(noteData.planStructured || [])];
+
+                    for (let i = 0; i < updatedPlan.length; i++) {
+                        const diag = updatedPlan[i].diagnosis;
                         try {
-                            // Recalculate existing MDMs periodically for sequential synthesis
-                            const currentMdms = (noteData.planStructured || [])
+                            // Calculate existing MDMs from the latest local state
+                            const currentMdms = updatedPlan
                                 .filter((item, idx) => item.mdm && idx !== i)
                                 .map(item => `Diagnosis: ${item.diagnosis}\nMDM: ${item.mdm}`)
                                 .join('\n\n');
@@ -2376,14 +2474,18 @@ const VisitNote = () => {
                                 diagnosis: diag,
                                 existingMdms: currentMdms
                             });
+
                             if (mdmResponse.data.success && mdmResponse.data.draftedText) {
-                                updatePlanDetails(i, 'mdm', mdmResponse.data.draftedText);
-                                // Update noteData immediately so the next iteration gets the new text
-                                setNoteData(prev => {
-                                    const updated = [...(prev.planStructured || [])];
-                                    if (updated[i]) updated[i].mdm = mdmResponse.data.draftedText;
-                                    return { ...prev, planStructured: updated };
-                                });
+                                // Update local copy
+                                updatedPlan[i] = { ...updatedPlan[i], mdm: mdmResponse.data.draftedText };
+
+                                // Batch state updates to trigger re-renders
+                                const formattedPlan = formatPlanText(updatedPlan);
+                                setNoteData(prev => ({
+                                    ...prev,
+                                    planStructured: updatedPlan,
+                                    plan: formattedPlan
+                                }));
                             }
                         } catch (e) {
                             console.error(`Failed to synthesize MDM for ${diag}`, e);
@@ -4946,7 +5048,17 @@ const VisitNote = () => {
                 isResident={(user?.role_name || user?.role || '').toUpperCase().includes('STUDENT') || (user?.role_name || user?.role || '').toUpperCase().includes('RESIDENT')}
                 onConfirm={handleSign}
             />
-        </div >
+
+            <DraftIntentModal
+                isOpen={showIntentModal}
+                onClose={() => setShowIntentModal(false)}
+                section={intentSection}
+                onConfirm={(intent) => {
+                    setShowIntentModal(false);
+                    refineSectionWithAI(intentSection, intentDiagnosis, intentPlanIndex, intent);
+                }}
+            />
+        </div>
     );
 };
 

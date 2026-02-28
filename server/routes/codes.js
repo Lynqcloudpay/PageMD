@@ -23,7 +23,7 @@ router.get('/icd10', async (req, res) => {
       if (tableCheck.rows[0].exists && search) {
         // Use database search with full-text search
         const result = await pool.query(`
-          SELECT code, description, billable, valid_for_submission
+          SELECT code, description, is_billable as billable, is_active as valid
           FROM icd10_codes
           WHERE search_vector @@ plainto_tsquery('english', $1)
              OR code ILIKE $2
@@ -38,7 +38,7 @@ router.get('/icd10', async (req, res) => {
             code: row.code,
             description: row.description,
             billable: row.billable,
-            valid: row.valid_for_submission
+            valid: row.valid
           })));
         }
       }

@@ -8,15 +8,14 @@ const { authenticate } = require('../middleware/auth');
 router.get('/search', authenticate, async (req, res) => {
     try {
         const { q, limit = 20 } = req.query;
-        if (!q || q.trim().length < 2) {
-            // Return nothing for very short queries to avoid "weird" suggestions
-            // and reduce lag on first click.
+        const searchTerm = q ? q.trim() : '';
+
+        // If no query, return some defaults or empty
+        if (!searchTerm || searchTerm.length < 2) {
             return res.json([]);
         }
 
-        const searchTerm = q.trim();
         const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
-        // Better whole-word regex: match the word itself or follows a space/parenthesis
         const wholeWordRegex = searchWords.map(w => `(\\m|\\()${w}(\\M|\\))`).join('.*');
         const tsQuery = searchWords.map(t => `${t.replace(/'/g, "''")}:*`).join(' & ');
 
@@ -34,32 +33,41 @@ router.get('/search', authenticate, async (req, res) => {
               )
             ORDER BY 
                 (c.code = $1) DESC,
-                COALESCE(u.use_count, 0) DESC, -- User Specific Usage (Personal Ranking)
-                c.usage_count DESC, -- Global/Platform Usage Ranking
-                -- 1. Direct Match: The most common clinical term (Essential/Primary/Unspecified/Uncomplicated)
+                COALESCE(u.use_count, 0) DESC,
+                c.usage_count DESC,
                 (c.is_billable AND c.description ~* $5 AND c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y') DESC,
-                -- 2. Good Match: Term as whole word + Billable
                 (c.is_billable AND c.description ~* $5) DESC,
-                -- 3. Favor Billable over non-billable for the same level of match
                 (c.is_billable AND c.description ILIKE $1 || '%') DESC,
-                -- 4. Favor shorter descriptions for general terms
-                (CASE WHEN LENGTH($1) < 15 AND LENGTH(c.description) < 40 THEN 0 ELSE 1 END) ASC,
-                -- 5. Full-text rank for general relevance
                 ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) DESC,
-                -- 6. Demote specialty/complicating chapters
-                (CASE WHEN c.code ~ '^[OPZ]' AND NOT ($1 ~* '(pregnancy|neonatal|newborn|history|screening)') THEN 1 ELSE 0 END) ASC,
-                -- 7. Demote specific complications unless explicitly searched
-                (CASE WHEN c.description ~* '\\y(with|due to|secondary)\\y' AND NOT ($1 ~* '(with|due|secondary)') THEN 1 ELSE 0 END) ASC,
                 LENGTH(c.description) ASC,
-                c.is_billable DESC,
                 c.code ASC
             LIMIT $3
         `, [searchTerm, tsQuery, limit, req.user.id, wholeWordRegex]);
 
+        if (results.rows.length === 0) {
+            const { searchFallback } = require('../utils/icd10-fallback');
+            const fallback = searchFallback(searchTerm);
+            return res.json(fallback.map(f => ({
+                id: f.code, // Use code as ID for fallback items
+                code: f.code,
+                description: f.description,
+                is_billable: f.billable,
+                use_count: 0
+            })));
+        }
+
         res.json(results.rows);
     } catch (error) {
         console.error('Error searching ICD-10:', error);
-        res.status(500).json({ error: 'Failed to search ICD-10 codes' });
+        // Extreme fallback on error
+        const { searchFallback } = require('../utils/icd10-fallback');
+        return res.json(searchFallback(req.query.q).map(f => ({
+            id: f.code,
+            code: f.code,
+            description: f.description,
+            is_billable: f.billable,
+            use_count: 0
+        })));
     }
 });
 

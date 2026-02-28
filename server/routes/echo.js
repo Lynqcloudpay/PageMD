@@ -859,12 +859,12 @@ router.delete('/preferences/:id', requirePermission('ai.echo'), async (req, res)
  */
 router.post('/refine-section', requirePermission('ai.echo'), async (req, res) => {
     try {
-        const { visitId, section, diagnosis, existingMdms } = req.body;
+        const { visitId, section, diagnosis, existingMdms, intent } = req.body;
         if (!visitId || !section) {
             return res.status(400).json({ error: 'Visit ID and section are required' });
         }
 
-        console.log(`[Echo Refine] Refining ${section} ${diagnosis ? `for ${diagnosis}` : ''} in visit ${visitId}`);
+        console.log(`[Echo Refine] Refining ${section} ${diagnosis ? `for ${diagnosis}` : ''} in visit ${visitId} ${intent ? `(Intent: ${intent})` : ''}`);
 
         // 1. Fetch transcript, patient context, and visit orders
         const visitResult = await pool.query(
@@ -883,11 +883,12 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
         }
 
         const visit = visitResult.rows[0];
-        // Graceful fallback: visit_transcript is the canonical source, but note_draft
-        // holds the content for all visits transcribed before the column was added.
-        const transcript = visit.visit_transcript || visit.note_draft;
-        if (!transcript) {
-            return res.status(400).json({ error: 'No spoken transcript found for this visit. Please transcribe audio first.' });
+        // Graceful fallback: visit_transcript is the canonical source
+        const transcript = visit.visit_transcript || visit.note_draft || '';
+
+        // If neither transcript nor intent exists, we cannot proceed
+        if (!transcript && !intent) {
+            return res.status(400).json({ error: 'No spoken transcript found for this visit. Please transcribe audio first or provide a brief intent.' });
         }
 
         // Robust age calculation for refinement
@@ -1001,7 +1002,7 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                     },
                     {
                         role: 'user',
-                        content: `Transcript:\n"${transcript}"\n\nCommand: ${promptSnippet}`
+                        content: `${intent ? `Physician's Clinical Intent for this section: ${intent}\n\n` : ''}${transcript ? `Spoken Transcript:\n"${transcript}"\n\n` : ''}Command: ${promptSnippet}`
                     }
                 ]
             })

@@ -1902,13 +1902,15 @@ async function seedICD10Codes() {
     for (const codeData of uniqueCodes) {
       try {
         const result = await client.query(`
-          INSERT INTO icd10_codes (code, description, billable, valid_for_submission)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO icd10_codes (code, description, is_billable, is_active)
+          VALUES ($1, $2, $3, true)
           ON CONFLICT (code) 
           DO UPDATE SET 
-            description = EXCLUDED.description
+            description = EXCLUDED.description,
+            is_billable = EXCLUDED.is_billable,
+            is_active = true
           RETURNING id
-        `, [codeData.code, codeData.description, true, true]);
+        `, [codeData.code, codeData.description, true]);
 
         if (result.rows.length > 0) {
           inserted++;
