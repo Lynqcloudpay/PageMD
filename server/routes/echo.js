@@ -952,18 +952,18 @@ router.post('/refine-section', requirePermission('ai.echo'), async (req, res) =>
                 4. FOLLOW-UP rationale — what to reassess and when (e.g., "RTC 2 weeks to reassess pain response; escalate to surgical consult if no improvement")
                 
                 STRICT RULES:
-                - Write in FIRST PERSON as the physician ("I considered...", "Labs ordered to r/o...")
-                - NO patient emotion or concern language ("patient is worried about surgery")
-                - NO generic filler ("it is important to note", "this adds complexity")
-                - Use clinical shorthand (PMHx, c/o, r/o, f/u, RTC, BID, etc.)
-                - MAX 2 paragraphs. Every sentence must serve a clinical or billing purpose.
+                - NO REPETITION: If an MDM exists for a related diagnosis (e.g., you already wrote an MDM for "ACS"), DO NOT repeat the pathophysiology, differential, or order rationale in this one. Only document the UNIQUE clinical delta for THIS specific code.
+                - NO INTRO CLICHÉS: Do not start with "I considered [Diagnosis Name]...". Jump directly into the clinical rationale or risk assessment.
+                - FIRST PERSON ONLY: Write as the physician ("I ordered...", "My rationale for...").
+                - NO FILLER: No "It is important to note," or "Given the patient's history."
+                - SHORTHAND: Use clinical abbreviations (r/o, c/o, PMHx, RTC) to keep it dense and professional.
                 
-                ${existingMdms ? `REPETITION WARNING:
-                The following MDMs have already been written for other diagnoses in this visit:
+                ${existingMdms ? `CONTEXT ON ALREADY WRITTEN MDMS:
+                The following clinical logic has already been documented in this note:
                 ---
                 ${existingMdms}
                 ---
-                DO NOT repeat the same clinical logic or wording. If this diagnosis (e.g., Unstable Angina) is related to another (e.g., ACS), focus specifically on the unique reasoning or management aspects of THIS diagnosis code. Cross-reference briefly if needed, but do not copy-paste paragraphs.` : ''}
+                CRITICAL: If the reasoning for THIS diagnosis is covered by the above, simply focus on the specific management unique to THIS ICD-10 code (e.g., code-specific complications, specific Rx adjustments). DO NOT repeat the same differential or lab justification.` : ''}
 
                 - Output ONLY the MDM text.`;
                 responseFormat = { type: 'text' };
