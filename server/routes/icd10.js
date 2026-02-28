@@ -5,50 +5,71 @@ const { authenticate } = require('../middleware/auth');
 
 // Search ICD-10 codes
 // GET /api/icd10/search?q=...&limit=20
+// Search ICD-10 codes
+// GET /api/icd10/search?q=...&limit=20
 router.get('/search', authenticate, async (req, res) => {
     try {
         const { q, limit = 20 } = req.query;
         const searchTerm = q ? q.trim() : '';
 
-        // If no query, return some defaults or empty
-        if (!searchTerm || searchTerm.length < 2) {
-            return res.json([]);
+        // Performance Optimization: If no query, return user favorites or common codes
+        if (!searchTerm || searchTerm.length < 1) {
+            const defaults = await pool.query(`
+                SELECT c.id, c.code, c.description, c.is_billable,
+                       COALESCE(u.use_count, 0) as use_count
+                FROM icd10_codes c
+                LEFT JOIN icd10_usage u ON c.id = u.icd10_id AND u.user_id = $1
+                WHERE c.is_active = true
+                ORDER BY u.use_count DESC NULLS LAST, c.code ASC
+                LIMIT $2
+            `, [req.user.id, limit]);
+            return res.json(defaults.rows);
         }
 
-        const searchWords = searchTerm.split(/\s+/).filter(t => t.length > 0);
-        const wholeWordRegex = searchWords.map(w => `(\\m|\\()${w}(\\M|\\))`).join('.*');
-        const tsQuery = searchWords.map(t => `${t.replace(/'/g, "''")}:*`).join(' & ');
+        // Prepare TS query (handles partial words)
+        const tsQuery = searchTerm.split(/\s+/)
+            .filter(t => t.length > 0)
+            .map(t => `${t.replace(/'/g, "''")}:*`)
+            .join(' & ');
 
         const results = await pool.query(`
-            SELECT 
-                c.id, c.code, c.description, c.is_billable,
-                COALESCE(u.use_count, 0) as use_count
-            FROM icd10_codes c
-            LEFT JOIN icd10_usage u ON c.id = u.icd10_id AND u.user_id = $4
-            WHERE c.is_active = true
-              AND (
-                c.code ILIKE $1 || '%'
-                OR to_tsvector('english', c.description) @@ to_tsquery('english', $2)
-                OR c.description ILIKE '%' || $1 || '%'
-              )
+            WITH search_results AS (
+                SELECT 
+                    id, code, description, is_billable, keywords,
+                    COALESCE(u.use_count, 0) as use_count,
+                    similarity(description, $1) as desc_sim,
+                    similarity(code, $1) as code_sim,
+                    CASE 
+                        WHEN code ILIKE $1 || '%' THEN 1.0
+                        WHEN keywords ILIKE '%' || $1 || '%' THEN 0.95
+                        WHEN description ILIKE '%' || $1 || '%' THEN 0.8
+                        ELSE ts_rank_cd(search_vector, to_tsquery('english', $2))
+                    END as match_weight
+                FROM icd10_codes c
+                LEFT JOIN icd10_usage u ON c.id = u.icd10_id AND u.user_id = $4
+                WHERE is_active = true
+                  AND (
+                    code ILIKE $1 || '%'
+                    OR description ILIKE '%' || $1 || '%'
+                    OR keywords ILIKE '%' || $1 || '%'
+                    OR (length($1) > 2 AND search_vector @@ to_tsquery('english', $2))
+                  )
+            )
+            SELECT * FROM search_results
             ORDER BY 
-                (c.code = $1) DESC,
-                COALESCE(u.use_count, 0) DESC,
-                c.usage_count DESC,
-                (c.is_billable AND c.description ~* $5 AND c.description ~* '\\y(unspecified|essential|primary|uncomplicated)\\y') DESC,
-                (c.is_billable AND c.description ~* $5) DESC,
-                (c.is_billable AND c.description ILIKE $1 || '%') DESC,
-                ts_rank_cd(to_tsvector('english', c.description), to_tsquery('english', $2)) DESC,
-                LENGTH(c.description) ASC,
-                c.code ASC
+                (code ILIKE $1) DESC,
+                (keywords ILIKE '%' || $1 || '%') DESC,
+                match_weight DESC,
+                use_count DESC,
+                (desc_sim + code_sim) DESC
             LIMIT $3
-        `, [searchTerm, tsQuery, limit, req.user.id, wholeWordRegex]);
+        `, [searchTerm, tsQuery, limit, req.user.id]);
 
         if (results.rows.length === 0) {
             const { searchFallback } = require('../utils/icd10-fallback');
             const fallback = searchFallback(searchTerm);
             return res.json(fallback.map(f => ({
-                id: f.code, // Use code as ID for fallback items
+                id: f.code,
                 code: f.code,
                 description: f.description,
                 is_billable: f.billable,

@@ -1994,7 +1994,7 @@ const VisitNote = () => {
             } catch (error) {
                 setIcd10Results([]);
             }
-        }, 300);
+        }, 150);
         return () => clearTimeout(timeout);
     }, [icd10Search]);
 
